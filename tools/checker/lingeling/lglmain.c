@@ -63,7 +63,7 @@ static void catchsig(int sig)
         }
     }
     resetsighandlers();
-    if (!getenv("LGLNABORT")) { raise(sig); } else { exit(1); }
+    if (!getenv("LGLNABORT")) { raise(sig); }  else { exit(1); }
 }
 
 static void setsighandlers(void)
@@ -124,8 +124,9 @@ typedef struct Opt { char * name; int size, count; } Opt;
 
 static void pushoptch(Opt * opt, int ch)
 {
-    if (opt->count + 1 >= opt->size)
-    { opt->name = realloc(opt->name, opt->size = opt->size ? 2 * opt->size : 2); }
+    if (opt->count + 1 >= opt->size) {
+        opt->name = realloc(opt->name, opt->size = opt->size ? 2 * opt->size : 2);
+    }
 
     opt->name[opt->count++] = ch;
     opt->name[opt->count] = 0;
@@ -157,11 +158,12 @@ SKIP:
             opt.count = 0;
             if (ch != '=') { continue; }
             ch = next(in, lp);
-            if (ch == '-') { sign = -1, ch = next(in, lp); } else { sign = 1; }
+            if (ch == '-') { sign = -1, ch = next(in, lp); }  else { sign = 1; }
             if (!isdigit(ch)) { continue; }
             val = ch - '0';
-            while (isdigit(ch = next(in, lp)))
-            { val = 10 * val + (ch - '0'); }
+            while (isdigit(ch = next(in, lp))) {
+                val = 10 * val + (ch - '0');
+            }
 
             if (!lglhasopt(lgl, opt.name)) {
                 fprintf(stderr,
@@ -182,7 +184,7 @@ SKIP:
     }
     free(opt.name);
     if (verbose) {
-        if (embedded) { printf("c\n"); } else { printf("c no embedded options\n"); }
+        if (embedded) { printf("c\n"); }  else { printf("c no embedded options\n"); }
         fflush(stdout);
     }
     header = m = n = v = l = c = 0;
@@ -206,18 +208,22 @@ SKIP:
         ;
     if (!isdigit(ch)) { return "invalid header: expected digit after 'p cnf '"; }
     m = ch - '0';
-    while (isdigit(ch = next(in, lp)))
-    { m = 10 * m + (ch - '0'); }
+    while (isdigit(ch = next(in, lp))) {
+        m = 10 * m + (ch - '0');
+    }
     if (ch != ' ') { return "invalid header: expected ' ' after 'p cnf <m>'"; }
     while ((ch = next(in, lp)) == ' ')
         ;
-    if (!isdigit(ch))
-    { return "invalid header: expected digit after 'p cnf <m> '"; }
+    if (!isdigit(ch)) {
+        return "invalid header: expected digit after 'p cnf <m> '";
+    }
     n = ch - '0';
-    while (isdigit(ch = next(in, lp)))
-    { n = 10 * n + (ch - '0'); }
-    while (ch == ' ')
-    { ch = next(in, lp); }
+    while (isdigit(ch = next(in, lp))) {
+        n = 10 * n + (ch - '0');
+    }
+    while (ch == ' ') {
+        ch = next(in, lp);
+    }
     if (ch != '\n') { return "invalid header: expected new line after header"; }
     if (verbose) { printf("c found 'p cnf %d %d' header\n", m, n); }
     header = 1;
@@ -252,8 +258,9 @@ BODY2:
     if (!isdigit(ch)) { return "expected digit"; }
     if (header && c == n) { return "too many clauses"; }
     lit = ch - '0';
-    while (isdigit(ch = next(in, lp)))
-    { lit = 10 * lit + (ch - '0'); }
+    while (isdigit(ch = next(in, lp))) {
+        lit = 10 * lit + (ch - '0');
+    }
     if (header && lit > m) { return "maxium variable index exceeded"; }
     if (lit > v) { v = lit; }
     if (lit) { l++; }
@@ -603,8 +610,9 @@ int main(int argc, char ** argv)
             fflush(stdout);
         }
         nopts = lglreadopts(lgl, pfile);
-        if (verbose)
-        { printf("c read and set %d options\nc\n", nopts), fflush(stdout); }
+        if (verbose) {
+            printf("c read and set %d options\nc\n", nopts), fflush(stdout);
+        }
         fclose(pfile);
     }
     if (verbose) { printf("c reading input file %s\n", iname); }

@@ -140,7 +140,7 @@ class Map
     }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert(const K& k, const D& d) { if (checkCap(size + 1)) { rehash(); } _insert(k, d); size++; }
+    void insert(const K& k, const D& d) { if (checkCap(size + 1)) { rehash(); }  _insert(k, d); size++; }
     bool peek(const K& k, D& d) const
     {
         if (size == 0) { return false; }

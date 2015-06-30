@@ -270,7 +270,7 @@ inline void ProofMaster::addGlobalClause(const T& clause, const Lit& extraClause
         if (opc != 0) {   // perform check for the global proof only
             opcTmpCls.clear();
             if (extraClauseLit != lit_Undef) { opcTmpCls.push(extraClauseLit); }
-            for (int i = startIndex; i < endIndex; i++) { if (clause[i] != lit_Undef && clause[i] != extraClauseLit) { opcTmpCls.push(clause[i]); } }
+            for (int i = startIndex; i < endIndex; i++) { if (clause[i] != lit_Undef && clause[i] != extraClauseLit) { opcTmpCls.push(clause[i]); }  }
             if (! opc->addClause(opcTmpCls)) { std::cerr << "c adding clause " << opcTmpCls << " to global proof fails" << std::endl; assert(false); exit(13); }
         }
 
@@ -359,7 +359,7 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
             if (opc != 0) {   // perform check for the global proof only
                 opcTmpCls.clear();
                 if (extraClauseLit != lit_Undef) { opcTmpCls.push(extraClauseLit); }
-                for (int i = startIndex; i < endIndex; i++) { if (clause[i] != lit_Undef && clause[i] != extraClauseLit) { opcTmpCls.push(clause[i]); } }
+                for (int i = startIndex; i < endIndex; i++) { if (clause[i] != lit_Undef && clause[i] != extraClauseLit) { opcTmpCls.push(clause[i]); }  }
                 opc->removeClause(opcTmpCls);
             }
 
@@ -496,7 +496,7 @@ inline void ProofMaster::addInputToProof(const T& clause, int ownerID, int numbe
 
         if (opc != 0) {   // perform check for the global proof only
             opcTmpCls.clear();
-            for (int i = 0; i < clause.size(); i++) { if (clause[i] != lit_Undef) { opcTmpCls.push(clause[i]); } }
+            for (int i = 0; i < clause.size(); i++) { if (clause[i] != lit_Undef) { opcTmpCls.push(clause[i]); }  }
             if (!opc->addClause(opcTmpCls)) { std::cerr << "c adding clause " << opcTmpCls << " to global proof fails" << std::endl; assert(false); exit(13); }
         }
 

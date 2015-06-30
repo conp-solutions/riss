@@ -3,10 +3,6 @@
 project(pfolio)
 
 
-# Dependencies:
-# 
-
-
 # Libraries:
 # 
 set(LIB_SOURCES

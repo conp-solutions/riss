@@ -54,8 +54,9 @@ void
 aigfuzz_msg(int level, const char *fmt, ...)
 {
     va_list ap;
-    if (verbosity < level)
-    { return; }
+    if (verbosity < level) {
+        return;
+    }
     fputs("[aigfuzz] ", stderr);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -106,10 +107,12 @@ pick_output(int flip, int remove)
     assert(O > 0);
     pos = aigfuzz_pick(0, O - 1);
     res = outputs[pos];
-    if (remove && pos < --O)
-    { outputs[pos] = outputs[O]; }
-    if (flip && aigfuzz_oneoutof(2))
-    { res ^= 1; }
+    if (remove && pos < --O) {
+        outputs[pos] = outputs[O];
+    }
+    if (flip && aigfuzz_oneoutof(2)) {
+        res ^= 1;
+    }
     return res;
 }
 
@@ -222,15 +225,18 @@ isposnum(const char * str)
 {
     const char * p;
 
-    if (str[0] == '0' && !str[1])
-    { return 1; }
+    if (str[0] == '0' && !str[1]) {
+        return 1;
+    }
 
-    if (str[0] == '0')
-    { return 0; }
+    if (str[0] == '0') {
+        return 0;
+    }
 
     for (p = str; *p; p++)
-        if (!isdigit(*p))
-        { return 0; }
+        if (!isdigit(*p)) {
+            return 0;
+        }
 
     return 1;
 }
@@ -278,64 +284,73 @@ main(int argc, char ** argv)
             exit(0);
         }
 
-        if (!strcmp(argv[i], "-v"))
-        { verbosity++; }
-        else if (!strcmp(argv[i], "-a"))
-        { ascii = 1; }
-        else if (!strcmp(argv[i], "-c"))
-        { opts.combinational = 1; }
-        else if (!strcmp(argv[i], "-m"))
-        { opts.merge = 1; }
-        else if (!strcmp(argv[i], "-s"))
-        { opts.small = 1; }
-        else if (!strcmp(argv[i], "-l"))
-        { opts.large = 1; }
-        else if (!strcmp(argv[i], "-S"))
-        { opts.liveness = 0; }
-        else if (!strcmp(argv[i], "-L"))
-        { opts.safety = 0; }
-        else if (!strcmp(argv[i], "-b"))
-        { opts.bad = 1; }
-        else if (!strcmp(argv[i], "-j"))
-        { opts.justice = 1; }
-        else if (!strcmp(argv[i], "-z"))
-        { opts.zero = 1; }
-        else if (!strcmp(argv[i], "-1"))
-        { opts.version = 1; }
-        else if (!strcmp(argv[i], "-2"))
-        { opts.version = 2; }
-        else if (!strcmp(argv[i], "-o")) {
-            if (dst)
-            { die("multiple output '%s' and '%s'", dst, argv[i]); }
+        if (!strcmp(argv[i], "-v")) {
+            verbosity++;
+        } else if (!strcmp(argv[i], "-a")) {
+            ascii = 1;
+        } else if (!strcmp(argv[i], "-c")) {
+            opts.combinational = 1;
+        } else if (!strcmp(argv[i], "-m")) {
+            opts.merge = 1;
+        } else if (!strcmp(argv[i], "-s")) {
+            opts.small = 1;
+        } else if (!strcmp(argv[i], "-l")) {
+            opts.large = 1;
+        } else if (!strcmp(argv[i], "-S")) {
+            opts.liveness = 0;
+        } else if (!strcmp(argv[i], "-L")) {
+            opts.safety = 0;
+        } else if (!strcmp(argv[i], "-b")) {
+            opts.bad = 1;
+        } else if (!strcmp(argv[i], "-j")) {
+            opts.justice = 1;
+        } else if (!strcmp(argv[i], "-z")) {
+            opts.zero = 1;
+        } else if (!strcmp(argv[i], "-1")) {
+            opts.version = 1;
+        } else if (!strcmp(argv[i], "-2")) {
+            opts.version = 2;
+        } else if (!strcmp(argv[i], "-o")) {
+            if (dst) {
+                die("multiple output '%s' and '%s'", dst, argv[i]);
+            }
 
-            if (++i == argc)
-            { die("argument to '-o' missing"); }
+            if (++i == argc) {
+                die("argument to '-o' missing");
+            }
 
             dst = argv[i];
-        } else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (isposnum(argv[i])) {
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (isposnum(argv[i])) {
             seed = atoi(argv[i]);
-            if (seed < 0)
-            { die("invalid seed '%s'", argv[i]); }
-        } else
-        { die("invalid command line argument '%s'", argv[i]); }
+            if (seed < 0) {
+                die("invalid seed '%s'", argv[i]);
+            }
+        } else {
+            die("invalid command line argument '%s'", argv[i]);
+        }
     }
 
-    if (opts.small && opts.large)
-    { die("can not combined '-s' and '-l'"); }
+    if (opts.small && opts.large) {
+        die("can not combined '-s' and '-l'");
+    }
 
-    if (!opts.safety && !opts.liveness)
-    { die("can not combined '-S' and '-L'"); }
+    if (!opts.safety && !opts.liveness) {
+        die("can not combined '-S' and '-L'");
+    }
 
-    if (!opts.safety && opts.bad)
-    { die("can not combined '-L' and '-b'"); }
+    if (!opts.safety && opts.bad) {
+        die("can not combined '-L' and '-b'");
+    }
 
-    if (!opts.liveness && opts.justice)
-    { die("can not combined '-S' and '-j'"); }
+    if (!opts.liveness && opts.justice) {
+        die("can not combined '-S' and '-j'");
+    }
 
-    if (seed < 0)
-    { seed = abs((times(0) * getpid()) >> 1); }
+    if (seed < 0) {
+        seed = abs((times(0) * getpid()) >> 1);
+    }
 
     rng = seed;
     aigfuzz_msg(1, "seed %u", rng);
@@ -406,8 +421,9 @@ main(int argc, char ** argv)
                     lits[1] = outputs[--O];
                     if (!lits[1]) { lits[1] = 1; }
                     aiger_add_justice(model, 2, lits, 0);
-                } else
-                { aiger_add_justice(model, 1, lits, 0); }
+                } else {
+                    aiger_add_justice(model, 1, lits, 0);
+                }
                 break;
             case 4:
                 assert(opts.liveness && !opts.justice);
@@ -444,15 +460,16 @@ main(int argc, char ** argv)
     }
 
     aigfuzz_msg(1, "writing %s", dst ? dst : "<stdout>");
-    if (dst)
-    { ok = aiger_open_and_write_to_file(model, dst); }
-    else {
+    if (dst) {
+        ok = aiger_open_and_write_to_file(model, dst);
+    } else {
         mode = (ascii || isatty(1)) ? aiger_ascii_mode : aiger_binary_mode;
         ok = aiger_write_to_file(model, mode, stdout);
     }
 
-    if (!ok)
-    { die("write error"); }
+    if (!ok) {
+        die("write error");
+    }
 
     aiger_reset(model);
 

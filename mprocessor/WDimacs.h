@@ -75,11 +75,11 @@ static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeig
         else if (*in == 'p') {
             foundPline = true;
             ++in;
-            if (!eagerMatch(in, " ")) { printf("PARSE ERROR! Expected space. Unexpected char: %c\n", *in), exit(3);}
+            if (!eagerMatch(in, " ")) { printf("PARSE ERROR! Expected space. Unexpected char: %c\n", *in), exit(3); }
 
             if (*in != 'w') {
                 // ++in;
-                if (!eagerMatch(in, "cnf")) { printf("PARSE ERROR! Expected cnf. Unexpected char: %c\n", *in), exit(3);}
+                if (!eagerMatch(in, "cnf")) { printf("PARSE ERROR! Expected cnf. Unexpected char: %c\n", *in), exit(3); }
                 vars    = parseInt(in);
                 clauses = parseInt(in);
                 original_vars = vars;

@@ -112,8 +112,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
     markArray.resize(2 * nVars());
 
     lock();
-    if (branchThreshold == 0)
-    { branchThreshold = opt_branch_threshold; }
+    if (branchThreshold == 0) {
+        branchThreshold = opt_branch_threshold;
+    }
     unlock();
     //lock();
     //if(triggerDoubleLookahead <= 0)
@@ -138,8 +139,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
     }
 
     // chck if solution found.... extend the model if found
-    if (checkSolution())
-    { return l_True; }
+    if (checkSolution()) {
+        return l_True;
+    }
 
     //int bestK = 0; //size of the subset of the variables on which lookahead will be performed
     vec<Lit> *decList = 0;
@@ -170,8 +172,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 if (splitting->size() == 0 && decList->size() == 0) {
                     //fprintf(stderr, "splitter: Unsat node 3\n");
                     return l_False;
-                } else
-                { break; }
+                } else {
+                    break;
+                }
             }
 
             // propagate top level
@@ -180,14 +183,16 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 if (splitting->size() == 0 && decList->size() == 0) {
                     //fprintf(stderr, "splitter: Unsat node 4\n");
                     return l_False;
-                } else
-                { break; }
+                } else {
+                    break;
+                }
             }
             int prevLocalValidSize = 0;
             // flip=(flip+1)%2;
             // chck if solution found.... extend the model if found
-            if (checkSolution())
-            { return l_True; }
+            if (checkSolution()) {
+                return l_True;
+            }
 
             vec<Lit> *tempDecList = decList;
             decList = new vec<Lit>();
@@ -199,8 +204,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 decList->pop();
                 validList->pop();
                 //fprintf(stderr, "next = %d\n", sign(next) ? 0-var(next) : var(next));
-                if (decList->size() == 0)
-                { goto jump; }
+                if (decList->size() == 0) {
+                    goto jump;
+                }
             }
 
             learntsLimitPop();
@@ -218,8 +224,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 triedVar[var(next)] = true;
                 localValid = new vec<vec<Lit>* >();
                 //validList->pop();
-                if (validList->size() > 1)
-                { (*validList)[validList->size() - 1]->copyTo(*localValid); }
+                if (validList->size() > 1) {
+                    (*validList)[validList->size() - 1]->copyTo(*localValid);
+                }
                 //validList->push(localValid);
             }
             int level = decisionLevel();
@@ -245,8 +252,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         if (splitting->size() == 0 && decList->size() == 0) {
                             //fprintf(stderr, "splitter: Unsat node 5\n");
                             return l_False;
-                        } else
-                        { goto jump; }
+                        } else {
+                            goto jump;
+                        }
                     } else {
                         cancelUntil(decisionLevel() - 1);
                         //depth--;
@@ -271,8 +279,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                     continue;
                 }
 
-                if (checkSolution())
-                { return l_True; }
+                if (checkSolution()) {
+                    return l_True;
+                }
                 if (optBranchDepth == 0) {
                     // branchThreshold+=(localValid->size()-prevLocalValidSize)/nVars();
                     //if((trail.size()-initTrailSize)*decisionLevel()*decisionLevel()*opt_children_count>branchThreshold*nVars() || decisionLevel()>=maxClauseSize)
@@ -300,8 +309,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         if (splitting->size() == 0 && decList->size() == 0) {
                             //fprintf(stderr, "splitter: Unsat node 7\n");
                             return l_False;
-                        } else
-                        { goto jump; }
+                        } else {
+                            goto jump;
+                        }
                     } else {
                         cancelUntil(decisionLevel() - 1);
                         //depth--;
@@ -325,8 +335,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         continue;
                     }
                 } else if (next == lit_Undef) {
-                    if (checkSolution())
-                    { return l_True; }
+                    if (checkSolution()) {
+                        return l_True;
+                    }
                 }
 
                 fprintf(stderr, "%d, ", sign(next) ? 0 - var(next) : var(next));
@@ -354,8 +365,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 if (splitting->size() > 0) {
                     vec<Lit> *alphaList = (*splitting)[0];
                     Lit alpha = (*alphaList)[0];
-                    if (var((*decList)[0]) != var(alpha))
-                    { goto jump; }
+                    if (var((*decList)[0]) != var(alpha)) {
+                        goto jump;
+                    }
                 }
                 //pushing pure literals
                 if (opt_pure_lit > 1) {
@@ -386,8 +398,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 if (splitting->size() == 0 && decList->size() == 0) {
                     //fprintf(stderr, "splitter: Unsat node 3\n");
                     return l_False;
-                } else
-                { break; }
+                } else {
+                    break;
+                }
             }
 
             // propagate top level
@@ -396,13 +409,15 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 if (splitting->size() == 0 && decList->size() == 0) {
                     //fprintf(stderr, "splitter: Unsat node 4\n");
                     return l_False;
-                } else
-                { break; }
+                } else {
+                    break;
+                }
             }
 
             // chck if solution found.... extend the model if found
-            if (checkSolution())
-            { return l_True; }
+            if (checkSolution()) {
+                return l_True;
+            }
             bool check1 = true;
 
             shrinkClauses();
@@ -420,16 +435,18 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         if (splitting->size() == 0 && decList->size() == 0) {
                             //fprintf(stderr, "splitter: Unsat node 5\n");
                             return l_False;
-                        } else
-                        { goto jump; }
+                        } else {
+                            goto jump;
+                        }
                     } else {
                         cancelUntil(decisionLevel() - 1);
                         next = ~(*decList)[decisionLevel()];
                         uncheckedEnqueue(next);
                         //  enqueue(next);
                         vec<Lit> *c = new vec<Lit>();
-                        if (opt_tabu)
-                        { tabuList[var(next)] = false; }
+                        if (opt_tabu) {
+                            tabuList[var(next)] = false;
+                        }
                         c->push(next);
                         decList->pop();
                         localValid->push(c);
@@ -453,8 +470,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                     goto jump;
                 }
 
-                if (checkSolution())
-                { return l_True; }
+                if (checkSolution()) {
+                    return l_True;
+                }
                 next = pickBranchLiteral(&localValid);
                 if (next == lit_Error) {
                     if (decisionLevel() == 0) {
@@ -462,8 +480,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         if (splitting->size() == 0 && decList->size() == 0) {
                             //fprintf(stderr, "splitter: Unsat node 7\n");
                             return l_False;
-                        } else
-                        { goto jump; }
+                        } else {
+                            goto jump;
+                        }
                     } else {
                         cancelUntil(decisionLevel() - 1);
                         next = ~(*decList)[decisionLevel()];
@@ -471,8 +490,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         //enqueue(next);
                         decList->pop();
                         vec<Lit> *c = new vec<Lit>();
-                        if (opt_tabu)
-                        { tabuList[var(next)] = false; }
+                        if (opt_tabu) {
+                            tabuList[var(next)] = false;
+                        }
                         c->push(next);
                         localValid->push(c);
                         learntsLimitPop();
@@ -487,8 +507,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                     }
                 } else {
                     if (next == lit_Undef) {
-                        if (checkSolution())
-                        { return l_True; }
+                        if (checkSolution()) {
+                            return l_True;
+                        }
                     }
                     if (decisionLevel() == 0 && splitting->size() == 0) {
                         //localValid->copyTo(**valid);
@@ -504,11 +525,13 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
 
                 if (optBranchDepth == 0) {
                     if (opt_dSeq) {
-                        if (decisionLevel() >= dSeq[16 - opt_children_count + splitting->size()])
-                        { check1 = false; }
+                        if (decisionLevel() >= dSeq[16 - opt_children_count + splitting->size()]) {
+                            check1 = false;
+                        }
                     } else { // branchThreshold+=(localValid->size()-prevLocalValidSize)/nVars(); //if((trail.size()-initTrailSize)*decisionLevel()*decisionLevel()*opt_children_count>branchThreshold*nVars() || decisionLevel()>=maxClauseSize)
-                        if ((trail.size() - initTrailSize)*decisionLevel()*decisionLevel()*log(512000) > branchThreshold * (nVars() - initTrailSize)*log(optNumChild) || decisionLevel() >= maxClauseSize - 1)
-                        { check1 = false; }
+                        if ((trail.size() - initTrailSize)*decisionLevel()*decisionLevel()*log(512000) > branchThreshold * (nVars() - initTrailSize)*log(optNumChild) || decisionLevel() >= maxClauseSize - 1) {
+                            check1 = false;
+                        }
                         if (decisionLevel() >= maxClauseSize - 1) {
                             lock();
                             branchThreshold *= opt_branch_threshold_penalty;
@@ -517,10 +540,11 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                         }
                     }
                 } else {
-                    if (decisionLevel() >= optBranchDepth)
-                    { check1 = false; }
+                    if (decisionLevel() >= optBranchDepth) {
+                        check1 = false;
+                    }
                 }
-                if (cpuTime_t() > timeOut)      { break; }
+                if (cpuTime_t() > timeOut) { break; }
             }
 
             validAtLevel->push(localValid);
@@ -533,7 +557,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 negCube.push(~((*decList)[i]));
             }
             addClause_(negCube);
-            if (cpuTime_t() > timeOut)      { break; }
+            if (cpuTime_t() > timeOut) { break; }
         }
     }
 
@@ -629,8 +653,9 @@ jump:
     clearLearnts();
     lock();
     if (opt_splitting_method == 1) {
-        if (cpuTime_t() > timeOut && opt_children_count - (*splits)->size() != 0)
-        { branchThreshold *= opt_branch_threshold_penalty / (opt_children_count - (*splits)->size()); }
+        if (cpuTime_t() > timeOut && opt_children_count - (*splits)->size() != 0) {
+            branchThreshold *= opt_branch_threshold_penalty / (opt_children_count - (*splits)->size());
+        }
     }
     branchThreshold *= (1.0f + opt_branch_threshold_increment);
     unlock();
@@ -657,8 +682,9 @@ void LookaheadSplitting::shrinkClauses()
         assert(decisionLevel() == 0);
 
         removeSatisfied(learnts);
-        if (remove_satisfied)
-        { removeSatisfied(clauses); }
+        if (remove_satisfied) {
+            removeSatisfied(clauses);
+        }
         vec<unsigned> pureLiteralCheck;
         pureLiteralCheck.growTo(nVars(), 0);
         Var v;
@@ -680,12 +706,14 @@ void LookaheadSplitting::shrinkClauses()
                     if (opt_pure_lit > 0) {
                         if (sign(c[j]) && value(c[j]) == l_Undef) {
                             v = var(c[j]);
-                            if (pureLiteralCheck[v] != 1 && pureLiteralCheck[v] != 3)
-                            { pureLiteralCheck[v] += 1; }
+                            if (pureLiteralCheck[v] != 1 && pureLiteralCheck[v] != 3) {
+                                pureLiteralCheck[v] += 1;
+                            }
                         } else if (!sign(c[j]) && value(c[j]) == l_Undef) {
                             v = var(c[j]);
-                            if (pureLiteralCheck[v] != 2 && pureLiteralCheck[v] != 3)
-                            { pureLiteralCheck[v] += 2; }
+                            if (pureLiteralCheck[v] != 2 && pureLiteralCheck[v] != 3) {
+                                pureLiteralCheck[v] += 2;
+                            }
                         }
                     }
                 }
@@ -757,8 +785,9 @@ void LookaheadSplitting::preselectionHeuristic()
 
     for (int i = 0; i < clauses.size(); i++) {
         Clause& c = ca[clauses[i]];
-        if (c.size() > maxClauseSize)
-        { maxClauseSize = c.size(); }
+        if (c.size() > maxClauseSize) {
+            maxClauseSize = c.size();
+        }
         if (opt_preselection_heuristic == 0 && c.size() == 2 && !satisfied(c)) {
             numBinClauses++;
             sign(c[0]) ? negLitScore[var(c[0])]++ : posLitScore[var(c[0])]++;
@@ -802,15 +831,17 @@ void LookaheadSplitting::preselectionHeuristic()
             Clause& c = ca[clauses[i]];
             if (c.size() == 2 && !satisfied(c)) {
                 numBinClauses++;
-                if (sign(c[0]))
-                { sign(c[1]) ? negLitScore[var(c[0])] += numPosLitClause[var(c[1])] : negLitScore[var(c[0])] += numNegLitClause[var(c[1])]; }
-                else
-                { sign(c[1]) ? posLitScore[var(c[0])] += numPosLitClause[var(c[1])] : posLitScore[var(c[0])] += numNegLitClause[var(c[1])]; }
+                if (sign(c[0])) {
+                    sign(c[1]) ? negLitScore[var(c[0])] += numPosLitClause[var(c[1])] : negLitScore[var(c[0])] += numNegLitClause[var(c[1])];
+                } else {
+                    sign(c[1]) ? posLitScore[var(c[0])] += numPosLitClause[var(c[1])] : posLitScore[var(c[0])] += numNegLitClause[var(c[1])];
+                }
 
-                if (sign(c[1]))
-                { sign(c[0]) ? negLitScore[var(c[1])] += numPosLitClause[var(c[0])] : negLitScore[var(c[1])] += numNegLitClause[var(c[0])]; }
-                else
-                { sign(c[0]) ? posLitScore[var(c[1])] += numPosLitClause[var(c[0])] : posLitScore[var(c[1])] += numNegLitClause[var(c[0])]; }
+                if (sign(c[1])) {
+                    sign(c[0]) ? negLitScore[var(c[1])] += numPosLitClause[var(c[0])] : negLitScore[var(c[1])] += numNegLitClause[var(c[0])];
+                } else {
+                    sign(c[0]) ? posLitScore[var(c[1])] += numPosLitClause[var(c[0])] : posLitScore[var(c[1])] += numNegLitClause[var(c[0])];
+                }
             }
         }
 
@@ -858,25 +889,31 @@ void LookaheadSplitting::preselectionHeuristic()
                         product = product * (sign(c[l]) ? prevPosHScore[var(c[l])] : prevNegHScore[var(c[l])]);
                     }
                     for (int l = 0; l < c.size(); l++) {
-                        if (sign(c[l]))
-                        { negHScore[var(c[l])] += (product / prevNegHScore[var(c[l])]); }
-                        else
-                        { posHScore[var(c[l])] += (product / prevPosHScore[var(c[l])]); }
+                        if (sign(c[l])) {
+                            negHScore[var(c[l])] += (product / prevNegHScore[var(c[l])]);
+                        } else {
+                            posHScore[var(c[l])] += (product / prevPosHScore[var(c[l])]);
+                        }
                     }
                 }
             }
-            if (i == opt_hscore_accuracy) //to skip the normalization in the last iteration
-            { break; }
+            if (i == opt_hscore_accuracy) { //to skip the normalization in the last iteration
+                break;
+            }
             sum = 0;
             for (int k = 1; k < nVars(); k++) {
-                if (negHScore[k] < opt_hscore_clause_lowerbound)
-                { negHScore[k] = opt_hscore_clause_lowerbound; }
-                if (negHScore[k] > opt_hscore_clause_upperbound)
-                { negHScore[k] = opt_hscore_clause_upperbound; }
-                if (posHScore[k] < opt_hscore_clause_lowerbound)
-                { posHScore[k] = opt_hscore_clause_lowerbound; }
-                if (posHScore[k] > opt_hscore_clause_upperbound)
-                { posHScore[k] = opt_hscore_clause_upperbound; }
+                if (negHScore[k] < opt_hscore_clause_lowerbound) {
+                    negHScore[k] = opt_hscore_clause_lowerbound;
+                }
+                if (negHScore[k] > opt_hscore_clause_upperbound) {
+                    negHScore[k] = opt_hscore_clause_upperbound;
+                }
+                if (posHScore[k] < opt_hscore_clause_lowerbound) {
+                    posHScore[k] = opt_hscore_clause_lowerbound;
+                }
+                if (posHScore[k] > opt_hscore_clause_upperbound) {
+                    posHScore[k] = opt_hscore_clause_upperbound;
+                }
                 sum += negHScore[k] + posHScore[k];
             }
             negHScore.copyTo(prevNegHScore);
@@ -900,8 +937,9 @@ void LookaheadSplitting::preselectionHeuristic()
     if (opt_preselection_heuristic == 3) {
         while (!order_heap.empty()) {
             int v = order_heap.removeMin();
-            if (value(v) == l_Undef)
-            { sortedVar.push(v); }
+            if (value(v) == l_Undef) {
+                sortedVar.push(v);
+            }
         }
         rebuildOrderHeap();
     }
@@ -925,12 +963,15 @@ void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
     }
 
     bkl.clear();
-    if (!opt_adp_preselection_ranking && bestK < opt_preselection_minimum)
-    { bestK = opt_preselection_minimum; }
-    if (bestK > opt_preselection_maximum)
-    { bestK = opt_preselection_maximum; }
-    if (bestK > sv.size())
-    { bestK = sv.size(); }
+    if (!opt_adp_preselection_ranking && bestK < opt_preselection_minimum) {
+        bestK = opt_preselection_minimum;
+    }
+    if (bestK > opt_preselection_maximum) {
+        bestK = opt_preselection_maximum;
+    }
+    if (bestK > sv.size()) {
+        bestK = sv.size();
+    }
     for (int i = 0; i < sv.size() && bestK > 0; i++) {
         //   //fprintf( stderr, "%f, ", varScore[i].score);
         if (value(sv[i]) == l_Undef) {
@@ -947,8 +988,9 @@ void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
     }
     fprintf(stderr, "c Number of preselected variables( objectID: %ld ) \t\t\t = %d / %d\n", (uint64_t)this, bkl.size(), nVars());
     assert(bkl.size() < nVars() && "cannot select more variables than present in the formula");
-    if (bkl.size() > statistics.getI(splitterMaxPreselectedVariablesID))
-    { statistics.changeI(splitterMaxPreselectedVariablesID, bkl.size() - statistics.getI(splitterMaxPreselectedVariablesID)); }
+    if (bkl.size() > statistics.getI(splitterMaxPreselectedVariablesID)) {
+        statistics.changeI(splitterMaxPreselectedVariablesID, bkl.size() - statistics.getI(splitterMaxPreselectedVariablesID));
+    }
 }
 
 bool LookaheadSplitting::lookahead(Lit p, vec<Lit>& lookaheadTrail, vec<Lit>& units)
@@ -1127,13 +1169,15 @@ decLitNotFound:
                 return lit_Undef;
             }
 
-            if (opt_tabu && opt_splitting_method == 1 && tabuList[bestKList[i]])
-            { continue; }
+            if (opt_tabu && opt_splitting_method == 1 && tabuList[bestKList[i]]) {
+                continue;
+            }
 
             p = mkLit(bestKList[i], false);
 
-            if (value(p) != l_Undef)
-            { continue; }
+            if (value(p) != l_Undef) {
+                continue;
+            }
             if (varEqCheck[bestKList[i]]) {
                 //fprintf(stderr, "splitter: Var EQ Check\n");
                 continue;
@@ -1312,8 +1356,9 @@ decLitNotFound:
                 vec<Lit> clause1;
 //                for(int j=1; j<positiveTrail.size(); j++){
                 for (int k = 1; k < negativeTrail.size(); k++) {
-                    if (value(negativeTrail[k]) != l_Undef)
-                    { continue; }
+                    if (value(negativeTrail[k]) != l_Undef) {
+                        continue;
+                    }
                     const bool posHit = markArray.isCurrentStep(toInt(negativeTrail[k]));
                     const bool negHit = markArray.isCurrentStep(toInt(~(negativeTrail[k])));
                     if (posHit && opt_nec_assign > 0) {
@@ -1503,14 +1548,16 @@ jump:
         Lit eqLit;
         for (int i = 0; i < varEq.size() - 1; i = i + 2) {
             eqLit = lit_Undef;
-            if (value(varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i])))
-            { eqLit = varEq[i + 1]; }
-            else if (value(~varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i])))
-            { eqLit = ~varEq[i + 1]; }
-            if (value(varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1])))
-            { eqLit = varEq[i]; }
-            else if (value(~varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1])))
-            { eqLit = ~varEq[i]; }
+            if (value(varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i]))) {
+                eqLit = varEq[i + 1];
+            } else if (value(~varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i]))) {
+                eqLit = ~varEq[i + 1];
+            }
+            if (value(varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1]))) {
+                eqLit = varEq[i];
+            } else if (value(~varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1]))) {
+                eqLit = ~varEq[i];
+            }
 
             if (eqLit != lit_Undef &&  ! lbd_marker.isCurrentStep(var(eqLit))) {
                 lbd_marker.setCurrentStep(var(eqLit));
@@ -1522,14 +1569,16 @@ jump:
     }
     if (opt_double_lookahead && opt_bin_constraints) {
         for (int i = 0, j = 0; i < binaryForcedClauses.size() - 1; i = i + 2) {
-            if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True)
-            { continue; }
-            if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef)
-            { j = i + 1; }
-            else if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef)
-            { j = i; }
-            else
-            { continue; }
+            if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True) {
+                continue;
+            }
+            if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef) {
+                j = i + 1;
+            } else if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef) {
+                j = i;
+            } else {
+                continue;
+            }
             if (! lbd_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
                 lbd_marker.setCurrentStep(var(binaryForcedClauses[j]));
                 clause = new vec<Lit>();
@@ -1593,8 +1642,9 @@ bool LookaheadSplitting::doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Li
         }else*/  if (c.size() == 3 && !satisfied(c)) {
             if (value(c[0]) != l_Undef || value(c[1]) != l_Undef || value(c[2]) != l_Undef) {
                 for (int j = 0; j < 3; j++) {
-                    if (value(c[j]) == l_Undef)
-                    { sign(c[j]) ? negLitScore[var(c[j])]++ : posLitScore[var(c[j])]++; }
+                    if (value(c[j]) == l_Undef) {
+                        sign(c[j]) ? negLitScore[var(c[j])]++ : posLitScore[var(c[j])]++;
+                    }
                 }
             }
         }
@@ -1642,10 +1692,12 @@ bool LookaheadSplitting::doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Li
             }
 
             Lit p = mkLit(bestKListDLA[i], false);
-            if (value(p) != l_Undef)
-            { continue; }      //skip the variables which are already propagated
-            if (varEqCheck[var(p)])
-            { continue; }
+            if (value(p) != l_Undef) {
+                continue;    //skip the variables which are already propagated
+            }
+            if (varEqCheck[var(p)]) {
+                continue;
+            }
 
             //check the positive branch
             positiveLookahead = lookahead(p, positiveTrail, unitLearnts);
@@ -1750,8 +1802,9 @@ void LookaheadSplitting::learntsLimitPush()
 
 void LookaheadSplitting::learntsLimitPop()
 {
-    if (learntsLimit.size() == 0)
-    { return; }
+    if (learntsLimit.size() == 0) {
+        return;
+    }
     unsigned limit = learntsLimit.last();
     learntsLimit.pop();
     for (int i = limit; i < learnts.size(); i++) {
@@ -1816,8 +1869,9 @@ CRef LookaheadSplitting::propagate()
             CRef     cr        = i->cref;
             Clause&  c         = ca[cr];
             Lit      false_lit = ~p;
-            if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+            if (c[0] == false_lit) {
+                c[0] = c[1], c[1] = false_lit;
+            }
             assert(c[1] == false_lit);
             i++;
 
@@ -1843,8 +1897,9 @@ CRef LookaheadSplitting::propagate()
                 confl = cr;
                 qhead = trail.size();
                 // Copy the remaining watches:
-                while (i < end)
-                { *j++ = *i++; }
+                while (i < end) {
+                    *j++ = *i++;
+                }
             } else {
                 decisionLevel() == 0 ? uncheckedEnqueue(first) : uncheckedEnqueue(first, cr);
 
@@ -1893,10 +1948,11 @@ void LookaheadSplitting::removeSatisfied(vec<CRef>& cs)
         Clause& c = ca[cs[i]];
 
 
-        if (satisfied(c)) // A bug if we remove size ==2, We need to correct it, but later.
-        { removeClause(cs[i]); }
-        else
-        { cs[j++] = cs[i]; }
+        if (satisfied(c)) { // A bug if we remove size ==2, We need to correct it, but later.
+            removeClause(cs[i]);
+        } else {
+            cs[j++] = cs[i];
+        }
     }
     cs.shrink_(i - j);
 }

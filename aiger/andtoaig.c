@@ -61,11 +61,11 @@ main(int argc, char **argv)
                     "*** [andtoaig] invalid command line option '%s'\n",
                     argv[i]);
             return 1;
-        } else if (!src)
-        { src = argv[i]; }
-        else if (!dst)
-        { dst = argv[i]; }
-        else {
+        } else if (!src) {
+            src = argv[i];
+        } else if (!dst) {
+            dst = argv[i];
+        } else {
             fprintf(stderr, "*** [andtoaig] more than two files specified\n");
             return 1;
         }
@@ -89,16 +89,19 @@ main(int argc, char **argv)
         return 1;
     }
 
-    if (!ascii && !dst && isatty(1))
-    { ascii = 1; }
+    if (!ascii && !dst && isatty(1)) {
+        ascii = 1;
+    }
 
     aiger = aiger_init();
 
-    while (fscanf(file, "%d %d %d\n", &lhs, &rhs0, &rhs1) == 3)
-    { aiger_add_and(aiger, lhs, rhs0, rhs1); }
+    while (fscanf(file, "%d %d %d\n", &lhs, &rhs0, &rhs1) == 3) {
+        aiger_add_and(aiger, lhs, rhs0, rhs1);
+    }
 
-    if (close_file)
-    { fclose(file); }
+    if (close_file) {
+        fclose(file);
+    }
 
     used = calloc(aiger->maxvar + 1, 1);
 
@@ -112,10 +115,12 @@ main(int argc, char **argv)
         and = aiger_is_and(aiger, i);
 
         if (used[aiger_lit2var(i)]) {
-            if (! and)
-            { aiger_add_input(aiger, i, 0); }
-        } else if ( and)
-        { aiger_add_output(aiger, i, 0); }
+            if (! and) {
+                aiger_add_input(aiger, i, 0);
+            }
+        } else if ( and) {
+            aiger_add_output(aiger, i, 0);
+        }
     }
 
     free(used);
@@ -128,9 +133,9 @@ main(int argc, char **argv)
         aiger_add_comment(aiger, "andtoaig");
         aiger_add_comment(aiger, src ? src : "<stdin>");
 
-        if (dst)
-        { res = !aiger_open_and_write_to_file(aiger, dst); }
-        else {
+        if (dst) {
+            res = !aiger_open_and_write_to_file(aiger, dst);
+        } else {
             aiger_mode mode = ascii ? aiger_ascii_mode : aiger_binary_mode;
             res = !aiger_write_to_file(aiger, mode, stdout);
         }

@@ -175,8 +175,9 @@ static int encode()
     aiger_and * uand;
     unsigned reset;
     int i, j;
-    if (nstates == szstates)
-    { states = realloc(states, ++szstates * sizeof * states); }
+    if (nstates == szstates) {
+        states = realloc(states, ++szstates * sizeof * states);
+    }
     nstates++;
     res = states + time;
     memset(res, 0, sizeof * res);
@@ -186,8 +187,9 @@ static int encode()
 
     if (time) {
         prev = res - 1;
-        for (i = 0; i < model->num_latches; i++)
-        { res->latches[i].lit = prev->latches[i].next; }
+        for (i = 0; i < model->num_latches; i++) {
+            res->latches[i].lit = prev->latches[i].next;
+        }
     } else {
         prev = 0;
         for (i = 0; i < model->num_latches; i++) {
@@ -196,8 +198,9 @@ static int encode()
             if (!reset) { lit = -1; }
             else if (reset == 1) { lit = 1; }
             else {
-                if (reset != symbol->lit)
-                { die("can only handle constant or uninitialized reset logic"); }
+                if (reset != symbol->lit) {
+                    die("can only handle constant or uninitialized reset logic");
+                }
                 lit = newvar();
             }
             res->latches[i].lit = lit;
@@ -205,8 +208,9 @@ static int encode()
     }
 
     res->inputs = malloc(model->num_inputs * sizeof * res->inputs);
-    for (i = 0; i < model->num_inputs; i++)
-    { res->inputs[i] = newvar(); }
+    for (i = 0; i < model->num_inputs; i++) {
+        res->inputs[i] = newvar();
+    }
 
     res->ands = malloc(model->num_ands * sizeof * res->ands);
     for (i = 0; i < model->num_ands; i++) {
@@ -216,15 +220,17 @@ static int encode()
         and (lit, import(res, uand->rhs0), import(res, uand->rhs1));
     }
 
-    for (i = 0; i < model->num_latches; i++)
-    { res->latches[i].next = import(res, model->latches[i].next); }
+    for (i = 0; i < model->num_latches; i++) {
+        res->latches[i].next = import(res, model->latches[i].next);
+    }
 
     res->assume = newvar();
 
     if (model->num_bad) {
         res->bad = malloc(model->num_bad * sizeof * res->bad);
-        for (i = 0; i < model->num_bad; i++)
-        { res->bad[i] = import(res, model->bad[i].lit); }
+        for (i = 0; i < model->num_bad; i++) {
+            res->bad[i] = import(res, model->bad[i].lit);
+        }
         if (model->num_bad > 1) {
             res->onebad = newvar();
             add(-res->onebad);
@@ -236,11 +242,13 @@ static int encode()
     if (model->num_constraints) {
         res->constraints =
             malloc(model->num_constraints * sizeof * res->constraints);
-        for (i = 0; i < model->num_constraints; i++)
-        { res->constraints[i] = import(res, model->constraints[i].lit); }
+        for (i = 0; i < model->num_constraints; i++) {
+            res->constraints[i] = import(res, model->constraints[i].lit);
+        }
         res->sane = newvar();
-        for (i = 0; i < model->num_constraints; i++)
-        { binary(-res->sane, res->constraints[i]); }
+        for (i = 0; i < model->num_constraints; i++) {
+            binary(-res->sane, res->constraints[i]);
+        }
         if (time) { binary(-res->sane, prev->sane); }
         binary(-res->assume, res->sane);
     }
@@ -251,8 +259,9 @@ static int encode()
         for (i = 0; i < model->num_justice; i++) {
             res->justice[i].lits =
                 malloc(model->justice[i].size * sizeof * res->justice[i].lits);
-            for (j = 0; j < model->justice[i].size; j++)
-            { res->justice[i].lits[j].lit = import(res, model->justice[i].lits[j]); }
+            for (j = 0; j < model->justice[i].size; j++) {
+                res->justice[i].lits[j].lit = import(res, model->justice[i].lits[j]);
+            }
         }
 
         res->join = newvar();
@@ -282,8 +291,9 @@ static int encode()
                 add(0);
             }
             res->justice[i].sat = newvar();
-            for (j = 0; j < model->justice[i].size; j++)
-            { binary(-res->justice[i].sat, res->justice[i].lits[j].sat); }
+            for (j = 0; j < model->justice[i].size; j++) {
+                binary(-res->justice[i].sat, res->justice[i].lits[j].sat);
+            }
         }
         if (model->num_justice > 1) {
             res->onejustified = newvar();
@@ -295,8 +305,9 @@ static int encode()
 
     if (model->num_justice && model->num_fairness) {
         res->fairness = malloc(model->num_fairness * sizeof * res->fairness);
-        for (i = 0; i < model->num_fairness; i++)
-        { res->fairness[i].lit = import(res, model->fairness[i].lit); }
+        for (i = 0; i < model->num_fairness; i++) {
+            res->fairness[i].lit = import(res, model->fairness[i].lit);
+        }
         for (i = 0; i < model->num_fairness; i++) {
             res->fairness[i].sat = newvar();
             add(-res->fairness[i].sat);
@@ -310,8 +321,9 @@ static int encode()
         }
         if (model->num_fairness > 1) {
             res->allfair = newvar();
-            for (i = 0; i < model->num_fairness; i++)
-            { binary(-res->allfair, res->fairness[i].sat); }
+            for (i = 0; i < model->num_fairness; i++) {
+                binary(-res->allfair, res->fairness[i].sat);
+            }
         } else { res->allfair = res->fairness[0].sat; }
 
         binary(-res->onejustified, res->allfair);
@@ -369,13 +381,13 @@ int main(int argc, char ** argv)
         else if (!strcmp(argv[i], "-m")) { move = 1; }
         else if (!strcmp(argv[i], "-n")) { nowitness = 1; }
         else if (!strcmp(argv[i], "-q")) { quiet = 1; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (name && maxk >= 0)
-        { die("unexpected argument '%s'", argv[i]); }
-        else if (name && !isnum(argv[i]))
-        { die("expected number got '%s'", argv[i]); }
-        else if (maxk < 0 && isnum(argv[i])) { maxk = atoi(argv[i]); }
+        else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (name && maxk >= 0) {
+            die("unexpected argument '%s'", argv[i]);
+        } else if (name && !isnum(argv[i])) {
+            die("expected number got '%s'", argv[i]);
+        } else if (maxk < 0 && isnum(argv[i])) { maxk = atoi(argv[i]); }
         else { name = argv[i]; }
     }
     if (maxk < 0) { maxk = 10; }
@@ -399,16 +411,17 @@ int main(int argc, char ** argv)
         wrn("%u fairness constraints but no justice properties",
             model->num_fairness);
     if (move) {
-        if (model->num_bad)
-        { wrn("will not move outputs if bad state properties exists"); }
-        else if (model->num_constraints)
-        { wrn("will not move outputs if environment constraints exists"); }
-        else if (!model->outputs)
-        { wrn("not outputs to move"); }
-        else {
+        if (model->num_bad) {
+            wrn("will not move outputs if bad state properties exists");
+        } else if (model->num_constraints) {
+            wrn("will not move outputs if environment constraints exists");
+        } else if (!model->outputs) {
+            wrn("not outputs to move");
+        } else {
             wrn("using %u outputs as bad state properties", model->num_outputs);
-            for (i = 0; i < model->num_outputs; i++)
-            { aiger_add_bad(model, model->outputs[i].lit, 0); }
+            for (i = 0; i < model->num_outputs; i++) {
+                aiger_add_bad(model, model->outputs[i].lit, 0);
+            }
         }
     }
     msg(1, "BCJF = %u %u %u %u",
@@ -429,8 +442,9 @@ int main(int argc, char ** argv)
     unit(newvar()), assert(nvars == 1);
     if (model->num_justice) {
         join = malloc(model->num_latches * sizeof * join);
-        for (i = 0; i < model->num_latches; i++)
-        { join[i] = newvar(); }
+        for (i = 0; i < model->num_latches; i++) {
+            join[i] = newvar();
+        }
     }
     for (k = 0; k <= maxk; k++) {
         lit = encode();
@@ -446,20 +460,24 @@ int main(int argc, char ** argv)
         found = 0;
         assert(nstates == k + 1);
         for (i = 0; i < model->num_bad; i++)
-            if (deref(states[k].bad[i]) > 0)
-            { printf("b%d", i), found++; }
+            if (deref(states[k].bad[i]) > 0) {
+                printf("b%d", i), found++;
+            }
         for (i = 0; i < model->num_justice; i++)
-            if (deref(states[k].justice[i].sat) > 0)
-            { printf("j%d", i), found++; }
+            if (deref(states[k].justice[i].sat) > 0) {
+                printf("j%d", i), found++;
+            }
         assert(found);
         assert(model->num_bad || model->num_justice);
         nl();
-        for (i = 0; i < model->num_latches; i++)
-        { print(states[0].latches[i].lit); }
+        for (i = 0; i < model->num_latches; i++) {
+            print(states[0].latches[i].lit);
+        }
         nl();
         for (i = 0; i <= k; i++) {
-            for (j = 0; j < model->num_inputs; j++)
-            { print(states[i].inputs[j]); }
+            for (j = 0; j < model->num_inputs; j++) {
+                print(states[i].inputs[j]);
+            }
             nl();
         }
         printf(".\n");

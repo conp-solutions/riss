@@ -17,8 +17,9 @@ namespace Coprocessor
 void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
     FILE* f = fopen(file, "wr");
-    if (f == NULL)
-    { fprintf(stderr, "could not open file %s\n", file), exit(1); }
+    if (f == NULL) {
+        fprintf(stderr, "could not open file %s\n", file), exit(1);
+    }
     printFormula(f);
     fclose(f);
 }
@@ -84,8 +85,9 @@ inline void Preprocessor::printClause(FILE * fd, CRef cr)
     Clause& c = ca[cr];
     if (c.mark()) { return; }
     stringstream s;
-    for (int i = 0; i < c.size(); ++i)
-    { s << c[i] << " "; }
+    for (int i = 0; i < c.size(); ++i) {
+        s << c[i] << " ";
+    }
     s << "0" << endl;
 
     fprintf(fd, "%s", s.str().c_str());
@@ -94,10 +96,11 @@ inline void Preprocessor::printClause(FILE * fd, CRef cr)
 
 inline void Preprocessor::printLit(FILE * fd, int l)
 {
-    if (l % 2 == 0)
-    { fprintf(fd, "%i ", (l / 2) + 1); }
-    else
-    { fprintf(fd, "-%i ", (l / 2) + 1); }
+    if (l % 2 == 0) {
+        fprintf(fd, "%i ", (l / 2) + 1);
+    } else {
+        fprintf(fd, "-%i ", (l / 2) + 1);
+    }
 }
 
 

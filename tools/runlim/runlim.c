@@ -121,10 +121,12 @@ isposnumber(const char *str)
     int res;
 
     if (*str) {
-        for (res = 1, p = str; res && *p; p++)
-        { res = isdigit((int) * p); }
-    } else
-    { res = 0; }
+        for (res = 1, p = str; res && *p; p++) {
+            res = isdigit((int) * p);
+        }
+    } else {
+        res = 0;
+    }
 
     return res;
 }
@@ -137,10 +139,11 @@ parse_number_argument(int *i, int argc, char **argv)
     unsigned res;
 
     if (argv[*i][2]) {
-        if (isposnumber(argv[*i] + 2))
-        { res = (unsigned) atoi(argv[*i] + 2); }
-        else
-        { goto ARGUMENT_IS_MISSING; }
+        if (isposnumber(argv[*i] + 2)) {
+            res = (unsigned) atoi(argv[*i] + 2);
+        } else {
+            goto ARGUMENT_IS_MISSING;
+        }
     } else if (*i + 1 < argc && isposnumber(argv[*i + 1])) {
         res = (unsigned) atoi(argv[*i + 1]);
         *i += 1;
@@ -165,8 +168,9 @@ print_long_command_line_option(FILE * file, char *str)
 {
     const char *p;
 
-    for (p = str; *p && *p != ' '; p++)
-    { fputc(*p, file); }
+    for (p = str; *p && *p != ' '; p++) {
+        fputc(*p, file);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -321,8 +325,9 @@ add_child(Proc * parent, Proc * child)
     }
     new->child = child;
     for (walk = &parent->children; *walk; walk = &(*walk)->next)
-        if ((*walk)->child->pid > child->pid)
-        { break; }
+        if ((*walk)->child->pid > child->pid) {
+            break;
+        }
 
     new->next = *walk;
     *walk = new;
@@ -336,8 +341,9 @@ find_proc(pid_t pid)
     Proc *p;
 
     for (p = proc_list; p; p = p->next)
-        if (p->pid == pid)
-        { break; }
+        if (p->pid == pid) {
+            break;
+        }
 
     return p;
 }
@@ -369,9 +375,9 @@ add_proc(pid_t pid, pid_t ppid, long unsigned sjiffies,
 {
     Proc *this, *parent;
 
-    if (!(this = find_proc(pid)))
-    { this = new_proc(pid, ppid, sjiffies, ujiffies, vsize, rsize); }
-    else {
+    if (!(this = find_proc(pid))) {
+        this = new_proc(pid, ppid, sjiffies, ujiffies, vsize, rsize);
+    } else {
         /* was already there, update sjiffies, ujiffies, vsize, rsize */
         this->sjiffies = sjiffies;
         this->ujiffies = ujiffies;
@@ -384,11 +390,13 @@ add_proc(pid_t pid, pid_t ppid, long unsigned sjiffies,
         return;
     }
 
-    if (pid == ppid)
-    { ppid = 0; }
+    if (pid == ppid) {
+        ppid = 0;
+    }
 
-    if (!(parent = find_proc(ppid)))
-    { parent = new_proc(ppid, 0, 0, 0, 0, 0); }
+    if (!(parent = find_proc(ppid))) {
+        parent = new_proc(ppid, 0, 0, 0, 0, 0);
+    }
 
     add_child(parent, this);
     this->parent = parent;
@@ -423,8 +431,9 @@ SKIP:
     while ((de = readdir(dir)) != NULL) {
         empty = 0;
         if ((pid = (pid_t) atoi(de->d_name)) == 0) { continue; }
-        if (!(path = malloc(strlen(Proc_BASE) + strlen(de->d_name) + 10)))
-        { continue; }
+        if (!(path = malloc(strlen(Proc_BASE) + strlen(de->d_name) + 10))) {
+            continue;
+        }
         sprintf(path, "%s/%d/stat", Proc_BASE, pid);
         file = fopen(path, "r");
         free(path);
@@ -433,8 +442,9 @@ SKIP:
         pos = 0;
 
         while ((ch = getc(file)) != EOF) {
-            if (pos >= size - 1)
-            { buffer = realloc(buffer, size *= 2); }
+            if (pos >= size - 1) {
+                buffer = realloc(buffer, size *= 2);
+            }
 
             buffer[pos++] = ch;
         }
@@ -515,8 +525,9 @@ sample_children(Child *cptr, double *time_ptr, double *mb_ptr)
         #ifdef DEBUGSAMPLE
         fprintf(log, "timeptr(new) %f\n", *time_ptr);
         #endif
-        if (cptr->child->children)
-        { sample_children(cptr->child->children, time_ptr, mb_ptr); }
+        if (cptr->child->children) {
+            sample_children(cptr->child->children, time_ptr, mb_ptr);
+        }
 
         cptr = cptr->next;
     }
@@ -537,14 +548,16 @@ sample_recursive(double *time_ptr, double *mb_ptr)
     read_proc();
     pr = find_proc(child_pid);
 
-    if (!pr)
-    { return 0; }
+    if (!pr) {
+        return 0;
+    }
 
     *time_ptr = (pr->ujiffies + pr->sjiffies) / (double) HZ;
     *mb_ptr = pr->rsize / (double)(1 << 8);
 
-    if (pr->children)
-    { sample_children(pr->children, time_ptr, mb_ptr); }
+    if (pr->children) {
+        sample_children(pr->children, time_ptr, mb_ptr);
+    }
 
     delete_proc();
 
@@ -627,17 +640,20 @@ sampler(int s)
     res = sample_recursive(&time, &mb);
 
     if (res) {
-        if (mb > max_mb)
-        { max_mb = mb; }
+        if (mb > max_mb) {
+            max_mb = mb;
+        }
 
-        if (time > max_seconds)
-        { max_seconds = time; }
+        if (time > max_seconds) {
+            max_seconds = time;
+        }
     }
 
     if (++num_samples_since_last_report >= REPORT_RATE) {
         num_samples_since_last_report = 0;
-        if (res)
-        { report(time, mb); }
+        if (res) {
+            report(time, mb);
+        }
     }
 
     if (res) {
@@ -722,10 +738,11 @@ main(int argc, char **argv)
             } else if (argv[i][1] == '2') {
                 err = argv[++i];
             } else if (argv[i][1] == 'o') {
-                if (argv[i][2])
-                { log = open_log(argv[i] + 2, "-o"); }
-                else
-                { log = open_log(i + 1 >= argc ? 0 : argv[++i], "-o"); }
+                if (argv[i][2]) {
+                    log = open_log(argv[i] + 2, "-o");
+                } else {
+                    log = open_log(i + 1 >= argc ? 0 : argv[++i], "-o");
+                }
             } else if (strstr(argv[i], "--output-file=") == argv[i]) {
                 p = strchr(argv[i], '=');
                 assert(p);
@@ -735,8 +752,9 @@ main(int argc, char **argv)
                         argv[i]);
                 exit(1);
             }
-        } else
-        { break; }
+        } else {
+            break;
+        }
     }
 
     if (i >= argc) {
@@ -744,8 +762,9 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    if (!log)
-    { log = stderr; }
+    if (!log) {
+        log = stderr;
+    }
 
     fprintf(log, "[runlim] version:\t\t%s\n", VERSION);
     fprintf(log, "[runlim] time limit:\t\t%u seconds\n", time_limit);
@@ -753,8 +772,9 @@ main(int argc, char **argv)
     fprintf(log, "[runlim] space limit:\t\t%u MB\n", space_limit);
     if (file_size_limit != -1) { fprintf(log, "[runlim] file size limit:\t\t%u MB\n", file_size_limit); }
     fprintf(log, "[runlim] sample rate:\t\t%u mil1iseconds\n", (SAMPLE_RATE / 1000));
-    for (j = i; j < argc; j++)
-    { fprintf(log, "[runlim] argv[%d]:\t\t%s\n", j - i, argv[j]); }
+    for (j = i; j < argc; j++) {
+        fprintf(log, "[runlim] argv[%d]:\t\t%s\n", j - i, argv[j]);
+    }
     t = time(0);
     fprintf(log, "[runlim] start:\t\t\t%s", ctime(&t));
     fflush(log);
@@ -798,9 +818,9 @@ main(int argc, char **argv)
 
             setitimer(ITIMER_REAL, &old_timer, &timer);
 
-            if (WIFEXITED(status))
-            { res = WEXITSTATUS(status); }
-            else if (WIFSIGNALED(status)) {
+            if (WIFEXITED(status)) {
+                res = WEXITSTATUS(status);
+            } else if (WIFSIGNALED(status)) {
                 s = WTERMSIG(status);
                 res = 128 + s;
                 switch (s) {
@@ -881,8 +901,9 @@ main(int argc, char **argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
@@ -891,8 +912,9 @@ main(int argc, char **argv)
             getrlimit(RLIMIT_FSIZE, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_file_lim < rl.rlim_max) {
                 rl.rlim_cur = new_file_lim;
-                if (setrlimit(RLIMIT_FSIZE, &rl) == -1)
-                { printf("WARNING! Could not set resource limit: File size.\n"); }
+                if (setrlimit(RLIMIT_FSIZE, &rl) == -1) {
+                    printf("WARNING! Could not set resource limit: File size.\n");
+                }
             }
 
         }
@@ -904,19 +926,21 @@ main(int argc, char **argv)
 
     real = real_time();
 
-    if (caught_usr1_signal)
-    { ok = EXEC_FAILED; }
-    else if (caught_out_of_memory)
-    { ok = OUT_OF_MEMORY; }
-    else if (caught_out_of_time)
-    { ok = OUT_OF_TIME; }
+    if (caught_usr1_signal) {
+        ok = EXEC_FAILED;
+    } else if (caught_out_of_memory) {
+        ok = OUT_OF_MEMORY;
+    } else if (caught_out_of_time) {
+        ok = OUT_OF_TIME;
+    }
 
     t = time(0);
     fprintf(log, "[runlim] end:\t\t\t%s", ctime(&t));
     fprintf(log, "[runlim] status:\t\t");
 
-    if (max_seconds >= time_limit || real_time() >= real_time_limit)
-    { goto FORCE_OUT_OF_TIME_ENTRY; }
+    if (max_seconds >= time_limit || real_time() >= real_time_limit) {
+        goto FORCE_OUT_OF_TIME_ENTRY;
+    }
 
     switch (ok) {
     case OK:

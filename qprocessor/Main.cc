@@ -116,8 +116,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -128,17 +129,20 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
-        if (argc == 1)
-        { printf("c Reading from standard input... Use '--help' for help.\n"); }
+        if (argc == 1) {
+            printf("c Reading from standard input... Use '--help' for help.\n");
+        }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL)
-        { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+        if (in == NULL) {
+            printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+        }
 
         if (S.verbosity > 0) {
             printf("c ========================[ Qprocessor %s %13s ]====================\n", solverVersion, gitSHA1);
@@ -162,8 +166,9 @@ int main(int argc, char** argv)
         }
 
         double parsed_time = cpuTime();
-        if (S.verbosity > 0)
-        { printf("c |  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time); }
+        if (S.verbosity > 0) {
+            printf("c |  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+        }
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
@@ -185,8 +190,9 @@ int main(int argc, char** argv)
         // do coprocessing here!
 
         if (dimacs) {
-            if (S.verbosity > 0)
-            { printf("c ==============================[ Writing QDIMACS ]===============================\n"); }
+            if (S.verbosity > 0) {
+                printf("c ==============================[ Writing QDIMACS ]===============================\n");
+            }
 
             if (beforeVariables < S.nVars()) { printf("c add %d extra variables to the prefix\n", S.nVars() - beforeVariables); }
 

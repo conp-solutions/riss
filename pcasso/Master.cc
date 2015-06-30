@@ -181,8 +181,9 @@ Master::main(int argc, char **argv)
         fprintf(stderr, "The output file name should be %s\n", argv[2]);
     }
     // push the root node to the solve and split queues
-    if (!plainpart)
-    { solveQueue.push_back(&root); }
+    if (!plainpart) {
+        solveQueue.push_back(&root);
+    }
 
     splitQueue.push_back(&root);
 
@@ -227,8 +228,9 @@ int Master::run()
                 threadData[i].s = idle;
                 threadData[i].result = 0;
                 threadData[i].nodeToSolve = 0;
-                if (threadData[i].solver != NULL)
-                { delete threadData[i].solver; }
+                if (threadData[i].solver != NULL) {
+                    delete threadData[i].solver;
+                }
                 threadData[i].solver = NULL;
                 if (threadData[i].handle != 0) { pthread_join(threadData[i].handle, NULL); }
                 threadData[i].handle = 0;
@@ -255,7 +257,7 @@ int Master::run()
         } else if (MSverbosity > 0) {
             fprintf(stderr, "STATE: solveQ: %d, splitQ: %d  -- Threads: i: %d, s: %d w: %d u: %d \n", (int)solveQueue.size(), (int)splitQueue.size(), idles, splitters, workers, uncleans);
         }
-        if (MSverbosity > 3)  { root.print(); } // might become quite huge
+        if (MSverbosity > 3) { root.print(); } // might become quite huge
 
         // uncleans have been turned into idle again
         idles = idles + uncleans;
@@ -463,8 +465,9 @@ int Master::run()
                 }
                  */
                 for (int i = 0; i < maxVar; i++) {
-                    if ((*model)[i] != l_Undef)
-                    { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1); }
+                    if ((*model)[i] != l_Undef) {
+                        fprintf(res, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1);
+                    }
                     /*
                     else
                     fprintf(res, "%s%s%d", (i==0)?"":" ", (true)?"":"-", i+1);
@@ -479,8 +482,9 @@ int Master::run()
                 }
                  */
                 for (int i = 0; i < maxVar; i++) {
-                    if ((*model)[i] != l_Undef)
-                    { fprintf(stdout, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1); }
+                    if ((*model)[i] != l_Undef) {
+                        fprintf(stdout, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1);
+                    }
                     /*
                     else
                     fprintf(res, "%s%s%d", (i==0)?"":" ", (true)?"":"-", i+1);
@@ -499,8 +503,8 @@ int Master::run()
             fprintf(stdout, "s UNSATISFIABLE\n");
         } else {
             fprintf(stdout, "s INDETERMINATE\n");
-
         }
+
 
         // fclose(out_state_file); // Davide> for statistics
 
@@ -555,8 +559,9 @@ int Master::run()
         ts.tv_nsec = -1;
     }
 
-    if (MSverbosity > 0)
-    { fprintf(stderr, "c Waited for threads for %f secs\n", (ts.tv_sec + ts.tv_nsec / 1000000000.0) - canc_t); }
+    if (MSverbosity > 0) {
+        fprintf(stderr, "c Waited for threads for %f secs\n", (ts.tv_sec + ts.tv_nsec / 1000000000.0) - canc_t);
+    }
 
     if (MSverbosity > 2 || printTree) {
         fprintf(stderr, "\n\nfinal tree:\n");
@@ -1137,12 +1142,14 @@ Master::splitInstance(void* data)
     } else {
         // simply set the node to the unknown state
         tData.nodeToSolve->setState(TreeNode::unknown);
-        for (unsigned int i = 0; i < validConstraints.size(); i++)
-        { tData.nodeToSolve->addNodeConstraint(validConstraints[i]); }
+        for (unsigned int i = 0; i < validConstraints.size(); i++) {
+            tData.nodeToSolve->addNodeConstraint(validConstraints[i]);
+        }
         // expand the node
         tData.nodeToSolve->expand(childConstraints);
-        for (unsigned int i = 0; i < childConstraints.size(); i++)
-        { delete childConstraints[i]; }
+        for (unsigned int i = 0; i < childConstraints.size(); i++) {
+            delete childConstraints[i];
+        }
         // add childs to both queues
         for (unsigned int i = 0 ; i < tData.nodeToSolve->size(); ++ i) {
             master.addNode(tData.nodeToSolve->getChild(i));
@@ -1169,8 +1176,9 @@ void
 Master::addNode(TreeNode* t)
 {
     solveQueue.push_back(t);
-    if (!plainpart)
-    { splitQueue.push_back(t); }
+    if (!plainpart) {
+        splitQueue.push_back(t);
+    }
 }
 
 void
@@ -1199,8 +1207,9 @@ Master::varCnt() const
 
 void Master::notify()
 {
-    if (MSverbosity > 0)
-    { fprintf(stderr, "wake up master with %d waiters\n", sleepLock.getWaiters()); }
+    if (MSverbosity > 0) {
+        fprintf(stderr, "wake up master with %d waiters\n", sleepLock.getWaiters());
+    }
     // do nothing, if master is already working
     //while( masterState == sleeping ){
     // otherwise wake it up
@@ -1236,9 +1245,9 @@ int
 Master::parseFormula(string filename)
 {
     gzFile in = (filename.size() == 0) ? gzdopen(0, "rb") : gzopen(filename.c_str(), "rb");
-    if (in == NULL)
-    { fprintf(stderr, "ERROR! Could not open file: %s\n", filename.size() == 0 ? "<stdin>" : filename.c_str()), exit(1); }
-    else {
+    if (in == NULL) {
+        fprintf(stderr, "ERROR! Could not open file: %s\n", filename.size() == 0 ? "<stdin>" : filename.c_str()), exit(1);
+    } else {
         // open file
         StreamBuffer stream(in);
         //parse_DIMACS_main(stream, S);
@@ -1260,9 +1269,9 @@ Master::parseFormula(string filename)
                 } else {
                     fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *stream), exit(3);
                 }
-            } else if (*stream == 'c' || *stream == 'p')
-            { skipLine(stream); }
-            else {
+            } else if (*stream == 'c' || *stream == 'p') {
+                skipLine(stream);
+            } else {
                 // parse the clause
                 cnt++;
                 // readClause(in, lits);

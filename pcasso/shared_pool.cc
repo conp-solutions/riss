@@ -31,10 +31,11 @@ void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size)
     // Remove duplicates
     Lit p; int i, j;
     for (i = j = 0, p = lit_Undef; i < c.lits.size(); i++)
-        if (c.lits[i] == ~p)   // contains a tautology
-        { return; }
-        else if (c.lits[i] != p)   // No duplicated
-        { c.lits[j++] = p = c.lits[i]; }
+        if (c.lits[i] == ~p) { // contains a tautology
+            return;
+        } else if (c.lits[i] != p) { // No duplicated
+            c.lits[j++] = p = c.lits[i];
+        }
     c.lits.shrink_(i - j);
 
     #ifndef NDEBUG

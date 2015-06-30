@@ -52,7 +52,7 @@ Lit Sls::heuristic()
     for (int i = 1; i < cl.size(); ++ i) {
         int thisBreak =   varData[ var(cl[i]) ].breakCount;
 
-        if (thisBreak > smallestBreak)  { continue; }
+        if (thisBreak > smallestBreak) { continue; }
 
         if (thisBreak == smallestBreak) {
             data.lits.push_back(cl[i]);

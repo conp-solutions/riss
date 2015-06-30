@@ -182,8 +182,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -194,17 +195,20 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
-        if (argc == 1)
-        { printf("c Reading from standard input... Use '--help' for help.\n"); }
+        if (argc == 1) {
+            printf("c Reading from standard input... Use '--help' for help.\n");
+        }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL)
-        { printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+        if (in == NULL) {
+            printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+        }
 
         // open file for proof
         S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
@@ -262,11 +266,13 @@ int main(int argc, char** argv)
         }
 
         if (dimacs) {
-            if (S.verbosity > 0)
-            { printf("c =======================================[ Writing DIMACS ]===============================================\n"); }
+            if (S.verbosity > 0) {
+                printf("c =======================================[ Writing DIMACS ]===============================================\n");
+            }
             S.toDimacs((const char*)dimacs);
-            if (S.verbosity > 0)
-            { printStats(S); }
+            if (S.verbosity > 0) {
+                printStats(S);
+            }
             exit(0);
         }
 
@@ -301,7 +307,9 @@ int main(int argc, char** argv)
                 else { fprintf(res, "s SATISFIABLE\nv "); }
                 for (int i = 0; i < S.model.size(); i++)
                     //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
-                { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                {
+                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                }
                 fprintf(res, " 0\n");
             } else if (ret == l_False) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
@@ -316,7 +324,9 @@ int main(int argc, char** argv)
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
-            { printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+            {
+                printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+            }
             printf(" 0\n");
         }
 

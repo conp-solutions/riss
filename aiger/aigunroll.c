@@ -104,16 +104,19 @@ build_rec(unsigned lit)
                 l = build_rec( and ->rhs0);
                 r = build_rec( and ->rhs1);
                 res = simpaig_and(mgr, l, r);
-            } else
-            { res = simpaig_var(mgr, lois + idx, 0); }
-        } else
-        { res = simpaig_false(mgr); }
+            } else {
+                res = simpaig_var(mgr, lois + idx, 0);
+            }
+        } else {
+            res = simpaig_false(mgr);
+        }
 
         lois[idx].aig = res;
     }
 
-    if (sign)
-    { res = simpaig_not(res); }
+    if (sign) {
+        res = simpaig_not(res);
+    }
 
     return res;
 }
@@ -318,18 +321,21 @@ next_symbol(unsigned idx, int slice)
 
     if (size_buffer < len) {
         if (size_buffer) {
-            while (size_buffer < len)
-            { size_buffer *= 2; }
+            while (size_buffer < len) {
+                size_buffer *= 2;
+            }
 
             buffer = realloc(buffer, size_buffer);
-        } else
-        { buffer = malloc(size_buffer = len); }
+        } else {
+            buffer = malloc(size_buffer = len);
+        }
     }
 
-    if (unsliced_name)
-    { sprintf(buffer, "%d %s %u", slice, unsliced_name, pos); }
-    else
-    { sprintf(buffer, "%d %u %u", slice, 2 * idx, pos); }
+    if (unsliced_name) {
+        sprintf(buffer, "%d %s %u", slice, unsliced_name, pos);
+    } else {
+        sprintf(buffer, "%d %u %u", slice, 2 * idx, pos);
+    }
 
     return buffer;
 }
@@ -347,8 +353,9 @@ copyaig(simpaig * aig)
 
     aig = simpaig_strip(aig);
     idx = simpaig_index(aig);
-    if (!idx || aigs[idx])
-    { return; }
+    if (!idx || aigs[idx]) {
+        return;
+    }
 
     aigs[idx] = aig;
     if (simpaig_isand(aig)) {
@@ -416,47 +423,54 @@ main(int argc, char **argv)
         for (p = argv[i]; isdigit(*p); p++)
             ;
 
-        if (!*p)
-        { k = atoi(argv[i]); }
-        else if (!strcmp(argv[i], "-h")) {
+        if (!*p) {
+            k = atoi(argv[i]);
+        } else if (!strcmp(argv[i], "-h")) {
             fprintf(stderr, USAGE);
             exit(0);
-        } else if (!strcmp(argv[i], "-a"))
-        { ascii = 1; }
-        else if (!strcmp(argv[i], "-s"))
-        { strip = 1; }
-        else if (!strcmp(argv[i], "-v"))
-        { verbose++; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (!src)
-        { src = argv[i]; }
-        else if (!dst)
-        { dst = argv[i]; }
-        else
-        { die("too many files"); }
+        } else if (!strcmp(argv[i], "-a")) {
+            ascii = 1;
+        } else if (!strcmp(argv[i], "-s")) {
+            strip = 1;
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose++;
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (!src) {
+            src = argv[i];
+        } else if (!dst) {
+            dst = argv[i];
+        } else {
+            die("too many files");
+        }
     }
 
-    if (ascii && dst)
-    { die("'dst' file and '-a' specified"); }
+    if (ascii && dst) {
+        die("'dst' file and '-a' specified");
+    }
 
-    if (!ascii && !dst && isatty(1))
-    { ascii = 1; }
+    if (!ascii && !dst && isatty(1)) {
+        ascii = 1;
+    }
 
-    if (src && dst && !strcmp(src, dst))
-    { die("identical 'src' and 'dst' file"); }
+    if (src && dst && !strcmp(src, dst)) {
+        die("identical 'src' and 'dst' file");
+    }
 
     model = aiger_init();
-    if (src)
-    { err = aiger_open_and_read_from_file(model, src); }
-    else
-    { err = aiger_read_from_file(model, stdin); }
+    if (src) {
+        err = aiger_open_and_read_from_file(model, src);
+    } else {
+        err = aiger_read_from_file(model, stdin);
+    }
 
-    if (!src)
-    { src = "<stdin>"; }
+    if (!src) {
+        src = "<stdin>";
+    }
 
-    if (err)
-    { die("%s: %s", src, err); }
+    if (err) {
+        die("%s: %s", src, err);
+    }
 
     msg("read MILOA %u %u %u %u %u",
         model->maxvar,
@@ -465,10 +479,12 @@ main(int argc, char **argv)
         model->num_outputs,
         model->num_ands);
 
-    if (model->num_bad)
-    { die("can not handle bad state properties (use 'aigmove')"); }
-    if (model->num_constraints)
-    { die("can not handle environment constraints (use 'aigmove')"); }
+    if (model->num_bad) {
+        die("can not handle bad state properties (use 'aigmove')");
+    }
+    if (model->num_constraints) {
+        die("can not handle environment constraints (use 'aigmove')");
+    }
     if (!model->num_outputs) { die("no output"); }
     if (model->num_outputs > 1) { die("more than one output"); }
     if (model->num_justice) { wrn("ignoring justice properties"); }
@@ -482,8 +498,9 @@ main(int argc, char **argv)
     expand(res);
     simpaig_dec(mgr, res);
 
-    for (i = 0; i <= model->maxvar; i++)
-    { simpaig_dec(mgr, lois[i].aig); }
+    for (i = 0; i <= model->maxvar; i++) {
+        simpaig_dec(mgr, lois[i].aig);
+    }
     assert(!simpaig_current_nodes(mgr));
     simpaig_reset(mgr);
     aiger_reset(model);
@@ -498,8 +515,9 @@ main(int argc, char **argv)
         }
     } else {
         mode = ascii ? aiger_ascii_mode : aiger_binary_mode;
-        if (!aiger_write_to_file(expansion, mode, stdout))
-        { goto WRITE_ERROR; }
+        if (!aiger_write_to_file(expansion, mode, stdout)) {
+            goto WRITE_ERROR;
+        }
     }
 
     aiger_reset(expansion);

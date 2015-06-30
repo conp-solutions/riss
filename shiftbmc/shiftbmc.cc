@@ -18,6 +18,8 @@ IN THE SOFTWARE.
 
 #include "shiftbmc/shiftbmc.h"
 
+using namespace std;
+
 static aiger * model = 0;
 static const char * name = 0;
 
@@ -260,8 +262,9 @@ static int encode(bool actuallyEnode = true)
     aiger_and * u_and;
     unsigned reset;
     int i, j;
-    if (nstates == szstates)
-    { states = (State*)realloc(states, ++szstates * sizeof * states); }
+    if (nstates == szstates) {
+        states = (State*)realloc(states, ++szstates * sizeof * states);
+    }
     nstates++; /// work on next state
     res = states + time;
     memset(res, 0, sizeof * res);
@@ -299,8 +302,9 @@ static int encode(bool actuallyEnode = true)
             else if (reset == 1) { lit = 1; initpos ++; }  // should be true-lit -> use equivalence to !falseLit !
             else {
                 initundef ++;
-                if (reset != symbol->lit)
-                { die("can only handle constant or uninitialized reset logic"); }
+                if (reset != symbol->lit) {
+                    die("can only handle constant or uninitialized reset logic");
+                }
                 lit = newvar();
             }
 
@@ -381,12 +385,14 @@ static int encode(bool actuallyEnode = true)
         if (!didNumConstraints) { cerr << "WARNING: CANNOT HANDLE NUM_CONSTRAINTS YET!" << endl; didNumConstraints = true; }
         res->constraints =
             (int*) malloc(model->num_constraints * sizeof * res->constraints);
-        for (i = 0; i < model->num_constraints; i++)
-        { res->constraints[i] = import(res, model->constraints[i].lit); }
+        for (i = 0; i < model->num_constraints; i++) {
+            res->constraints[i] = import(res, model->constraints[i].lit);
+        }
         res->sane = newvar();
         if (actuallyEnode) {
-            for (i = 0; i < model->num_constraints; i++)
-            { binary(-res->sane, res->constraints[i]); }
+            for (i = 0; i < model->num_constraints; i++) {
+                binary(-res->sane, res->constraints[i]);
+            }
             if (time) { binary(-res->sane, prev->sane); }  /// compare with previous round!
             binary(-res->assume, res->sane);
         }
@@ -542,8 +548,9 @@ int parseOptions(int argc, char ** argv)
                 getrlimit(RLIMIT_AS, &rl);
                 if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                     rl.rlim_cur = new_mem_lim;
-                    if (setrlimit(RLIMIT_AS, &rl) == -1)
-                    { wrn("could not set resource limit: Virtual memory."); }
+                    if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                        wrn("could not set resource limit: Virtual memory.");
+                    }
                 } else {
                     msg(0, "set memory limit to %d MB", memLim);
                 }
@@ -760,10 +767,10 @@ void printState(int k)
 {
     cerr << "c maxVar[" << k << "]:     " << nvars << endl;
     cerr << "c assume[" << k << "]:     " << shiftFormula.currentAssume << endl;
-    cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; } cerr << endl;
-    cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; } cerr << endl;
-    cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; } cerr << endl;
-    cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; } cerr << endl;
+    cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; }  cerr << endl;
+    cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; }  cerr << endl;
+    cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; }  cerr << endl;
+    cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; }  cerr << endl;
     cerr << "c initial max var: " << shiftFormula.initialMaxVar << endl;
     cerr << "c initial after pp max var: " << shiftFormula.afterPPmaxVar << endl;
     cerr << "c merge shift dist: " << shiftFormula.mergeShiftDist << endl;
@@ -810,12 +817,12 @@ int simplifyCNF(int& k, void* preprocessorToUse, double& ppCNFtime)
     // freez input equalitiy variables!
     for (int i = 0 ; i < shiftFormula.initEqualities.size(); i++) {
         if (shiftFormula.initEqualities[i] > 0) { CPfreezeVariable(preprocessorToUse, shiftFormula.initEqualities[i]); }
-        else  { CPfreezeVariable(preprocessorToUse, - shiftFormula.initEqualities[i]); }
+        else { CPfreezeVariable(preprocessorToUse, - shiftFormula.initEqualities[i]); }
     }
     // freez loop equalitiy variables!
     for (int i = 0 ; i < shiftFormula.loopEqualities.size(); i++) {
         if (shiftFormula.loopEqualities[i] > 0) { CPfreezeVariable(preprocessorToUse, shiftFormula.loopEqualities[i]); }
-        else  { CPfreezeVariable(preprocessorToUse, - shiftFormula.loopEqualities[i]); }
+        else { CPfreezeVariable(preprocessorToUse, - shiftFormula.loopEqualities[i]); }
     }
 
     // perform simplification on the formula
@@ -908,7 +915,7 @@ int restoreSimplifyModel(void* usedPreprocessor, std::vector<uint8_t>& model)
     // extend model without copying current model twice
     CPresetModel(usedPreprocessor);   // reset current internal model
     for (int j = 0 ; j < model.size(); ++ j) {
-        if (debugWitness)     { cerr << "c push model " << j << " : " << (model[j] == l_True ? 1 : 0) << endl; }
+        if (debugWitness) { cerr << "c push model " << j << " : " << (model[j] == l_True ? 1 : 0) << endl; }
         CPpushModelBool(usedPreprocessor, model[j]  == l_True ? 1 : 0);
     }
     CPpostprocessModel(usedPreprocessor);
@@ -917,7 +924,7 @@ int restoreSimplifyModel(void* usedPreprocessor, std::vector<uint8_t>& model)
     for (int j = 0 ; j < modelVars; ++ j) {
         uint8_t ret  = CPgetFinalModelLit(usedPreprocessor) > 0 ? l_True : l_False;
         model.push_back(ret);
-        if (debugWitness)     { cerr << "c get model " << j << " : " << (int)ret << endl; }
+        if (debugWitness) { cerr << "c get model " << j << " : " << (int)ret << endl; }
     }
     return modelVars;
 }
@@ -989,8 +996,9 @@ printWitness(int k, int shiftDist, int initialLatchNum)
                 } else {
                     mergeFrameModel.clear();
                     mergeFrameModel.push_back(fullFrameModel[0]);   // copy the constant unit
-                    for (int j = 1; j <= mergeFrameSize; ++ j)
-                    { mergeFrameModel.push_back(fullFrameModel[ localFrame * mergeFrameSize + j]); }   // copy all the other variables for the current (inner) frame
+                    for (int j = 1; j <= mergeFrameSize; ++ j) {
+                        mergeFrameModel.push_back(fullFrameModel[ localFrame * mergeFrameSize + j]);    // copy all the other variables for the current (inner) frame
+                    }
                     // has an inner simplifier been used? then undo its simplifications as well!
                     if (innerPreprocessor != 0) {
                         if (debugWitness) { cerr << "c restore inner model with PP: " << (int)(innerPreprocessor != 0) << endl; }
@@ -1002,9 +1010,9 @@ printWitness(int k, int shiftDist, int initialLatchNum)
                 for (int j = 0; j < shiftFormula.currentBads.size(); j++) {
                     int tlit = shiftFormula.currentBads[j];
                     int v = 0; // by default the bad state is false
-                    if (tlit > 0) { if (mergeFrameModel[ tlit - 1 ] == l_True) { v = 1; } }
-                    else { if (mergeFrameModel[ -tlit - 1 ] == l_False) { v = 1; } }
-                    if (v = 1) { printf("b%d", j), found++;}    // print the current bad state
+                    if (tlit > 0) { if (mergeFrameModel[ tlit - 1 ] == l_True) { v = 1; }  }
+                    else { if (mergeFrameModel[ -tlit - 1 ] == l_False) { v = 1; }  }
+                    if (v = 1) { printf("b%d", j), found++; }   // print the current bad state
                     assert((shiftFormula.currentBads.size() > 1 || found > 0) && "only one output -> find immediately");
                 }
                 if (found > 0) {   // this inner frame is the first frame where things brake
@@ -1101,8 +1109,9 @@ printWitness(int k, int shiftDist, int initialLatchNum)
                     } else {
                         mergeFrameModel.clear();
                         mergeFrameModel.push_back(fullFrameModel[0]);   // copy the constant unit
-                        for (int j = 1; j <= mergeFrameSize; ++ j)
-                        { mergeFrameModel.push_back(fullFrameModel[ localFrame * mergeFrameSize + j]); }   // copy all the other variables for the current (inner) frame
+                        for (int j = 1; j <= mergeFrameSize; ++ j) {
+                            mergeFrameModel.push_back(fullFrameModel[ localFrame * mergeFrameSize + j]);    // copy all the other variables for the current (inner) frame
+                        }
                         // has an inner simplifier been used? then undo its simplifications as well!
                         if (innerPreprocessor != 0) { restoreSimplifyModel(innerPreprocessor, mergeFrameModel); }    // restore model from the inner preprocessor, if an inner preprocessor has been used
                     }
@@ -1123,7 +1132,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
                     for (; latchNumber < witnessLatches.size(); latchNumber++) { // print the actual values!
                         int tlit = witnessLatches[latchNumber];
                         if (tlit > 0) { printV(mergeFrameModel[ tlit - 1 ] == l_False ? -1 : 1); }
-                        else  { printV(mergeFrameModel[ -tlit - 1 ] == l_True ? -1 : 1); }
+                        else { printV(mergeFrameModel[ -tlit - 1 ] == l_True ? -1 : 1); }
                     }
                     if (debugWitness) { cerr << "c print not initialized latches from " << latchNumber << " to " << initialLatchNum << endl; }
                     for (; latchNumber < initialLatchNum; ++ latchNumber) {   // print the latches that might have been removed by ABC
@@ -1172,8 +1181,9 @@ printWitness(int k, int shiftDist, int initialLatchNum)
                     else {
                         mergeFrameModel.clear();
                         mergeFrameModel.push_back(fullFrameModel[0]);   // copy the constant unit
-                        for (int j = 1; j <= mergeFrameSize; ++ j)
-                        { mergeFrameModel.push_back(fullFrameModel[ localFrame * mergeFrameSize + j]); }   // copy all the other variables for the current (inner) frame
+                        for (int j = 1; j <= mergeFrameSize; ++ j) {
+                            mergeFrameModel.push_back(fullFrameModel[ localFrame * mergeFrameSize + j]);    // copy all the other variables for the current (inner) frame
+                        }
                         // has an inner simplifier been used? then undo its simplifications as well!
                         if (innerPreprocessor != 0) { restoreSimplifyModel(innerPreprocessor, mergeFrameModel); }    // restore model from the inner preprocessor, if an inner preprocessor has been used
                     }
@@ -1181,7 +1191,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
                     for (int j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
                         int tlit = shiftFormula.inputs[j];
                         if (tlit > 0) { printV(mergeFrameModel[ tlit - 1 ] == l_False ? -1 : 1); }     // print input j of iteration i
-                        else  { printV(mergeFrameModel[ -tlit - 1 ] == l_True ? -1 : 1); }     // or complementary literal
+                        else { printV(mergeFrameModel[ -tlit - 1 ] == l_True ? -1 : 1); }     // or complementary literal
                     }
                     nl();
                 }
@@ -1196,8 +1206,9 @@ printWitness(int k, int shiftDist, int initialLatchNum)
         // "old" way of printing the witness with all structures from the tool
         assert(nstates == k + 1);
         for (i = 0; i < model->num_bad; i++) {
-            if (deref(states[k].bad[i]) > 0)
-            { printf("b%d", i), found++; }
+            if (deref(states[k].bad[i]) > 0) {
+                printf("b%d", i), found++;
+            }
             // cerr << "c check bad state for: " << states[k].bad[i] << endl;
         }
         assert(found);
@@ -1212,8 +1223,9 @@ printWitness(int k, int shiftDist, int initialLatchNum)
         }
         nl();
         for (i = 0; i <= k; i++) {
-            for (int j = 0; j < model->num_inputs; j++)
-            { print(states[i].inputs[j]); }
+            for (int j = 0; j < model->num_inputs; j++) {
+                print(states[i].inputs[j]);
+            }
             nl();
         }
         printf(".\n");
@@ -1291,8 +1303,9 @@ int main(int argc, char ** argv)
     /**
      *  use ABC for simplification
      */
-    if (nonZeroInitialized == 0  && model->num_outputs != 0 && model->num_inputs != 0)
-    { ABC_simplify(ppAigTime, initialLatchNum); } // measure CPU time, get number of latches in the initial AIG problem
+    if (nonZeroInitialized == 0  && model->num_outputs != 0 && model->num_inputs != 0) {
+        ABC_simplify(ppAigTime, initialLatchNum);    // measure CPU time, get number of latches in the initial AIG problem
+    }
 
     if (initialLatchNum != 0) { cerr << "c set initial latches to " << initialLatchNum << endl; }
 
@@ -1318,8 +1331,9 @@ int main(int argc, char ** argv)
         msg(1, "found %d nonZeroInitialized latches(non: %d, pos %d)\n", nonZeroInitialized2, initundef, initpos);
     }
 
-    if (nonZeroInitialized == 0  && model->num_outputs != 0 && model->num_inputs != 0)
-    { ABC_cleanup(); }
+    if (nonZeroInitialized == 0  && model->num_outputs != 0 && model->num_inputs != 0) {
+        ABC_cleanup();
+    }
 
     // print stats
     msg(0, "encode MILOA = %u %u %u %u %u", model->maxvar, model->num_inputs, model->num_latches, model->num_outputs, model->num_ands);
@@ -1344,16 +1358,17 @@ int main(int argc, char ** argv)
 
     // use output as bad state, if not bad state exists yet!
     if (move) {
-        if (model->num_bad)
-        { wrn("will not move outputs if bad state properties exists"); }
-        else if (model->num_constraints)
-        { wrn("will not move outputs if environment constraints exists"); }
-        else if (!model->outputs)
-        { wrn("not outputs to move"); }
-        else {
+        if (model->num_bad) {
+            wrn("will not move outputs if bad state properties exists");
+        } else if (model->num_constraints) {
+            wrn("will not move outputs if environment constraints exists");
+        } else if (!model->outputs) {
+            wrn("not outputs to move");
+        } else {
             wrn("using %u outputs as bad state properties", model->num_outputs);
-            for (i = 0; i < model->num_outputs; i++)
-            { aiger_add_bad(model, model->outputs[i].lit, 0); }
+            for (i = 0; i < model->num_outputs; i++) {
+                aiger_add_bad(model, model->outputs[i].lit, 0);
+            }
 
 
             msg(1, "after move: BCJF = %u %u %u %u",
@@ -1431,13 +1446,13 @@ int main(int argc, char ** argv)
         if (innerPPConf != 0) {
             if (string(innerPPConf) == "AUTO") {
                 const int ands = model->num_ands, clss = shiftFormula.clauses; // use number of and gates and clauses to select the technique
-                if (clss <   75000   || ands <   28000) { innerPPConf = "BMC_FULL"; }
-                else if (clss <  100000   || ands <   35000) { innerPPConf = "BMC_BVEPRBAST"; }
-                else if (clss <  180000   || ands <   60000) { innerPPConf = "BMC_FULLNOPRB"; }
-                else if (clss <  275000   || ands <  100000) { innerPPConf = "BMC_BVEUHDAST"; }
-                else if (clss <  390000   || ands <  150000) { innerPPConf = "BMC_BVEBVAAST"; }
-                else if (clss < 2000000   || ands <  850000) { innerPPConf = "BMC_BVECLE"; }
-                else if (clss < 2500000   || ands < 1200000) { innerPPConf = "BMC_BEBE"; }
+                if (clss <   75000   || ands <   28000) { string(innerPPConf) = "BMC_FULL"; }
+                else if (clss <  100000   || ands <   35000) { string(innerPPConf) = "BMC_BVEPRBAST"; }
+                else if (clss <  180000   || ands <   60000) { string(innerPPConf) = "BMC_FULLNOPRB"; }
+                else if (clss <  275000   || ands <  100000) { string(innerPPConf) = "BMC_BVEUHDAST"; }
+                else if (clss <  390000   || ands <  150000) { string(innerPPConf) = "BMC_BVEBVAAST"; }
+                else if (clss < 2000000   || ands <  850000) { string(innerPPConf) = "BMC_BVECLE"; }
+                else if (clss < 2500000   || ands < 1200000) { string(innerPPConf) = "BMC_BEBE"; }
                 else { innerPPConf = 0; } // if the formula is too large, disable innerPPconf
             }
 
@@ -1565,13 +1580,13 @@ int main(int argc, char ** argv)
         // if( simplifiedCNF == 0 ) { // use preprocessing setup for inner frame
         if (outerPPConf == 0 || string(outerPPConf) == "AUTO") {
             const int vars = newMaxVar, clss = shiftFormula.clauses; // use number of and gates and clauses to select the technique
-            if (clss <   75000   || vars <   28000) { outerPPConf = "BMC_FULL"; }
-            else if (clss <  100000   || vars <   35000) { outerPPConf = "BMC_BVEPRBAST"; }
-            else if (clss <  180000   || vars <   70000) { outerPPConf = "BMC_FULLNOPRB"; }
-            else if (clss <  275000   || vars <  125000) { outerPPConf = "BMC_BVEUHDAST"; }
-            else if (clss <  390000   || vars <  160000) { outerPPConf = "BMC_BVEBVAAST"; }
-            else if (clss < 2000000   || vars <  840000) { outerPPConf = "BMC_BVECLE"; }
-            else if (clss < 2500000   || vars < 1100000) { outerPPConf = "BMC_BEBE"; }
+            if (clss <   75000   || vars <   28000) { string(outerPPConf) = "BMC_FULL"; }
+            else if (clss <  100000   || vars <   35000) { string(outerPPConf) = "BMC_BVEPRBAST"; }
+            else if (clss <  180000   || vars <   70000) { string(outerPPConf) = "BMC_FULLNOPRB"; }
+            else if (clss <  275000   || vars <  125000) { string(outerPPConf) = "BMC_BVEUHDAST"; }
+            else if (clss <  390000   || vars <  160000) { string(outerPPConf) = "BMC_BVEBVAAST"; }
+            else if (clss < 2000000   || vars <  840000) { string(outerPPConf) = "BMC_BVECLE"; }
+            else if (clss < 2500000   || vars < 1100000) { string(outerPPConf) = "BMC_BEBE"; }
             else { outerPPConf = 0; } // if the formula is too large, disable innerPPconf
         }
         //} else {
