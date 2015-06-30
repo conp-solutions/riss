@@ -1,0 +1,19 @@
+Description of optiriss, submitted by Norbert Manthey to the MAXSAT Evaluation
+
+optiriss is an extension of the MaxSAT Solver Open-WBO (see details below)
+
+As a SAT solver, Riss 5.0.2 is used. Furthermore, the solver has been enabled to
+support incomplete solving, by printing an interpretation for each 
+optimization bound that has been found by the algorithm. 
+
+The solver also allows to simplify the problem before solving it. Yet, the 
+printed model is not (always) correct. However, the reported bounds are correct 
+if simplification is used. The simplification can also be applied to formulas 
+that have only soft unit clauses, and no soft clauses of greater length, as 
+simplification would turn the formulas into this shape.
+
+Running optiriss (best known configuration):
+
+./optiriss -solverConfig=INCSOLVE <formula>
+
+

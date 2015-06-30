@@ -23,6 +23,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using namespace NSPACE;
 
+#include <sstream>
+
 /************************************************************************************************
  //
  // Public methods
@@ -541,15 +543,18 @@ void MaxSAT::printModel()
 
     assert(model.size() != 0);
 
-    printf("v ");
+    std::stringstream s;
+    s << "v ";
+//     printf("v ");
     for (int i = 0; i < model.size(); i++) {
         if (model[i] == l_True) {
-            printf("%d ", i + 1);
+	   s << i+1 << " ";
+//             printf("%d ", i + 1);
         } else {
-            printf("%d ", -(i + 1));
+	  s << -(i+1) << " ";
         }
     }
-    printf("\n");
+    printf("%s\n",s.str().c_str());
 }
 
 // Prints search statistics.

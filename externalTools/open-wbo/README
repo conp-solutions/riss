@@ -1,3 +1,21 @@
+### README for optiriss
+
+optiriss is an extension of the MaxSAT Solver Open-WBO (see details below)
+
+As a SAT solver, Riss 5.0.2 is used. Furthermore, the solver has been enabled to
+support incomplete solving, by printing an interpretation for each 
+optimization bound that has been found by the algorithm. 
+
+The solver also allows to simplify the problem before solving it. Yet, the 
+printed model is not correct. However, the reported bounds are correct if
+simplification is used.
+
+Running optiriss (best known configuration):
+
+./optiriss -solverConfig=INCSOLVE <formula>
+
+
+
 ### README for the Open-WBO MaxSAT Solver
 ### Version 1.3.0 -- 1 January 2015
 
