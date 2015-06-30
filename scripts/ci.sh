@@ -9,7 +9,7 @@
 set -e
 
 # solvers for fuzzchecking
-solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso -model -thread=2')
+solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso -model -threads=2')
 params="-mem-lim=2048"
 
 # directory of this script (in repo/scripts)
@@ -26,6 +26,12 @@ fi
 
 # test debug and release version
 build_types=('Debug' 'Release')
+
+# store exit code for fuzzchecker-runs to provide that debug and release are both build once
+exitcode=0
+# write error msg for fuzz-runs that will be displayed at the bottom of the log
+# but for building errors (there the script exits immediately)
+error_msg=""
 
 for build_type in "${build_types[@]}"
 do
@@ -60,8 +66,16 @@ do
 
         if ! [ $bugs -eq 1 ]
             then
-                echo "fuzzer found bug for $s"
-                exit 1
+                if [ "$error_msg" == "" ]; then
+                    error_msg="fuzzer found bug for: $s ($build_type)"
+                else
+                    error_msg="$error_msg, $s ($build_type)"
+                fi
+            exitcode=1
         fi
     done
+
+    echo $error_msg
 done
+
+exit $exitcode
