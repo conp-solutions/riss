@@ -2,7 +2,10 @@
 build-and-check: 
   script: "scripts/ci.sh"
   only: 
-    - branches
+    # Our monolothic build test runs very long (like 30min)
+    # Therefore we only provide build tests for the master
+    # branch.
+    - master
 
 # We could split the tests in separate tests, but they would possibly executed
 # in parallel. This makes it more complicated. Therefore we we have a single
