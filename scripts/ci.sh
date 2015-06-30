@@ -9,7 +9,7 @@
 set -e
 
 # solvers for fuzzchecking
-solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso -model -thread=2')
+solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso -model -threads=2')
 params="-mem-lim=2048"
 
 # directory of this script (in repo/scripts)
