@@ -86,7 +86,28 @@ void Trainer::solvePCA(string out) {
   cout << "\tProjection accurate:\t\t\t" << pca.check_projection_accurate() << endl;
   
   pca.save(out);
-     
+  
+  
+  cout << "long num_vars_ = " << pca.get_num_variables() << ";" << endl;
+  cout << "long num_records_ = " << pca.get_num_records() << ";" << endl;
+  //cout << "long record_buffer_ = " << pca.get_
+  cout << "std::string solver_ = " << pca.get_solver() << ";" << endl;
+  cout << "bool do_normalize_ = " << pca.get_do_normalize() << ";" << endl;
+  cout << "bool do_bootstrap_ = " << pca.get_do_bootstrap() << ";" << endl;
+  cout << "long num_bootstraps_ = " << pca.get_num_bootstraps() << ";" << endl;
+  cout << "long bootstrap_seed_ = " << pca.get_bootstrap_seed() << ";" << endl;
+  cout << "long num_retained_ = " << pca.get_num_retained() << ";" << endl;
+//   //arma::Mat<double> data_  = pca.get
+//   arma::Col<double> energy_ = pca.get_energy_CC();
+//   arma::Col<double> energy_boot_ = pca.get_energy_boot_CC();
+//   arma::Col<double> eigval_ = pca.get_eigval_CC();
+//   arma::Mat<double> eigval_boot_ = pca.get_eigval_boot_CC();
+//   arma::Mat<double> eigvec_ = pca.get_eigvec_CC();
+//   //arma::Mat<double> proj_eigvec_ = pca.get
+//   arma::Mat<double> princomp_ = pca.get_princomp_CC();
+//   arma::Col<double> mean_ = pca.get_mean_CC();
+//   arma::Col<double> sigma_ = pca.get_sigma_CC();
+    
 }
 
 void Trainer::writeData(string out) {
@@ -120,10 +141,14 @@ void Trainer::writeCC() {
   
   if (ofs.is_open()){
     
+    ofs << "#include <vector>;" << endl;
+    ofs << "using namespace std;" << endl << endl;
+    
     //int's
     ofs << "int amountClasses = " << amountClasses << ";" << endl;
     ofs << "int dimension = " << dimension << ";" << endl;
    
+    //vector's
     ofs << "vector<string> classNames = { " << endl; 
     if (amountClasses > 0){
       for (int i = 0; i < amountClasses-1; ++i) ofs << "\t\"" << classNames[i] << "\"," << endl;

@@ -20,6 +20,7 @@ int main(int argc, char** argv)
 { 
   
   int timeout;
+  double threshold;
   
   try 
   {
@@ -34,11 +35,12 @@ int main(int argc, char** argv)
       ("help,h", 								"Print help messages")
       ("input-files", 		po::value<vector<std::string> >()->required(), 	"Specify input/output-files <times.dat> <features.csv> <output>")
       ("featurecalc,c", 	po::value<std::string>(),			"Select the classes with respect to the time which is needed for the feature-calculation")
-      ("timeout,t", 		po::value<int>(&timeout)->required(),		"timeout")
-      ("method,m",								"Specify the training methods") //TODO
-      ("dim,d", 								"Specify the dimension of the database")
+      ("timeout,t", 		po::value<int>(&timeout)->required(),		"Specify the timeout which is used to select 'solved' instances")
       ("generateheader,g",							"Generates a c++ header file, which is usable in RISS")
-      ("verbose,v",								"Verbose");
+      ("threshold",		po::value<double>(&threshold),			"")//TODO
+      ("method,m",								"Specify the training methods") //TODO
+      ("dim,d", 								"Specify the dimension of the database") //TODO
+      ("verbose,v",								"Verbose"); //TODO
   /////////////////////////////////////////////////////////////////////
 
     po::positional_options_description p;

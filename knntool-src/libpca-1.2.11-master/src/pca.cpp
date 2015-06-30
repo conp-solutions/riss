@@ -365,4 +365,46 @@ void pca::load(const std::string& basename) {
 	set_num_retained(num_retained_);
 }
 
+// //arma::Mat<double> get_data_CC() const;
+// arma::Col<double> pca::get_energy_CC() const{
+//   return energy_;
+// }
+// 
+// arma::Col<double> pca::get_energy_boot_CC() const{
+//   return energy_boot_;
+// }
+// 
+// arma::Col<double> pca::get_eigval_CC() const{
+//   return eigval_;
+// }
+// 
+// arma::Mat<double> pca::get_eigval_boot_CC() const{
+//   return eigval_boot_;
+// }
+// 
+// arma::Mat<double> pca::get_eigvec_CC() const{
+//   return eigvec_;
+// }
+// 
+// //arma::Mat<double> get_proj_eigvec_CC() const;
+// arma::Mat<double> pca::get_princomp_CC() const{
+//   return princomp_;
+// }
+// 
+// arma::Col<double> pca::get_mean_CC() const{
+//   return mean_;
+// }
+// 
+// arma::Col<double> pca::get_sigma_CC() const{
+//   return sigma_;
+// }
+
+void pca::saveCC() {
+  
+  
+  
+  
+  
+}
+
 } // stats
