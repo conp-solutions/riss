@@ -89,7 +89,6 @@ class CoreConfig : public Config
     IntOption opt_inc_restart_level;
 
     DoubleOption opt_garbage_frac;
-    DoubleOption opt_reduce_frac;        // When clause database is reduced, this fraction of learnt clauses are removed              (default 0.5)
 
     IntOption opt_allUipHack;
     DoubleOption opt_vsids_start; // interpolate between VSIDS and VMTF, start value

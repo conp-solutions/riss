@@ -120,6 +120,9 @@ int main(int argc, char** argv)
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
+    IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
+    StringOption opt_tuneFile ("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
+    
     try {
 
         //
@@ -132,6 +135,25 @@ int main(int argc, char** argv)
         foundHelp = cp3config.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
 
+        // print pcs information into file
+        if( 0 != (const char*)opt_tuneFile ) {
+	  FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
+	  fprintf( pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
+	  ::printOptions( pcsFile, opt_tuneLevel );
+	  fprintf( pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
+	  coreConfig.printOptions( pcsFile );
+	  fprintf( pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
+	  cp3config.printOptions( pcsFile );
+	  fprintf( pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
+	  fprintf( pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
+ 	  ::printOptionsDependencies( pcsFile, opt_tuneLevel );
+	  fprintf( pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
+	  coreConfig.printOptionsDependencies( pcsFile );
+	  fprintf( pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
+	  cp3config.printOptionsDependencies( pcsFile );
+	   exit(0);
+	}
+        
         if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);

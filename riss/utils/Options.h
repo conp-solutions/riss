@@ -46,6 +46,11 @@ extern void setHelpPrefixStr(const char* str);
 
 extern void configCall(int argc, char** argv, std::stringstream& s);
 
+// print global options in PCS file format into the given File
+extern void printOptions(FILE* pcsFile, int printLevel = -1);
+// print option dependencies in PCS file format into the given File
+extern void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
+
 //==================================================================================================
 // Options is an abstract class that gives the interface for all types options:
 
@@ -100,18 +105,33 @@ class Option
     virtual bool hasDefaultValue() = 0;                 // check whether the current value corresponds to the default value of the option
     virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
 
+    virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
+    
     int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
     {
         if (dependOnNonDefaultOf == 0) { return 0; }
         return dependOnNonDefaultOf->getDependencyLevel() + 1;
     }
-
+    
     bool isEnabled()
     {
         if (dependOnNonDefaultOf == 0) { return true; }
         else { return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled(); }
     }
 
+    void printOptionsDependencies(FILE* pcsFile, int printLevel) {
+      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
+      if (dependOnNonDefaultOf == 0) { return; } // no dependency
+      
+      char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
+      dependOnNonDefaultOf->getNonDefaultString( defaultAsString, 2047 );
+      assert( strlen( defaultAsString ) < 2047 && "memory overflow" ); 
+      fprintf( pcsFile, "%s   | %s in {%s} #  only active, if %s has not its default value \n", name, dependOnNonDefaultOf->name, defaultAsString, dependOnNonDefaultOf->name);
+    }
+    
+#warning fix this for intoption, do not use for double!
+    virtual void getNonDefaultString( char* buffer, int size ) = 0; // convert the default value into a string
+    
     friend  bool parseOptions(int& argc, char** argv, bool strict);
     friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
     friend  void setUsageHelp(const char* str);
@@ -216,7 +236,23 @@ class DoubleOption : public Option
         }
         #endif
     }
+    
+    void printOptions(FILE* pcsFile, int printLevel) {
+      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
+      
+      // print only, if there is a default
+      // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+      double badd = 0, esub = 0;
+      if( !range.begin_inclusive ) badd = 0.0001;
+      if( !range.end_inclusive ) esub = 0.0001;
+      // always logarithmic
+      fprintf( pcsFile, "%s  {%lf,%lf} [%lf]l   # %s\n", name, range.begin+badd, range.end-esub, defaultValue, description);
+    }
 
+    virtual void getNonDefaultString( char* buffer, int size ) {
+      snprintf(buffer, size, "%lf", defaultValue);
+    }
+    
     void giveRndValue(std::string& optionText)
     {
         double rndV = range.begin_inclusive ? range.begin : range.begin + 0.000001;
@@ -305,6 +341,20 @@ class IntOption : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel) {
+      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
+      
+      // print only, if there is a default
+      // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+      if( range.end - range.begin < 16 ) 
+	fprintf( pcsFile, "%s  {%d,%d} [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+      else 
+	fprintf( pcsFile, "%s  {%d,%d} [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+    }
+    
+    virtual void getNonDefaultString( char* buffer, int size ) {
+      snprintf(buffer, size, "%d", defaultValue);
+    }
 
     void giveRndValue(std::string& optionText)
     {
@@ -393,7 +443,21 @@ class Int64Option : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel) {
+      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
+      
+      // print only, if there is a default
+      // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+      if( range.end - range.begin < 16 ) 
+	fprintf( pcsFile, "%s  {%ld,%ld} [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+      else 
+	fprintf( pcsFile, "%s  {%ld,%ld} [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+    }
 
+    virtual void getNonDefaultString( char* buffer, int size ) {
+      snprintf(buffer, size, "%ld", defaultValue);
+    }
+    
     void giveRndValue(std::string& optionText)
     {
         int64_t rndV = range.begin;
@@ -452,6 +516,20 @@ class StringOption : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel) {
+      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
+      
+      // print only, if there is a default
+      if( defaultValue != 0 ) fprintf( pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description);
+    }
+    
+    virtual void getNonDefaultString( char* buffer, int size ) {
+      if( defaultValue == 0 ) buffer[0] = 0;
+      else {
+	assert( size > strlen( defaultValue ) );
+	strncpy( buffer, defaultValue, size );
+      }
+    }
 
     void giveRndValue(std::string& optionText)
     {
@@ -519,7 +597,17 @@ class BoolOption : public Option
         #endif
     }
 
-
+    void printOptions(FILE* pcsFile, int printLevel) {
+      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
+      
+      fprintf( pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
+    }
+    
+    virtual void getNonDefaultString( char* buffer, int size ) {
+      assert( size > 3 && "cannot print values otherwise" );
+      strncpy( buffer, !defaultValue ? "yes" : "no", size );
+    }
+    
     void giveRndValue(std::string& optionText)
     {
         int r = rand();

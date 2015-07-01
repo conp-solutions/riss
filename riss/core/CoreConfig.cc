@@ -83,9 +83,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_restart_inc(_cr, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr, &opt_restarts_type),
     opt_inc_restart_level(_cr, "irlevel", "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX), optionListPtr, &opt_restarts_type),
 
-    opt_garbage_frac(_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
-
-    opt_reduce_frac(_cat, "reduce-frac", "Remove this quota of learnt clauses when database is reduced",                    0.50, DoubleRange(0, false, 1, true)),
+    opt_garbage_frac(_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, 1, false), optionListPtr),
 
     opt_allUipHack("CORE -- CONFLIG ANALYSIS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) , optionListPtr),
     opt_vsids_start("CORE -- SEARCH", "vsids-s", "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true), optionListPtr),
@@ -104,7 +102,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
     opt_act_based("999HACK", "act-based",    "use activity for learned clauses", false, optionListPtr),
     opt_lbd_core_thresh("999HACK", "lbd-core-th",  "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
-    opt_l_red_frac("999HACK", "reduce-frac",  "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
+    opt_l_red_frac("999HACK", "reduce-frac",  "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, 1, false), optionListPtr),
     opt_keep_permanent_size("999HACK", "size-core", "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
 #warning implement option dependencies
 
@@ -120,7 +118,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 // extra
     opt_act("INIT", "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3) , optionListPtr),
     opt_actStart("INIT", "actStart", "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
-    pot_actDec("INIT", "actDec", "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, HUGE_VAL, true), optionListPtr),
+    pot_actDec("INIT", "actDec", "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, 1, true), optionListPtr),
     actFile("INIT", "actFile", "increase activities of those variables", 0, optionListPtr),
     opt_pol("INIT", "polMode", "invert provided polarities", false , optionListPtr),
     polFile("INIT", "polFile", "use these polarities", 0, optionListPtr),
