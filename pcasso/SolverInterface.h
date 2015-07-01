@@ -11,11 +11,11 @@
 
 namespace Pcasso
 {
-class ISolver
+class SolverInterface
 {
 
   public:
-    virtual ~ISolver()
+    virtual ~SolverInterface()
     {
     }
 

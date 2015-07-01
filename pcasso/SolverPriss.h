@@ -6,22 +6,22 @@
  *
  */
 
-#ifndef SOLVERRISS_H
-#define SOLVERRISS_H
+#ifndef SOLVEPRRISS_H
+#define SOLVEPRRISS_H
 
-#include "riss/core/Solver.h"
+#include "pfolio/PSolver.h"
 #include "pcasso/InstanceSolver.h"
 
 namespace Pcasso
 {
-class SolverRiss : public InstanceSolver
+class SolverPriss : public InstanceSolver
 {
   public:
-    SolverRiss(Riss::CoreConfig* config);
+    SolverPriss(Riss::CoreConfig *config, int threadsToUse);
 
-    ~SolverRiss();
+    ~SolverPriss();
 
-    Riss::Solver solver;
+    Riss::PSolver solver;
 
     unsigned int        curPTLevel;         // Davide> Contains the pt_level of curNode
     TreeNode*           tnode;
@@ -57,4 +57,4 @@ class SolverRiss : public InstanceSolver
 };
 }
 
-#endif //SOLVERRISS_H
+#endif //SOLVERPRISS_H

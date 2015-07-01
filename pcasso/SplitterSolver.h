@@ -9,12 +9,12 @@
 #define PCASSO_SPLITTERSOLVER_H
 
 #include "riss/core/Solver.h"
-#include "pcasso/ISolver.h"
+#include "pcasso/SolverInterface.h"
 
 namespace Pcasso
 {
 
-class SplitterSolver : public Riss::Solver, public ISolver
+class SplitterSolver : public Riss::Solver, public SolverInterface
 {
 
     Riss::CoreConfig* coreConfig;
