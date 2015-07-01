@@ -62,15 +62,9 @@ cmake -DOPTION_NAME=value ..
 | Option          | Description                                            | Default |
 | --------------- | ------------------------------------------------------ | ------- |
 | STATIC_BINARIES | Build fully statically linked binaries                 |      ON |
-| SHIFTBMC        | Include agier and shiftbmc build targets               |     OFF |
+| SHIFTBMC        | Include build targets for shiftbmc and aiger library   |     OFF |
+| AIGER-TOOLS     | Include build targets for all agier executables        |     OFF |
 | WARNINGS        | Set verbose warning flags                              |     OFF |
-
-The follwing options are only enabled, if `SHIFTBMC=ON`.
-
-| ShiftBMC Option | Description                                            | Default        |
-| --------------- | ------------------------------------------------------ | -------------- |
-| ABC_LIB         | Path to the directory containing the ABC library       | /usr/local/lib |
-| PICOSAT_LIB     | Path to the directory containing the PicoSAT library   | /usr/local/lib |
 
 
 ## Common Usage

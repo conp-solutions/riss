@@ -16,15 +16,17 @@ IN THE SOFTWARE.
 #ifndef RISS_SHIFTBMC_H
 #define RISS_SHIFTBMC_H
 
-#include "aiger/aiger.h"
-
 // enable this to disable all the output that might tell about the content of the implementation
 // #define TEST_BINARY
 
-extern "C" { // we are compiling with G++, however, picosat is C code, as well as the library interfaces of the other two solvers
+// we are compiling with G++, however, picosat and aiger is C code, as well as the library interfaces of the other two solvers
+extern "C" {
+
+#include "aiger/aiger.h"
 #include "picosat.h"
 #include "riss/librissc.h"
 #include "pfolio/libprissc.h"
+
 }
 
 #include <assert.h>
@@ -37,7 +39,6 @@ extern "C" { // we are compiling with G++, however, picosat is C code, as well a
 /**
  *  For g++ extension
  */
-using namespace std;
 #include <vector>
 #include <string>
 #include <sstream>
@@ -106,21 +107,21 @@ double cpuTime(void)
 class ShiftFormula
 {
   public:
-    vector<int> initUnits;        // units to initialize the initial circuit - will not be used for simplification, but freezed (to generate the same clauses for bad states,fairness,justice,...)
-    vector<int> formula;          // formula that contains all the clauses to be shifted per iteration
-    vector<int> inputs;           // the input literals
-    vector<int> outputs;          // the input literals
-    vector<int> latch;            // current latch literals
-    vector<int> originalLatch;        // current latch literals (original variable indexes of original formula
-    vector<int> latchNext;        // next latch literals
-    vector<int> currentBads;      // bad state literals of current formula
-    vector<int> initEqualities;       // equalities that have to be added to the formula before solving
-    vector<int> loopEqualities;       // equalities that have to be added to fuse two time frames (not to initialize the first time frame!)
+    std::vector<int> initUnits;        // units to initialize the initial circuit - will not be used for simplification, but freezed (to generate the same clauses for bad states,fairness,justice,...)
+    std::vector<int> formula;          // formula that contains all the clauses to be shifted per iteration
+    std::vector<int> inputs;           // the input literals
+    std::vector<int> outputs;          // the input literals
+    std::vector<int> latch;            // current latch literals
+    std::vector<int> originalLatch;    // current latch literals (original variable indexes of original formula
+    std::vector<int> latchNext;        // next latch literals
+    std::vector<int> currentBads;      // bad state literals of current formula
+    std::vector<int> initEqualities;   // equalities that have to be added to the formula before solving
+    std::vector<int> loopEqualities;   // equalities that have to be added to fuse two time frames (not to initialize the first time frame!)
 
-    int currentAssume;            // literal that is used as assuption for this round
-    vector<int> mergeAssumes;     // in case of merging multiple timeframes, this vector stores the variables of the
-    int mergeShiftDist;           // use this value for freezing extra variables
-    vector<int> mergeBads;        // bad state literals of merged formula
+    int currentAssume;              // literal that is used as assuption for this round
+    std::vector<int> mergeAssumes;  // in case of merging multiple timeframes, this vector stores the variables of the
+    int mergeShiftDist;             // use this value for freezing extra variables
+    std::vector<int> mergeBads;     // bad state literals of merged formula
 
     int clauses; // count the number of clauses that are present in the current formula
 

@@ -8,7 +8,8 @@ namespace Pcasso
 SolverRiss::SolverRiss(CoreConfig *config) :
     solver(config),
     coreConfig(config),
-    lastLevel(0)
+    lastLevel(0),
+    curPTLevel(0)
 {
     cerr << "c using Riss as solver within Pcasso (WIP)" << endl << flush;
 }

@@ -859,11 +859,11 @@ Master::solveInstance(void* data)
         slvr->getModel(solverModel);
         master.submitModel(solverModel);
     } else if (ret == 20) {
-        if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
+        if (opt_conflict_killing && slvr->lastLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
             if (tData.nodeToSolve != 0) {
-                int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
+                int i = tData.nodeToSolve->getPTLevel() - slvr->lastLevel;
                 while (i > 0) {
                     TreeNode* node = tData.nodeToSolve->getFather();
                     node->setState(TreeNode::unsat);

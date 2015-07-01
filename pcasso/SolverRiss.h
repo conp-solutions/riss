@@ -23,7 +23,7 @@ class SolverRiss : public InstanceSolver
 
     Riss::Solver solver;
 
-    unsigned         curPTLevel;         // Davide> Contains the pt_level of curNode
+    unsigned int     curPTLevel;         // Davide> Contains the pt_level of curNode
     unsigned int     lastLevel;        // option related to clause sharing
     TreeNode*        tnode;
     vector<unsigned> shared_indeces;
