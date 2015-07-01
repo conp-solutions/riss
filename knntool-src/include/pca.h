@@ -26,6 +26,7 @@ public:
 	 * @throws std::invalid_argument if num_vars is smaller than two
 	 */
 	explicit pca(long num_vars);
+	
 	/**
 	 * @brief Destructor
 	 */
@@ -249,16 +250,18 @@ public:
 	 */
 	std::vector<double> get_sigma_values() const;
 	
-	//arma::Mat<double> get_data_CC() const;
-	arma::Col<double> get_energy_CC() const;
-	arma::Col<double> get_energy_boot_CC() const;
-	arma::Col<double> get_eigval_CC() const;
-	arma::Mat<double> get_eigval_boot_CC() const;
-	arma::Mat<double> get_eigvec_CC() const;
-	//arma::Mat<double> get_proj_eigvec_CC() const;
-	arma::Mat<double> get_princomp_CC() const;
-	arma::Col<double> get_mean_CC() const;
-	arma::Col<double> get_sigma_CC() const;
+	void saveCC();
+	
+// 	//arma::Mat<double> get_data_CC() const;
+// 	arma::Col<double> get_energy_CC() const;
+// 	arma::Col<double> get_energy_boot_CC() const;
+// 	arma::Col<double> get_eigval_CC() const;
+// 	arma::Mat<double> get_eigval_boot_CC() const;
+// 	arma::Mat<double> get_eigvec_CC() const;
+// 	//arma::Mat<double> get_proj_eigvec_CC() const;
+// 	arma::Mat<double> get_princomp_CC() const;
+// 	arma::Col<double> get_mean_CC() const;
+// 	arma::Col<double> get_sigma_CC() const;
 
 protected:
 

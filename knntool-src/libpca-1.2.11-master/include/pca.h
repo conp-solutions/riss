@@ -26,6 +26,7 @@ public:
 	 * @throws std::invalid_argument if num_vars is smaller than two
 	 */
 	explicit pca(long num_vars);
+	
 	/**
 	 * @brief Destructor
 	 */

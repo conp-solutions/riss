@@ -26,13 +26,20 @@ void Trainer::setBasic(int dimension, int amountClasses, int amountFiles, int st
 
 void Trainer::solvePCA(string out) {
   
+  
+  stats::pca pca();
+  
+  pca.save("test");
+  
+  exit(0);
+  
   //printVector(features[1]);
   for ( int i = 0; i < dimension; ++i ){
     divisors.push_back(normalizeDivAll(features[i]));
   }
   
   // create a pca object
-  stats::pca pca(dimension);
+//   stats::pca pca(dimension);
   // set normalize mod
   //pca.set_do_normalize(true);
   
@@ -85,18 +92,18 @@ void Trainer::solvePCA(string out) {
 //   printNValues(eigenvalues, var);
   cout << "\tProjection accurate:\t\t\t" << pca.check_projection_accurate() << endl;
   
-  pca.save(out);
+  pca.saveCC();
   
   
-  cout << "long num_vars_ = " << pca.get_num_variables() << ";" << endl;
-  cout << "long num_records_ = " << pca.get_num_records() << ";" << endl;
-  //cout << "long record_buffer_ = " << pca.get_
-  cout << "std::string solver_ = " << pca.get_solver() << ";" << endl;
-  cout << "bool do_normalize_ = " << pca.get_do_normalize() << ";" << endl;
-  cout << "bool do_bootstrap_ = " << pca.get_do_bootstrap() << ";" << endl;
-  cout << "long num_bootstraps_ = " << pca.get_num_bootstraps() << ";" << endl;
-  cout << "long bootstrap_seed_ = " << pca.get_bootstrap_seed() << ";" << endl;
-  cout << "long num_retained_ = " << pca.get_num_retained() << ";" << endl;
+//   cout << "long num_vars_ = " << pca.get_num_variables() << ";" << endl;
+//   cout << "long num_records_ = " << pca.get_num_records() << ";" << endl;
+//   //cout << "long record_buffer_ = " << pca.get_
+//   cout << "std::string solver_ = " << pca.get_solver() << ";" << endl;
+//   cout << "bool do_normalize_ = " << pca.get_do_normalize() << ";" << endl;
+//   cout << "bool do_bootstrap_ = " << pca.get_do_bootstrap() << ";" << endl;
+//   cout << "long num_bootstraps_ = " << pca.get_num_bootstraps() << ";" << endl;
+//   cout << "long bootstrap_seed_ = " << pca.get_bootstrap_seed() << ";" << endl;
+//   cout << "long num_retained_ = " << pca.get_num_retained() << ";" << endl;
 //   //arma::Mat<double> data_  = pca.get
 //   arma::Col<double> energy_ = pca.get_energy_CC();
 //   arma::Col<double> energy_boot_ = pca.get_energy_boot_CC();

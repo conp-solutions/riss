@@ -5,45 +5,51 @@
 #include "pca.h"
 #include <stdexcept>
 #include <random>
+#include <vector>
+#include "../../matsave.cc"
 
+using namespace std;
 namespace stats {
 
-pca::pca()
-	: num_vars_(0),
-	  num_records_(0),
-	  record_buffer_(1000),
-	  solver_("dc"),
-	  do_normalize_(false),
-	  do_bootstrap_(false),
-	  num_bootstraps_(10),
-	  bootstrap_seed_(1),
-	  num_retained_(1),
-	  energy_(1)
-{}
+// pca::pca()
+// 	: num_vars_(0),
+// 	  num_records_(0),
+// 	  record_buffer_(1000),
+// 	  solver_("dc"),
+// 	  do_normalize_(false),
+// 	  do_bootstrap_(false),
+// 	  num_bootstraps_(10),
+// 	  bootstrap_seed_(1),
+// 	  num_retained_(1),
+// 	  energy_(1)
+// {}
 
-pca::pca(long num_vars)
-	: num_vars_(num_vars),
-	  num_records_(0),
-	  record_buffer_(1000),
-	  solver_("dc"),
-	  do_normalize_(false),
-	  do_bootstrap_(false),
-	  num_bootstraps_(10),
-	  bootstrap_seed_(1),
-	  num_retained_(num_vars_),
-	  data_(record_buffer_, num_vars_),
-	  energy_(1),
-	  energy_boot_(num_bootstraps_),
-	  eigval_(num_vars_),
-	  eigval_boot_(num_bootstraps_, num_vars_),
-	  eigvec_(num_vars_, num_vars_),
-	  proj_eigvec_(num_vars_, num_vars_),
-	  princomp_(record_buffer_, num_vars_),
-	  mean_(num_vars_),
-	  sigma_(num_vars_)
+
+pca::pca()
+	   :data_(1000, num_vars_CC),
+	    eigval_boot_(num_bootstraps_CC, num_vars_CC),
+	    proj_eigvec_(num_vars_CC, num_vars_CC)
 {
+	num_vars_ = num_vars_CC;
+	num_records_ = num_records_CC;
+        record_buffer_ = 1000;
+	solver_ = solver_CC;
+	do_normalize_ = do_normalize_CC;
+	do_bootstrap_ = do_bootstrap_CC;
+	num_bootstraps_ = num_bootstraps_CC;
+        bootstrap_seed_ = 1;
+	num_retained_ = num_vars_;
+	energy_ = energy_CC;
+	energy_boot_ = energy_boot_CC;
+	eigval_ = eigval_CC;
+	eigvec_ = eigvec_CC;
+	princomp_ = princomp_CC;
+	mean_ = mean_CC;
+	sigma_ = sigma_CC;
+	
 	assert_num_vars_();
-	initialize_();
+	set_num_retained(num_retained_);
+	
 }
 
 pca::~pca()
@@ -401,10 +407,90 @@ void pca::load(const std::string& basename) {
 
 void pca::saveCC() {
   
+  ofstream ofs ("matsave.cc", ofstream::out); //TODO pecision
+  ofs.precision(10);
+  ofs << "long num_vars_CC = " << num_vars_ << ";" << endl;
+  ofs << "long num_records_CC = " << num_records_ << ";" << endl;
+  //cout << "long record_buffer_ = " << pca.get_
+  ofs << "std::string solver_CC = \"" << solver_ << "\";" << endl;
+  ofs << "bool do_normalize_CC = " << do_normalize_ << ";" << endl;
+  ofs << "bool do_bootstrap_CC = " << do_bootstrap_ << ";" << endl;
+  ofs << "long num_bootstraps_CC = " << num_bootstraps_ << ";" << endl;
+  ofs << "long bootstrap_seed_CC = " << bootstrap_seed_ << ";" << endl;
+  ofs << "long num_retained_CC = " << num_retained_ << ";" << endl;
+  ofs << "arma::Col<double> energy_CC = { " <<  endl << energy_ << " };" << endl;
   
+  vector<double> tmp = get_eigenvalues();
+  int n = tmp.size()-1;
+  ofs << "arma::Col<double> eigval_CC = { " << endl;
+  for (int i = 0; i < n; ++i){
+    	ofs << tmp[i] << "," << endl;
+  }
+  ofs << tmp[n] << endl << "};" << endl;
   
+  tmp = get_energy_boot();
+  n = tmp.size()-1;
+  ofs << "arma::Col<double> energy_boot_CC = {" << endl;
+  for ( int i = 0; i < n; ++i){
+     ofs << tmp[i] << "," << endl;
+  }
+  ofs << tmp[n] << endl << "};" << endl;
   
+  tmp = get_mean_values();
+  n = tmp.size() -1;
   
+  ofs << "arma::Col<double> mean_CC = {" << endl;
+  for ( int i = 0; i < n; ++i){
+     ofs << tmp[i] << ", ";
+  }
+  ofs << tmp[n] << endl << "};" << endl;
+  
+  tmp = get_sigma_values();
+  n = tmp.size() -1;
+  ofs << "arma::Col<double> sigma_CC = {" << endl;
+  for ( int i = 0; i < n; ++i){
+     ofs << tmp[i] << ", ";
+  }
+  ofs << tmp[n] << endl << "};" << endl;
+  
+  ofs << "arma::Mat<double> princomp_CC = {" << endl;
+  for (int j = 0; j < num_vars_-1; ++j){
+    tmp = get_principal(j);
+    n = tmp.size() -1;
+    ofs << " { "; 
+    for ( int i = 0; i < n; ++i){
+      ofs << tmp[i] << ", " ;
+    }
+    ofs << tmp[n] << endl << "}, " << endl;
+  }
+  tmp = get_principal(num_vars_ -1);
+  n = tmp.size() -1;
+  ofs << " { "; 
+  for ( int i = 0; i < n; ++i){
+    ofs << tmp[i] << ", ";
+  } 
+  ofs << tmp[n] << endl << "} }; " << endl;
+  
+  ofs << "arma::Mat<double> eigvec_CC = {" << endl;
+  for (int j = 0; j < num_vars_-1; ++j){
+    tmp = get_eigenvector(j);
+    n = tmp.size() -1;
+    ofs << " { "; 
+    for ( int i = 0; i < n; ++i){
+      ofs << tmp[i] << ", ";
+    }
+    ofs << tmp[n] << endl << "}, " << endl;
+  }
+  tmp = get_eigenvector(num_vars_-1);
+  n = tmp.size() -1;
+  ofs << " { "; 
+  for ( int i = 0; i < n; ++i){
+    ofs << tmp[i] << ", ";
+  }
+  ofs << tmp[n] << endl << "} }; " << endl;
+
+  ofs.close();
+    
 }
 
 } // stats
