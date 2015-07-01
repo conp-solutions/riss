@@ -5,6 +5,9 @@ http://tools.computational-logic.org
 
 Please send bug reports to norbert.manthey@tu-dresden.de
 
+All tools in this package are highly configurable. For a simple comparison, most 
+techniques are disabled by default. Hence, you should specify options to use. For
+both Riss and Coprocessor, using -config=Riss427 is a fair starting point.
 
 ## Components
 
@@ -73,6 +76,18 @@ The available parameters can be listed for each tool by calling:
 
     bin/<tool> --help
 
+Due to the large number of parameters, a more helpful alternative is:
+    
+    bin/<tool> --help -helpLevel=0 --help-verb
+
+The configuration specification can be written to a pcs file automatically. 
+Before using this file with an automated configuration framework, please check
+that only necessary parameters appear in the file. The procedure will include 
+all parameters, also the cpu or memory limit parameters.
+
+  bin/<tool> -pcs-file=<pcs-filename>
+  
+
 Using Riss to solve a formula <input.cnf> use
 
     bin/riss <input.cnf> [solution] [solverOptions]
@@ -80,9 +95,9 @@ Using Riss to solve a formula <input.cnf> use
 Using Riss to solve a formula <input.cnf> and generating a DRUP proof, the 
 following call can be used. Depending on the proof verification tool the option
 `-no-proofFormat` should be specified. Note, not all formula simplification
-techniques support generating a DRUP proof.
+techniques support generating a DRAT proof.
 
-    bin/riss <input.cnf> -drup=input.proof -no-proofFormat [solution] [solverOptions]
+    bin/riss <input.cnf> -proof=input.proof -no-proofFormat [solution] [solverOptions]
 
 The script `cp.sh` provides a simple setup for using Coprocessor as a formula
 simplification tool and afterwards running a SAT solver. The used SAT solver can
