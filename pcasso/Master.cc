@@ -729,7 +729,7 @@ Master::solveInstance(void* data)
 
     // create a solver object
     InstanceSolver* solver;
-    if( !priss ) {
+    if (!priss) {
         solver = new SolverRiss(&defaultSolverConfig);
     } else {
         // TODO: how many threads for priss? commandline option?

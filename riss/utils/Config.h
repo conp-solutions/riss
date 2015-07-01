@@ -65,10 +65,10 @@ class Config
 
     /** fill the std::string stream with the command that is necessary to obtain the current configuration */
     void configCall(std::stringstream& s);
-    
+
     /** print specification of the options that belong to this configuration */
     void printOptions(FILE* pcsFile, int printLevel = -1);
-    
+
     /** print dependencies of the options that belong to this configuration */
     void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
 };
@@ -633,7 +633,8 @@ bool Config::checkConfiguration()
 }
 
 inline
-void Config::printOptions(FILE* pcsFile, int printLevel) {
+void Config::printOptions(FILE* pcsFile, int printLevel)
+{
     sort((*optionListPtr), Option::OptionLt());
 
     const char* prev_cat  = NULL;
@@ -641,13 +642,13 @@ void Config::printOptions(FILE* pcsFile, int printLevel) {
 
     // all options in the global list
     for (int i = 0; i < (*optionListPtr).size(); i++) {
-      
+
         if (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel) { continue; }  // can jump over full categories
-      
+
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 
-	// print new category
+        // print new category
         if (cat != prev_cat) {
             fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
         } else if (type != prev_type) {
@@ -657,14 +658,15 @@ void Config::printOptions(FILE* pcsFile, int printLevel) {
         // print the actual option
         (*optionListPtr)[i]->printOptions(pcsFile, printLevel);
 
-	// set prev values, so that print is nicer
+        // set prev values, so that print is nicer
         prev_cat  = (*optionListPtr)[i]->category;
         prev_type = (*optionListPtr)[i]->type_name;
     }
 }
 
 inline
-void Config::printOptionsDependencies(FILE* pcsFile, int printLevel) {
+void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
+{
     sort((*optionListPtr), Option::OptionLt());
 
     const char* prev_cat  = NULL;
@@ -672,16 +674,16 @@ void Config::printOptionsDependencies(FILE* pcsFile, int printLevel) {
 
     // all options in the global list
     for (int i = 0; i < (*optionListPtr).size(); i++) {
-      
-        if ( (*optionListPtr)[i]->dependOnNonDefaultOf == 0 ||   // no dependency
-	  (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel)) { // or too deep in the dependency level
-	  continue;
-	}  // can jump over full categories
-      
+
+        if ((*optionListPtr)[i]->dependOnNonDefaultOf == 0 ||    // no dependency
+                (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel)) { // or too deep in the dependency level
+            continue;
+        }  // can jump over full categories
+
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 
-	// print new category
+        // print new category
         if (cat != prev_cat) {
             fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
         } else if (type != prev_type) {
@@ -691,7 +693,7 @@ void Config::printOptionsDependencies(FILE* pcsFile, int printLevel) {
         // print the actual option
         (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel);
 
-	// set prev values, so that print is nicer
+        // set prev values, so that print is nicer
         prev_cat  = (*optionListPtr)[i]->category;
         prev_type = (*optionListPtr)[i]->type_name;
     }

@@ -32,6 +32,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/ParseUtils.h"
 #include "riss/mtl/Sort.h"
 
+#include <iostream>
+#include <string>
+
 namespace Riss
 {
 
@@ -106,32 +109,35 @@ class Option
     virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
 
     virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
-    
+
     int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
     {
         if (dependOnNonDefaultOf == 0) { return 0; }
         return dependOnNonDefaultOf->getDependencyLevel() + 1;
     }
-    
+
     bool isEnabled()
     {
         if (dependOnNonDefaultOf == 0) { return true; }
         else { return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled(); }
     }
 
-    void printOptionsDependencies(FILE* pcsFile, int printLevel) {
-      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
-      if (dependOnNonDefaultOf == 0) { return; } // no dependency
-      
-      char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
-      dependOnNonDefaultOf->getNonDefaultString( defaultAsString, 2047 );
-      assert( strlen( defaultAsString ) < 2047 && "memory overflow" ); 
-      fprintf( pcsFile, "%s   | %s in {%s} #  only active, if %s has not its default value \n", name, dependOnNonDefaultOf->name, defaultAsString, dependOnNonDefaultOf->name);
+    virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
+
+    void printOptionsDependencies(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if (dependOnNonDefaultOf == 0) { return; } // no dependency
+        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }    // cannot express opposite value of dependency-parent
+
+        char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
+        dependOnNonDefaultOf->getNonDefaultString(defaultAsString, 2047);
+        assert(strlen(defaultAsString) < 2047 && "memory overflow");
+        fprintf(pcsFile, "%s   | %s in {%s} #  only active, if %s has not its default value \n", name, dependOnNonDefaultOf->name, defaultAsString, dependOnNonDefaultOf->name);
     }
-    
-#warning fix this for intoption, do not use for double!
-    virtual void getNonDefaultString( char* buffer, int size ) = 0; // convert the default value into a string
-    
+
+    virtual void getNonDefaultString(char* buffer, int size) = 0;   // convert the default value into a string
+
     friend  bool parseOptions(int& argc, char** argv, bool strict);
     friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
     friend  void setUsageHelp(const char* str);
@@ -236,23 +242,28 @@ class DoubleOption : public Option
         }
         #endif
     }
-    
-    void printOptions(FILE* pcsFile, int printLevel) {
-      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
-      
-      // print only, if there is a default
-      // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-      double badd = 0, esub = 0;
-      if( !range.begin_inclusive ) badd = 0.0001;
-      if( !range.end_inclusive ) esub = 0.0001;
-      // always logarithmic
-      fprintf( pcsFile, "%s  {%lf,%lf} [%lf]l   # %s\n", name, range.begin+badd, range.end-esub, defaultValue, description);
+
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        double badd = 0, esub = 0;
+        if (!range.begin_inclusive) { badd = 0.0001; }
+        if (!range.end_inclusive) { esub = 0.0001; }
+        // always logarithmic
+        fprintf(pcsFile, "%s  {%lf,%lf} [%lf]l   # %s\n", name, range.begin + badd, range.end - esub, defaultValue, description);
     }
 
-    virtual void getNonDefaultString( char* buffer, int size ) {
-      snprintf(buffer, size, "%lf", defaultValue);
+    virtual bool canPrintOppositeOfDefault() { return false; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+        // snprintf(buffer, size, "%lf", defaultValue); // could only print the default value
+        return;
     }
-    
+
     void giveRndValue(std::string& optionText)
     {
         double rndV = range.begin_inclusive ? range.begin : range.begin + 0.000001;
@@ -341,19 +352,37 @@ class IntOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel) {
-      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
-      
-      // print only, if there is a default
-      // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-      if( range.end - range.begin < 16 ) 
-	fprintf( pcsFile, "%s  {%d,%d} [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-      else 
-	fprintf( pcsFile, "%s  {%d,%d} [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        if (range.end - range.begin <= 16) {
+            fprintf(pcsFile, "%s  {%d,%d} [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+        } else {
+            fprintf(pcsFile, "%s  {%d,%d} [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+        }
     }
-    
-    virtual void getNonDefaultString( char* buffer, int size ) {
-      snprintf(buffer, size, "%d", defaultValue);
+
+    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+
+        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+            for (int i = range.begin ; i <= range.end; ++ i) {
+                if (i == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%d", i);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i != range.end && i + 1 != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        }
     }
 
     void giveRndValue(std::string& optionText)
@@ -443,21 +472,39 @@ class Int64Option : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel) {
-      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
-      
-      // print only, if there is a default
-      // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-      if( range.end - range.begin < 16 ) 
-	fprintf( pcsFile, "%s  {%ld,%ld} [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-      else 
-	fprintf( pcsFile, "%s  {%ld,%ld} [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        if (range.end - range.begin <= 16) {
+            fprintf(pcsFile, "%s  {%ld,%ld} [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+        } else {
+            fprintf(pcsFile, "%s  {%ld,%ld} [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+        }
     }
 
-    virtual void getNonDefaultString( char* buffer, int size ) {
-      snprintf(buffer, size, "%ld", defaultValue);
+    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+
+        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+            for (int64_t  i = range.begin ; i <= range.end; ++ i) {
+                if (i == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%ld", i);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i != range.end && i + 1 != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        }
     }
-    
+
     void giveRndValue(std::string& optionText)
     {
         int64_t rndV = range.begin;
@@ -516,19 +563,23 @@ class StringOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel) {
-      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
-      
-      // print only, if there is a default
-      if( defaultValue != 0 ) fprintf( pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description);
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
     }
-    
-    virtual void getNonDefaultString( char* buffer, int size ) {
-      if( defaultValue == 0 ) buffer[0] = 0;
-      else {
-	assert( size > strlen( defaultValue ) );
-	strncpy( buffer, defaultValue, size );
-      }
+
+    virtual bool canPrintOppositeOfDefault() { return false; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+        if (defaultValue == 0) { buffer[0] = 0; }
+        else {
+            assert(size > strlen(defaultValue));
+            strncpy(buffer, defaultValue, size);
+        }
     }
 
     void giveRndValue(std::string& optionText)
@@ -597,17 +648,21 @@ class BoolOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel) {
-      if ( printLevel != -1 && getDependencyLevel() > printLevel ) return; // do not print this option, as its dependency is too deep
-      
-      fprintf( pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
     }
-    
-    virtual void getNonDefaultString( char* buffer, int size ) {
-      assert( size > 3 && "cannot print values otherwise" );
-      strncpy( buffer, !defaultValue ? "yes" : "no", size );
+
+    virtual bool canPrintOppositeOfDefault() { return true; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+        assert(size > 3 && "cannot print values otherwise");
+        strncpy(buffer, !defaultValue ? "yes" : "no", size);
     }
-    
+
     void giveRndValue(std::string& optionText)
     {
         int r = rand();

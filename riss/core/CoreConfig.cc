@@ -104,8 +104,6 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lbd_core_thresh("999HACK", "lbd-core-th",  "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
     opt_l_red_frac("999HACK", "reduce-frac",  "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, 1, false), optionListPtr),
     opt_keep_permanent_size("999HACK", "size-core", "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
-#warning implement option dependencies
-
 
     opt_updateLearnAct(_cm, "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr),
 
