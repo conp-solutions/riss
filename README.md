@@ -37,10 +37,13 @@ mkdir debug
 cd debug/
 
 # Create a debug build configuration
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake -D CMAKE_BUILD_TYPE=Debug ..
+
+# Create release build Intel compiler
+cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_CXX_COMPILER=icpc ..
 
 # If you want DRAT proof support, configure cmake the following
-cmake -DDRATPROOF=ON ..
+cmake -D DRATPROOF=ON ..
 
 # You get a list of all targets with
 make help
@@ -59,15 +62,17 @@ make scripts
 To configure your build, pass the described options to cmake like this
 
 ```bash
-cmake -DOPTION_NAME=value ..
+cmake -D OPTION_NAME=value ..
 ```
 
-| Option          | Description                                            | Default |
-| --------------- | ------------------------------------------------------ | ------- |
-| STATIC_BINARIES | Build fully statically linked binaries                 |      ON |
-| SHIFTBMC        | Include build targets for shiftbmc and aiger library   |     OFF |
-| AIGER-TOOLS     | Include build targets for all agier executables        |     OFF |
-| WARNINGS        | Set verbose warning flags                              |     OFF |
+| Option             | Description                                            | Default |
+| ------------------ | ------------------------------------------------------ | ------- |
+| CMAKE_BUILD_TYPE   | "Debug" or "Release"                                   | Release |
+| CMAKE_CXX_COMPILER | C++ compiler that should be used                       |     g++ |
+| STATIC_BINARIES    | Build fully statically linked binaries                 |      ON |
+| SHIFTBMC           | Include build targets for shiftbmc and aiger library   |     OFF |
+| AIGER-TOOLSS       | Include build targets for all agier executables        |     OFF |
+| WARNINGS           | Set verbose warning flags                              |     OFF |
 
 
 ## Common Usage
