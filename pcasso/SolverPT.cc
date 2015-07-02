@@ -643,7 +643,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         bool fullPool = pool->isFull();
 
         pool->levelPoolLock.unlock();
-        //      pthread_setcancelstate(old_cancel_state, NULL);
+        //      pthread_setcancelstate(old_cancel_state, nullptr);
 
         // ******************** END OF CRITICAL SECTION ******************* //
 
@@ -1547,7 +1547,7 @@ void SolverPT::pull_learnts(int curr_restarts)
                 //cout << "EXITING WHILE" << endl;
 
                 //fprintf(stderr,"Pull Learnts: Read Unlock\n");
-                //              pthread_setcancelstate(old_cancel_state, NULL);
+                //              pthread_setcancelstate(old_cancel_state, nullptr);
 
                 if (!ok) {
                     break;

@@ -228,11 +228,11 @@ int Master::run()
                 threadData[i].s = idle;
                 threadData[i].result = 0;
                 threadData[i].nodeToSolve = 0;
-                if (threadData[i].solver != NULL) {
+                if (threadData[i].solver != nullptr) {
                     delete threadData[i].solver;
                 }
-                threadData[i].solver = NULL;
-                if (threadData[i].handle != 0) { pthread_join(threadData[i].handle, NULL); }
+                threadData[i].solver = nullptr;
+                if (threadData[i].handle != 0) { pthread_join(threadData[i].handle, nullptr); }
                 threadData[i].handle = 0;
             }
         }
@@ -448,7 +448,7 @@ int Master::run()
 
     if (printModel) {
 
-        if (res != NULL) { fprintf(stderr, "c write model to file\n"); }
+        if (res != nullptr) { fprintf(stderr, "c write model to file\n"); }
 
         if (model != 0) {
             assert(solution == 10 && "the solution has to be 20");
@@ -457,7 +457,7 @@ int Master::run()
             // fprintf(out_state_file, "SAT %g\n", cpuTime()); // Davide> for statistics
 
             // print model only, if a file has been specified
-            if (res != NULL) {
+            if (res != nullptr) {
                 fprintf(res, "s SATISFIABLE\nv ");
                 /*
                 if( model.size() != maxVar ){
@@ -499,7 +499,7 @@ int Master::run()
 
             fprintf(stdout, "UNSATISFIABLE\n");
 
-            if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); }
+            if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); }
             fprintf(stdout, "s UNSATISFIABLE\n");
         } else {
             fprintf(stdout, "s INDETERMINATE\n");
@@ -525,7 +525,7 @@ int Master::run()
     for (unsigned int i = 0 ; i < threads ; ++i) {
         //    int err = 0;
         fprintf(stderr, "c try to cancel thread %d\n", i);
-        // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == NULL) continue;
+        // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == nullptr) continue;
         if (threadData[i].solver == 0) { continue; }
         threadData[i].solver->interrupt(); // Yeah, it takes time.
         // threadData[i].solver->kill();
@@ -542,7 +542,7 @@ int Master::run()
         int err = 0;
         if (MSverbosity > 1) { fprintf(stderr, "c try to join thread %d\n", i); }
         //    if( threadData[i].s == idle || threadData[i].handle == 0 ) continue;
-        if (threadData[i].solver != NULL) {
+        if (threadData[i].solver != nullptr) {
             if (threadData[i].handle != 0) {
                 err = pthread_join(threadData[i].handle, (void**)&status);
                 if (err == EINVAL) { fprintf(stderr, "c tried to cancel wrong thread\n"); }
@@ -735,7 +735,7 @@ Master::solveInstance(void* data)
         // TODO: how many threads for priss? commandline option?
         solver = new SolverPriss(&defaultSolverConfig, 2);
     }
-    assert(tData.solver == NULL);
+    assert(tData.solver == nullptr);
     tData.solver = solver;
 
 //    // Davide> Give the pt_level to the solver
@@ -1028,9 +1028,9 @@ Master::splitInstance(void* data)
         //try {
         // ## begin automatically handled code
         // ## selecting split mode
-        if (split_mode == 0) {   //solution = S->simpleSplit(&splits, NULL, split_timeout);
+        if (split_mode == 0) {   //solution = S->simpleSplit(&splits, nullptr, split_timeout);
         } else if (split_mode == 1) {
-            solution = ((VSIDSSplitting *)S)->vsidsScatteringSplit(&splits, NULL, split_timeout);
+            solution = ((VSIDSSplitting *)S)->vsidsScatteringSplit(&splits, nullptr, split_timeout);
         } else if (split_mode == 2) {
             solution = ((LookaheadSplitting *)S)->produceSplitting(&splits, &valid);
         } else if (split_mode == 3) {   //solution = S->score(&splits, &valid, split_timeout);
@@ -1245,7 +1245,7 @@ int
 Master::parseFormula(string filename)
 {
     gzFile in = (filename.size() == 0) ? gzdopen(0, "rb") : gzopen(filename.c_str(), "rb");
-    if (in == NULL) {
+    if (in == nullptr) {
         fprintf(stderr, "ERROR! Could not open file: %s\n", filename.size() == 0 ? "<stdin>" : filename.c_str()), exit(1);
     } else {
         // open file

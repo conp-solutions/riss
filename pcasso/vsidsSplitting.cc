@@ -145,7 +145,7 @@ lbool VSIDSSplitting::scatterSolve(void* data)
 //    }
 
     //struct timeval tmp_t;
-    //gettimeofday(&tmp_t, NULL);
+    //gettimeofday(&tmp_t, nullptr);
     //double start_t = tmp_t.tv_sec + tmp_t.tv_usec/1000000;
     //double tcput = cpuTime_t();
     // Search:
@@ -172,7 +172,7 @@ lbool VSIDSSplitting::scatterSolve(void* data)
 
     cancelUntil(0);
 
-    //gettimeofday(&tmp_t, NULL);
+    //gettimeofday(&tmp_t, nullptr);
     //double rt = tmp_t.tv_sec + tmp_t.tv_usec/1000000 -  start_t;
     //printf("I was running for wall time %f and per thread cpu time %f\n",
     //  rt, cpuTime_t() - tcput);

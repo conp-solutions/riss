@@ -213,7 +213,7 @@ int main(int argc, char** argv)
         }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL) {
+        if (in == nullptr) {
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         }
 
@@ -229,12 +229,12 @@ int main(int argc, char** argv)
 
 
         // open file for proof
-        S.proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != NULL) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+        S.proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
         double parsed_time = cpuTime();
         if (S.verbosity > 0) {
@@ -253,13 +253,13 @@ int main(int argc, char** argv)
         //signal(SIGXCPU,SIGINT_interrupt);
 
         if (!S.simplify()) {
-            if (res != NULL) {
+            if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
-                res = NULL;
+                res = nullptr;
             }
             // add the empty clause to the proof, close proof file
-            if (S.proofFile != NULL) {
+            if (S.proofFile != nullptr) {
                 bool validProof = S.checkProof(); // check the proof that is generated inside the solver
                 if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
                 fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
@@ -284,8 +284,8 @@ int main(int argc, char** argv)
         S.budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
-            if (res != NULL) { fclose(res); res == NULL; }
-            if (S.proofFile != NULL) {
+            if (res != nullptr) { fclose(res); res == nullptr; }
+            if (S.proofFile != nullptr) {
                 fclose(S.proofFile);   // close the current file
                 S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
                 fclose(S.proofFile);   // close the file again
@@ -312,14 +312,14 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.proofFile != NULL) {
+        if (ret == l_False && S.proofFile != nullptr) {
             bool validProof = S.checkProof(); // check the proof that is generated inside the solver
             if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
             fprintf(S.proofFile, "0\n");
         }
 
         // print solution into file
-        if (res != NULL) {
+        if (res != nullptr) {
             if (ret == l_True) {
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
@@ -334,11 +334,11 @@ int main(int argc, char** argv)
                 else { fprintf(res, "s UNSATISFIABLE\n"); }
             } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
             else { fprintf(res, "s UNKNOWN\n"); }
-            fclose(res); res = NULL;
+            fclose(res); res = nullptr;
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == NULL) {
+        if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)

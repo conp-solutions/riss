@@ -68,8 +68,8 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose, int activeLeve
 
     sort(Option::getOptionList(), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     for (int i = 0; i < Option::getOptionList().size(); i++) {
 
@@ -90,7 +90,7 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose, int activeLeve
         prev_type = Option::getOptionList()[i]->type_name;
     }
 
-    if (usage != NULL) {
+    if (usage != nullptr) {
         fprintf(stderr, "\n");
         fprintf(stderr, usage, argv[0]);
     }
@@ -108,8 +108,8 @@ void Riss::printOptions(FILE* pcsFile, int printLevel)
 {
     sort(Option::getOptionList(), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     // all options in the global list
     for (int i = 0; i < Option::getOptionList().size(); i++) {
@@ -139,8 +139,8 @@ void Riss::printOptionsDependencies(FILE* pcsFile, int printLevel)
 {
     sort(Option::getOptionList(), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     // all options in the global list
     for (int i = 0; i < Option::getOptionList().size(); i++) {

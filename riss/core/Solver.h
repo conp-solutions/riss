@@ -1379,7 +1379,7 @@ namespace Riss   // open namespace again!
 inline bool Solver::outputsProof() const
 {
     // either there is a local file, or there is a parallel build proof
-    return proofFile != NULL || (communication != 0 && communication->getPM() != 0);
+    return proofFile != nullptr || (communication != 0 && communication->getPM() != 0);
 }
 
 template <class T>
