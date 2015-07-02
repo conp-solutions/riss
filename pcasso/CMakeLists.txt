@@ -38,7 +38,8 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
                                                  VERSION ${VERSION}
                                                  SOVERSION ${SOVERSION})
 
-if(GIT_FOUND)
+# Check if the source code is under version control
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
     message(STATUS "Build signature from git")
 
     # Custom version target that is always built, because it DEPENDS on a file (string)
