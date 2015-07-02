@@ -1,6 +1,6 @@
-# Extract version information from git
 #
-find_package(Git)
+# Extract pcasso version information from git
+#
 
 # the commit's SHA1, and whether the building workspace was dirty or not
 execute_process(COMMAND
@@ -18,10 +18,9 @@ execute_process(COMMAND
 
 # Generate version source file
 #
-set(VERSION_CC   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/version.cc)
-set(VERSION_TEMP ${VERSION_CC}.tmp)
+set(TEMP ${OUTPUT}.tmp)
 
-file(WRITE ${VERSION_TEMP}
+file(WRITE ${TEMP}
   "/*\n"
   " * This file was created automatically. Do not change it.\n"
   " * If you want to distribute the source code without\n"
@@ -38,9 +37,9 @@ file(WRITE ${VERSION_TEMP}
 # reduces needless rebuilds
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
-  ${VERSION_TEMP}
-  ${VERSION_CC}
+  ${TEMP}
+  ${OUTPUT}
 )
 
 # Remove the temporary generated file
-file(REMOVE ${VERSION_CC}.tmp)
+file(REMOVE ${TEMP})

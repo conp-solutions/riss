@@ -71,7 +71,8 @@ endif()
 
 
 # Dependencies:
-# 
+#
+find_package(Git)
 include_directories(${PROJECT_SOURCE_DIR})
 
 # Compile flags:
