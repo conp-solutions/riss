@@ -2901,7 +2901,7 @@ void Solver::toDimacs(FILE* f, Clause& c, vec<Var>& map, Var& max)
 void Solver::toDimacs(const char *file, const vec<Lit>& assumps)
 {
     FILE* f = fopen(file, "wr");
-    if (f == NULL) {
+    if (f == nullptr) {
         fprintf(stderr, "could not open file %s\n", file), exit(1);
     }
     toDimacs(f, assumps);

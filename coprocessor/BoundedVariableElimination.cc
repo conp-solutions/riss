@@ -25,7 +25,7 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
       litCount(0), unitCount(0), elimCount(0), restarts(0), seqBveSteps(0), bveLimit(config.opt_bve_limit),
       nClsIncreases(0), nClsDecreases(0), nClsKeep(0), totallyAddedClauses(0), processTime(0), subsimpTime(0),
       gateTime(0)
-//, heap_comp(NULL)
+//, heap_comp(nullptr)
 //, variable_heap(heap_comp)
 {
 }

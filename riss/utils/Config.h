@@ -596,15 +596,15 @@ inline
 void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeLevel)
 {
     const char* usage = Option::getUsageString();
-    if (usage != NULL) {
+    if (usage != nullptr) {
         fprintf(stderr, "\n");
         fprintf(stderr, usage, argv[0]);
     }
 
     sort((*optionListPtr), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     for (int i = 0; i < (*optionListPtr).size(); i++) {
 
@@ -637,8 +637,8 @@ void Config::printOptions(FILE* pcsFile, int printLevel)
 {
     sort((*optionListPtr), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     // all options in the global list
     for (int i = 0; i < (*optionListPtr).size(); i++) {
@@ -669,8 +669,8 @@ void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
 {
     sort((*optionListPtr), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     // all options in the global list
     for (int i = 0; i < (*optionListPtr).size(); i++) {

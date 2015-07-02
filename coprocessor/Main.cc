@@ -144,7 +144,7 @@ int main(int argc, char** argv)
             }
         }
 
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
         if (!post) {
 
             if (argc == 1) {
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
             }
 
             gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-            if (in == NULL) {
+            if (in == nullptr) {
                 printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
             }
 
@@ -166,8 +166,8 @@ int main(int argc, char** argv)
             }
 
             // open file for proof
-            S.proofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.proofFile != NULL) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+            S.proofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : nullptr;
+            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
             parse_DIMACS(in, S);
             gzclose(in);
@@ -215,8 +215,8 @@ int main(int argc, char** argv)
             }
 
             if (!S.okay()) {
-                if (S.proofFile != NULL) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
+                if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
                 else { printf("s UNSATISFIABLE\n"); }
                 if (S.verbosity > 0) {
                     printf("c =========================================================================================================\n");
@@ -244,7 +244,7 @@ int main(int argc, char** argv)
                 if (ret == l_True) {
                     if (S.proofFile != 0) { fclose(S.proofFile); }  // close proof file!
                     preprocessor.extendModel(S.model);
-                    if (res != NULL) {
+                    if (res != nullptr) {
                         cerr << "s SATISFIABLE" << endl;
                         fprintf(res, "s SATISFIABLE\nv ");
                         for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
@@ -267,8 +267,8 @@ int main(int argc, char** argv)
                     return (10);
                     #endif
                 } else if (ret == l_False) {
-                    if (S.proofFile != NULL) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
-                    if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                    if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
+                    if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                     printf("s UNSATISFIABLE\n");
                     cerr.flush(); cout.flush();
                     #ifdef NDEBUG
@@ -297,7 +297,7 @@ int main(int argc, char** argv)
                 preprocessor.extendModel(S.model);
                 int varLimit = preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables();
                 assert(varLimit <= S.model.size() && "cannot print variables that are not present in the model");
-                if (res != NULL) {
+                if (res != nullptr) {
                     printf("s SATISFIABLE\n");
                     fprintf(res, "s SATISFIABLE\nv ");
                     for (int i = 0; i < varLimit; i++)
@@ -320,7 +320,7 @@ int main(int argc, char** argv)
                 return (10);
                 #endif
             } else if (solution == 20) {
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                 printf("s UNSATISFIABLE\n");
                 cerr.flush(); cout.flush();
                 #ifdef NDEBUG
@@ -329,7 +329,7 @@ int main(int argc, char** argv)
                 return (20);
                 #endif
             } else {
-                if (res != NULL) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
                 printf("s UNKNOWN\n");
             }
 

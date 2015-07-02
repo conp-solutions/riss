@@ -448,7 +448,7 @@ void TreeNode::phaseCopyTo(vec<char>& ph)
 
 void TreeNode::updateActivityPolarity(vec<double>& act, vec<Solver::VarFlags>& ph, int option)
 {
-    if (!inheritedActPol && parent != NULL && pt_level > 1) { //level 1 nodes do not receive act & polarity from parents
+    if (!inheritedActPol && parent != nullptr && pt_level > 1) { //level 1 nodes do not receive act & polarity from parents
         vec<double> parentActivity;
         vec<char> parentPhase;
         if (option > 0) { parent->activityCopyTo(parentActivity); }

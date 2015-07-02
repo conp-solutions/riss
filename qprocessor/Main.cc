@@ -140,7 +140,7 @@ int main(int argc, char** argv)
         }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL) {
+        if (in == nullptr) {
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         }
 

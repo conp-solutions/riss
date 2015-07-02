@@ -88,7 +88,7 @@ class Subsumption : public Technique
     /** run subsumption and strengthening until completion
      * @param doStrengthen use strengthening in this call?
      */
-    bool process(bool doStrengthen = true, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
+    bool process(bool doStrengthen = true, Riss::Heap<VarOrderBVEHeapLt> * heap = nullptr, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
 
     void initClause(const Riss::CRef& cr, const bool& addToStrengthen = true);   // inherited from Technique
 

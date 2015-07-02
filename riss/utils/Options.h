@@ -210,7 +210,7 @@ class DoubleOption : public Option
         char*  end;
         double tmp = strtod(span, &end);
 
-        if (end == NULL) {
+        if (end == nullptr) {
             return false;
         } else if (tmp >= range.end && (!range.end_inclusive || tmp != range.end)) {
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
@@ -312,7 +312,7 @@ class IntOption : public Option
         char*   end;
         int32_t tmp = strtol(span, &end, 10);
 
-        if (end == NULL) {
+        if (end == nullptr) {
             return false;
         } else if (tmp > range.end) {
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
@@ -432,7 +432,7 @@ class Int64Option : public Option
         char*   end;
         int64_t tmp = strtoll(span, &end, 10);
 
-        if (end == NULL) {
+        if (end == nullptr) {
             return false;
         } else if (tmp > range.end) {
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
@@ -526,7 +526,7 @@ class StringOption : public Option
     const char* value;
     const char* defaultValue;
   public:
-    StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+    StringOption(const char* c, const char* n, const char* d, const char* def = nullptr, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
         : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def), defaultValue(def) {}
 
     operator      const char*  (void) const     { return value; }
