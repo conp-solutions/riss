@@ -22,6 +22,9 @@ debug/
 release/
 build/
 
+# CI wrapper script
+tools/checker/solver-wrapper.sh
+
 # Latex build files
 *.aux
 *.log
