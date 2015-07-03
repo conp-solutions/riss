@@ -139,7 +139,7 @@ string splitString(const std::string& s, unsigned int n, char delim = ' ')
 
 static bool isInfinite(const double pV)
 {
-    return isinf(fabs(pV));
+    return std::isinf(fabs(pV));
 }
 
 void dumpData()

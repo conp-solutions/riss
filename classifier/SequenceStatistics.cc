@@ -76,7 +76,7 @@ void SequenceStatistics::addValue(double value)
         count++;
         sum += value;
         sumXsq += (value * value);
-        if (isnan(sum) || isnan(sumXsq)) {
+        if (std::isnan(sum) || std::isnan(sumXsq)) {
             printf("wrong!!!\n");
         }
         if (value > max)

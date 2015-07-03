@@ -4,7 +4,7 @@
  *  Created on: Dec 23, 2013
  *      Author: gardero
  */
-
+#include <assert.h>
 #include "WekaDataset.h"
 
 using namespace std;
@@ -24,10 +24,13 @@ bool WekaDataset::getDataRow(vector<string>& row)
         istringstream split(line);
         bool positive = true; // positive
         string word;
-        while (getline(split, word, ',')) {
+	#pragma message ( "haveLine should be a bool fix it (=="") to get a working weka function" )
+	assert(false);
+	while (getline(split, word, ',')) {
             row.push_back(word);
         } while (split);
-        haveLine = getline(fin, line);
+        getline(fin, line);
+	haveLine = line != "EOF";
         return true;
     } else
     { return false; }

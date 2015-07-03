@@ -13,7 +13,7 @@
 #include <math.h>
 
 #include "riss/mtl/Sort.h"
-#include "knn.cc"
+#include "knntool-src/knn.cc"
 
 using namespace Riss;
 using namespace std;
@@ -1202,7 +1202,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
 static bool isInfinite(const double pV)
 {
-    return isinf(fabs(pV));
+    return std::isinf(fabs(pV));
 }
 
 std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
