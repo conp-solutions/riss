@@ -268,7 +268,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     if (onlineDratChecker != 0) { onlineDratChecker->setVerbosity(config.opt_checkProofOnline); }
 
     if( (const char*)config.search_schedule != 0 )
-      configScheduler.initConfigs( string(config.search_schedule), config.sscheduleGrowFactor ); // setup configuration
+      configScheduler.initConfigs( searchconfiguration, string(config.search_schedule), config.sscheduleGrowFactor, config.scheduleDefaultConflicts, config.scheduleConflicts ); // setup configuration
 }
 
 
@@ -2561,7 +2561,7 @@ lbool Solver::initSolve(int solves)
         topLevelsSinceLastLa = 0; untilLa = config.opt_laEvery;
 	curr_restarts = 0; // reset restarts
 	
-	configScheduler.reset();
+	configScheduler.reset(searchconfiguration);
     }
 
     // initialize activities and polarities
@@ -2739,7 +2739,7 @@ lbool Solver::solve_()
         //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
         while (status == l_Undef) {
 	  
-	    configScheduler.checkAndChangeSearchConfig(); // update current configuration?
+	    configScheduler.checkAndChangeSearchConfig(conflicts, searchconfiguration); // update current configuration?
 
             double rest_base = 0;
             if (searchconfiguration.restarts_type != 0) { // set current restart limit
@@ -4202,15 +4202,15 @@ growFactor(1)
 {}
 
 
-void Solver::ConfigurationScheduler::initConfigs(string schedule, int factor)
+void Solver::ConfigurationScheduler::initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, string schedule, float factor, int defaultC, int usualC)
 {
   if( schedule.size() == 0 ) return; // do not init anything
   
   growFactor = factor; // set factor
   
   // push default config with default conflict number
-  searchConfigs.push( searchconfiguration ); // default object
-  searchConfigConflicts.push( config.scheduleDefaultConflicts );
+  searchConfigs.push( searchConfiguration ); // default object
+  searchConfigConflicts.push( defaultC );
   
 # warning depending on schedule string add configs, for now, add two more: 1) SAT, and 2) STRONG UNSAT
   SearchConfiguration sc; // temporary work object
@@ -4224,7 +4224,7 @@ void Solver::ConfigurationScheduler::initConfigs(string schedule, int factor)
   sc.use_reverse_minimization = false;
 
   searchConfigs.push ( sc ); // add Minisat like configuration
-  searchConfigConflicts.push( config.scheduleConflicts );
+  searchConfigConflicts.push( usualC );
   
   sc.var_decay = 0.8;
   sc.var_decay_start = 0.8;
@@ -4239,18 +4239,18 @@ void Solver::ConfigurationScheduler::initConfigs(string schedule, int factor)
   sc.lbLBDReverseClause = 20;
   
   searchConfigs.push ( sc ); // add strong focus like configuration
-  searchConfigConflicts.push( config.scheduleConflicts );
+  searchConfigConflicts.push( usualC );
 }
 
-void Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int currentConflicts)
+void Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int conflicts, Riss::Solver::SearchConfiguration& searchConfiguration)
 {
   if( searchConfigs.size() == 0 ) return; // nothing to be done, no schedule
   
-  const int diff = currentConflicts - lastConfigChangeConflict;
+  const int diff = conflicts - lastConfigChangeConflict;
   
   // budget of this config is over?
   if( diff > searchConfigConflicts[ currentConfig ] ) {
-    lastConfigChangeConflict = currentConflicts;
+    lastConfigChangeConflict = conflicts;
     
     currentConfig ++;
     if( currentConfig == searchConfigs.size() ) { // finished one round
@@ -4258,17 +4258,17 @@ void Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int currentConfl
       for( int i = 0 ; i < searchConfigConflicts.size(); ++ i ) {  // increase all distances
 	searchConfigConflicts[i] = (float) searchConfigConflicts[i] * growFactor;
       }
-      searchconfiguration = searchConfigs[currentConfig]; // set current configuration
+      searchConfiguration = searchConfigs[currentConfig]; // set current configuration
     }
   }
 }
 
-void Solver::ConfigurationScheduler::reset()
+void Solver::ConfigurationScheduler::reset(Riss::Solver::SearchConfiguration& searchConfiguration)
 {
   if( searchConfigs.size() == 0 ) return; // nothing to be done, no schedule
   lastConfigChangeConflict = 0;
   currentConfig = 0;
-  searchconfiguration = searchConfigs[currentConfig];
+  searchConfiguration = searchConfigs[currentConfig];
 }
 
 

@@ -291,9 +291,9 @@ class Solver
       int currentConfig;                      // index of currently used configuration
       float growFactor;                       // increase of all conflict limits after running each configuration once
       
-      void reset();
-      void initConfigs(string schedule, int factor);                     // initialize all configurations
-      void checkAndChangeSearchConfig();      // takes care of whether the configuration should be changed at this restart
+      void reset(Riss::Solver::SearchConfiguration& searchConfiguration);
+      void initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, string schedule, float factor, int defaultC, int usualC);                     // initialize all configurations
+      void checkAndChangeSearchConfig( int conflicts, SearchConfiguration& searchConfiguration);      // takes care of whether the configuration should be changed at this restart
       ConfigurationScheduler();
     } configScheduler;
         
