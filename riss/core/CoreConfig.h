@@ -135,6 +135,11 @@ class CoreConfig : public Config
     IntOption opt_rMax;
     DoubleOption opt_rMaxInc;
 
+    StringOption search_schedule;
+    IntOption    scheduleConflicts;
+    IntOption    scheduleDefaultConflicts;
+    DoubleOption sscheduleGrowFactor;
+    
     #ifndef NDEBUG
     BoolOption localLookaheadDebug;
     #endif

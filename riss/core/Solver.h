@@ -281,12 +281,27 @@ class Solver
         int       restarts_type;       // choose series (dynamic, luby, geometric)
     } searchconfiguration;
 
+    /// store all required things to change the configuration during search
+    struct ConfigurationScheduler {
+      vec<SearchConfiguration> searchConfigs; // list of configs that use used for iteration
+      vec<int> searchConfigConflicts;         // number of conflicts allowed for the given configuration
+      int lastConfigChangeConflict;           // store number of conflict when seeing last conflict
+      
+
+      int currentConfig;                      // index of currently used configuration
+      float growFactor;                       // increase of all conflict limits after running each configuration once
+      
+      void reset();
+      void initConfigs(string schedule, int factor);                     // initialize all configurations
+      void checkAndChangeSearchConfig();      // takes care of whether the configuration should be changed at this restart
+      ConfigurationScheduler();
+    } configScheduler;
+        
     double    random_var_freq;
     double    random_seed;
     bool      rnd_pol;            // Use random polarities for branching heuristics.
     bool      rnd_init_act;       // Initialize variable activities with a small random value.
     double    garbage_frac;       // The fraction of wasted memory allowed before a garbage collection is triggered.
-
 
 
     // Statistics: (read-only member variable)

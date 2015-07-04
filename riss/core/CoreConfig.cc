@@ -127,6 +127,11 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_rMax(_cr, "rMax", "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) , optionListPtr),
     opt_rMaxInc(_cr, "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &opt_rMax),
 
+    search_schedule("SCHEDULE", "sschedule", "specify configs to be schedules", 0, optionListPtr),
+    scheduleConflicts("SCHEDULE", "sscheConflicts", "initial conflicts for schedule", 1000000, IntRange(1, INT32_MAX) , optionListPtr),
+    scheduleDefaultConflicts("SCHEDULE", "sscheDConflicts","initial conflicts for default", 3000000, IntRange(1, INT32_MAX) , optionListPtr),
+    sscheduleGrowFactor("SCHEDULE", "sscheInc", 1.3, "increment for conflicts per schedule round", DoubleRange(1, true, HUGE_VAL, false), optionListPtr),
+    
     #ifndef NDEBUG
     localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA", false, optionListPtr),
     #endif

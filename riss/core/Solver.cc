@@ -66,7 +66,6 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , rnd_init_act(config.opt_rnd_init_act)
     , garbage_frac(config.opt_garbage_frac)
 
-
     // Statistics: (formerly in 'SolverStats')
     //
     , nbRemovedClauses(0), nbReducedClauses(0), nbDL2(0), nbBin(0), nbUn(0) , nbReduceDB(0)
@@ -268,6 +267,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
 
     if (onlineDratChecker != 0) { onlineDratChecker->setVerbosity(config.opt_checkProofOnline); }
 
+    if( (const char*)config.search_schedule != 0 )
+      configScheduler.initConfigs( string(config.search_schedule), config.sscheduleGrowFactor ); // setup configuration
 }
 
 
@@ -2558,6 +2559,9 @@ lbool Solver::initSolve(int solves)
         nbstopsrestartssame = 0; lastblockatrestart = 0;
         las = 0; failedLAs = 0; maxBound = 0; maxLaNumber = config.opt_laBound;
         topLevelsSinceLastLa = 0; untilLa = config.opt_laEvery;
+	curr_restarts = 0; // reset restarts
+	
+	configScheduler.reset();
     }
 
     // initialize activities and polarities
@@ -2719,7 +2723,7 @@ lbool Solver::solve_()
     //
     // Search:
     //
-    int curr_restarts = 0;
+    curr_restarts = 0;
     lastReshuffleRestart = 0;
 
     // substitueDisjunctions
@@ -2732,9 +2736,10 @@ lbool Solver::solve_()
 
     rerInitRewriteInfo();
 
-    do {
         //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
         while (status == l_Undef) {
+	  
+	    configScheduler.checkAndChangeSearchConfig(); // update current configuration?
 
             double rest_base = 0;
             if (searchconfiguration.restarts_type != 0) { // set current restart limit
@@ -2758,10 +2763,6 @@ lbool Solver::solve_()
 
             status = inprocess(status);
         }
-
-        // another cegr iteration
-        break; // if non of the cegar methods found something, stop here!
-    } while (true);   // if nothing special happens, a single search call is sufficient
 
     if (status == l_False && config.opt_refineConflict) { refineFinalConflict(); }  // minimize final conflict clause
 
@@ -4193,5 +4194,82 @@ void Solver::printSearchProgress()
                (int)nbReduceDB, nLearnts(), (int)nbDL2, (int)nbRemovedClauses, progressEstimate() * 100);
     }
 }
+
+Solver::ConfigurationScheduler::ConfigurationScheduler()
+: lastConfigChangeConflict(0),
+currentConfig(0),
+growFactor(1)
+{}
+
+
+void Solver::ConfigurationScheduler::initConfigs(string schedule, int factor)
+{
+  if( schedule.size() == 0 ) return; // do not init anything
+  
+  growFactor = factor; // set factor
+  
+  // push default config with default conflict number
+  searchConfigs.push( searchconfiguration ); // default object
+  searchConfigConflicts.push( config.scheduleDefaultConflicts );
+  
+# warning depending on schedule string add configs, for now, add two more: 1) SAT, and 2) STRONG UNSAT
+  SearchConfiguration sc; // temporary work object
+  sc.var_decay = 0.95;  // only little update
+  sc.var_decay_start = 0.95;
+  sc.var_decay_end = 0.95;
+  sc.restarts_type = 1; // luby
+  sc.firstReduceDB = 30000;
+  sc.incReduceDB   = 5000;
+  sc.lbSizeMinimizingClause = 0;
+  sc.use_reverse_minimization = false;
+
+  searchConfigs.push ( sc ); // add Minisat like configuration
+  searchConfigConflicts.push( config.scheduleConflicts );
+  
+  sc.var_decay = 0.8;
+  sc.var_decay_start = 0.8;
+  sc.var_decay_end = 0.85;  
+  sc.var_decay_inc = 0.005;
+  sc.var_decay_distance = 1000;
+  sc.restarts_type = 0;
+  sc.firstReduceDB = 4000;
+  sc.lbSizeMinimizingClause = 50;
+  sc.use_reverse_minimization = false;
+  sc.lbSizeReverseClause = 50;
+  sc.lbLBDReverseClause = 20;
+  
+  searchConfigs.push ( sc ); // add strong focus like configuration
+  searchConfigConflicts.push( config.scheduleConflicts );
+}
+
+void Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int currentConflicts)
+{
+  if( searchConfigs.size() == 0 ) return; // nothing to be done, no schedule
+  
+  const int diff = currentConflicts - lastConfigChangeConflict;
+  
+  // budget of this config is over?
+  if( diff > searchConfigConflicts[ currentConfig ] ) {
+    lastConfigChangeConflict = currentConflicts;
+    
+    currentConfig ++;
+    if( currentConfig == searchConfigs.size() ) { // finished one round
+      currentConfig = 0;  // set back to first (default)
+      for( int i = 0 ; i < searchConfigConflicts.size(); ++ i ) {  // increase all distances
+	searchConfigConflicts[i] = (float) searchConfigConflicts[i] * growFactor;
+      }
+      searchconfiguration = searchConfigs[currentConfig]; // set current configuration
+    }
+  }
+}
+
+void Solver::ConfigurationScheduler::reset()
+{
+  if( searchConfigs.size() == 0 ) return; // nothing to be done, no schedule
+  lastConfigChangeConflict = 0;
+  currentConfig = 0;
+  searchconfiguration = searchConfigs[currentConfig];
+}
+
 
 } // namespace Riss
