@@ -22,7 +22,7 @@ class RWLock
     RWLock()
     {
         // create semaphore with no space in it
-        pthread_rwlock_init(&_lock, NULL);
+        pthread_rwlock_init(&_lock, nullptr);
     }
 
     /** release all used resources (nothing to do -> semaphore becomes invalid)

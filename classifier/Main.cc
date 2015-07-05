@@ -120,8 +120,8 @@ Configurations* configuration;
 istringstream* split;
 bool runtimesInfo;
 CNFClassifier* cnfclassifier;
-ostream* out = NULL;
-ofstream* fileout = NULL;
+ostream* out = nullptr;
+ofstream* fileout = nullptr;
 const char* cnffile;
 double time1 = 0;
 
@@ -138,7 +138,7 @@ string splitString(const std::string& s, unsigned int n, char delim = ' ')
 
 static bool isInfinite(const double pV)
 {
-    return isinf(fabs(pV));
+    return std::isinf(fabs(pV));
 }
 
 void dumpData()
@@ -201,7 +201,7 @@ void printFeatures(int argc, char** argv)
     }
 
     gzFile in = gzopen(cnffile, "rb");
-    if (in == NULL) {
+    if (in == nullptr) {
         printf("c ERROR! Could not open file: %s\n",
                argc == 1 ? "<stdin>" : cnffile);
     }
@@ -257,7 +257,7 @@ void printFeatures(int argc, char** argv)
     if (attr) {
         cnfclassifier->setAttrFileName(attrFile);
     } else {
-        cnfclassifier->setAttrFileName(NULL);
+        cnfclassifier->setAttrFileName(nullptr);
     }
     cnfclassifier->setComputingDerivative(derivative);
 

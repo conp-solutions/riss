@@ -256,11 +256,11 @@ class CoprocessorData
 
 // formula statistics with HeapUpdate and LockHandling
 
-    void addedLiteral(const Riss::Lit& l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);   // update counter for literal
-    void removedLiteral(const Riss::Lit& l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);   // update counter for literal
+    void addedLiteral(const Riss::Lit& l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = nullptr, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = nullptr, SpinLock * heap_lock = nullptr);   // update counter for literal
+    void removedLiteral(const Riss::Lit& l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = nullptr, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = nullptr, SpinLock * heap_lock = nullptr);   // update counter for literal
     void addedClause(const Riss::CRef& cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap = 0, const bool update = false, const Riss::Var ignore = (-1), SpinLock* data_lock = 0, SpinLock* heap_lock = 0);              // update counters for literals in the clause
 
-    void removedClause(const Riss::CRef& cr, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);             // update counters for literals in the clause
+    void removedClause(const Riss::CRef& cr, Riss::Heap<VarOrderBVEHeapLt> * heap = nullptr, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = nullptr, SpinLock * heap_lock = nullptr);             // update counters for literals in the clause
     void removedClause(const Riss::Lit& l1, const Riss::Lit& l2);             // update counters for literals in the clause
 
     bool removeClauseThreadSafe(const Riss::CRef& cr);
@@ -415,7 +415,7 @@ struct VarOrderBVEHeapLt {
     const int heapOption;
     bool operator()(Riss::Var x, Riss::Var y) const
     {
-        /* assert (data != NULL && "Please assign a valid data object before heap usage" );*/
+        /* assert (data != nullptr && "Please assign a valid data object before heap usage" );*/
         if (heapOption == 0) {
             return data[x] < data[y];
         } else if (heapOption == 1) {
@@ -471,7 +471,7 @@ struct LitOrderHeapLt {
     const int heapOption;
     bool operator()(int ix, int iy) const
     {
-        /* assert (data != NULL && "Please assign a valid data object before heap usage" );*/
+        /* assert (data != nullptr && "Please assign a valid data object before heap usage" );*/
         const Riss::Lit x = Riss::toLit(ix); const Riss::Lit y = Riss::toLit(iy);
         if (heapOption == 0) {
             return data[x] < data[y];
@@ -735,19 +735,19 @@ inline void CoprocessorData::addClause(const Riss::CRef& cr , Riss::Heap<VarOrde
 {
     const Riss::Clause& c = ca[cr];
     if (c.can_be_deleted()) { return; }
-    if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
+    if (heap == nullptr && data_lock == nullptr && heap_lock == nullptr) {
         for (int l = 0; l < c.size(); ++l) {
             occs[Riss::toInt(c[l])].push_back(cr);
             lit_occurrence_count[Riss::toInt(c[l])] += 1;
         }
         numberOfCls ++;
     } else {
-        if (data_lock != NULL) { data_lock->lock(); }
-        if (heap_lock != NULL) { heap_lock->lock(); }
+        if (data_lock != nullptr) { data_lock->lock(); }
+        if (heap_lock != nullptr) { heap_lock->lock(); }
         for (int l = 0; l < c.size(); ++l) {
             occs[Riss::toInt(c[l])].push_back(cr);
             lit_occurrence_count[Riss::toInt(c[l])] += 1;
-            if (heap != NULL) {
+            if (heap != nullptr) {
                 if (heap->inHeap(var(c[l]))) {
                     heap->increase(var(c[l]));
                 } else {
@@ -757,9 +757,9 @@ inline void CoprocessorData::addClause(const Riss::CRef& cr , Riss::Heap<VarOrde
                 }
             }
         }
-        if (heap_lock != NULL) { heap_lock->unlock(); }
+        if (heap_lock != nullptr) { heap_lock->unlock(); }
         numberOfCls ++;
-        if (data_lock != NULL) { data_lock->unlock(); }
+        if (data_lock != nullptr) { data_lock->unlock(); }
     }
 }
 
@@ -947,60 +947,60 @@ inline void CoprocessorData::removedClause(const Riss::Lit& l1, const Riss::Lit&
 
 inline void CoprocessorData::addedLiteral(const Riss::Lit& l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
 {
-    if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
+    if (heap == nullptr && data_lock == nullptr && heap_lock == nullptr) {
         lit_occurrence_count[Riss::toInt(l)] += diff;
     } else {
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->lock();
         }
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->lock();
         }
         lit_occurrence_count[Riss::toInt(l)] += diff;
-        if (heap != NULL) {
+        if (heap != nullptr) {
             if (heap->inHeap(var(l))) {
                 heap->increase(var(l));
             } else if (update && var(l) != ignore) {
                 heap->update(var(l));
             }
         }
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->unlock();
         }
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->unlock();
         }
     }
 }
 inline void CoprocessorData::removedLiteral(const Riss::Lit& l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)   // update counter for literal
 {
-    if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
+    if (heap == nullptr && data_lock == nullptr && heap_lock == nullptr) {
         deletedVar(var(l));
         lit_occurrence_count[Riss::toInt(l)] -= diff;
         ca.freeLit();
         //assert(lit_occurrence_count[Riss::toInt(l)] == countLitOcc(l));
     } else {
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->lock();
         }
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->lock();
         }
         deletedVar(var(l));
         lit_occurrence_count[Riss::toInt(l)] -= diff;
         ca.freeLit();
         //assert(lit_occurrence_count[Riss::toInt(l)] == countLitOcc(l));
-        if (heap != NULL) {
+        if (heap != nullptr) {
             if (heap->inHeap(var(l))) {
                 heap->decrease(var(l));
             } else if (update && var(l) != ignore) {
                 heap->update(var(l));
             }
         }
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->unlock();
         }
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->unlock();
         }
     }
@@ -1008,21 +1008,21 @@ inline void CoprocessorData::removedLiteral(const Riss::Lit& l, const int32_t di
 inline void CoprocessorData::addedClause(const Riss::CRef& cr, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update , const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)              // update counters for literals in the clause
 {
     const Riss::Clause& c = ca[cr];
-    if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
+    if (heap == nullptr && data_lock == nullptr && heap_lock == nullptr) {
         for (int l = 0; l < c.size(); ++l) {
             lit_occurrence_count[Riss::toInt(c[l])] += 1;
         }
         numberOfCls++;
     } else {
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->lock();
         }
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->lock();
         }
         for (int l = 0; l < c.size(); ++l) {
             lit_occurrence_count[Riss::toInt(c[l])] += 1;
-            if (heap != NULL) {
+            if (heap != nullptr) {
                 if (heap->inHeap(var(c[l]))) {
                     heap->increase(var(c[l]));
                 } else if (update && var(c[l]) != ignore) {
@@ -1031,10 +1031,10 @@ inline void CoprocessorData::addedClause(const Riss::CRef& cr, Riss::Heap<VarOrd
             }
         }
         numberOfCls++;
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->unlock();
         }
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->unlock();
         }
     }
@@ -1042,7 +1042,7 @@ inline void CoprocessorData::addedClause(const Riss::CRef& cr, Riss::Heap<VarOrd
 inline void CoprocessorData::removedClause(const Riss::CRef& cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const bool update, const Riss::Var ignore, SpinLock* data_lock, SpinLock* heap_lock)             // update counters for literals in the clause
 {
     const Riss::Clause& c = ca[cr];
-    if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
+    if (heap == nullptr && data_lock == nullptr && heap_lock == nullptr) {
         for (int l = 0; l < c.size(); ++l) {
             deletedVar(var(c[l]));
             --lit_occurrence_count[Riss::toInt(c[l])];
@@ -1051,10 +1051,10 @@ inline void CoprocessorData::removedClause(const Riss::CRef& cr, Riss::Heap< Cop
         numberOfCls --;
         ca.free(cr);
     } else {
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->lock();
         }
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->lock();
         }
         for (int l = 0; l < c.size(); ++l) {
@@ -1062,7 +1062,7 @@ inline void CoprocessorData::removedClause(const Riss::CRef& cr, Riss::Heap< Cop
             --lit_occurrence_count[Riss::toInt(c[l])];
             //assert(lit_occurrence_count[Riss::toInt(c[l])] == countLitOcc(c[l]));
 
-            if (heap != NULL) {
+            if (heap != nullptr) {
                 if (heap->inHeap(var(c[l]))) {
                     heap->decrease(var(c[l]));
                 } else if (update && var(c[l]) != ignore) {
@@ -1072,10 +1072,10 @@ inline void CoprocessorData::removedClause(const Riss::CRef& cr, Riss::Heap< Cop
         }
         numberOfCls --;
         ca.free(cr);
-        if (heap_lock != NULL) {
+        if (heap_lock != nullptr) {
             heap_lock->unlock();
         }
-        if (data_lock != NULL) {
+        if (data_lock != nullptr) {
             data_lock->unlock();
         }
     }

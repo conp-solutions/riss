@@ -109,14 +109,14 @@ class CNFClassifier
         this->dumpingPlots = dumpingPlots;
     }
 
-    const std::string& getPlotsFileName() const
+    const char* getPlotsFileName() const
     {
         return plotsFileName;
     }
 
     void setPlotsFileName(const char* plotsFileName)
     {
-        dumpingPlots = (plotsFileName != NULL);
+        dumpingPlots = (plotsFileName != nullptr);
         this->plotsFileName = plotsFileName;
     }
 

@@ -22,7 +22,7 @@ SOLVERDIR  = riss
 NSPACE     = Riss
 
 # THE REMAINING OF THE MAKEFILE SHOULD BE LEFT UNCHANGED
-EXEC       = open-wbo
+EXEC       = optiriss
 DEPDIR     = mtl utils core 
 
 # For the original Minisat based systems

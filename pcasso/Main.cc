@@ -179,7 +179,7 @@ int main(int argc, char** argv)
         // first one that prints will set it to 1 -> no other can print its solution
         int printedAlready = 0;
         pthread_mutex_t mutex;
-        pthread_mutex_init(&mutex, NULL);
+        pthread_mutex_init(&mutex, nullptr);
 
         sem_t sleepSem;
         sem_init(&(sleepSem), 0, 0);
@@ -262,7 +262,7 @@ void* solverMain(void* pointer)
         }
 
         gzFile in = (p.argc == 1) ? gzdopen(0, "rb") : gzopen(p.argv[1], "rb");
-        if (in == NULL) {
+        if (in == nullptr) {
             fprintf(stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1);
         }
 
@@ -302,8 +302,8 @@ void* solverMain(void* pointer)
             pthread_mutex_lock(share->mutex);
             if (*(share->printedAlready) == 0) {
                 *(share->printedAlready) = 1;
-                FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : NULL;
-                if (res != NULL) { ffprintf(stderr, res, "UNSAT\n"), fclose(res); }
+                FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : nullptr;
+                if (res != nullptr) { ffprintf(stderr, res, "UNSAT\n"), fclose(res); }
 
                 if (S.verbosity > 0) {
                     fprintf(stderr, "===============================================================================\n");
@@ -344,8 +344,8 @@ void* solverMain(void* pointer)
             }
             fprintf(stderr, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
 
-            FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : NULL;
-            if (res != NULL) {
+            FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : nullptr;
+            if (res != nullptr) {
                 if (ret == l_True) {
                     fprintf(res, "SAT\n");
                     for (int i = 0; i < S.nVars(); i++)

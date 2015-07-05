@@ -103,8 +103,8 @@ class HashLookUpTable
 
   public:
 
-    HashLookUpTable() : table(NULL), cap(0), size(0) {}
-    HashLookUpTable(const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
+    HashLookUpTable() : table(nullptr), cap(0), size(0) {}
+    HashLookUpTable(const H& h, const E& e) : hash(h), equals(e), table(nullptr), cap(0), size(0) {}
     ~HashLookUpTable() { delete [] table; }
 
     // PRECONDITION: the key must *NOT* exist in the map.
@@ -148,7 +148,7 @@ class HashLookUpTable
     // PRECONDITION: the key must exist in the map.
     void remove(const K& k)
     {
-        assert(table != NULL);
+        assert(table != nullptr);
         vec<K>& ps = table[index(k)];
         int j = 0;
         for (; j < ps.size() && !equals(ps[j].key, k); j++) {};
@@ -161,7 +161,7 @@ class HashLookUpTable
     /** remove based on other key type */
     void removeL(const L& k)
     {
-        assert(table != NULL);
+        assert(table != nullptr);
         vec<K>& ps = table[index(k)];
         int j = 0;
         for (; j < ps.size() && !equalsKL(ps[j].key, k); j++) {};
@@ -175,7 +175,7 @@ class HashLookUpTable
     {
         cap = size = 0;
         delete [] table;
-        table = NULL;
+        table = nullptr;
     }
 
     int  elems() const { return size; }
@@ -190,7 +190,7 @@ class HashLookUpTable
         other.cap   = cap;
         other.size  = size;
 
-        table = NULL;
+        table = nullptr;
         size = cap = 0;
     }
 

@@ -1,0 +1,12 @@
+The MaxSAT solver optiriss shall be executed in four different ways during the MaxSAT competition:
+
+1) in all complete tracks, please use the following command lines:
+
+./optiriss -solverConfig=INCSOLVE <inputfile>
+./optiriss -solverConfig=INCSOLVE -algorithm=0 -incremental=1 <inputfile>
+
+2) in all incomplete tracks, please use the following configurations of the tool:
+
+./optiriss -solverConfig=INCSOLVE -algorithm=0 -incremental=1 -incomplete <inputfile>
+./optiriss -solverConfig=INCSOLVE -incomplete <inputfile>
+

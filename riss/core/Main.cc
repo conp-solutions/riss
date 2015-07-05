@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    StringOption drupFile("PROOF", "proof", "Write a proof trace into the given file", 0);
+    StringOption proofFile("PROOF", "proof", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, DRUP or DRAT)", "DRAT");
 
 
@@ -118,6 +118,10 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+    IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
+
+    IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
+    StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
     try {
 
@@ -127,9 +131,28 @@ int main(int argc, char** argv)
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
         CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
-        foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
-        foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
+        foundHelp = coreConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        foundHelp = cp3config.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
+
+        // print pcs information into file
+        if (0 != (const char*)opt_tuneFile) {
+            FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
+            fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
+            ::printOptions(pcsFile, opt_tuneLevel);
+            fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
+            coreConfig.printOptions(pcsFile);
+            fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
+            cp3config.printOptions(pcsFile);
+            fprintf(pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
+            fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
+            ::printOptionsDependencies(pcsFile, opt_tuneLevel);
+            fprintf(pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
+            coreConfig.printOptionsDependencies(pcsFile);
+            fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
+            cp3config.printOptionsDependencies(pcsFile);
+            exit(0);
+        }
 
         if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
@@ -190,7 +213,7 @@ int main(int argc, char** argv)
         }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL) {
+        if (in == nullptr) {
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         }
 
@@ -206,12 +229,12 @@ int main(int argc, char** argv)
 
 
         // open file for proof
-        S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+        S.proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
         double parsed_time = cpuTime();
         if (S.verbosity > 0) {
@@ -230,16 +253,16 @@ int main(int argc, char** argv)
         //signal(SIGXCPU,SIGINT_interrupt);
 
         if (!S.simplify()) {
-            if (res != NULL) {
+            if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
-                res = NULL;
+                res = nullptr;
             }
             // add the empty clause to the proof, close proof file
-            if (S.drupProofFile != NULL) {
+            if (S.proofFile != nullptr) {
                 bool validProof = S.checkProof(); // check the proof that is generated inside the solver
                 if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-                fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
+                fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
             }
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -261,11 +284,11 @@ int main(int argc, char** argv)
         S.budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
-            if (res != NULL) { fclose(res); res == NULL; }
-            if (S.drupProofFile != NULL) {
-                fclose(S.drupProofFile);   // close the current file
-                S.drupProofFile = fopen((const char*) drupFile, "w"); // remove the content of that file
-                fclose(S.drupProofFile);   // close the file again
+            if (res != nullptr) { fclose(res); res == nullptr; }
+            if (S.proofFile != nullptr) {
+                fclose(S.proofFile);   // close the current file
+                S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
+                fclose(S.proofFile);   // close the file again
             }
         }
 
@@ -289,14 +312,14 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.drupProofFile != NULL) {
+        if (ret == l_False && S.proofFile != nullptr) {
             bool validProof = S.checkProof(); // check the proof that is generated inside the solver
             if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-            fprintf(S.drupProofFile, "0\n");
+            fprintf(S.proofFile, "0\n");
         }
 
         // print solution into file
-        if (res != NULL) {
+        if (res != nullptr) {
             if (ret == l_True) {
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
@@ -311,11 +334,11 @@ int main(int argc, char** argv)
                 else { fprintf(res, "s UNSATISFIABLE\n"); }
             } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
             else { fprintf(res, "s UNKNOWN\n"); }
-            fclose(res); res = NULL;
+            fclose(res); res = nullptr;
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == NULL) {
+        if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)

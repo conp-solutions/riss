@@ -87,7 +87,7 @@ string runandoutput(string cmd)
     if (stream) {
         cerr << "c while reading from command call, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
         while (!feof(stream))
-            if (fgets(buffer, max_buffer, stream) != NULL) {
+            if (fgets(buffer, max_buffer, stream) != nullptr) {
                 data.append(buffer);
             }
         pclose(stream);

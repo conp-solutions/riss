@@ -460,7 +460,7 @@ bool PSolver::initializeThreads()
         }
         pthread_attr_destroy(&attr);
     }
-    solvers[0]->drupProofFile = 0; // set to 0, independently of the previous value
+    solvers[0]->proofFile = 0; // set to 0, independently of the previous value
     return failed;
 }
 
@@ -636,7 +636,7 @@ void PSolver::setDrupFile(FILE* drupFile)
     // set file for the first solver
     if (!initialized && solvers.size() > 0) {
         cerr << "c set DRUP file for solver 0" << endl;
-        solvers[0]->drupProofFile = drupFile;
+        solvers[0]->proofFile = drupFile;
     }
     // set own file handle to initialize the proof master afterwards
     drupProofFile = drupFile;

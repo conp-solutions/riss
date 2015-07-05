@@ -5,6 +5,9 @@ http://tools.computational-logic.org
 
 Please send bug reports to norbert.manthey@tu-dresden.de
 
+All tools in this package are highly configurable. For a simple comparison, most 
+techniques are disabled by default. Hence, you should specify options to use. For
+both Riss and Coprocessor, using -config=Riss427 is a fair starting point.
 
 ## Components
 
@@ -34,10 +37,13 @@ mkdir debug
 cd debug/
 
 # Create a debug build configuration
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake -D CMAKE_BUILD_TYPE=Debug ..
+
+# Create release build Intel compiler
+cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_CXX_COMPILER=icpc ..
 
 # If you want DRAT proof support, configure cmake the following
-cmake -DDRATPROOF=ON ..
+cmake -D DRATPROOF=ON ..
 
 # You get a list of all targets with
 make help
@@ -56,15 +62,17 @@ make scripts
 To configure your build, pass the described options to cmake like this
 
 ```bash
-cmake -DOPTION_NAME=value ..
+cmake -D OPTION_NAME=value ..
 ```
 
-| Option          | Description                                            | Default |
-| --------------- | ------------------------------------------------------ | ------- |
-| STATIC_BINARIES | Build fully statically linked binaries                 |      ON |
-| SHIFTBMC        | Include build targets for shiftbmc and aiger library   |     OFF |
-| AIGER-TOOLS     | Include build targets for all agier executables        |     OFF |
-| WARNINGS        | Set verbose warning flags                              |     OFF |
+| Option             | Description                                            | Default |
+| ------------------ | ------------------------------------------------------ | ------- |
+| CMAKE_BUILD_TYPE   | "Debug" or "Release"                                   | Release |
+| CMAKE_CXX_COMPILER | C++ compiler that should be used                       |     g++ |
+| STATIC_BINARIES    | Build fully statically linked binaries                 |      ON |
+| SHIFTBMC           | Include build targets for shiftbmc and aiger library   |     OFF |
+| AIGER-TOOLSS       | Include build targets for all agier executables        |     OFF |
+| WARNINGS           | Set verbose warning flags                              |     OFF |
 
 
 ## Common Usage
@@ -73,6 +81,18 @@ The available parameters can be listed for each tool by calling:
 
     bin/<tool> --help
 
+Due to the large number of parameters, a more helpful alternative is:
+    
+    bin/<tool> --help -helpLevel=0 --help-verb
+
+The configuration specification can be written to a pcs file automatically. 
+Before using this file with an automated configuration framework, please check
+that only necessary parameters appear in the file. The procedure will include 
+all parameters, also the cpu or memory limit parameters.
+
+  bin/<tool> -pcs-file=<pcs-filename>
+  
+
 Using Riss to solve a formula <input.cnf> use
 
     bin/riss <input.cnf> [solution] [solverOptions]
@@ -80,9 +100,9 @@ Using Riss to solve a formula <input.cnf> use
 Using Riss to solve a formula <input.cnf> and generating a DRUP proof, the 
 following call can be used. Depending on the proof verification tool the option
 `-no-proofFormat` should be specified. Note, not all formula simplification
-techniques support generating a DRUP proof.
+techniques support generating a DRAT proof.
 
-    bin/riss <input.cnf> -drup=input.proof -no-proofFormat [solution] [solverOptions]
+    bin/riss <input.cnf> -proof=input.proof -no-proofFormat [solution] [solverOptions]
 
 The script `cp.sh` provides a simple setup for using Coprocessor as a formula
 simplification tool and afterwards running a SAT solver. The used SAT solver can

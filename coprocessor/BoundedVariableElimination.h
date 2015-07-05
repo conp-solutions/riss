@@ -175,7 +175,7 @@ class BoundedVariableElimination : public Technique
     inline int  tryResolve(const Riss::Clause& c, const Riss::Clause& d, const int v);
     inline bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit& l);
     inline char checkUpdatePrev(Riss::Lit& prev, const Riss::Lit& l);
-    bool findGates(CoprocessorData& data, const Riss::Var v, int& p_limit, int& n_limit, double& _gateTim, Riss::MarkArray * helper = NULL);
+    bool findGates(CoprocessorData& data, const Riss::Var v, int& p_limit, int& n_limit, double& _gateTim, Riss::MarkArray * helper = nullptr);
 
 
   public:

@@ -634,7 +634,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(Coprocessor::Cop
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
             else {
-                data.removedClause(cr, NULL, false, ignore, &data_lock, NULL);
+                data.removedClause(cr, nullptr, false, ignore, &data_lock, nullptr);
             }
 
             if (!c.learnt() /*&& cr < limit*/) {
@@ -900,7 +900,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, He
                     } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
                         data.addClause(cr, &heap, config.heap_updates == 2, v, &data_lock, &heap_lock);
                     } else {
-                        data.addClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+                        data.addClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
                     }
 
                     data_lock.lock();
@@ -965,7 +965,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
             else {
-                data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+                data.removedClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
             }
             if (!c.learnt() /* && cr < limit*/) {
                 data_lock.lock();
@@ -1485,7 +1485,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                     data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
                 else {
-                    data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL);
+                    data.removedClause(crO, nullptr, false, var_Undef, &data_lock, nullptr);
                 }
                 if (l_False == state) {
                     other.unlock();
@@ -1516,7 +1516,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                 } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
                     data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
                 } else {
-                    data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL);
+                    data.removedLiteral(neg, 1, nullptr, false, var_Undef, &data_lock, nullptr);
                 }
                 /*              if ( ! other.can_subsume())
                               {
@@ -1683,7 +1683,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                     data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
                 else {
-                    data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL);
+                    data.removedClause(crO, nullptr, false, var_Undef, &data_lock, nullptr);
                 }
                 if (l_False == state) {
                     other.unlock();
@@ -1715,7 +1715,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
                     data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
                 } else {
-                    data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL);
+                    data.removedLiteral(neg, 1, nullptr, false, var_Undef, &data_lock, nullptr);
                 }
                 /*              if ( ! other.can_subsume())
                               {
@@ -1825,7 +1825,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
             else {
-                data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+                data.removedClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
             }
 
         }
@@ -1899,7 +1899,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
                     data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
                 else {
-                    data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+                    data.removedClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
                 }
                 if (doStatistics) {
                     if (c.learnt()) { ++countL; }
@@ -1934,7 +1934,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
         } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
             data.removedLiteral(nl, countL + countO, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
         } else {
-            data.removedLiteral(nl, countL + countO, NULL, false, var_Undef, &data_lock, NULL);
+            data.removedLiteral(nl, countL + countO, nullptr, false, var_Undef, &data_lock, nullptr);
         }
 
         if (doStatistics) {

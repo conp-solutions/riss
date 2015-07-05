@@ -64,12 +64,12 @@ CNFClassifier::CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVa
     computingClausesGraph = true;
     computingClausesGraph = true;
     computingRWH = true;
-    attrFileName = NULL;
+    attrFileName = nullptr;
     computeBinaryImplicationGraph = true;
     computeConstraints = true;
     computeXor = true;
-    outputFileName = NULL;
-    plotsFileName = NULL;
+    outputFileName = nullptr;
+    plotsFileName = nullptr;
     maxClauseSize = -1;
     computingDerivative = false;
     verb = 1;
@@ -144,7 +144,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         vector<double>& ret)
 {
 
-    Graph *variablesGraph = NULL;
+    Graph *variablesGraph = nullptr;
     if (computingVarGraph) { variablesGraph = new Graph(nVars, computingDerivative); }
     uint64_t operations = 0, operationsV = 0;
     double time1 = cpuTime();
@@ -1186,7 +1186,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     ret.push_back(time1);
     setCpuTime(time1);
 
-    if (attrFileName != NULL) {
+    if (attrFileName != nullptr) {
         std::ofstream fnout;
         fnout.open(attrFileName, ios::out);
         fnout << "@relation cnf_features" << endl;
@@ -1203,7 +1203,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
 static bool isInfinite(const double pV)
 {
-    return isinf(fabs(pV));
+    return std::isinf(fabs(pV));
 }
 
 std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
@@ -1211,7 +1211,7 @@ std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
 
     ostream* output = &cout;
     std::ofstream fout;
-    if (outputFileName != NULL) {
+    if (outputFileName != nullptr) {
         fout.open(outputFileName, fstream::app | fstream::out);
         if (!fout) { cerr << "failed to open data file" << endl; }
         output = &fout;
@@ -1232,7 +1232,7 @@ std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
     }
     *output << endl;
 
-    if (outputFileName != NULL) {
+    if (outputFileName != nullptr) {
         fout.close();
     }
     return features;

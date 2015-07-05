@@ -5,7 +5,7 @@
 #
 
 #params="-quiet -printDec=2 -rem-debug=1 -no-learn-debug -verb=0"
-params="-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -no-cp3_stats"
+params="-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -no-cp3_stats -quiet -printDec=2 -rem-debug=1 -no-learn-debug -verb=0"
 
 
 #
@@ -41,14 +41,14 @@ ec1=$?
 if [ "$ec2" == "1" ]
 then
   # analyze manually
-  	meld /tmp/err_$$ /tmp/err2_$$
+#  	meld /tmp/err_$$ /tmp/err2_$$
 	exit 2
 fi
 
 # stdout missmatch
 if [ "$ec1" == "1" ]
 then
-	meld /tmp/out_$$ /tmp/out2_$$
+#	meld /tmp/out_$$ /tmp/out2_$$
 	exit 1
 fi
 

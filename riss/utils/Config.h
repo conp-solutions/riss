@@ -39,12 +39,12 @@ class Config
     /** parse all options from the command line
       * @return true, if "help" has been found in the parameters
       */
-    bool parseOptions(int& argc, char** argv, bool strict = false);
+    bool parseOptions(int& argc, char** argv, bool strict = false, int activeLevel = -1);
 
     /** parse options that are present in one std::string
      * @return true, if "help" has been found in the parameters
      */
-    bool parseOptions(const std::string& options, bool strict = false);
+    bool parseOptions(const std::string& options, bool strict = false, int activeLevel = -1);
 
     /** set all the options of the specified preset option sets (multiple separated with : possible) */
     void setPreset(const std::string& optionSet);
@@ -55,7 +55,7 @@ class Config
     bool addPreset(const std::string& optionSet);
 
     /** show print for the options of this object */
-    void printUsageAndExit(int  argc, char** argv, bool verbose = false);
+    void printUsageAndExit(int  argc, char** argv, bool verbose = false, int activeLevel = -1);
 
     /** checks all specified constraints */
     bool checkConfiguration();
@@ -65,6 +65,12 @@ class Config
 
     /** fill the std::string stream with the command that is necessary to obtain the current configuration */
     void configCall(std::stringstream& s);
+
+    /** print specification of the options that belong to this configuration */
+    void printOptions(FILE* pcsFile, int printLevel = -1);
+
+    /** print dependencies of the options that belong to this configuration */
+    void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
 };
 
 inline
@@ -506,10 +512,10 @@ bool Config::addPreset(const std::string& optionSet)
 
 
 inline
-bool Config::parseOptions(const std::string& options, bool strict)
+bool Config::parseOptions(const std::string& options, bool strict, int activeLevel)
 {
     if (options.size() == 0) { return false; }
-    // split std::string into sub std::strings, separated by ':'
+    // split std::string into sub std::strings, separated by ' '
     std::vector<std::string> optionList;
     int lastStart = 0;
     int findP = 0;
@@ -532,13 +538,13 @@ bool Config::parseOptions(const std::string& options, bool strict)
     int argc = optionList.size() + 1;
 
     // call conventional method
-    bool ret = parseOptions(argc, argv, strict);
+    bool ret = parseOptions(argc, argv, strict, activeLevel);
     return ret;
 }
 
 
 inline
-bool Config::parseOptions(int& argc, char** argv, bool strict)
+bool Config::parseOptions(int& argc, char** argv, bool strict, int activeLevel)
 {
     if (optionListPtr == 0) { return false; }  // the options will not be parsed
 
@@ -557,10 +563,10 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
         const char* str = argv[i];
         if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")) {
             if (*str == '\0') {
-                this->printUsageAndExit(argc, argv);
+                this->printUsageAndExit(argc, argv, false, activeLevel);
                 ret = true;
             } else if (match(str, "-verb")) {
-                this->printUsageAndExit(argc, argv, true);
+                this->printUsageAndExit(argc, argv, true, activeLevel);
                 ret = true;
             }
             argv[j++] = argv[i]; // keep -help in parameters!
@@ -587,20 +593,23 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
 }
 
 inline
-void Config::printUsageAndExit(int  argc, char** argv, bool verbose)
+void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeLevel)
 {
     const char* usage = Option::getUsageString();
-    if (usage != NULL) {
+    if (usage != nullptr) {
         fprintf(stderr, "\n");
         fprintf(stderr, usage, argv[0]);
     }
 
     sort((*optionListPtr), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     for (int i = 0; i < (*optionListPtr).size(); i++) {
+
+        if (activeLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > activeLevel) { continue; }  // can jump over full categories
+
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 
@@ -621,6 +630,73 @@ inline
 bool Config::checkConfiguration()
 {
     return true;
+}
+
+inline
+void Config::printOptions(FILE* pcsFile, int printLevel)
+{
+    sort((*optionListPtr), Option::OptionLt());
+
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
+
+    // all options in the global list
+    for (int i = 0; i < (*optionListPtr).size(); i++) {
+
+        if (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel) { continue; }  // can jump over full categories
+
+        const char* cat  = (*optionListPtr)[i]->category;
+        const char* type = (*optionListPtr)[i]->type_name;
+
+        // print new category
+        if (cat != prev_cat) {
+            fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
+        } else if (type != prev_type) {
+            fprintf(pcsFile, "\n");
+        }
+
+        // print the actual option
+        (*optionListPtr)[i]->printOptions(pcsFile, printLevel);
+
+        // set prev values, so that print is nicer
+        prev_cat  = (*optionListPtr)[i]->category;
+        prev_type = (*optionListPtr)[i]->type_name;
+    }
+}
+
+inline
+void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
+{
+    sort((*optionListPtr), Option::OptionLt());
+
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
+
+    // all options in the global list
+    for (int i = 0; i < (*optionListPtr).size(); i++) {
+
+        if ((*optionListPtr)[i]->dependOnNonDefaultOf == 0 ||    // no dependency
+                (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel)) { // or too deep in the dependency level
+            continue;
+        }  // can jump over full categories
+
+        const char* cat  = (*optionListPtr)[i]->category;
+        const char* type = (*optionListPtr)[i]->type_name;
+
+        // print new category
+        if (cat != prev_cat) {
+            fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
+        } else if (type != prev_type) {
+            fprintf(pcsFile, "\n");
+        }
+
+        // print the actual option
+        (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel);
+
+        // set prev values, so that print is nicer
+        prev_cat  = (*optionListPtr)[i]->category;
+        prev_type = (*optionListPtr)[i]->type_name;
+    }
 }
 
 inline

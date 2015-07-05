@@ -98,7 +98,7 @@ static inline void nanosleep(int nanoseconds)
     struct timespec req;
     req.tv_nsec = nanoseconds;
     req.tv_sec = 0;
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &req, NULL);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &req, nullptr);
 }
 
 /** simple class that combines cpu and wall clock time */

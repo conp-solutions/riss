@@ -55,27 +55,13 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , deleteConfig(externalConfig == 0)
     , config(* privateConfig)
     // DRUP output file
-    , drupProofFile(0)
-    // Parameters (user settable):
-    //
+    , proofFile(0)
+
+    // setup search configuration as code to fill struct
     , verbosity(config.opt_verb)
     , verbEveryConflicts(100000)
-    , K(config.opt_K)
-    , R(config.opt_R)
-    , sizeLBDQueue(config.opt_size_lbd_queue)
-    , sizeTrailQueue(config.opt_size_trail_queue)
-    , firstReduceDB(config.opt_first_reduce_db)
-    , incReduceDB(config.opt_inc_reduce_db)
-    , specialIncReduceDB(config.opt_spec_inc_reduce_db)
-    , lbLBDFrozenClause(config.opt_lb_lbd_frozen_clause)
-    , lbSizeMinimizingClause(config.opt_lb_size_minimzing_clause)
-    , lbLBDMinimizingClause(config.opt_lb_lbd_minimzing_clause)
-    , var_decay(config.opt_var_decay_start)
-    , clause_decay(config.opt_clause_decay)
     , random_var_freq(config.opt_random_var_freq)
     , random_seed(config.opt_random_seed)
-    , ccmin_mode(config.opt_ccmin_mode)
-    , phase_saving(config.opt_phase_saving)
     , rnd_pol(random_var_freq > 0)               // if there is a random variable frequency, allow random decisions
     , rnd_init_act(config.opt_rnd_init_act)
     , garbage_frac(config.opt_garbage_frac)
@@ -244,6 +230,39 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , lbdChange(0)
     , sendRatio(0)
 {
+
+    // Parameters (user settable):
+    //
+    searchconfiguration.K = config.opt_K;
+    searchconfiguration.R = config.opt_R;
+    searchconfiguration.sizeLBDQueue = config.opt_size_lbd_queue;
+    searchconfiguration.sizeTrailQueue = config.opt_size_trail_queue;
+
+    searchconfiguration.firstReduceDB = config.opt_first_reduce_db;
+    searchconfiguration.incReduceDB = config.opt_inc_reduce_db;
+    searchconfiguration.specialIncReduceDB = config.opt_spec_inc_reduce_db;
+    searchconfiguration.lbLBDFrozenClause = config.opt_lb_lbd_frozen_clause;
+
+    searchconfiguration.lbSizeMinimizingClause = config.opt_lb_size_minimzing_clause;
+    searchconfiguration.lbLBDMinimizingClause = config.opt_lb_lbd_minimzing_clause;
+    searchconfiguration.uhle_minimizing_size = config.uhle_minimizing_size;
+    searchconfiguration.uhle_minimizing_lbd  = config.uhle_minimizing_lbd;
+    searchconfiguration.use_reverse_minimization = config.opt_use_reverse_minimization; // has to be set in the reverseminimization object as well!
+    searchconfiguration.lbSizeReverseClause =      config.reverse_minimizing_size;
+    searchconfiguration.lbLBDReverseClause =       config.lbLBDreverseClause;
+
+    searchconfiguration.var_decay = config.opt_var_decay_start;
+    searchconfiguration.var_decay_start = config.opt_var_decay_start;
+    searchconfiguration.var_decay_end = config.opt_var_decay_stop;
+    searchconfiguration.var_decay_inc = config.opt_var_decay_inc;
+    searchconfiguration.var_decay_distance = config.opt_var_decay_dist;
+    searchconfiguration.clause_decay = config.opt_clause_decay;
+
+    searchconfiguration.ccmin_mode = config.opt_ccmin_mode;
+
+    searchconfiguration.phase_saving = config.opt_phase_saving;
+    searchconfiguration.restarts_type = config.opt_restarts_type;
+
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
 
@@ -512,7 +531,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
     // const unsigned int lbd = computeLBD(out_learnt);
     const Lit p = ~out_learnt[0];
 
-    if (lbd <= lbLBDMinimizingClause) {
+    if (lbd <= searchconfiguration.lbLBDMinimizingClause) {
         lbd_marker.nextStep();
         for (int i = 1; i < out_learnt.size(); i++) { lbd_marker.setCurrentStep(var(out_learnt[i])); }
         const vec<Watcher>&  wbin  = watches[p]; // const!
@@ -551,7 +570,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
  ******************************************************************/
 bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd)
 {
-    if (lbd <= config.uhle_minimizing_lbd) { // should not touch the very first literal!
+    if (lbd <= searchconfiguration.uhle_minimizing_lbd) { // should not touch the very first literal!
         const Lit p = learned_clause[0]; // this literal cannot be removed!
         const uint32_t cs = learned_clause.size(); // store the size of the initial clause
         Lit Splus  [cs];      // store sorted literals of the clause
@@ -688,7 +707,7 @@ void Solver::cancelUntil(int level)
             varFlags [x].assigns = l_Undef;
             vardata [x].dom = lit_Undef; // reset dominator
             vardata [x].reason = CRef_Undef; // TODO for performance this is not necessary, but for assertions and all that!
-            if (phase_saving > 1  || ((phase_saving == 1) && c > trail_lim.last())) {   // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
+            if (searchconfiguration.phase_saving > 1  || ((searchconfiguration.phase_saving == 1) && c > trail_lim.last())) {   // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
                 varFlags[x].polarity = sign(trail[c]);
             }
             insertVarOrder(x);
@@ -808,7 +827,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                 if (c.learnt()  && c.lbd() > 2) {
                     unsigned int nblevels = computeLBD(c);
                     if (nblevels + 1 < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
-                        if (c.lbd() <= lbLBDFrozenClause) {
+                        if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);
                         }
                         // seems to be interesting : keep it for the next round
@@ -847,7 +866,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                         // UPDATEVARACTIVITY trick (see competition'09 companion paper)
                         // VSIDS scores of variables at the current decision level is aditionally
                         // bumped if they are propagated by core learnt clauses (similar to glucose)
-                        if (r != CRef_Undef && ca[r].learnt()) {
+                        if (r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause())) { // either core clause, as some learnt clauses are moved ) {
                             DOUT(if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl;);
                             lastDecisionLevel.push(q);
                         }
@@ -959,7 +978,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         int i, j;
         uint64_t minimize_extra_info = extraInfo;
         out_learnt.copyTo(analyze_toclear);
-        if (ccmin_mode == 2) {
+        if (searchconfiguration.ccmin_mode == 2) {
             uint32_t abstract_level = 0;
             for (i = 1; i < out_learnt.size(); i++) {
                 abstract_level |= abstractLevel(var(out_learnt[i]));    // (maintain an abstraction of levels involved in conflict)
@@ -976,7 +995,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                 }
             }
 
-        } else if (ccmin_mode == 1) {
+        } else if (searchconfiguration.ccmin_mode == 1) {
             for (i = j = 1; i < out_learnt.size(); i++) {
                 Var x = var(out_learnt[i]);
 
@@ -1015,17 +1034,17 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         Otherwise, this can be useless
              */
 
-        if (out_learnt.size() <= lbSizeMinimizingClause) {
+        if (out_learnt.size() <= searchconfiguration.lbSizeMinimizingClause) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd); // code in this method should execute below code until determining correct backtrack level
         }
 
-        if (out_learnt.size() <= config.uhle_minimizing_size) {
+        if (out_learnt.size() <= searchconfiguration.uhle_minimizing_size) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = searchUHLE(out_learnt, lbd);
         }
 
-        if (out_learnt.size() <= config.reverse_minimizing_size) {
+        if (searchconfiguration.use_reverse_minimization && out_learnt.size() <= searchconfiguration.lbSizeReverseClause) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = reverseLearntClause(out_learnt, lbd);
         }
@@ -1143,7 +1162,7 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo)
 
 bool Solver::reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd)
 {
-    if (!reverseMinimization.enabled || lbd > config.lbLBDreverseClause) { return false; }
+    if (!reverseMinimization.enabled || lbd > searchconfiguration.lbLBDReverseClause) { return false; }
 
     // sort literal in the clause
     sort(learned_clause, TrailPosition_Gt(vardata));
@@ -1439,7 +1458,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                 if (c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
                     int newLbd = computeLBD(c);
                     if (newLbd < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
-                        if (c.lbd() <= lbLBDFrozenClause) {
+                        if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);   // LBD of clause improved, so that its not considered for deletion
                         }
                         c.setLBD(newLbd);
@@ -1524,9 +1543,9 @@ void Solver::reduceDB()
     else { sort(learnts, reduceDB_act_lt(ca)); }  // sort size 2 and lbd 2 to the back!
 
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
-    if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += specialIncReduceDB; }
+    if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
     // Useless :-)
-    if (ca[learnts.last()].lbd() <= 5)  { nbclausesbeforereduce += specialIncReduceDB; }
+    if (ca[learnts.last()].lbd() <= 5)  { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
 
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
@@ -1881,7 +1900,7 @@ lbool Solver::search(int nof_conflicts)
             }
 
             trailQueue.push(trail.size());
-            if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > R * trailQueue.getavg()) {
+            if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > searchconfiguration.R * trailQueue.getavg()) {
                 lbdQueue.fastclear();
                 nbstopsrestarts++;
                 if (!blocked) {lastblockatrestart = starts; nbstopsrestartssame++; blocked = true;}
@@ -2027,7 +2046,7 @@ void Solver::clauseRemoval()
     if (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) { // perform only if learnt clauses are present
         curRestart = (conflicts / nbclausesbeforereduce) + 1;
         reduceDB();
-        nbclausesbeforereduce += incReduceDB;
+        nbclausesbeforereduce += searchconfiguration.incReduceDB;
     }
 }
 
@@ -2036,10 +2055,10 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 {
     {
         // dynamic glucose restarts
-        if (config.opt_restarts_type == 0) {
+        if (searchconfiguration.restarts_type == 0) {
             // Our dynamic restart, see the SAT09 competition compagnion paper
             if (
-                (lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / (conflicts > 0 ? conflicts : 1))))
+                (lbdQueue.isvalid() && ((lbdQueue.getavg()*searchconfiguration.K) > (sumLBD / (conflicts > 0 ? conflicts : 1))))
                 || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound) // if thre have been too many conflicts
             ) {
 
@@ -2564,9 +2583,9 @@ lbool Solver::initSolve(int solves)
             for (Var v = 0 ; v < nVars(); ++ v) {
                 if (solves == 1 || (config.resetActEvery != 0 && solves % config.resetActEvery == 0)) {
                     if (config.opt_init_act == 1) { activity[v] = v; }
-                    else if (config.opt_init_act == 2) { activity[v] = pow(1.0 / config.opt_var_decay_start, 2 * v / nVars()); }
+                    else if (config.opt_init_act == 2) { activity[v] = pow(1.0 / searchconfiguration.var_decay_start, 2 * v / nVars()); }
                     else if (config.opt_init_act == 3) { activity[nVars() - v - 1] = v; }
-                    else if (config.opt_init_act == 4) { activity[nVars() - v - 1] = pow(1.0 / config.opt_var_decay_start, 2 * v / nVars()); }
+                    else if (config.opt_init_act == 4) { activity[nVars() - v - 1] = pow(1.0 / searchconfiguration.var_decay_start, 2 * v / nVars()); }
                     else if (config.opt_init_act == 5) { activity[v] = drand(random_seed); }
                     else if (config.opt_init_act == 6) { activity[v] = jw[v] > 0 ? jw[v] : -jw[v]; }
                     changedActivities = true;
@@ -2655,8 +2674,8 @@ lbool Solver::solve_()
     model.clear();
     conflict.clear();
     if (!ok) { return l_False; }
-    lbdQueue.initSize(sizeLBDQueue);
-    trailQueue.initSize(sizeTrailQueue);
+    lbdQueue.initSize(searchconfiguration.sizeLBDQueue);
+    trailQueue.initSize(searchconfiguration.sizeTrailQueue);
     sumLBD = 0;
     solves++;
 
@@ -2664,7 +2683,7 @@ lbool Solver::solve_()
     if (initValue != l_Undef)  { return initValue; }
 
     lbool   status        = l_Undef;
-    nbclausesbeforereduce = firstReduceDB;
+    nbclausesbeforereduce = searchconfiguration.firstReduceDB;
 
     printHeader();
 
@@ -2680,7 +2699,7 @@ lbool Solver::solve_()
     }
 
     // probing during search, or UHLE for learnt clauses
-    if (config.opt_uhdProbe > 0 || (config.uhle_minimizing_size > 0 && config.uhle_minimizing_lbd > 0)) {
+    if (config.opt_uhdProbe > 0 || (searchconfiguration.uhle_minimizing_size > 0 && searchconfiguration.uhle_minimizing_lbd > 0)) {
         if (big == 0) { big = new Coprocessor::BIG(); }   // if there is no big yet, create it!
         big->recreate(ca, nVars(), clauses, learnts);
         big->removeDuplicateEdges(nVars());
@@ -2718,8 +2737,8 @@ lbool Solver::solve_()
         while (status == l_Undef) {
 
             double rest_base = 0;
-            if (config.opt_restarts_type != 0) { // set current restart limit
-                rest_base = config.opt_restarts_type == 1 ? luby(config.opt_restart_inc, curr_restarts) : pow(config.opt_restart_inc, curr_restarts);
+            if (searchconfiguration.restarts_type != 0) { // set current restart limit
+                rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, curr_restarts) : pow(config.opt_restart_inc, curr_restarts);
             }
 
             // re-shuffle BIG, if a sufficient number of restarts is reached
@@ -2842,11 +2861,13 @@ void Solver::refineFinalConflict()
     refineAssumptions.moveTo(assumptions);
 
     // literals in conflict clause are reversed now. turn around the vector once more
-    int i = 0, j = conflict.size() - 1;
-    while (i < j) {
-        Lit tmp = conflict[i];
-        conflict[i++] = conflict[j]; // last time i is used in loop, hence increase afterwards
-        conflict[j--] = tmp;         // last time j is used in loop, hence increase afterwards
+    if (config.opt_refineConflictReverse) {
+        int i = 0, j = conflict.size() - 1;
+        while (i < j) {
+            Lit tmp = conflict[i];
+            conflict[i++] = conflict[j]; // last time i is used in loop, hence increase afterwards
+            conflict[j--] = tmp;         // last time j is used in loop, hence increase afterwards
+        }
     }
 }
 
@@ -2880,7 +2901,7 @@ void Solver::toDimacs(FILE* f, Clause& c, vec<Var>& map, Var& max)
 void Solver::toDimacs(const char *file, const vec<Lit>& assumps)
 {
     FILE* f = fopen(file, "wr");
-    if (f == NULL) {
+    if (f == nullptr) {
         fprintf(stderr, "could not open file %s\n", file), exit(1);
     }
     toDimacs(f, assumps);
@@ -3948,10 +3969,10 @@ void Solver::printHeader()
         printf("c |-------------------------------------------------------------------------------------------------------|\n");
         printf("c |                                |                                |                                     |\n");
         printf("c | - Restarts:                    | - Reduce Clause DB:            | - Minimize Asserting:               |\n");
-        printf("c |   * LBD Queue    : %6d      |   * First     : %6d         |    * size < %3d                     |\n", lbdQueue.maxSize(), firstReduceDB, lbSizeMinimizingClause);
-        printf("c |   * Trail  Queue : %6d      |   * Inc       : %6d         |    * lbd  < %3d                     |\n", trailQueue.maxSize(), incReduceDB, lbLBDMinimizingClause);
-        printf("c |   * K            : %6.2f      |   * Special   : %6d         |                                     |\n", K, specialIncReduceDB);
-        printf("c |   * R            : %6.2f      |   * Protected :  (lbd)< %2d     |                                     |\n", R, lbLBDFrozenClause);
+        printf("c |   * LBD Queue    : %6d      |   * First     : %6d         |    * size < %3d                     |\n", lbdQueue.maxSize(), searchconfiguration.firstReduceDB, searchconfiguration.lbSizeMinimizingClause);
+        printf("c |   * Trail  Queue : %6d      |   * Inc       : %6d         |    * lbd  < %3d                     |\n", trailQueue.maxSize(), searchconfiguration.incReduceDB, searchconfiguration.lbLBDMinimizingClause);
+        printf("c |   * K            : %6.2f      |   * Special   : %6d         |                                     |\n", searchconfiguration.K, searchconfiguration.specialIncReduceDB);
+        printf("c |   * R            : %6.2f      |   * Protected :  (lbd)< %2d     |                                     |\n", searchconfiguration.R, searchconfiguration.lbLBDFrozenClause);
         printf("c |                                |                                |                                     |\n");
         printf("c =========================================================================================================\n");
     }
@@ -4030,21 +4051,21 @@ void Solver::printConflictTrail(CRef confl)
 void Solver::updateDecayAndVMTF()
 {
     // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
-    if (var_decay < config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0) {   // div is the more expensive operation!
-        var_decay += config.opt_var_decay_inc;
-        var_decay = var_decay >= config.opt_var_decay_stop ? config.opt_var_decay_stop : var_decay; // set upper boung
+    if (searchconfiguration.var_decay < config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0) {   // div is the more expensive operation!
+        searchconfiguration.var_decay += config.opt_var_decay_inc;
+        searchconfiguration.var_decay = searchconfiguration.var_decay >= config.opt_var_decay_stop ? config.opt_var_decay_stop : searchconfiguration.var_decay; // set upper boung
     }
 
     // update the mixture between VMTF and VSIDS dynamically, similarly to the decay
-    if (useVSIDS != config.opt_vsids_end && conflicts % config.opt_vsids_distance == 0) {
-        if (config.opt_vsids_end > config.opt_vsids_start) {
-            useVSIDS += config.opt_vsids_inc;
-            if (useVSIDS >= config.opt_vsids_end) { useVSIDS = config.opt_vsids_end; }
-        } else if (config.opt_vsids_end < config.opt_vsids_start) {
-            useVSIDS -= config.opt_vsids_inc;
-            if (useVSIDS <= config.opt_vsids_end) { useVSIDS = config.opt_vsids_end; }
+    if (useVSIDS != searchconfiguration.var_decay_end && conflicts % searchconfiguration.var_decay_distance == 0) {
+        if (searchconfiguration.var_decay_end > searchconfiguration.var_decay_start) {
+            useVSIDS += searchconfiguration.var_decay_inc;
+            if (useVSIDS >= searchconfiguration.var_decay_end) { useVSIDS = searchconfiguration.var_decay_end; }
+        } else if (searchconfiguration.var_decay_end < searchconfiguration.var_decay_start) {
+            useVSIDS -= searchconfiguration.var_decay_inc;
+            if (useVSIDS <= searchconfiguration.var_decay_end) { useVSIDS = searchconfiguration.var_decay_end; }
         } else {
-            useVSIDS = config.opt_vsids_end;
+            useVSIDS = searchconfiguration.var_decay_end;
         }
     }
 }
@@ -4111,9 +4132,10 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         CRef cr = CRef_Undef;
 
         // is a core learnt clause, so we do not create a learned, but a "usual" clause
-        if (!activityBasedRemoval && nblevels < lbd_core_threshold + 1) {
+//  if (!activityBasedRemoval && nblevels < lbd_core_threshold + 1) {
+        if (learnt_clause.size() <= config.opt_keep_permanent_size || nblevels <= lbd_core_threshold) {
             // no_LBD = false
-            cr = ca.alloc(learnt_clause);
+            cr = ca.alloc(learnt_clause); // memorize that this is a learnt clause (in analyze method vsids activity is increased sometimes)
             if (rerClause == rerMemorizeClause) { resetRestrictedExtendedResolution(); } // do not memorize clause that is added to the formula
             ca[cr].setCoreClause(true);   // memorize that this clause is a core-learnt clause
             clauses.push(cr);
@@ -4124,19 +4146,19 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
             // ca[cr].mark(no_LBD ? 0 : nblevels < 6 ? 3 : 2);
             learnts.push(cr);
             if (rerClause == rerMemorizeClause) { rerFuseClauses.push(cr); }    // memorize this clause reference for RER
-            if (activityBasedRemoval || nblevels > lbd_core_threshold) { // FIXME: check whether second condition can be eliminated
-                if (config.opt_cls_act_bump_mode != 2) {
-                    claBumpActivity(ca[cr],                                                         // bump activity based on its
-                                    (config.opt_cls_act_bump_mode == 0 ? 1                          // constant
-                                     : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size()  // size
-                                     : nblevels              // LBD
-                                    ));
-                } else {
-                    ca[cr].activity() = ca[cr].size() < config.opt_size_bounded_randomized ?       // if clause size is less than SBR
-                                        ca[cr].size()                                              // use size as activity
-                                        : config.opt_size_bounded_randomized + drand(random_seed);   // otherwise, use SBR
-                }
+
+            if (config.opt_cls_act_bump_mode != 2) {
+                claBumpActivity(ca[cr],                                                         // bump activity based on its
+                                (config.opt_cls_act_bump_mode == 0 ? 1                          // constant
+                                 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size()  // size
+                                 : nblevels              // LBD
+                                ));
+            } else {
+                ca[cr].activity() = ca[cr].size() < config.opt_size_bounded_randomized ?       // if clause size is less than SBR
+                                    ca[cr].size()                                              // use size as activity
+                                    : config.opt_size_bounded_randomized + drand(random_seed);   // otherwise, use SBR
             }
+
         }
         ca[cr].setLBD(nblevels);
         if (nblevels <= 2) { nbDL2++; } // stats
