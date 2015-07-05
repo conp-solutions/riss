@@ -129,9 +129,9 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
     search_schedule("SCHEDULE", "sschedule", "specify configs to be schedules", 0, optionListPtr),
     scheduleConflicts("SCHEDULE", "sscheConflicts", "initial conflicts for schedule", 10000000, IntRange(1, INT32_MAX) , optionListPtr, &search_schedule),
-    scheduleDefaultConflicts("SCHEDULE", "sscheDConflicts","initial conflicts for default", 3000000, IntRange(1, INT32_MAX) , optionListPtr, &search_schedule),
+    scheduleDefaultConflicts("SCHEDULE", "sscheDConflicts", "initial conflicts for default", 3000000, IntRange(1, INT32_MAX) , optionListPtr, &search_schedule),
     sscheduleGrowFactor("SCHEDULE", "sscheInc", "increment for conflicts per schedule round", 1.3, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &search_schedule),
-    
+
     #ifndef NDEBUG
     localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA", false, optionListPtr),
     #endif

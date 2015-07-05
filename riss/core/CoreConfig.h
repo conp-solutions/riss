@@ -139,7 +139,7 @@ class CoreConfig : public Config
     IntOption    scheduleConflicts;
     IntOption    scheduleDefaultConflicts;
     DoubleOption sscheduleGrowFactor;
-    
+
     #ifndef NDEBUG
     BoolOption localLookaheadDebug;
     #endif

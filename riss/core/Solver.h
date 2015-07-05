@@ -283,20 +283,20 @@ class Solver
 
     /// store all required things to change the configuration during search
     struct ConfigurationScheduler {
-      vec<SearchConfiguration> searchConfigs; // list of configs that use used for iteration
-      vec<int> searchConfigConflicts;         // number of conflicts allowed for the given configuration
-      int lastConfigChangeConflict;           // store number of conflict when seeing last conflict
-      
+        vec<SearchConfiguration> searchConfigs; // list of configs that use used for iteration
+        vec<int> searchConfigConflicts;         // number of conflicts allowed for the given configuration
+        int lastConfigChangeConflict;           // store number of conflict when seeing last conflict
 
-      int currentConfig;                      // index of currently used configuration
-      float growFactor;                       // increase of all conflict limits after running each configuration once
-      
-      void reset(Riss::Solver::SearchConfiguration& searchConfiguration);
-      void initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, string schedule, float factor, int defaultC, int usualC);                     // initialize all configurations
-      bool checkAndChangeSearchConfig( int conflicts, SearchConfiguration& searchConfiguration);      // takes care of whether the configuration should be changed at this restart, @return true, if new configuration was picked
-      ConfigurationScheduler();
+
+        int currentConfig;                      // index of currently used configuration
+        float growFactor;                       // increase of all conflict limits after running each configuration once
+
+        void reset(Riss::Solver::SearchConfiguration& searchConfiguration);
+        void initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, string schedule, float factor, int defaultC, int usualC);                     // initialize all configurations
+        bool checkAndChangeSearchConfig(int conflicts, SearchConfiguration& searchConfiguration);       // takes care of whether the configuration should be changed at this restart, @return true, if new configuration was picked
+        ConfigurationScheduler();
     } configScheduler;
-        
+
     double    random_var_freq;
     double    random_seed;
     bool      rnd_pol;            // Use random polarities for branching heuristics.
@@ -312,7 +312,7 @@ class Solver
   protected:
 
     void applyConfiguration(); // assigns relevant values of search configuration to data structures/counters
-    
+
     long curRestart;
     // Helper structures:
     //
