@@ -36,6 +36,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso/InstanceSolver.h"
 #include "pcasso/LookaheadSplitting.h"
 #include "pcasso/vsidsSplitting.h"
+#include "pcasso/version.h"
 
 using namespace Riss;
 using namespace std;
@@ -154,15 +155,14 @@ Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 int
 Master::main(int argc, char **argv)
 {
-
-    fprintf(stderr, "c ***********************************************************************************************\n");
-    fprintf(stderr, "c * PCASSO - a Parallel, CooperAtive Sat SOlver                                                 *\n");
-    fprintf(stderr, "c * Author: Nobert Manthey                                                                      *\n");
-    fprintf(stderr, "c * Contributors:                                                                               *\n");
-    fprintf(stderr, "c * Davide Lanti (clause sharing, extended conflict analysis)                                   *\n");
-    fprintf(stderr, "c * Ahmed Irfan  (LA partitioning, information sharing      )                                   *\n");
-    fprintf(stderr, "c * This solver is based on Riss3g, Glucose 2.2 and Minisat 2.2                                 *\n");
-    fprintf(stderr, "c ***********************************************************************************************\n");
+    fprintf(stderr, "c ===============================[ Pcasso  %13s ]=================================================\n", Pcasso::gitSHA1);
+    fprintf(stderr, "c | PCASSO - a Parallel, CooperAtive Sat SOlver                                                           |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
+    fprintf(stderr, "c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+    fprintf(stderr, "c | Contributors:                                                                                         |\n");
+    fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
+    fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
 
     string filename = (argc == 1) ? "" : argv[1];
 
