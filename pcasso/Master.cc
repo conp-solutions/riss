@@ -739,7 +739,7 @@ Master::solveInstance(void* data)
     tData.solver = solver;
 
 //    // Davide> Give the pt_level to the solver
-//    solver->curPTLevel = tData.nodeToSolve->getPTLevel();
+    solver->curPTLevel = tData.nodeToSolve->getPTLevel();
 
     if (Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel) {   // a portfolio node should be solved
         const int nodeLevel = tData.nodeToSolve->getLevel();
