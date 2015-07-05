@@ -293,7 +293,7 @@ class Solver
       
       void reset(Riss::Solver::SearchConfiguration& searchConfiguration);
       void initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, string schedule, float factor, int defaultC, int usualC);                     // initialize all configurations
-      void checkAndChangeSearchConfig( int conflicts, SearchConfiguration& searchConfiguration);      // takes care of whether the configuration should be changed at this restart
+      bool checkAndChangeSearchConfig( int conflicts, SearchConfiguration& searchConfiguration);      // takes care of whether the configuration should be changed at this restart, @return true, if new configuration was picked
       ConfigurationScheduler();
     } configScheduler;
         
@@ -311,6 +311,8 @@ class Solver
 
   protected:
 
+    void applyConfiguration(); // assigns relevant values of search configuration to data structures/counters
+    
     long curRestart;
     // Helper structures:
     //

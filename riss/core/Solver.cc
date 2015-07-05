@@ -2670,6 +2670,19 @@ lbool Solver::initSolve(int solves)
     return l_Undef;
 }
 
+void Solver::applyConfiguration()
+{
+  lbdQueue.clear();  
+  lbdQueue.initSize(searchconfiguration.sizeLBDQueue);
+    
+  trailQueue.clear();
+  trailQueue.initSize(searchconfiguration.sizeTrailQueue);
+    
+  nbclausesbeforereduce = searchconfiguration.firstReduceDB;
+  sumLBD = 0;
+}
+
+
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
@@ -2678,16 +2691,13 @@ lbool Solver::solve_()
     model.clear();
     conflict.clear();
     if (!ok) { return l_False; }
-    lbdQueue.initSize(searchconfiguration.sizeLBDQueue);
-    trailQueue.initSize(searchconfiguration.sizeTrailQueue);
-    sumLBD = 0;
+    applyConfiguration();
     solves++;
 
     lbool initValue = initSolve(solves);
     if (initValue != l_Undef)  { return initValue; }
-
     lbool   status        = l_Undef;
-    nbclausesbeforereduce = searchconfiguration.firstReduceDB;
+    
 
     printHeader();
 
@@ -2736,14 +2746,15 @@ lbool Solver::solve_()
 
     rerInitRewriteInfo();
 
+    int type1restarts = 0, type2restarts = 0; // have extra counters for the restart types, could also be global
         //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
         while (status == l_Undef) {
 	  
-	    configScheduler.checkAndChangeSearchConfig(conflicts, searchconfiguration); // update current configuration?
+	    if( configScheduler.checkAndChangeSearchConfig(conflicts, searchconfiguration) ) applyConfiguration(); // if a new configuratoin was selected, update structures
 
             double rest_base = 0;
             if (searchconfiguration.restarts_type != 0) { // set current restart limit
-                rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, curr_restarts) : pow(config.opt_restart_inc, curr_restarts);
+                rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, type1restarts) : pow(config.opt_restart_inc, type2restarts);
             }
 
             // re-shuffle BIG, if a sufficient number of restarts is reached
@@ -2759,7 +2770,11 @@ lbool Solver::solve_()
 
             status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
             if (!withinBudget()) { break; }
+            
+            // increment restart counters based on restart type
             curr_restarts++;
+	    type1restarts = searchconfiguration.restarts_type == 1 ? type1restarts + 1 : type1restarts;
+	    type2restarts = searchconfiguration.restarts_type == 2 ? type2restarts + 1 : type2restarts;
 
             status = inprocess(status);
         }
@@ -4240,16 +4255,21 @@ void Solver::ConfigurationScheduler::initConfigs(const Riss::Solver::SearchConfi
   
   searchConfigs.push ( sc ); // add strong focus like configuration
   searchConfigConflicts.push( usualC );
+  
+//   cerr << "c schedule length: " << searchConfigs.size() << endl;
 }
 
-void Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int conflicts, Riss::Solver::SearchConfiguration& searchConfiguration)
+bool Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int conflicts, Riss::Solver::SearchConfiguration& searchConfiguration)
 {
-  if( searchConfigs.size() == 0 ) return; // nothing to be done, no schedule
+  if( searchConfigs.size() == 0 ) return false; // nothing to be done, no schedule
   
   const int diff = conflicts - lastConfigChangeConflict;
   
   // budget of this config is over?
   if( diff > searchConfigConflicts[ currentConfig ] ) {
+    
+//     cerr << "c change config after " << conflicts << " conflicts" << endl;
+    
     lastConfigChangeConflict = conflicts;
     
     currentConfig ++;
@@ -4260,7 +4280,10 @@ void Solver::ConfigurationScheduler::checkAndChangeSearchConfig(int conflicts, R
       }
       searchConfiguration = searchConfigs[currentConfig]; // set current configuration
     }
+    return true; // changed the configuration
   }
+  
+  return false;
 }
 
 void Solver::ConfigurationScheduler::reset(Riss::Solver::SearchConfiguration& searchConfiguration)
