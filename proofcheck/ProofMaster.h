@@ -77,6 +77,9 @@ class ProofMaster
     void addUnitsToProof(const vec<Lit>& units, int ownerID, bool local);
     /** add a single unit clause to the proof */
     void addUnitToProof(const Lit& unit, int ownerID, bool local);
+    
+    /** add an equivalence to the proof. treat it as two clauses (Note:hard to be deleted)*/
+    void addEquivalenceToProof(const Lit& a, const Lit& b, int ownerID, bool local);
 
     /** add the clause directly to the proof-data without writing to FILE, and without a check. Sets the number of occurrences to the given number
      * Note: does not lock the global proof
@@ -413,6 +416,35 @@ inline void ProofMaster::addUnitToProof(const Lit& unit, int ownerID, bool local
         ownLock.unlock();
     }
 }
+
+inline void ProofMaster::addEquivalenceToProof(const Lit& a, const Lit& b, int ownerID, bool local)
+{
+    assert(!local && "yet, local proofs are not supported");
+
+    if (local) {   // simply extend the local pool
+        if (ownerID == -1) { ownerID = threads; }   // correct owner ID
+        localClauses[ownerID].push_back(~a);
+	localClauses[ownerID].push_back(b);
+        localClauses[ownerID].push_back(lit_Undef);   // mark the end of the clause with "lit_Undef"
+	localClauses[ownerID].push_back(a);
+	localClauses[ownerID].push_back(~b);
+        localClauses[ownerID].push_back(lit_Undef);   // mark the end of the clause with "lit_Undef"
+    } else {
+        // lock
+        ownLock.lock();
+        // add the clause to the global proof
+	Lit clause[2]; 
+	clause[0] = ~a; clause[1] = b;
+	assert( false && "equivalences can yet not be handled by proof system" );
+#warning equivalences can yet not be handled by proof system
+	// addGlobalClause( clause, lit_Undef, ownerID,0,2);
+	clause[0] = a; clause[1] = b;
+	// addGlobalClause( clause, lit_Undef, ownerID,0,2);
+        // unlock
+        ownLock.unlock();
+    }
+}
+
 
 
 inline void ProofMaster::addUnitsToProof(const vec< Lit >& units, int ownerID, bool local)

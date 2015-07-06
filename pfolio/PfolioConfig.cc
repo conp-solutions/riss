@@ -44,6 +44,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_sendIncModel("SEND", "sendIncModel", "allow sending with variables where the number of models potentially increased", true, optionListPtr)
     , opt_sendDecModel("SEND", "sendDecModel", "llow sending with variables where the number of models potentially deecreased", false, optionListPtr)
     , opt_useDynamicLimits("SEND", "dynLimits", "update sharing limits dynamically", true, optionListPtr)
+    , opt_sendEquivalences("SEND", "shareEE", "share equivalent literals", true, optionListPtr)
 
 {}
 

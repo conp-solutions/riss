@@ -420,30 +420,60 @@ class Solver
     {
         bool activeReplacements;                    // replaced by also points to offsets somewhere
         vec<Riss::Lit> equivalencesStack;   // stack of literal classes that represent equivalent literals which have to be processed
+        Solver* solver;
       public:
         vec<Riss::Lit> replacedBy;          // stores which variable has been replaced by which literal
+        vec<Riss::Lit> temporary;
 
         // methods
-        EquivalenceInfo() : activeReplacements(false) {}
+        EquivalenceInfo(Solver* _solver) : activeReplacements(false), solver(_solver) {}
 
         inline vec<Riss::Lit>& getEquivalenceStack() { return equivalencesStack; }
 
         inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
         inline bool hasEquivalencesToProcess() const { return equivalencesStack.size() > 0; }
 
-        inline void addEquivalenceClass(const Lit& a, const Lit& b)
+        inline void addEquivalenceClass(const Lit& a, const Lit& b, bool doShare = true
+#ifdef PCASSO
+	  , int dependencyLevel = -1
+#endif  
+	)
         {
             if (a != b) {
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
                 equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
+		if( doShare ) {
+		  temporary.clear();
+		  temporary.push(a);
+		  temporary.push(b);
+#ifdef PCASSO
+	          solver->updateSleep( &temporary, 2, dependencyLevel, false, true);
+#else 
+		  solver->updateSleep( &temporary, 2, false, true);
+#endif  
+		}
             }
         }
         template <class T>
-        inline void addEquivalenceClass(const T& lits)
-        {
+        inline void addEquivalenceClass(const T& lits, bool doShare = true
+#ifdef PCASSO
+	  , int dependencyLevel = -1
+#endif  
+	)
+	{
             for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
+	    
+		if( doShare ) { // tell priss about shared equivalences
+		  temporary.clear(); 
+		  for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }	  
+#ifdef PCASSO
+	          solver->updateSleep(&temporary, lits.size(), dependencyLevel, false, true);
+#else 
+		  solver->updateSleep(&temporary, lits.size(), false, true);
+#endif  
+		}
         }
 
         /** just return the next smaller reprentative */
@@ -596,7 +626,7 @@ class Solver
      *  different decision levels in a clause or list of literals.
      */
     template<typename T>
-    int computeLBD(const T& lits);
+    int computeLBD(const T& lits, const int& litsSize);
 
     /** perform minimization with binary clauses of the formula
      *  @param lbd the current calculated LBD score of the clause
@@ -1100,11 +1130,19 @@ class Solver
 
     /** goto sleep, wait until master did updates, wakeup, process the updates
      * @param toSend if not 0, send the (learned) clause, if 0, receive shared clauses
+     * @param toSendSize number of literals in data to share
+     * @param dependencyLevel (in Pcasso, dependencyLevel of information)
+     * @param multiUnits send a set of unit clauses instead of a single clause
+     * @param equivalences send an SCC of equivalent literals
      * note: can also interrupt search and incorporate new assumptions etc.
      * @return -1 = abort, 0=everythings nice, 1=conflict/false result
      */
     template<typename T> // can be either clause or vector
-    int updateSleep(const T* toSend, bool multiUnits = false);
+#ifdef PCASSO
+    int updateSleep(T* toSend, int toSendSize, int dependencyLevel, bool multiUnits = false, bool equivalences = false);
+#else
+    int updateSleep(T* toSend, int toSendSize, bool multiUnits = false, bool equivalences = false);
+#endif
 
     /** add a learned clause to the solver
      * @param bump increases the activity of the current clause to the last seen value
@@ -1132,7 +1170,9 @@ class Solver
     public:
     /** necessary data structures for communication */
     struct CommunicationClient {
-      vec<Lit> receiveClause;         /// temporary placeholder for receiving clause
+      vec<Lit> receiveClause;             /// temporary placeholder for receiving clause
+      vec<Lit> receivedUnits;             /// temporary placeholder for receiving units
+      vec<Lit> receivedEquivalences;      /// temporary placeholder for receiving equivalences, classes separated by lit_Undef
       std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
       int currentTries;                          /// current number of waits
       int receiveEvery;                          /// do receive every n tries
@@ -1158,6 +1198,26 @@ class Solver
                  sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0), 
                  sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
     } communicationClient;
+    
+    class VariableInformation {
+       vec<VarFlags>& varInfo;
+       bool receiveInc;  // allow working with variables where the number of models increased
+       bool receiveDec;  // allow working with variable where the number decreased
+    public: 
+       VariableInformation( vec<VarFlags>& _varInfo, bool _receiveAdd, bool _receiveDel ) 
+         : varInfo(varInfo), receiveDec( _receiveDel ), receiveInc( _receiveAdd ) {}
+       
+       bool canBeReceived( const Var& v ) const { 
+	 return (!varInfo[v].addModels || receiveInc)   // if the variable has been modified and models have been added
+	     && (!varInfo[v].delModels || receiveDec);  // or models have been deleted
+      }
+       
+       void setDependency( const Var& v, const int& dep ) {
+#ifdef PCASSO
+	 varFlags[v].varPT = dep > varFlags[v].varPT ? dep : varFlags[v].varPT;
+#endif
+       }
+    };
 
 // [END] modifications for parallel assumption based solver
 
@@ -1326,7 +1386,7 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
  *************************************************************/
 
 template<typename T>
-inline int Solver::computeLBD(const T& lits)
+inline int Solver::computeLBD(const T& lits, const int& litsSize)
 {
 
     // Already discovered decision levels are stored in a mark array. We do
@@ -1340,7 +1400,7 @@ inline int Solver::computeLBD(const T& lits)
     lbd_marker.nextStep();
     bool withLevelZero = false;
     const int minLevel = (config.opt_lbd_ignore_assumptions ? assumptions.size() : 0);
-    for (int i = 0; i < lits.size(); i++) {
+    for (int i = 0; i < litsSize; i++) {
         // decision level of the literal
         const int& dec_level = level(var(lits[i]));
         if (dec_level < minLevel) { continue; }  // ignore literals for assumptions

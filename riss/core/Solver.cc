@@ -78,6 +78,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , var_inc(1)
     , watches(WatcherDeleted(ca))
 //  , watchesBin            (WatcherDeleted(ca))
+    , eqInfo( this )
 
     , reverseMinimization(config.opt_use_reverse_minimization)  // reverse minimization hack
 
@@ -519,7 +520,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
 {
 
     // Find the LBD measure
-    // const unsigned int lbd = computeLBD(out_learnt);
+    // const unsigned int lbd = computeLBD(out_learnt,out_learnt.size());
     const Lit p = ~out_learnt[0];
 
     if (lbd <= searchconfiguration.lbLBDMinimizingClause) {
@@ -807,7 +808,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         }
 
 	if( !c.wasUsedInAnalyze() ) { // share clauses only, if they are used during resolutions in conflict analysis
-	   updateSleep(&c); 
+	   updateSleep(&c, c.size()); 
 	   c.setUsedInAnalyze();
 	}
         
@@ -821,7 +822,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
             if (config.opt_update_lbd == 1) {    // update lbd during analysis, if allowed
                 if (c.learnt()  && c.lbd() > 2) {
-                    unsigned int nblevels = computeLBD(c);
+                    unsigned int nblevels = computeLBD(c,c.size());
                     if (nblevels + 1 < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
                         if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);
@@ -944,7 +945,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     DOUT(if (config.opt_rer_debug) cerr << "c learned clause (before mini): " << out_learnt << endl;);
 
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
-    lbd = computeLBD(out_learnt);
+    lbd = computeLBD(out_learnt,out_learnt.size());
     bool recomputeLBD = false; // current lbd is valid
     if (decisionLevel() > 0 && out_learnt.size() > decisionLevel() && out_learnt.size() > config.opt_learnDecMinSize && config.opt_learnDecPrecent != -1) {  // is it worth to check for decisionClause?
         if (lbd > (config.opt_learnDecPrecent * decisionLevel() + 99) / 100) {
@@ -1031,23 +1032,23 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
              */
 
         if (out_learnt.size() <= searchconfiguration.lbSizeMinimizingClause) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            if (recomputeLBD) { lbd = computeLBD(out_learnt,out_learnt.size()); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd); // code in this method should execute below code until determining correct backtrack level
         }
 
         if (out_learnt.size() <= searchconfiguration.uhle_minimizing_size) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            if (recomputeLBD) { lbd = computeLBD(out_learnt,out_learnt.size()); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = searchUHLE(out_learnt, lbd);
         }
 
         if (searchconfiguration.use_reverse_minimization && out_learnt.size() <= searchconfiguration.lbSizeReverseClause) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            if (recomputeLBD) { lbd = computeLBD(out_learnt,out_learnt.size()); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = reverseLearntClause(out_learnt, lbd);
         }
 
         // rewrite clause only, if one of the two systems added information
         if (out_learnt.size() <= 0) {   // FIXME not used yet
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            if (recomputeLBD) { lbd = computeLBD(out_learnt,out_learnt.size()); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = erRewrite(out_learnt, lbd);
         }
     } // end working on usual learnt clause (minimize etc.)
@@ -1080,7 +1081,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     assert(out_btlevel < decisionLevel() && "there should be some backjumping");
 
     // Compute LBD, if the current value is not the right value
-    if (recomputeLBD) { lbd = computeLBD(out_learnt); }
+    if (recomputeLBD) { lbd = computeLBD(out_learnt,out_learnt.size()); }
 
 
     #ifdef UPDATEVARACTIVITY
@@ -1438,7 +1439,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
 	    if( !c.wasPropagated() ) { // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
-	      updateSleep(&c); // shorter clauses are shared immediately!
+	      updateSleep(&c, c.size() ); // shorter clauses are shared immediately!
 	      c.setPropagated();
 	    }
             
@@ -1456,7 +1457,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                 // if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
 
                 if (c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
-                    int newLbd = computeLBD(c);
+                    int newLbd = computeLBD(c,c.size());
                     if (newLbd < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
                         if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);   // LBD of clause improved, so that its not considered for deletion
@@ -1928,7 +1929,7 @@ lbool Solver::search(int nof_conflicts)
             // add the new clause(s) to the solver, perform more analysis on them
             if (ret > 0) {   // multiple learned clauses
                 if (l_False == handleMultipleUnits(learnt_clause)) { return l_False; }
-                updateSleep(&learnt_clause, true);   // share multiple unit clauses!
+                updateSleep(&learnt_clause, learnt_clause.size(), true);   // share multiple unit clauses!
             } else { // treat usual learned clause!
                 if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, extraInfo)) { return l_False; }
             }
@@ -1955,7 +1956,7 @@ lbool Solver::search(int nof_conflicts)
             if (!withinBudget()) { return l_Undef; }   // check whether we can still do conflicts
 
             // check for communication to the outside (for example in the portfolio solver)
-            int result = updateSleep( (vec<Lit>*)0x0 );
+            int result = updateSleep( (vec<Lit>*)0x0, 0 );
             if (-1 == result) {
                 // interrupt via communication
                 return l_Undef;
@@ -4132,7 +4133,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
     // parallel portfolio: send the learned clause!
-    if( sharingTimePoint == 0 || learnt_clause.size() < 3) updateSleep(&learnt_clause); // shorter clauses are shared immediately!
+    if( sharingTimePoint == 0 || learnt_clause.size() < 3) updateSleep(&learnt_clause, learnt_clause.size() ); // shorter clauses are shared immediately!
 
     if (learnt_clause.size() == 1) {
         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");

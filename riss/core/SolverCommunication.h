@@ -90,7 +90,11 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
 
 template<typename T> // can be either clause or vector
 inline
-int Solver::updateSleep(const T* toSend, bool multiUnits)
+#ifdef PCASSO
+int Solver::updateSleep(T* toSend, int toSendSize, int dependencyLevel, bool multiUnits, bool equivalences)
+#else
+int Solver::updateSleep(T* toSend, int toSendSize, bool multiUnits, bool equivalences)    
+#endif
 // int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 {
     if (communication == 0) { return 0; }     // no communication -> do nothing!
@@ -153,41 +157,62 @@ int Solver::updateSleep(const T* toSend, bool multiUnits)
 
     if (communication->getDoSend() && toSend != 0) {     // send
  
+	if( ! communication->sendEquivalences && equivalences ) return 0; // do not share equivalences
+      
         // check, whether the clause is allowed to be sent
         bool rejectSend = false;
-        for (int i = 0 ; !rejectSend && i < toSend->size(); ++ i) { // repeat until allowed, stay in clause
+	int keep = 0;
+        for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
 	  const Var v = var( (*toSend)[i] ); // get variable to analyze
 	  rejectSend = (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
+	  if( multiUnits || equivalences) continue; // jump over this literal, so that it is not shared
+	  else {
+	    if ( rejectSend ) break;
+	    else (*toSend)[keep++] = (*toSend)[i]; // keep literal
+	  }
 #warning: check here, whether the clause contains a variable that is too high, and hence should not be sent (could be done via above flags)
 	}
-	if( rejectSend ) return 0; // do nothing here, as there are variables that should not be sent
+	if( rejectSend && !multiUnits && !equivalences ) return 0; // do nothing here, as there are variables in the clause that should not be sent
+	else { 
+	  if( keep == 1 && equivalences ) return 0; // do not share equivalence of one literal
+	  else if ( keep == 0 && multiUnits ) return 0; // do not share "no" units
+	}
+	
+	toSendSize = keep; // set to number of elements that can be shared
       
-        // calculated size of the send clause
-        int s = 0;
-        if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
-            for (int i = 0 ; i < toSend->size(); ++ i) {
-                s = communication->isProtected((*toSend)[i]) ? s : s + 1;
-            }
-        } else { s = toSend->size(); }
+        if( !multiUnits && !equivalences ) { // check sharing limits, if its not units, and no equivalences
+	  // calculated size of the send clause
+	  int s = 0;
+	  if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
+	      for (int i = 0 ; i < toSendSize; ++ i) {
+		  s = communication->isProtected((*toSend)[i]) ? s : s + 1;
+	      }
+	  } else { s = toSendSize; }
 
-        // filter sending:
-        if (toSend->size() > communicationClient.currentSendSizeLimit) {
-            updateDynamicLimits(true);    // update failed limits!
-            communication->nrRejectSendSizeCls++;
-            return 0; // TODO: parameter, adaptive?
-        }
+	  // filter sending:
+	  if (toSendSize > communicationClient.currentSendSizeLimit) {
+	      updateDynamicLimits(true);    // update failed limits!
+	      communication->nrRejectSendSizeCls++;
+	      return 0; // TODO: parameter, adaptive?
+	  }
 
-        if (s > 0) {
-            // calculate LBD value
-            int lbd = computeLBD(*toSend);
+	  if (s > 0) {
+	      // calculate LBD value
+	      int lbd = computeLBD(*toSend, toSendSize);
 
-            if (lbd > communicationClient.currentSendLbdLimit) {
-                updateDynamicLimits(true);    // update failed limits!
-                communication->nrRejectSendLbdCls++;
-                return 0; //TODO: parameter (adaptive?)
-            }
-        }
-        communication->addClause(*toSend);
+	      if (lbd > communicationClient.currentSendLbdLimit) {
+		  updateDynamicLimits(true);    // update failed limits!
+		  communication->nrRejectSendLbdCls++;
+		  return 0; //TODO: parameter (adaptive?)
+	      }
+	  }
+	}
+        
+#ifdef PCASSO
+        communication->addClause(*toSend, toSendSize, dependencyLevel, multiUnits, equivalences);
+#else
+        communication->addClause(*toSend, toSendSize, multiUnits, equivalences);	
+#endif
         updateDynamicLimits(false); // a clause could be send
         communication->nrSendCls++;
 
@@ -199,10 +224,28 @@ int Solver::updateSleep(const T* toSend, bool multiUnits)
         // not at level 0? nothing to do
         if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 
-        communicationClient.receiveClauses.clear();
-        communication->receiveClauses(ca, communicationClient.receiveClauses);
+        VariableInformation vi ( varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel ); // setup variable information object
+        communicationClient.receiveClauses.clear();  // prepare for receive
+        communication->receiveClauses(ca, communicationClient.receiveClauses, communicationClient.receivedUnits, communicationClient.receivedEquivalences, vi); // receive multiple things!
         // if( communicationClient.receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << communicationClient.receiveClauses.size() << " clauses." << std::endl;
-        communicationClient.succesfullySend += communicationClient.receiveClauses.size();
+        communicationClient.succesfullyReceived += communicationClient.receiveClauses.size();
+	
+	if( communicationClient.receivedUnits.size() > 0) { // prcess all unit clauses
+	  cancelUntil( 0 ); // jump to level 0!
+	  for( int i = 0 ; i < communicationClient.receivedUnits.size() ; ++ i ) {
+	    const Lit& unit = communicationClient.receivedUnits[i];
+	    if( value(unit) == l_False ) return 1; // we found a conflict
+	    else if ( value(unit) == l_Undef ) {
+	      uncheckedEnqueue( unit );            // enqueue unit
+	      if( propagate() != CRef_Undef ) return 1; // report conflict, if necessary
+	    }
+	  }
+	} // finished processing units
+	
+	if( communicationClient.receivedEquivalences.size() > 0 ) { // process all equivalent literals
+	  eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences, false ); // tell object about these equivalences, ignore setting a dependency
+	}
+	
         for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
             Clause& c = ca[ communicationClient.receiveClauses[i] ]; // take the clause and propagate / enqueue it
 

@@ -254,7 +254,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         for (int j = 0; j < assumps.size(); ++ j) {  // make sure, everybody knows all the variables
             while (solvers[i]->nVars() <= var(assumps[j])) { solvers[i]->newVar(); }
         }
-        assumps.copyTo(communicators[i]->assumptions);
+#warning check whether necessary
+//         assumps.copyTo(communicators[i]->assumptions);
         communicators[i]->setFormulaVariables(solvers[i]->newVar());   // for incremental calls, no ER is supported, so that everything should be fine until here! Note: be careful with this!
         communicators[i]->setWinner(false);
         assert((communicators[i]->isFinished() || communicators[i]->isWaiting()) && "all solvers should not touch anything!");
@@ -447,6 +448,7 @@ bool PSolver::initializeThreads()
 	communicators[i]->sendIncModel = pfolioConfig.opt_sendIncModel;
 	communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
 	communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
+	communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
         
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);

@@ -55,7 +55,8 @@ class PfolioConfig : public Config
 
     BoolOption opt_sendIncModel;            // allow sending with variables where the number of models potentially increased
     BoolOption opt_sendDecModel;            // allow sending with variables where the number of models potentially deecreased
-    BoolOption opt_useDynamicLimits;
+    BoolOption opt_useDynamicLimits;        // use dynamic limits for clause sharing
+    BoolOption opt_sendEquivalences;        // send info about equivalences
 };
 
 }
