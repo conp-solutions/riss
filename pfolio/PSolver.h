@@ -21,6 +21,10 @@ namespace Riss
 class PSolver
 {
 
+    Riss::PfolioConfig* privateConfig; // do be able to construct object without modifying configuration
+    bool deleteConfig;
+    Riss::PfolioConfig& pfolioConfig;  // configuration for this portfolio solver
+    
     bool initialized;
     int threads;
 
@@ -42,7 +46,7 @@ class PSolver
 
   public:
 
-    PSolver(const int threadsToUse, const char* configName = 0) ;
+    PSolver(PfolioConfig* externalConfig = 0, const char* configName = 0, int externalThreads = -1) ;
 
     ~PSolver();
 

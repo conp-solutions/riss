@@ -116,7 +116,8 @@ class ClauseRingBuffer
      * @param authorID id of the author thread, to be stored with the clause
      * @param clause std::vector that stores the clause to be added
      */
-    void addClause(int authorID, const vec<Lit>& clause)
+    template<typename T> // can be either clause or vector
+    void addClause(int authorID, const T& clause)
     {
         lock();
 
@@ -359,6 +360,9 @@ class Communicator
         , lbdChange(0.0)   // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.02)
         , sendRatio(0.1)   // how many of the learned clauses should be shared? 10%?
         , doBumpClauseActivity(false)
+	, sendIncModel(true)           // allow sending with variables where the number of models potentially increased
+	, sendDecModel(false)          // allow sending with variables where the number of models potentially deecreased
+	, useDynamicLimits(true)       // update sharing limits dynamically
         , nrSendCls(0)
         , nrRejectSendSizeCls(0)
         , nrRejectSendLbdCls(0)
@@ -476,7 +480,8 @@ class Communicator
     /** adds a clause to the next position of the pool
      * @param clause std::vector that stores the clause to be added
      */
-    void addClause(const vec<Lit>& clause)
+    template<typename T> // can be either clause or vector
+    void addClause(const T& clause)
     {
         data->getBuffer().addClause(id, clause);
     }
@@ -521,6 +526,10 @@ class Communicator
     float sendRatio;              // How big should the ratio of send clauses be?
     bool  doBumpClauseActivity;   // Should the activity of a received clause be increased from 0 to current activity
 
+    bool sendIncModel;            // allow sending with variables where the number of models potentially increased
+    bool sendDecModel;            // allow sending with variables where the number of models potentially deecreased
+    bool useDynamicLimits;        // update sharing limits dynamically
+    
     unsigned nrSendCls;           // how many clauses have been send via this communicator
     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd

@@ -35,13 +35,16 @@ void Solver::setCommunication(Communicator* comm)
     communication = comm;
     initLimits();  // set communication limits
     // copy values from communicator object
-    sendSize = communication->sendSize;
-    sendLbd = communication->sendLbd;
-    sendMaxSize = communication->sendMaxSize;
-    sendMaxLbd = communication->sendMaxLbd;
-    sizeChange = communication->sizeChange;
-    lbdChange = communication->lbdChange;
-    sendRatio = communication->sendRatio;
+    communicationClient.sendSize = communication->sendSize;
+    communicationClient.sendLbd = communication->sendLbd;
+    communicationClient.sendMaxSize = communication->sendMaxSize;
+    communicationClient.sendMaxLbd = communication->sendMaxLbd;
+    communicationClient.sizeChange = communication->sizeChange;
+    communicationClient.lbdChange = communication->lbdChange;
+    communicationClient.sendRatio = communication->sendRatio;
+    communicationClient.sendIncModel = communication->sendIncModel; // allow sending with variables where the number of models potentially increased
+    communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
+    communicationClient.useDynamicLimits = communication->useDynamicLimits;
 }
 
 inline
@@ -85,14 +88,16 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
     return true;
 }
 
+template<typename T> // can be either clause or vector
 inline
-int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
+int Solver::updateSleep(const T* toSend, bool multiUnits)
+// int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 {
     if (communication == 0) { return 0; }     // no communication -> do nothing!
 
     // nothing to send, do only receive every reveiceEvery tries!
-    if (toSend == 0 && currentTries++ < receiveEvery) { return 0; }
-    currentTries = 0;
+    if (toSend == 0 && communicationClient.currentTries++ < communicationClient.receiveEvery) { return 0; }
+    communicationClient.currentTries = 0;
 
     // check current state, e.g. wait for master to do something!
     if (!communication->isWorking()) {
@@ -123,9 +128,9 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
                 // goto level 0
                 if (decisionLevel() != 0) { cancelUntil(0); }
                 // add unit clauses from master as clauses of the formula!!
-                communication->data->receiveUnits(receiveClause);
-                for (int i = 0 ; i < receiveClause.size(); ++ i) {
-                    if (!addClause(receiveClause[i])) {    // this methods adds the units to the proof as well!
+                communication->data->receiveUnits(communicationClient.receiveClause);
+                for (int i = 0 ; i < communicationClient.receiveClause.size(); ++ i) {
+                    if (!addClause(communicationClient.receiveClause[i])) {    // this methods adds the units to the proof as well!
                         assert(false && "case that send unit clause makes the whole formula unsatisfiable is not handled - can this happen?");
                         break;                                  // Add a unit clause to the solver.
                     }
@@ -147,9 +152,16 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
     if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0; }
 
     if (communication->getDoSend() && toSend != 0) {     // send
-        // clause:
-        int levels [ toSend->size() ];
-
+ 
+        // check, whether the clause is allowed to be sent
+        bool rejectSend = false;
+        for (int i = 0 ; !rejectSend && i < toSend->size(); ++ i) { // repeat until allowed, stay in clause
+	  const Var v = var( (*toSend)[i] ); // get variable to analyze
+	  rejectSend = (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
+#warning: check here, whether the clause contains a variable that is too high, and hence should not be sent (could be done via above flags)
+	}
+	if( rejectSend ) return 0; // do nothing here, as there are variables that should not be sent
+      
         // calculated size of the send clause
         int s = 0;
         if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
@@ -159,7 +171,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
         } else { s = toSend->size(); }
 
         // filter sending:
-        if (toSend->size() > currentSendSizeLimit) {
+        if (toSend->size() > communicationClient.currentSendSizeLimit) {
             updateDynamicLimits(true);    // update failed limits!
             communication->nrRejectSendSizeCls++;
             return 0; // TODO: parameter, adaptive?
@@ -167,36 +179,9 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 
         if (s > 0) {
             // calculate LBD value
-            #if 0   // if variables should be protected
-            if (communication->variableProtection()) {
-                int j = 0;
-                for (int i = 0 ; i < toSend->size(); ++ i)
-                    if (!communication->isProtected((*toSend)[i])) {
-                        levels[j++] = level(var((*toSend)[i]));     // just consider the variable that are not protected!
-                    }
-            } else {
-                for (int i = 0 ; i < toSend->size(); ++ i) {
-                    levels[i] = level(var((*toSend)[i]));
-                }
-            }
-            // insertionsort
-            for (int i = 1; i < s; ++i) {
-                unsigned p = i; int l = levels[i];
-                for (int j = i + 1; j < s; ++ j) {
-                    if (levels[j] > l) {
-                        p = j; l = levels[j];
-                    }
-                }
-                int ltmp = levels[i]; levels[i] = levels[p]; levels[p] = ltmp;
-            }
-            int lbd = 1;
-            for (int i = 1; i < s; ++ i) {
-                lbd = (levels[i - 1] == levels[i]) ? lbd : lbd + 1;
-            }
-            #endif
             int lbd = computeLBD(*toSend);
 
-            if (lbd > currentSendLbdLimit) {
+            if (lbd > communicationClient.currentSendLbdLimit) {
                 updateDynamicLimits(true);    // update failed limits!
                 communication->nrRejectSendLbdCls++;
                 return 0; //TODO: parameter (adaptive?)
@@ -214,12 +199,12 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
         // not at level 0? nothing to do
         if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 
-        receiveClauses.clear();
-        communication->receiveClauses(ca, receiveClauses);
-        // if( receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << receiveClauses.size() << " clauses." << std::endl;
-        succesfullySend += receiveClauses.size();
-        for (unsigned i = 0 ; i < receiveClauses.size(); ++ i) {
-            Clause& c = ca[ receiveClauses[i] ]; // take the clause and propagate / enqueue it
+        communicationClient.receiveClauses.clear();
+        communication->receiveClauses(ca, communicationClient.receiveClauses);
+        // if( communicationClient.receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << communicationClient.receiveClauses.size() << " clauses." << std::endl;
+        communicationClient.succesfullySend += communicationClient.receiveClauses.size();
+        for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
+            Clause& c = ca[ communicationClient.receiveClauses[i] ]; // take the clause and propagate / enqueue it
 
             if (c.size() < 2) {
                 if (c.size() == 0) {
@@ -261,12 +246,12 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
                         ok = (propagate() == CRef_Undef);
                         if (!ok) { return 1; }
                     } else { // attach the clause, if its not a unit clause!
-                        addToProof(ca[receiveClauses[i]]);   // the shared clause stays in the solver, hence add this clause to the proof!
-                        learnts.push(receiveClauses[i]);
+                        addToProof(ca[communicationClient.receiveClauses[i]]);   // the shared clause stays in the solver, hence add this clause to the proof!
+                        learnts.push(communicationClient.receiveClauses[i]);
                         if (communication->doBumpClauseActivity) {
-                            ca[receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
+                            ca[communicationClient.receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
                         }
-                        attachClause(receiveClauses[i]);
+                        attachClause(communicationClient.receiveClauses[i]);
                     }
                 }
             }
@@ -279,29 +264,30 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 inline
 void Solver::updateDynamicLimits(bool failed, bool sizeOnly)
 {
-    if (! failed) { succesfullySend ++; }
+    if( !communicationClient.useDynamicLimits ) return; // do not do anything with the ratios
+    if (! failed) { communicationClient.succesfullySend ++; }
 
-    bool fulfillRatio = (double) conflicts * sendRatio < succesfullySend; // send more than ratio clauses?
+    bool fulfillRatio = (double) conflicts * communicationClient.sendRatio < communicationClient.succesfullySend; // send more than ratio clauses?
 
     // fail -> increase geometrically, success, decrease geometrically!
-    currentSendSizeLimit = (failed ? currentSendSizeLimit * (1.0 + sizeChange) : currentSendSizeLimit - currentSendSizeLimit * sizeChange);
+    communicationClient.currentSendSizeLimit = (failed ? communicationClient.currentSendSizeLimit * (1.0 + communicationClient.sizeChange) : communicationClient.currentSendSizeLimit - communicationClient.currentSendSizeLimit * communicationClient.sizeChange);
     // check bound
-    currentSendSizeLimit = currentSendSizeLimit < sendSize    ? sendSize    : currentSendSizeLimit;
-    currentSendSizeLimit = currentSendSizeLimit > sendMaxSize ? sendMaxSize : currentSendSizeLimit;
+    communicationClient.currentSendSizeLimit = communicationClient.currentSendSizeLimit < communicationClient.sendSize    ? communicationClient.sendSize    : communicationClient.currentSendSizeLimit;
+    communicationClient.currentSendSizeLimit = communicationClient.currentSendSizeLimit > communicationClient.sendMaxSize ? communicationClient.sendMaxSize : communicationClient.currentSendSizeLimit;
 
     if (fulfillRatio) { initLimits(); }   // we have hit the ratio, tigthen limits again!
 
 //   if( sizeOnly ) {
-//     currentSendLbdLimit = currentSendLbdLimit < sendLbd    ? sendLbd    : currentSendLbdLimit;
-//     currentSendLbdLimit = currentSendLbdLimit > sendMaxLbd ? sendMaxLbd : currentSendLbdLimit;
+//     communicationClient.currentSendLbdLimit = communicationClient.currentSendLbdLimit < communicationClient.sendLbd    ? communicationClient.sendLbd    : communicationClient.currentSendLbdLimit;
+//     communicationClient.currentSendLbdLimit = communicationClient.currentSendLbdLimit > communicationClient.sendMaxLbd ? communicationClient.sendMaxLbd : communicationClient.currentSendLbdLimit;
 //     return;
 //   }
 
     // fail -> increase geometrically, success, decrease geometrically!
-    currentSendLbdLimit = (failed ? currentSendLbdLimit * (1.0 + lbdChange) : currentSendLbdLimit - currentSendLbdLimit * lbdChange);
+    communicationClient.currentSendLbdLimit = (failed ? communicationClient.currentSendLbdLimit * (1.0 + communicationClient.lbdChange) : communicationClient.currentSendLbdLimit - communicationClient.currentSendLbdLimit * communicationClient.lbdChange);
     // check bound
-    currentSendLbdLimit = currentSendLbdLimit < sendLbd    ? sendLbd    : currentSendLbdLimit;
-    currentSendLbdLimit = currentSendLbdLimit > sendMaxLbd ? sendMaxLbd : currentSendLbdLimit;
+    communicationClient.currentSendLbdLimit = communicationClient.currentSendLbdLimit < communicationClient.sendLbd    ? communicationClient.sendLbd    : communicationClient.currentSendLbdLimit;
+    communicationClient.currentSendLbdLimit = communicationClient.currentSendLbdLimit > communicationClient.sendMaxLbd ? communicationClient.sendMaxLbd : communicationClient.currentSendLbdLimit;
 
     return;
 }
@@ -317,8 +303,8 @@ void Solver::initVariableProtection()
 inline
 void Solver::initLimits()
 {
-    currentSendSizeLimit = communication->sendSize;
-    currentSendLbdLimit  = communication->sendLbd;
+    communicationClient.currentSendSizeLimit = communication->sendSize;
+    communicationClient.currentSendLbdLimit  = communication->sendLbd;
 }
 
 }

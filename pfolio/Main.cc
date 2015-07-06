@@ -107,24 +107,26 @@ int main(int argc, char** argv)
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    IntOption    threads("MAIN", "threads", "Number of threads to be used by the parallel solver.\n", 2, IntRange(1, 64));
-
     StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
-
 
     BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
     BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
-    StringOption opt_config("MAIN", "config", "the configuration to be used for the portfolio solver", "DRUP");
+    StringOption opt_config("MAIN", "pconfig", "the configuration to be used for the portfolio solver", 0);
+    IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
     try {
 
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
+	PfolioConfig pfolioConfig(string(opt_config == 0 ? "" : opt_config));
+        foundHelp = pfolioConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        if (foundHelp) { exit(0); }  // stop after printing the help information
+	
         if (foundHelp) { exit(0); }   // stop after printing the help information
 
-        PSolver S(threads, opt_config); // set up a portfolio solver for DRUP proofs
+        PSolver S( &pfolioConfig ); // set up a portfolio solver for DRUP proofs
 
         double initial_time = cpuTime();
 

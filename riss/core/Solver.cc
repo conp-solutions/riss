@@ -214,20 +214,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , useCoprocessorIP(config.opt_usePPip)
 
     // communication to other solvers that might be run in parallel
+    , sharingTimePoint( config.sharingType )
     , communication(0)
-    , currentTries(0)
-    , receiveEvery(0)
-    , currentSendSizeLimit(0)
-    , currentSendLbdLimit(0)
-    , succesfullySend(0)
-    , succesfullyReceived(0)
-    , sendSize(0)
-    , sendLbd(0)
-    , sendMaxSize(0)
-    , sendMaxLbd(0)
-    , sizeChange(0)
-    , lbdChange(0)
-    , sendRatio(0)
 {
 
     // Parameters (user settable):
@@ -278,6 +266,7 @@ Solver::~Solver()
 {
     if (big != 0)         { big->BIG::~BIG(); delete big; big = 0; }   // clean up!
     if (coprocessor != 0) { delete coprocessor; coprocessor = 0; }
+    if ( deleteConfig ) delete privateConfig;
 }
 
 
@@ -817,6 +806,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             c[0] =  c[1], c[1] = tmp;
         }
 
+	if( !c.wasUsedInAnalyze() ) { // share clauses only, if they are used during resolutions in conflict analysis
+	   updateSleep(&c); 
+	   c.setUsedInAnalyze();
+	}
+        
         resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 
         if (!foundFirstLearnedClause) {  // dynamic adoption only until first learned clause!
@@ -1443,7 +1437,11 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
+	    if( !c.wasPropagated() ) { // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
+	      updateSleep(&c); // shorter clauses are shared immediately!
+	      c.setPropagated();
+	    }
+            
             if (value(first) == l_False) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
@@ -1957,7 +1955,7 @@ lbool Solver::search(int nof_conflicts)
             if (!withinBudget()) { return l_Undef; }   // check whether we can still do conflicts
 
             // check for communication to the outside (for example in the portfolio solver)
-            int result = updateSleep(0);
+            int result = updateSleep( (vec<Lit>*)0x0 );
             if (-1 == result) {
                 // interrupt via communication
                 return l_Undef;
@@ -4134,7 +4132,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
     // parallel portfolio: send the learned clause!
-    updateSleep(&learnt_clause);
+    if( sharingTimePoint == 0 || learnt_clause.size() < 3) updateSleep(&learnt_clause); // shorter clauses are shared immediately!
 
     if (learnt_clause.size() == 1) {
         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");

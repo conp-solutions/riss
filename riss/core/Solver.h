@@ -1093,6 +1093,9 @@ class Solver
     void resetLastSolve();
 
   private:
+    
+    int sharingTimePoint; // when to share a learned clause (0=when learned, 1=when first used for propagation, 2=when first used during conflict analysis)
+    
     Communicator* communication; /// communication with the outside, and control of this solver
 
     /** goto sleep, wait until master did updates, wakeup, process the updates
@@ -1100,7 +1103,8 @@ class Solver
      * note: can also interrupt search and incorporate new assumptions etc.
      * @return -1 = abort, 0=everythings nice, 1=conflict/false result
      */
-    int updateSleep(vec<Lit>* toSend, bool multiUnits = false);
+    template<typename T> // can be either clause or vector
+    int updateSleep(const T* toSend, bool multiUnits = false);
 
     /** add a learned clause to the solver
      * @param bump increases the activity of the current clause to the last seen value
@@ -1125,23 +1129,35 @@ class Solver
     /*
      * stats and limits for communication
      */
-    vec<Lit> receiveClause;         /// temporary placeholder for receiving clause
-    std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
-    int currentTries;                          /// current number of waits
-    int receiveEvery;                          /// do receive every n tries
-    float currentSendSizeLimit;                /// dynamic limit to control send size
-    float currentSendLbdLimit;                 /// dynamic limit to control send lbd
-  public:
-    int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
-    int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
-  private:
-    float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
-    float sendLbd;                             /// Minimum size of clauses to send (also start value)
-    float sendMaxSize;                         /// Maximum size of clauses to send
-    float sendMaxLbd;                          /// Maximum Lbd of clauses to send
-    float sizeChange;                          /// How fast should size send limit be adopted?
-    float lbdChange;                           /// How fast should lbd send limit be adopted?
-    float sendRatio;                           /// How big should the ratio of send clauses be?
+    public:
+    /** necessary data structures for communication */
+    struct CommunicationClient {
+      vec<Lit> receiveClause;         /// temporary placeholder for receiving clause
+      std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
+      int currentTries;                          /// current number of waits
+      int receiveEvery;                          /// do receive every n tries
+      float currentSendSizeLimit;                /// dynamic limit to control send size
+      float currentSendLbdLimit;                 /// dynamic limit to control send lbd
+    
+      int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
+      int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
+
+      float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
+      float sendLbd;                             /// Minimum size of clauses to send (also start value)
+      float sendMaxSize;                         /// Maximum size of clauses to send
+      float sendMaxLbd;                          /// Maximum Lbd of clauses to send
+      float sizeChange;                          /// How fast should size send limit be adopted?
+      float lbdChange;                           /// How fast should lbd send limit be adopted?
+      float sendRatio;                           /// How big should the ratio of send clauses be?
+      
+      bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
+      bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
+      bool useDynamicLimits;                     /// update sharing limits dynamically
+      
+      CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), succesfullySend(0), succesfullyReceived(0),
+                 sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0), 
+                 sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
+    } communicationClient;
 
 // [END] modifications for parallel assumption based solver
 

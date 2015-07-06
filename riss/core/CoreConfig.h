@@ -140,6 +140,8 @@ class CoreConfig : public Config
     IntOption    scheduleDefaultConflicts;
     DoubleOption sscheduleGrowFactor;
 
+    IntOption    sharingType;  // determine when learned clauses are shared
+    
     #ifndef NDEBUG
     BoolOption localLookaheadDebug;
     #endif

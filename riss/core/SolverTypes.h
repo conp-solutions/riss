@@ -90,7 +90,7 @@ inline  Lit  mkLit(const Var& var, const bool& sign = false) { Lit p; p.x = var 
 inline  Lit  operator ~(const Lit& p)              { Lit q; q.x = p.x ^ 1; return q; }
 inline  Lit  operator ^(const Lit& p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
 inline  bool sign(const Lit& p)              { return p.x & 1; }
-inline  int  var(const Lit& p)              { return p.x >> 1; }
+inline  const int  var(const Lit& p)         { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
 inline  int  toInt(const Var& v)              { return v; }
@@ -205,7 +205,30 @@ class Clause
         unsigned extra_info : 64;
         #endif
 
-        ClauseHeader(void) {}
+        ClauseHeader(void) : 
+             mark (0)
+            ,locked (0)
+            ,learnt (0)
+            ,has_extra (0)
+            ,reloced (0)
+            ,lbd (0)
+	    ,wasPropagated  (0)
+            ,usedInAnalyze  (0)
+            ,isCore  (0)
+            ,canbedel  (0)
+            ,can_subsume  (0)
+            ,can_strengthen  (0)
+            ,size (0)
+            #ifdef PCASSO
+            , pt_level  (0)
+            , shared  (0)
+            , shCleanDelay (0)
+            #endif
+            #ifdef CLS_EXTRA_INFO
+            , extra_info (0)
+            #endif
+        {}
+        
         ClauseHeader(volatile ClauseHeader& rhs)
         {
             mark = rhs.mark;
@@ -214,6 +237,8 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+	    wasPropagated = rhs.wasPropagated;
+            usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
@@ -237,6 +262,8 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+	    wasPropagated = rhs.wasPropagated;
+            usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
@@ -263,25 +290,13 @@ class Clause
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt)
     {
-        header.mark      = 0;
-        header.locked    = 0;
+        // header is initialized as above, everything set to 0, hence, set only different values!
         header.learnt    = learnt;
         header.has_extra = use_extra;
-        header.reloced   = 0;
         header.size      = ps.size();
-        #ifdef CLS_EXTRA_INFO
-        header.extra_info = 0
-        #endif
-                            header.lbd = 0;
-        header.isCore = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-        #ifdef PCASSO
-        header.pt_level = 0;
-        header.shared = 0; // Non-shared
-        header.shCleanDelay = 0;
-        #endif
 
         for (int i = 0; i < ps.size(); i++)
             for (int j = i + 1; j < ps.size(); j++) {
@@ -306,24 +321,13 @@ class Clause
     template<class V>
     Clause(const V* ps, int psSize, bool use_extra, bool learnt)
     {
-        header.mark      = 0;
-        header.locked    = 0;
+        // header is initialized as above, everything set to 0, hence, set only different values!
         header.learnt    = learnt;
         header.has_extra = use_extra;
-        header.reloced   = 0;
         header.size      = psSize;
-        #ifdef CLS_EXTRA_INFO
-        header.extra_info = 0
-        #endif
-                            header.lbd = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-        #ifdef PCASSO
-        header.pt_level = 0;
-        header.shared = 0; // Non-shared
-        header.shCleanDelay = 0;
-        #endif
 
         for (int i = 0; i < psSize; i++)
             for (int j = i + 1; j < psSize; j++) {
@@ -406,6 +410,12 @@ class Clause
     bool isCoreClause() const { return header.isCore; }
     void setCoreClause(bool c) { header.isCore = c; }
 
+    bool wasPropagated() const { return header.wasPropagated; }
+    void setPropagated() { header.wasPropagated = 1; }
+    
+    bool wasUsedInAnalyze() const { return header.usedInAnalyze; }
+    void setUsedInAnalyze() { header.usedInAnalyze; }
+    
     void         print(bool nl = false) const
     {
         for (int i = 0; i < size(); i++) {

@@ -11,17 +11,18 @@ using namespace std;
 namespace Riss
 {
 
-BoolOption opt_share("PFOLIO", "ps",  "enable clause sharing for all clients", true, 0);
-BoolOption opt_proofCounting("PFOLIO", "pc",  "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0);
-IntOption  opt_verboseProof("PFOLIO", "pv",  "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), 0);
-BoolOption opt_internalProofCheck("PFOLIO", "pic", "use internal proof checker during run time", false, 0);
-BoolOption opt_verbosePfolio("PFOLIO", "ppv", "verbose pfolio execution", false, 0);
+
 
 /** main method that is executed by all worker threads */
 static void* runWorkerSolver(void* data);
 
-PSolver::PSolver(const int threadsToUse, const char* configName)
-    : initialized(false), threads(threadsToUse)
+PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int externalThreads)
+    : 
+      privateConfig(externalConfig == 0 ? new PfolioConfig(configName) : externalConfig)
+    , deleteConfig(externalConfig == 0)
+    , pfolioConfig(* privateConfig)
+    , initialized(false)
+    , threads(pfolioConfig.threads)
     , data(0)
     , threadIDs(0)
     , proofMaster(0)
@@ -31,6 +32,8 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     , verbosity(0)
     , verbEveryConflicts(0)
 {
+    if( externalThreads != -1 ) threads = externalThreads; // set number of threads from constructor, overwrite command line
+  
     // setup the default configuration for all the solvers!
     configs   = new CoreConfig        [ threads ];
     ppconfigs = new CP3Config         [ threads ];
@@ -43,7 +46,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     createThreadConfigs();
 
     // here, DRUP proofs are created!
-    if (opt_internalProofCheck) {
+    if (pfolioConfig.opt_internalProofCheck) {
         opc = new OnlineProofChecker(drupProof);
     }
 
@@ -70,6 +73,8 @@ PSolver::~PSolver()
 
     if (threadIDs != 0) { delete [] threadIDs; threadIDs = 0; }
     if (data != 0) { delete data; data = 0; }
+    
+    if ( deleteConfig ) delete privateConfig;
 }
 
 CoreConfig& PSolver::getConfig(const int solverID)
@@ -142,7 +147,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
             while (solvers[i]->nVars() <= var(ps[j])) { solvers[i]->newVar(); }
         }
         bool ret2 = solvers[i]->addClause_(ps); // if a solver failed adding the clause, then the state for all solvers is bad as well
-        if (opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; } // TODO remove after debug
+        if (pfolioConfig.opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; } // TODO remove after debug
         ret = ret2 && ret;
     }
     return ret;
@@ -198,7 +203,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         } else {
             cerr << "c initialization of " << threads << " threads: succeeded" << endl;
         }
-        if (proofMaster != 0 && opt_verboseProof > 0) { proofMaster->addCommentToProof("c initialized parallel solvers", -1); }
+        if (proofMaster != 0 && pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("c initialized parallel solvers", -1); }
 
         /*
          * copy the formula from the first solver to all the other solvers
@@ -220,15 +225,15 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
         // copy the formula of the solver 0 number of thread times
         if (proofMaster != 0) {  // if a proof is generated, add all clauses that are currently present in solvers[0]
-            if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add irredundant clauses multiple times", -1); }
+            if (pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("add irredundant clauses multiple times", -1); }
             for (int j = 0 ; j < solvers[0]->clauses.size(); ++ j) {
                 proofMaster->addInputToProof(solvers[0]->ca[ solvers[0]->clauses[j] ], -1, threads); // so far, work on global proof
             }
-            if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add redundant clauses multiple times", -1); }
+            if (pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("add redundant clauses multiple times", -1); }
             for (int j = 0 ; j < solvers[0]->learnts.size(); ++ j) {
                 proofMaster->addInputToProof(solvers[0]->ca[ solvers[0]->learnts[j] ], -1, threads);  // so far, work on global proof
             }
-            if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add unit clauses of solver 0", -1); }
+            if (pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("add unit clauses of solver 0", -1); }
             proofMaster->addUnitsToProof(solvers[0]->trail, 0, false);   // incorporate all the units once more
         }
 
@@ -255,7 +260,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         assert((communicators[i]->isFinished() || communicators[i]->isWaiting()) && "all solvers should not touch anything!");
     }
 
-    if (proofMaster != 0 && opt_verboseProof > 0) { proofMaster->addCommentToProof("c start all solvers", -1); }
+    if (proofMaster != 0 && pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("c start all solvers", -1); }
     start(); // allow all solvers to start,
     waitFor(oneFinished);   // and wait until the first solver finishes
 
@@ -378,9 +383,9 @@ void PSolver::createThreadConfigs()
         }
     } else if (defaultConfig == "DRUP") {
         for (int t = 0 ; t < threads; ++ t) {
-            if (opt_verboseProof > 1) {
+            if (pfolioConfig.opt_verboseProof > 1) {
                 configs[t].opt_verboseProof = 1;
-                //configs[t].opt_verboseProof = true;
+                //configs[t].pfolioConfig.opt_verboseProof = true;
             }
         }
     } else if (defaultConfig == "RESTART") {
@@ -413,7 +418,7 @@ bool PSolver::initializeThreads()
 
     // the portfolio should print proofs
     if (drupProofFile != 0) {
-        proofMaster = new ProofMaster(drupProofFile, threads, nVars(), opt_proofCounting, opt_verboseProof > 1);  // use a counting proof master
+        proofMaster = new ProofMaster(drupProofFile, threads, nVars(), pfolioConfig.opt_proofCounting, pfolioConfig.opt_verboseProof > 1);  // use a counting proof master
         proofMaster->setOnlineProofChecker(opc);     // tell proof master about the online proof checker
         data->setProofMaster(proofMaster);       // tell shared clauses pool about proof master (so that it adds shared clauses)
     }
@@ -428,15 +433,27 @@ bool PSolver::initializeThreads()
             solvers.push(new Solver(& configs[i]));      // solver 0 should exist already!
         }
 
+        // setup parameters for communication system
+        communicators[i]->protectAssumptions = pfolioConfig.opt_protectAssumptions;
+	communicators[i]->sendSize = pfolioConfig.opt_sendSize;             
+	communicators[i]->sendLbd = pfolioConfig.opt_sendLbd;              
+	communicators[i]->sendMaxSize = pfolioConfig.opt_sendMaxSize;          
+	communicators[i]->sendMaxLbd = pfolioConfig.opt_sendMaxLbd;           
+	communicators[i]->sizeChange = pfolioConfig.opt_sizeChange;           
+	communicators[i]->lbdChange = pfolioConfig.opt_lbdChange;           
+	communicators[i]->sendRatio = pfolioConfig.opt_sendRatio;           
+	communicators[i]->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
+
+	communicators[i]->sendIncModel = pfolioConfig.opt_sendIncModel;
+	communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
+	communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
+        
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);
-//     if( proofMaster != 0 ) { // for now, we do not use sharing
-//       cerr << "c for DRUP proofs, yet, sharing is disabled" << endl;
-//     }
-        if (! opt_share) {
-            communicators[i]->setDoReceive(false);   // no receive
-            communicators[i]->setDoSend(false);   // no sending
-        }
+
+        if (! pfolioConfig.opt_share)   communicators[i]->setDoSend(false);    // no sending
+        if( !pfolioConfig.opt_receive ) communicators[i]->setDoReceive(false); // no sending
+	
         // tell the communicator about the proof master
         communicators[i]->setProofMaster(proofMaster);
         // tell solver about its communication interface

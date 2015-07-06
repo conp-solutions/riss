@@ -9,8 +9,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef RISS_CoreConfig_h
-#define RISS_CoreConfig_h
+#ifndef RISS_PfolioConfig_h
+#define RISS_PfolioConfig_h
 
 #include "riss/utils/Config.h"
 #include "riss/utils/Options.h"
@@ -30,10 +30,32 @@ class PfolioConfig : public Config
     /** default constructor, which sets up all options in their standard format */
     PfolioConfig(const std::string& presetOptions = "");
 
+    
+    BoolOption opt_proofCounting;
+    IntOption  opt_verboseProof;
+    BoolOption opt_internalProofCheck;
+    BoolOption opt_verbosePfolio;
+    
+    IntOption  threads;
+    StringOption opt_defaultSetup;          // presets to run priss in given setup (DRUP, BMC, ...)
+    
+    // sharing options
+    BoolOption opt_share;
+    BoolOption opt_receive; 
+    
+    BoolOption opt_protectAssumptions;      // should assumption variables not be considered for calculating send-limits?
+    DoubleOption opt_sendSize;              // Minimum Lbd of clauses to send  (also start value)
+    DoubleOption opt_sendLbd;               // Minimum size of clauses to send (also start value)
+    DoubleOption opt_sendMaxSize;           // Maximum size of clauses to send
+    DoubleOption opt_sendMaxLbd;            // Maximum Lbd of clauses to send
+    DoubleOption opt_sizeChange;            // How fast should size send limit be adopted?
+    DoubleOption opt_lbdChange;             // How fast should lbd send limit be adopted?
+    DoubleOption opt_sendRatio;             // How big should the ratio of send clauses be?
+    BoolOption opt_doBumpClauseActivity;    // Should the activity of a received clause be increased from 0 to current activity
 
-    BoolOption send;
-    BoolOption receive; // remove elements on watch list faster, but unsorted
-    BoolOption proofCounting; // interrupt after preprocessing
+    BoolOption opt_sendIncModel;            // allow sending with variables where the number of models potentially increased
+    BoolOption opt_sendDecModel;            // allow sending with variables where the number of models potentially deecreased
+    BoolOption opt_useDynamicLimits;
 };
 
 }
