@@ -70,5 +70,5 @@ inline uint64_t SolverRiss::getDecisions()              { return solver.decision
 inline uint64_t SolverRiss::getConflicts()              { return solver.conflicts; }
 inline void     SolverRiss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
 inline Riss::Lit SolverRiss::trailGet(const unsigned int index) { return solver.trail[index]; }
-inline unsigned int SolverRiss::getNumberOfTopLevelUnits() const    { return solver.trail.size(); }
+inline unsigned int SolverRiss::getNumberOfTopLevelUnits() const    { return solver.trail_lim.size() == 0 ? solver.trail.size() : solver.trail_lim[0] ; }
 } // namespace Pcasso

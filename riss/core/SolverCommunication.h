@@ -90,10 +90,6 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 {
     if (communication == 0) { return 0; }     // no communication -> do nothing!
 
-    // nothing to send, do only receive every reveiceEvery tries!
-    if (toSend == 0 && currentTries++ < receiveEvery) { return 0; }
-    currentTries = 0;
-
     // check current state, e.g. wait for master to do something!
     if (!communication->isWorking()) {
         if (communication->isAborted()) {
@@ -143,6 +139,10 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
         }
     }
 
+    // nothing to send, do only receive every reveiceEvery tries!
+    if (toSend == 0 && currentTries++ < receiveEvery) { return 0; }
+    currentTries = 0;
+    
     // if there should not be communication
     if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0; }
 
