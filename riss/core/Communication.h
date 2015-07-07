@@ -297,7 +297,11 @@ class ClauseRingBuffer
      * note: only an approximation
      */
     template <typename T>
+#ifdef PCASSO
+    unsigned receiveClauses(int authorID, unsigned lastSeenIndex, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<int>& receivedUnitsDependencies, vec<Lit>& receivedEquivalences, vec<int>& receivedEquivalencesDependencies, T& receiveData)
+#else
     unsigned receiveClauses(int authorID, unsigned lastSeenIndex, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<Lit>& receivedEquivalences, T& receiveData)
+#endif
     {
         //std::cerr << "c [COMM] thread " << authorID << " called receive with last seen " << lastSeenIndex << ", addHere: " << addHereNext << std::endl;
         clauses.clear();
@@ -317,23 +321,32 @@ class ClauseRingBuffer
                 for (unsigned i = startIndex; i < stopIndex; ++ i) {   // do copy the last clause!
                     // receive only, if calling thread was not the author
                     if (getAuthor(i) != authorID) {
-
-
+#ifdef PCASSO
+		      incorporateReceiveItem(i, allocator, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive one element, and its dependencies
+#else
+		      incorporateReceiveItem(i, allocator, clauses, receivedUnits, receivedEquivalences, receiveData); // receive one element, add info to collecting data strucutures
+#endif
                     }
                 }
             } else { // startIndex > stopIndex
                 for (unsigned i = startIndex; i < poolSize; ++i) {
                     // receive only, if calling thread was not the author
                     if (getAuthor(i) != authorID) {
-                        //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
-                        clauses.push_back(getClause(i, allocator));   // create clause directly in clause allocator
+#ifdef PCASSO
+		      incorporateReceiveItem(i, allocator, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive one element, and its dependencies
+#else
+		      incorporateReceiveItem(i, allocator, clauses, receivedUnits, receivedEquivalences, receiveData); // receive one element, add info to collecting data strucutures
+#endif
                     }
                 }
                 for (unsigned i = 0 ; i < stopIndex; ++ i) {
                     // receive only, if calling thread was not the author
                     if (getAuthor(i) != authorID) {
-                        //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
-                        clauses.push_back(getClause(i, allocator));   // create clause directly in clause allocator
+#ifdef PCASSO
+		      incorporateReceiveItem(i, allocator, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive one element, and its dependencies
+#else
+		      incorporateReceiveItem(i, allocator, clauses, receivedUnits, receivedEquivalences, receiveData); // receive one element, add info to collecting data strucutures
+#endif
                     }
                 }
             }
@@ -491,6 +504,8 @@ class Communicator
         , nrRejectSendSizeCls(0)
         , nrRejectSendLbdCls(0)
         , nrReceivedCls(0)
+	, nrReceivedMultiUnits(0)
+	, nrReceivedEEs(0)
     {
         // do create the solver here, or from the outside?
         // solver = new Solver();
@@ -642,11 +657,19 @@ class Communicator
      * @param receiveData object that can tell per variable whether receiving is ok, get set dependency value per variable (for Pcasso, clauses have their value stored already)
      */
     template <typename T>
+#ifdef PCASSO
+    void receiveClauses(Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<int>& receivedUnitsDependencies, vec<Lit>& receivedEquivalences, vec<int>& receivedEquivalencesDependencies, T& receiveData)
+#else    
     void receiveClauses(Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<Lit>& receivedEquivalences, T& receiveData)
+#endif
     {
         if (!doReceive) { return; }
         //unsigned int oldLastSeen = lastSeenIndex;
-        lastSeenIndex = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+#ifdef PCASSO
+        lastSeenIndex = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+#else
+	lastSeenIndex = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+#endif
     }
 
     void initProtect(const vec<Lit>& assumptions, const int vars)
@@ -687,6 +710,8 @@ class Communicator
     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd
     unsigned nrReceivedCls;       // how many clauses have been received (there is no filter yet!!)
+    unsigned nrReceivedMultiUnits; // how many multi-unit packages have been sent
+    unsigned nrReceivedEEs;       // how many equivalence SCC have been sent
 
 };
 

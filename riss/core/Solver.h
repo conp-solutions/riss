@@ -479,6 +479,23 @@ class Solver
                 #endif
             }
         }
+        
+#ifdef PCASSO
+	/** add received equivalence classes faster than checking each class on its own*/
+        template <class T>
+        inline void addEquivalenceClass(const T& lits, vec<int>& dependencyLevels)
+        {
+	    int usedSCC = 0;
+            for (int i = 0 ; i < lits.size(); ++ i) { 
+	      equivalencesStack.push(lits[i]); 
+	      if( lits[i] == lit_Undef ) { // reached end of an SCC?
+		assert( usedSCC < dependencyLevels.size() && "number of received scc has to fit" );
+		dependencyStack.push( dependencyLevels[usedSCC++] );
+	      }
+	    }
+	    assert( (lits.size() == 0 || lits[ lits.size() -1 ] == lit_Undef) && "SCC should be separated by lit_Undef	 " );
+        }
+#endif
 
         /** just return the next smaller reprentative */
         inline Lit getFirstReplacement(Lit l) const
@@ -1163,7 +1180,9 @@ class Solver
     struct CommunicationClient {
         vec<Lit> receiveClause;             /// temporary placeholder for receiving clause
         vec<Lit> receivedUnits;             /// temporary placeholder for receiving units
+        vec<int> unitDependencies;          /// store the dependency of each unit
         vec<Lit> receivedEquivalences;      /// temporary placeholder for receiving equivalences, classes separated by lit_Undef
+        vec<int> eeDependencies;            /// store the dependency of each equivalence class
         std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
         int currentTries;                          /// current number of waits
         int receiveEvery;                          /// do receive every n tries

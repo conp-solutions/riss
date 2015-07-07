@@ -237,7 +237,16 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 
     VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
     communicationClient.receiveClauses.clear();  // prepare for receive
+    communicationClient.receivedUnits.clear();
+    communicationClient.receivedEquivalences.clear();
+#ifdef PCASSO
+    communicationClient.unitDependencies.clear();
+    communicationClient.eeDependencies.clear();
+    communication->receiveClauses(ca, communicationClient.receiveClauses, communicationClient.receivedUnits, communicationClient.unitDependencies,
+				  communicationClient.receivedEquivalences, communicationClient.eeDependencies, vi); // receive multiple things!
+#else
     communication->receiveClauses(ca, communicationClient.receiveClauses, communicationClient.receivedUnits, communicationClient.receivedEquivalences, vi); // receive multiple things!
+#endif
     // if( communicationClient.receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << communicationClient.receiveClauses.size() << " clauses." << std::endl;
     communicationClient.succesfullyReceived += communicationClient.receiveClauses.size();
 
@@ -245,16 +254,32 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
         cancelUntil(0);   // jump to level 0!
         for (int i = 0 ; i < communicationClient.receivedUnits.size() ; ++ i) {
             const Lit& unit = communicationClient.receivedUnits[i];
-            if (value(unit) == l_False) { return 1; }  // we found a conflict
+            if (value(unit) == l_False) { // we found a conflict
+#ifdef PCASSO
+	      assert( false && "take care to set the unsatPTlevel correctly!" );
+#warning take care to set the unsatPTlevel correctly!
+#endif
+	      return 1; 
+	    }  
             else if (value(unit) == l_Undef) {
-                uncheckedEnqueue(unit);              // enqueue unit
+#ifdef PCASSO
+                uncheckedEnqueue(unit, communicationClient.unitDependencies[i] ); // enqueue unit with dependency
+#else
+                uncheckedEnqueue(unit); // enqueue unit
+#endif
                 if (propagate() != CRef_Undef) { return 1; }  // report conflict, if necessary
             }
         }
+	communication->nrReceivedMultiUnits ++;
     } // finished processing units
 
     if (communicationClient.receivedEquivalences.size() > 0) {  // process all equivalent literals
-        eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences, false);  // tell object about these equivalences, ignore setting a dependency
+#ifdef PCASSO
+        eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences,  communicationClient.eeDependencies, false);  // use fast-import for pcasso, do not share again
+#else
+        eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences, false);  // tell object about these equivalences, do not share again, ignore setting a dependency
+#endif
+	communication->nrReceivedEEs ++;
     }
 
     for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
