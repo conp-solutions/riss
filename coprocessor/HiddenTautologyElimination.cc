@@ -181,7 +181,7 @@ void HiddenTautologyElimination::elimination_worker(CoprocessorData& data, uint3
                 if (doLock) { data.lock(); }
                 data.addCommentToProof("found during HTE variable array filling");
                 data.addUnitToProof(unit);
-                lbool result = data.enqueue(unit, data.defaultExtraInfo());
+                lbool result = data.enqueue(unit, data.currentDependencyLevel());
                 if (doLock) { data.unlock(); }
                 if (result == l_False) { return; }
                 continue; // no need to check a variable that is unit!

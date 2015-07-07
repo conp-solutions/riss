@@ -119,7 +119,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
                          << endl;);
                 }
                 if (data.value(~lfailed) != l_True) { data.addCommentToProof("found during stamping in unhiding"); data.addUnitToProof(~lfailed); }     // add the unit twice?
-                if (l_False == data.enqueue(~lfailed, data.defaultExtraInfo())) { return stamp; }
+                if (l_False == data.enqueue(~lfailed, data.currentDependencyLevel())) { return stamp; }
 
                 if (stampInfo[ toInt(~l1) ].dsc != 0 && stampInfo[ toInt(~l1) ].fin == 0) { continue; }
             }
@@ -479,7 +479,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                 } else {
                     if (clause.size() == 1) {
                         DOUT(if (config.opt_uhd_Debug > 1) cerr << "c derived unit " << clause[0] << endl;);
-                        if (l_False == data.enqueue(clause[0], data.defaultExtraInfo())) {
+                        if (l_False == data.enqueue(clause[0], data.currentDependencyLevel())) {
                             return didSomething;
                         }
                     }
@@ -509,7 +509,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                     data.addCommentToProof("implied by unhiding probing");
                     data.addUnitToProof(clause[1]);
                 }
-                if (l_False == data.enqueue(clause[1], data.defaultExtraInfo())) {
+                if (l_False == data.enqueue(clause[1], data.currentDependencyLevel())) {
                     return didSomething;
                 }
             } else if ((bs < as && ae < be)   // b -> a
@@ -520,7 +520,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                     data.addCommentToProof("implied by unhiding probing");
                     data.addUnitToProof(clause[0]);
                 }
-                if (l_False == data.enqueue(clause[0], data.defaultExtraInfo())) {
+                if (l_False == data.enqueue(clause[0], data.currentDependencyLevel())) {
                     return didSomething;
                 }
             } else if (config.opt_uhd_probe > 1) {   // more expensive method
@@ -541,7 +541,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                                 if (j == 0 || k == 0) { uhdProbeL2Units ++; }  else { uhdProbeL3Units ++; }
                             }
                             if (data.value(bLit) != l_True) { data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(bLit); }
-                            if (l_False == data.enqueue(bLit, data.defaultExtraInfo())) {
+                            if (l_False == data.enqueue(bLit, data.currentDependencyLevel())) {
                                 return didSomething;
                             }
                         } else {
@@ -553,7 +553,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                                     data.addUnitToProof(aLit);
                                 }
                                 if (data.value(aLit) != l_True) {data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(aLit); }
-                                if (l_False == data.enqueue(aLit, data.defaultExtraInfo())) {
+                                if (l_False == data.enqueue(aLit, data.currentDependencyLevel())) {
                                     return didSomething;
                                 }
                             }
@@ -652,7 +652,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                             data.addUnitToProof(minLit);
                         }
                         if (data.value(minLit) != l_True) { data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(minLit); }
-                        if (l_False == data.enqueue(minLit, data.defaultExtraInfo())) {
+                        if (l_False == data.enqueue(minLit, data.currentDependencyLevel())) {
                             return didSomething;
                         }
                         for (int j = 0 ; j < clause.size(); ++ j) {

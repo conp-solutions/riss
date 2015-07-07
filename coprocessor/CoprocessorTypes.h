@@ -196,7 +196,7 @@ class CoprocessorData
 // semantic:
     bool ok();                                             // return ok-state of solver
     void setFailed();                                      // found UNSAT, set ok state to false
-    Riss::lbool enqueue(const Riss::Lit& l, const uint64_t extraInfo = 0);  // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
+    Riss::lbool enqueue(const Riss::Lit& l, const unsigned dependencyLevel = 0);  // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
     Riss::lbool value(const Riss::Lit& l) const ;           // return the assignment of a literal
     void resetAssignment(const Riss::Var v);               // set the polarity of a variable to l_Undef -- Note: be careful with this!
 
@@ -326,10 +326,26 @@ class CoprocessorData
         for (int i = 0 ; i < solver->trail.size(); ++ i) { std::cerr << " " << solver->trail[i]; }
     }
 
-    /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
-    bool usesExtraInfo() const { return solver->usesExtraInfo(); }
-    uint64_t defaultExtraInfo() const { return solver->defaultExtraInfo(); }
-    uint64_t variableExtraInfo(const Riss::Var& v) const { return solver->variableExtraInfo(v); }
+    /** return dependencyLevel of the given variable */
+    unsigned dependencyLevel(const Riss::Var& v)
+    {
+        #ifdef PCASSO
+        solver->vardata[ v ]. dependencyLevel;
+        #else
+        return 0;
+        #endif
+    }
+
+    /** return the dependency level of the node the solver is operating on*/
+    unsigned currentDependencyLevel() const
+    {
+        #ifdef PCASSO
+        return solver->currentDependencyLevel();
+        #else
+        return 0;
+        #endif
+    }
+
 };
 
 /** class representing the binary implication graph of the formula */
@@ -407,6 +423,7 @@ class BIG
     uint32_t getStart(const Riss::Lit& l) { return start != 0 && var(l) < duringCreationVariables ? start[ Riss::toInt(l) ] : 0; }
     /** get indexes of BIG scan algorithm */
     uint32_t getStop(const Riss::Lit& l) { return stop != 0 && var(l) < duringCreationVariables  ? stop[ Riss::toInt(l) ] : 0; }
+
 };
 
 /** Comperator for Variable Riss::Heap of BVE */
@@ -675,15 +692,18 @@ inline bool CoprocessorData::isInterupted()
 }
 
 
-inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit& l, const uint64_t extraInfo)
+inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit& l, const unsigned int dependencyLevel)
 {
     if (false || global_debug_out) { std::cerr << "c enqueue " << l << " with previous value " << (solver->value(l) == l_Undef ? "undef" : (solver->value(l) == l_False ? "unsat" : " sat ")) << std::endl; }
     if (solver->value(l) == l_False) {
         solver->ok = false; // set state to false
         return l_False;
     } else if (solver->value(l) == l_Undef) {
+        #ifdef PCASSO
+        solver->uncheckedEnqueue(l, dependencyLevel);
+        #else
         solver->uncheckedEnqueue(l);
-        // if( extraInfo != 0 ) solver.vardata[ var(l) ] ... // make use of extra information!
+        #endif
         return l_True;
     }
     return l_Undef;

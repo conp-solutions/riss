@@ -5,8 +5,8 @@ using namespace std;
 
 namespace Pcasso
 {
-SolverPriss::SolverPriss(CoreConfig *config, int threadsToUse) :
-    solver(threadsToUse),
+SolverPriss::SolverPriss(PfolioConfig *config, int threadsToUse) :
+    solver(config, 0, threadsToUse), // setup solver with given configuration, no extra default name, and the given number of threads
     coreConfig(config),
     curPTLevel(0)
 {

@@ -30,19 +30,19 @@ class PfolioConfig : public Config
     /** default constructor, which sets up all options in their standard format */
     PfolioConfig(const std::string& presetOptions = "");
 
-    
+
     BoolOption opt_proofCounting;
     IntOption  opt_verboseProof;
     BoolOption opt_internalProofCheck;
     BoolOption opt_verbosePfolio;
-    
+
     IntOption  threads;
     StringOption opt_defaultSetup;          // presets to run priss in given setup (DRUP, BMC, ...)
-    
+
     // sharing options
     BoolOption opt_share;
-    BoolOption opt_receive; 
-    
+    BoolOption opt_receive;
+
     BoolOption opt_protectAssumptions;      // should assumption variables not be considered for calculating send-limits?
     DoubleOption opt_sendSize;              // Minimum Lbd of clauses to send  (also start value)
     DoubleOption opt_sendLbd;               // Minimum size of clauses to send (also start value)

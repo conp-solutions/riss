@@ -56,11 +56,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //
 // if PCASSO is compiled, use virtual methods
 //
-#ifdef PCASSO
-    #define  virtual
-#else
-    #define 
-#endif
 
 //
 // forward declarations
@@ -129,18 +124,18 @@ class Solver
     //
     Solver(CoreConfig* externalConfig = 0, const char* configName = 0);
 
-    
+
     ~Solver();
     /// tell the solver to delete the configuration it just received
     void setDeleteConfig() { deleteConfig = true; }
 
     // Problem specification:
     //
-    
+
     Var     newVar(bool polarity = true, bool dvar = true, char type = 'o');     // Add a new variable with parameters specifying variable mode.
     void    reserveVars(Var v);
 
-    
+
     bool    addClause(const vec<Lit>& ps);                      /// Add a clause to the solver.
 
     bool    addClause(const Clause& ps);                        /// Add a clause to the solver (all clause invariants do not need to be checked)
@@ -149,7 +144,7 @@ class Solver
     bool    addClause(Lit p, Lit q);                            /// Add a binary clause to the solver.
     bool    addClause(Lit p, Lit q, Lit r);                     /// Add a ternary clause to the solver.
 
-    
+
     bool    addClause_(vec<Lit>& ps, bool noRedundancyCheck = false);                           /// Add a clause to the solver without making superflous internal copy. Will
     /// change the passed vector 'ps'.
     void    addInputClause_(vec<Lit>& ps);                      /// Add a clause to the online proof checker
@@ -321,14 +316,14 @@ class Solver
         CRef reason; int level;
         Lit dom;      /// for lhbr
         int32_t position; /// for hack
-        #ifdef CLS_EXTRA_INFO
-        uint64_t extraInfo;
+        #ifdef PCASSO
+        unsigned dependencyLevel;
         #endif
     };
     static inline VarData mkVarData(CRef cr, int l)
     {
         VarData d = {cr, l, lit_Undef, -1
-                     #ifdef CLS_EXTRA_INFO
+                     #ifdef PCASSO
                      , 0
                      #endif
                     }; return d;
@@ -336,7 +331,7 @@ class Solver
     static inline VarData mkVarData(CRef cr, int l, int _cost)
     {
         VarData d = {cr, l, lit_Undef, _cost
-                     #ifdef CLS_EXTRA_INFO
+                     #ifdef PCASSO
                      , 0
                      #endif
                     }; return d;
@@ -434,46 +429,46 @@ class Solver
         inline bool hasEquivalencesToProcess() const { return equivalencesStack.size() > 0; }
 
         inline void addEquivalenceClass(const Lit& a, const Lit& b, bool doShare = true
-#ifdef PCASSO
-	  , int dependencyLevel = -1
-#endif  
-	)
+                                        #ifdef PCASSO
+                                        , int dependencyLevel = -1
+                                        #endif
+                                       )
         {
             if (a != b) {
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
                 equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
-		if( doShare ) {
-		  temporary.clear();
-		  temporary.push(a);
-		  temporary.push(b);
-#ifdef PCASSO
-	          solver->updateSleep( &temporary, 2, dependencyLevel, false, true);
-#else 
-		  solver->updateSleep( &temporary, 2, false, true);
-#endif  
-		}
+                if (doShare) {
+                    temporary.clear();
+                    temporary.push(a);
+                    temporary.push(b);
+                    #ifdef PCASSO
+                    solver->updateSleep(&temporary, 2, dependencyLevel, false, true);
+                    #else
+                    solver->updateSleep(&temporary, 2, false, true);
+                    #endif
+                }
             }
         }
         template <class T>
         inline void addEquivalenceClass(const T& lits, bool doShare = true
-#ifdef PCASSO
-	  , int dependencyLevel = -1
-#endif  
-	)
-	{
+                                        #ifdef PCASSO
+                                        , int dependencyLevel = -1
+                                        #endif
+                                       )
+        {
             for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
-	    
-		if( doShare ) { // tell priss about shared equivalences
-		  temporary.clear(); 
-		  for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }	  
-#ifdef PCASSO
-	          solver->updateSleep(&temporary, lits.size(), dependencyLevel, false, true);
-#else 
-		  solver->updateSleep(&temporary, lits.size(), false, true);
-#endif  
-		}
+
+            if (doShare) {  // tell priss about shared equivalences
+                temporary.clear();
+                for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }
+                #ifdef PCASSO
+                solver->updateSleep(&temporary, lits.size(), dependencyLevel, false, true);
+                #else
+                solver->updateSleep(&temporary, lits.size(), false, true);
+                #endif
+            }
         }
 
         /** just return the next smaller reprentative */
@@ -576,25 +571,25 @@ class Solver
     // Main internal methods:
     //
     void     insertVarOrder(Var x);                                                    // Insert a variable in the decision order priority queue.
-    
+
     Lit      pickBranchLit();                                                          // Return the next decision variable.
     void     newDecisionLevel();                                                       // Begins a new decision level.
-    
+
     void     uncheckedEnqueue(Lit p, CRef from = CRef_Undef,                           // Enqueue a literal. Assumes value of literal is undefined.
-                              bool addToProof = false, const uint64_t extraInfo = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
+                              bool addToProof = false, const unsigned dependencyLevel = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
     bool     enqueue(Lit p, CRef from = CRef_Undef);                                   // Test if fact 'p' contradicts current state, enqueue otherwise.
-    
+
     CRef     propagate(bool duringAddingClauses = false);                              // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
     void     cancelUntil(int level);                                                   // Backtrack until a certain level.
-    
-    int      analyze(CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo);               // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
+
+    int      analyze(CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, unsigned& dependencyLevel);               // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
     void     analyzeFinal(Lit p, vec<Lit>& out_conflict);                              // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
-    bool     litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo);                           // (helper method for 'analyze()')
-    
+    bool     litRedundant(Lit p, uint32_t abstract_levels, unsigned& dependencyLevel);                           // (helper method for 'analyze()')
+
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
-    
+
     lbool    solve_();                                                                 // Main solve method (assumptions given in 'assumptions').
-    
+
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
   public:
@@ -615,7 +610,7 @@ class Solver
     //
     void     attachClause(CRef cr);                    // Attach a clause to watcher lists.
     void     detachClause(CRef cr, bool strict = false);      // Detach a clause to watcher lists.
-    
+
     void     removeClause(CRef cr, bool strict = false);      // Detach and free a clause.
     bool     locked(const Clause& c) const;            // Returns TRUE if a clause is a reason for some implication in the current state.
     bool     satisfied(const Clause& c) const;         // Returns TRUE if a clause is satisfied in the current state.
@@ -632,9 +627,9 @@ class Solver
      *  @param lbd the current calculated LBD score of the clause
      *  @return true, if the clause has been shrinked
      */
-    bool minimisationWithBinaryResolution(vec<Lit>& out_learnt, unsigned int& lbd);
+    bool minimisationWithBinaryResolution(Riss::vec< Riss::Lit >& out_learnt, unsigned int& lbd, unsigned int& dependencyLevel);
 
-    
+
     void     relocAll(ClauseAllocator& to);
 
     // Misc:
@@ -684,7 +679,7 @@ class Solver
     /** handle learned clause, perform RER,ECL, extra analysis, DRUP, ...
      * @return l_False, if adding the learned unit clause(s) results in UNSAT of the formula
      */
-    lbool handleLearntClause(Riss::vec< Riss::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo);
+    lbool handleLearntClause(Riss::vec< Riss::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, unsigned int& dependencyLevel);
 
     /** check whether a restart should be performed (return true, if restart)
      * @param nof_conflicts limit can be increased by the method, if an agility reject has been applied
@@ -730,7 +725,7 @@ class Solver
     void restrictedExtendedResolutionInitialize(const vec< Lit >& currentLearnedClause);
 
     /// @return true, if a clause should be added to rerFuseClauses
-    rerReturnType restrictedExtendedResolution(vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo);
+    rerReturnType restrictedExtendedResolution(Riss::vec< Riss::Lit >& currentLearnedClause, unsigned int& lbd, unsigned int& dependencyLevel);
     /// reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
     /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
@@ -884,7 +879,7 @@ class Solver
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
-    bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd);
+    bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& dependencyLevel);
 
     /// sort according to position of literal in trail
     struct TrailPosition_Gt {
@@ -900,13 +895,13 @@ class Solver
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
-    bool reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd);
+    bool reverseLearntClause(Riss::vec< Riss::Lit >& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel);
 
     /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
-    bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd);
+    bool erRewrite(Riss::vec< Riss::Lit >& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel);
 // contrasat hack
 
     bool      pq_order;           // If true, use a priority queue to decide the order in which literals are implied
@@ -1081,22 +1076,6 @@ class Solver
     bool useCoprocessorPP;
     bool useCoprocessorIP;
 
-    /** if extra info should be used, this method needs to return true! */
-    bool usesExtraInfo() const
-    {
-        #ifdef CLS_EXTRA_INFO
-        return true;
-        #else
-        return false;
-        #endif
-    }
-
-    /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
-    uint64_t defaultExtraInfo() const ;
-
-    /** return extra variable information (should be called for top level units only!) */
-    uint64_t variableExtraInfo(const Var& v) const ;
-
     /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
     void setExtendedResolution(bool enabled) { doAddVariablesViaER = enabled; }
 
@@ -1123,10 +1102,13 @@ class Solver
     void resetLastSolve();
 
   private:
-    
+
     int sharingTimePoint; // when to share a learned clause (0=when learned, 1=when first used for propagation, 2=when first used during conflict analysis)
-    
+
     Communicator* communication; /// communication with the outside, and control of this solver
+
+    /** return dependency level we are currently working on */
+    unsigned currentDependencyLevel() const ;
 
     /** goto sleep, wait until master did updates, wakeup, process the updates
      * @param toSend if not 0, send the (learned) clause, if 0, receive shared clauses
@@ -1138,11 +1120,11 @@ class Solver
      * @return -1 = abort, 0=everythings nice, 1=conflict/false result
      */
     template<typename T> // can be either clause or vector
-#ifdef PCASSO
+    #ifdef PCASSO
     int updateSleep(T* toSend, int toSendSize, int dependencyLevel, bool multiUnits = false, bool equivalences = false);
-#else
+    #else
     int updateSleep(T* toSend, int toSendSize, bool multiUnits = false, bool equivalences = false);
-#endif
+    #endif
 
     /** add a learned clause to the solver
      * @param bump increases the activity of the current clause to the last seen value
@@ -1167,56 +1149,59 @@ class Solver
     /*
      * stats and limits for communication
      */
-    public:
+  public:
     /** necessary data structures for communication */
     struct CommunicationClient {
-      vec<Lit> receiveClause;             /// temporary placeholder for receiving clause
-      vec<Lit> receivedUnits;             /// temporary placeholder for receiving units
-      vec<Lit> receivedEquivalences;      /// temporary placeholder for receiving equivalences, classes separated by lit_Undef
-      std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
-      int currentTries;                          /// current number of waits
-      int receiveEvery;                          /// do receive every n tries
-      float currentSendSizeLimit;                /// dynamic limit to control send size
-      float currentSendLbdLimit;                 /// dynamic limit to control send lbd
-    
-      int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
-      int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
+        vec<Lit> receiveClause;             /// temporary placeholder for receiving clause
+        vec<Lit> receivedUnits;             /// temporary placeholder for receiving units
+        vec<Lit> receivedEquivalences;      /// temporary placeholder for receiving equivalences, classes separated by lit_Undef
+        std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
+        int currentTries;                          /// current number of waits
+        int receiveEvery;                          /// do receive every n tries
+        float currentSendSizeLimit;                /// dynamic limit to control send size
+        float currentSendLbdLimit;                 /// dynamic limit to control send lbd
 
-      float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
-      float sendLbd;                             /// Minimum size of clauses to send (also start value)
-      float sendMaxSize;                         /// Maximum size of clauses to send
-      float sendMaxLbd;                          /// Maximum Lbd of clauses to send
-      float sizeChange;                          /// How fast should size send limit be adopted?
-      float lbdChange;                           /// How fast should lbd send limit be adopted?
-      float sendRatio;                           /// How big should the ratio of send clauses be?
-      
-      bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
-      bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
-      bool useDynamicLimits;                     /// update sharing limits dynamically
-      
-      CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), succesfullySend(0), succesfullyReceived(0),
-                 sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0), 
-                 sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
+        int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
+        int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
+
+        float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
+        float sendLbd;                             /// Minimum size of clauses to send (also start value)
+        float sendMaxSize;                         /// Maximum size of clauses to send
+        float sendMaxLbd;                          /// Maximum Lbd of clauses to send
+        float sizeChange;                          /// How fast should size send limit be adopted?
+        float lbdChange;                           /// How fast should lbd send limit be adopted?
+        float sendRatio;                           /// How big should the ratio of send clauses be?
+
+        bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
+        bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
+        bool useDynamicLimits;                     /// update sharing limits dynamically
+
+        CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), succesfullySend(0), succesfullyReceived(0),
+            sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
+            sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
     } communicationClient;
-    
-    class VariableInformation {
-       vec<VarFlags>& varInfo;
-       bool receiveInc;  // allow working with variables where the number of models increased
-       bool receiveDec;  // allow working with variable where the number decreased
-    public: 
-       VariableInformation( vec<VarFlags>& _varInfo, bool _receiveAdd, bool _receiveDel ) 
-         : varInfo(varInfo), receiveDec( _receiveDel ), receiveInc( _receiveAdd ) {}
-       
-       bool canBeReceived( const Var& v ) const { 
-	 return (!varInfo[v].addModels || receiveInc)   // if the variable has been modified and models have been added
-	     && (!varInfo[v].delModels || receiveDec);  // or models have been deleted
-      }
-       
-       void setDependency( const Var& v, const int& dep ) {
-#ifdef PCASSO
-	 varFlags[v].varPT = dep > varFlags[v].varPT ? dep : varFlags[v].varPT;
-#endif
-       }
+
+    class VariableInformation
+    {
+        vec<VarFlags>& varInfo;
+        bool receiveInc;  // allow working with variables where the number of models increased
+        bool receiveDec;  // allow working with variable where the number decreased
+      public:
+        VariableInformation(vec<VarFlags>& _varInfo, bool _receiveAdd, bool _receiveDel)
+            : varInfo(_varInfo), receiveDec(_receiveDel), receiveInc(_receiveAdd) {}
+
+        bool canBeReceived(const Var& v) const
+        {
+            return (!varInfo[v].addModels || receiveInc)   // if the variable has been modified and models have been added
+                   && (!varInfo[v].delModels || receiveDec);  // or models have been deleted
+        }
+
+        void setDependency(const Var& v, const int& dep)
+        {
+            #ifdef PCASSO
+            varInfo[v].varPT = dep > varInfo[v].varPT ? dep : varInfo[v].varPT;
+            #endif
+        }
     };
 
 // [END] modifications for parallel assumption based solver

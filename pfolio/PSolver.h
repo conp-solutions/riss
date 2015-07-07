@@ -24,7 +24,7 @@ class PSolver
     Riss::PfolioConfig* privateConfig; // do be able to construct object without modifying configuration
     bool deleteConfig;
     Riss::PfolioConfig& pfolioConfig;  // configuration for this portfolio solver
-    
+
     bool initialized;
     int threads;
 

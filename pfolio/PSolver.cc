@@ -17,8 +17,8 @@ namespace Riss
 static void* runWorkerSolver(void* data);
 
 PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int externalThreads)
-    : 
-      privateConfig(externalConfig == 0 ? new PfolioConfig(configName) : externalConfig)
+    :
+    privateConfig(externalConfig == 0 ? new PfolioConfig(configName) : externalConfig)
     , deleteConfig(externalConfig == 0)
     , pfolioConfig(* privateConfig)
     , initialized(false)
@@ -32,8 +32,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , verbosity(0)
     , verbEveryConflicts(0)
 {
-    if( externalThreads != -1 ) threads = externalThreads; // set number of threads from constructor, overwrite command line
-  
+    if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
+
     // setup the default configuration for all the solvers!
     configs   = new CoreConfig        [ threads ];
     ppconfigs = new CP3Config         [ threads ];
@@ -73,8 +73,8 @@ PSolver::~PSolver()
 
     if (threadIDs != 0) { delete [] threadIDs; threadIDs = 0; }
     if (data != 0) { delete data; data = 0; }
-    
-    if ( deleteConfig ) delete privateConfig;
+
+    if (deleteConfig) { delete privateConfig; }
 }
 
 CoreConfig& PSolver::getConfig(const int solverID)
@@ -436,26 +436,26 @@ bool PSolver::initializeThreads()
 
         // setup parameters for communication system
         communicators[i]->protectAssumptions = pfolioConfig.opt_protectAssumptions;
-	communicators[i]->sendSize = pfolioConfig.opt_sendSize;             
-	communicators[i]->sendLbd = pfolioConfig.opt_sendLbd;              
-	communicators[i]->sendMaxSize = pfolioConfig.opt_sendMaxSize;          
-	communicators[i]->sendMaxLbd = pfolioConfig.opt_sendMaxLbd;           
-	communicators[i]->sizeChange = pfolioConfig.opt_sizeChange;           
-	communicators[i]->lbdChange = pfolioConfig.opt_lbdChange;           
-	communicators[i]->sendRatio = pfolioConfig.opt_sendRatio;           
-	communicators[i]->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
+        communicators[i]->sendSize = pfolioConfig.opt_sendSize;
+        communicators[i]->sendLbd = pfolioConfig.opt_sendLbd;
+        communicators[i]->sendMaxSize = pfolioConfig.opt_sendMaxSize;
+        communicators[i]->sendMaxLbd = pfolioConfig.opt_sendMaxLbd;
+        communicators[i]->sizeChange = pfolioConfig.opt_sizeChange;
+        communicators[i]->lbdChange = pfolioConfig.opt_lbdChange;
+        communicators[i]->sendRatio = pfolioConfig.opt_sendRatio;
+        communicators[i]->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
 
-	communicators[i]->sendIncModel = pfolioConfig.opt_sendIncModel;
-	communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
-	communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
-	communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
-        
+        communicators[i]->sendIncModel = pfolioConfig.opt_sendIncModel;
+        communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
+        communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
+        communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
+
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);
 
-        if (! pfolioConfig.opt_share)   communicators[i]->setDoSend(false);    // no sending
-        if( !pfolioConfig.opt_receive ) communicators[i]->setDoReceive(false); // no sending
-	
+        if (! pfolioConfig.opt_share) { communicators[i]->setDoSend(false); }   // no sending
+        if (!pfolioConfig.opt_receive) { communicators[i]->setDoReceive(false); }  // no sending
+
         // tell the communicator about the proof master
         communicators[i]->setProofMaster(proofMaster);
         // tell solver about its communication interface

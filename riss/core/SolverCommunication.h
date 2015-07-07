@@ -88,226 +88,237 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
     return true;
 }
 
+inline
+unsigned Solver::currentDependencyLevel() const
+{
+    #ifdef PCASSO
+    return communication == 0 ? 0 : communication->currentDependencyLevel();
+    #else
+    return 0;
+    #endif
+}
+
 template<typename T> // can be either clause or vector
 inline
 #ifdef PCASSO
-int Solver::updateSleep(T* toSend, int toSendSize, int dependencyLevel, bool multiUnits, bool equivalences)
+    int Solver::updateSleep(T* toSend, int toSendSize, int dependencyLevel, bool multiUnits, bool equivalences)
 #else
-int Solver::updateSleep(T* toSend, int toSendSize, bool multiUnits, bool equivalences)    
+    int Solver::updateSleep(T* toSend, int toSendSize, bool multiUnits, bool equivalences)
 #endif
 // int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 {
-    if (communication == 0) { return 0; }     // no communication -> do nothing!
+if (communication == 0) { return 0; }     // no communication -> do nothing!
 
-    // nothing to send, do only receive every reveiceEvery tries!
-    if (toSend == 0 && communicationClient.currentTries++ < communicationClient.receiveEvery) { return 0; }
-    communicationClient.currentTries = 0;
+// nothing to send, do only receive every reveiceEvery tries!
+if (toSend == 0 && communicationClient.currentTries++ < communicationClient.receiveEvery) { return 0; }
+communicationClient.currentTries = 0;
 
-    // check current state, e.g. wait for master to do something!
-    if (!communication->isWorking()) {
-        if (communication->isAborted()) {
-            interrupt();
-            if (verbosity > 0)
-                std::cerr << "c [THREAD] " << communication->getID()
-                          << " aborted current search due to flag by master" << std::endl;
-            return -1;
-        }
-
-        /* not working -> master interrupted thread
-         * tell master that we reached this state
-         * sleep until master changed something
-         * wake up afterwards
-         */
-        communication->ownLock->lock();
-        communication->setState(Communicator::waiting);
-        // not unlock (avoid same error as in master!)
-
-        communication->awakeMaster();
-
-        std::cerr << "c [THREAD] " << communication->getID() << " wait for master to do something (sleep)" << std::endl;
-        // wait until master changes the state again to working!
-
-        while (! communication->isWorking()) {
-            if (communication->isDoReceive()) {
-                // goto level 0
-                if (decisionLevel() != 0) { cancelUntil(0); }
-                // add unit clauses from master as clauses of the formula!!
-                communication->data->receiveUnits(communicationClient.receiveClause);
-                for (int i = 0 ; i < communicationClient.receiveClause.size(); ++ i) {
-                    if (!addClause(communicationClient.receiveClause[i])) {    // this methods adds the units to the proof as well!
-                        assert(false && "case that send unit clause makes the whole formula unsatisfiable is not handled - can this happen?");
-                        break;                                  // Add a unit clause to the solver.
-                    }
-                }
-                // sleep again, so that master can make sure everybody saw the units!
-                communication->setState(Communicator::finishedReceiving);
-            }
-            if (communication->isAborted()) { break; }
-            communication->ownLock->sleep();
-        }
-        communication->ownLock->unlock();
-        if (communication->isAborted()) {
-            interrupt();
-            return -1;
-        }
+                                   // check current state, e.g. wait for master to do something!
+if (!communication->isWorking()) {
+if (communication->isAborted()) {
+        interrupt();
+        if (verbosity > 0)
+            std::cerr << "c [THREAD] " << communication->getID()
+                      << " aborted current search due to flag by master" << std::endl;
+        return -1;
     }
 
-    // if there should not be communication
-    if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0; }
+    /* not working -> master interrupted thread
+     * tell master that we reached this state
+     * sleep until master changed something
+     * wake up afterwards
+     */
+    communication->ownLock->lock();
+    communication->setState(Communicator::waiting);
+    // not unlock (avoid same error as in master!)
 
-    if (communication->getDoSend() && toSend != 0) {     // send
- 
-	if( ! communication->sendEquivalences && equivalences ) return 0; // do not share equivalences
-      
-        // check, whether the clause is allowed to be sent
-        bool rejectSend = false;
-	int keep = 0;
-        for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
-	  const Var v = var( (*toSend)[i] ); // get variable to analyze
-	  rejectSend = (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
-	  if( multiUnits || equivalences) continue; // jump over this literal, so that it is not shared
-	  else {
-	    if ( rejectSend ) break;
-	    else (*toSend)[keep++] = (*toSend)[i]; // keep literal
-	  }
+    communication->awakeMaster();
+
+    std::cerr << "c [THREAD] " << communication->getID() << " wait for master to do something (sleep)" << std::endl;
+    // wait until master changes the state again to working!
+
+    while (! communication->isWorking()) {
+        if (communication->isDoReceive()) {
+            // goto level 0
+            if (decisionLevel() != 0) { cancelUntil(0); }
+            // add unit clauses from master as clauses of the formula!!
+            communication->data->receiveUnits(communicationClient.receiveClause);
+            for (int i = 0 ; i < communicationClient.receiveClause.size(); ++ i) {
+                if (!addClause(communicationClient.receiveClause[i])) {    // this methods adds the units to the proof as well!
+                    assert(false && "case that send unit clause makes the whole formula unsatisfiable is not handled - can this happen?");
+                    break;                                  // Add a unit clause to the solver.
+                }
+            }
+            // sleep again, so that master can make sure everybody saw the units!
+            communication->setState(Communicator::finishedReceiving);
+        }
+        if (communication->isAborted()) { break; }
+        communication->ownLock->sleep();
+    }
+    communication->ownLock->unlock();
+    if (communication->isAborted()) {
+        interrupt();
+        return -1;
+    }
+}
+
+// if there should not be communication
+if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0; }
+
+if (communication->getDoSend() && toSend != 0) {     // send
+
+if (! communication->sendEquivalences && equivalences) { return 0; }  // do not share equivalences
+
+    // check, whether the clause is allowed to be sent
+    bool rejectSend = false;
+    int keep = 0;
+    for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
+        const Var v = var((*toSend)[i]);   // get variable to analyze
+        rejectSend = (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
+        if (multiUnits || equivalences) { continue; } // jump over this literal, so that it is not shared
+        else {
+            if (rejectSend) { break; }
+            else { (*toSend)[keep++] = (*toSend)[i]; } // keep literal
+        }
 #warning: check here, whether the clause contains a variable that is too high, and hence should not be sent (could be done via above flags)
-	}
-	if( rejectSend && !multiUnits && !equivalences ) return 0; // do nothing here, as there are variables in the clause that should not be sent
-	else { 
-	  if( keep == 1 && equivalences ) return 0; // do not share equivalence of one literal
-	  else if ( keep == 0 && multiUnits ) return 0; // do not share "no" units
-	}
-	
-	toSendSize = keep; // set to number of elements that can be shared
-      
-        if( !multiUnits && !equivalences ) { // check sharing limits, if its not units, and no equivalences
-	  // calculated size of the send clause
-	  int s = 0;
-	  if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
-	      for (int i = 0 ; i < toSendSize; ++ i) {
-		  s = communication->isProtected((*toSend)[i]) ? s : s + 1;
-	      }
-	  } else { s = toSendSize; }
+    }
+    if (rejectSend && !multiUnits && !equivalences) { return 0; }  // do nothing here, as there are variables in the clause that should not be sent
+    else {
+        if (keep == 1 && equivalences) { return 0; }  // do not share equivalence of one literal
+        else if (keep == 0 && multiUnits) { return 0; }   // do not share "no" units
+    }
 
-	  // filter sending:
-	  if (toSendSize > communicationClient.currentSendSizeLimit) {
-	      updateDynamicLimits(true);    // update failed limits!
-	      communication->nrRejectSendSizeCls++;
-	      return 0; // TODO: parameter, adaptive?
-	  }
+    toSendSize = keep; // set to number of elements that can be shared
 
-	  if (s > 0) {
-	      // calculate LBD value
-	      int lbd = computeLBD(*toSend, toSendSize);
+    if (!multiUnits && !equivalences) {  // check sharing limits, if its not units, and no equivalences
+        // calculated size of the send clause
+        int s = 0;
+        if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
+            for (int i = 0 ; i < toSendSize; ++ i) {
+                s = communication->isProtected((*toSend)[i]) ? s : s + 1;
+            }
+        } else { s = toSendSize; }
 
-	      if (lbd > communicationClient.currentSendLbdLimit) {
-		  updateDynamicLimits(true);    // update failed limits!
-		  communication->nrRejectSendLbdCls++;
-		  return 0; //TODO: parameter (adaptive?)
-	      }
-	  }
-	}
-        
-#ifdef PCASSO
-        communication->addClause(*toSend, toSendSize, dependencyLevel, multiUnits, equivalences);
-#else
-        communication->addClause(*toSend, toSendSize, multiUnits, equivalences);	
-#endif
-        updateDynamicLimits(false); // a clause could be send
-        communication->nrSendCls++;
+        // filter sending:
+        if (toSendSize > communicationClient.currentSendSizeLimit) {
+            updateDynamicLimits(true);    // update failed limits!
+            communication->nrRejectSendSizeCls++;
+            return 0; // TODO: parameter, adaptive?
+        }
 
-    } else if (communication->getDoReceive()) {         // receive (only at level 0)
+        if (s > 0) {
+            // calculate LBD value
+            int lbd = computeLBD(*toSend, toSendSize);
 
-        // TODO: add parameter that forces to restart!
-        // if( communication->
+            if (lbd > communicationClient.currentSendLbdLimit) {
+                updateDynamicLimits(true);    // update failed limits!
+                communication->nrRejectSendLbdCls++;
+                return 0; //TODO: parameter (adaptive?)
+            }
+        }
+    }
 
-        // not at level 0? nothing to do
-        if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
+    #ifdef PCASSO
+    VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
+    communication->addClause(*toSend, toSendSize, dependencyLevel, vi, multiUnits, equivalences);
+    #else
+    communication->addClause(*toSend, toSendSize, multiUnits, equivalences);
+    #endif
+    updateDynamicLimits(false); // a clause could be send
+    communication->nrSendCls++;
 
-        VariableInformation vi ( varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel ); // setup variable information object
-        communicationClient.receiveClauses.clear();  // prepare for receive
-        communication->receiveClauses(ca, communicationClient.receiveClauses, communicationClient.receivedUnits, communicationClient.receivedEquivalences, vi); // receive multiple things!
-        // if( communicationClient.receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << communicationClient.receiveClauses.size() << " clauses." << std::endl;
-        communicationClient.succesfullyReceived += communicationClient.receiveClauses.size();
-	
-	if( communicationClient.receivedUnits.size() > 0) { // prcess all unit clauses
-	  cancelUntil( 0 ); // jump to level 0!
-	  for( int i = 0 ; i < communicationClient.receivedUnits.size() ; ++ i ) {
-	    const Lit& unit = communicationClient.receivedUnits[i];
-	    if( value(unit) == l_False ) return 1; // we found a conflict
-	    else if ( value(unit) == l_Undef ) {
-	      uncheckedEnqueue( unit );            // enqueue unit
-	      if( propagate() != CRef_Undef ) return 1; // report conflict, if necessary
-	    }
-	  }
-	} // finished processing units
-	
-	if( communicationClient.receivedEquivalences.size() > 0 ) { // process all equivalent literals
-	  eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences, false ); // tell object about these equivalences, ignore setting a dependency
-	}
-	
-        for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
-            Clause& c = ca[ communicationClient.receiveClauses[i] ]; // take the clause and propagate / enqueue it
+} else if (communication->getDoReceive()) {         // receive (only at level 0)
 
-            if (c.size() < 2) {
-                if (c.size() == 0) {
-                    std::cerr << "c empty clause has been shared!" << std::endl;
-                    ok = false; return 1;
+// TODO: add parameter that forces to restart!
+// if( communication->
+
+// not at level 0? nothing to do
+if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
+
+    VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
+    communicationClient.receiveClauses.clear();  // prepare for receive
+    communication->receiveClauses(ca, communicationClient.receiveClauses, communicationClient.receivedUnits, communicationClient.receivedEquivalences, vi); // receive multiple things!
+    // if( communicationClient.receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << communicationClient.receiveClauses.size() << " clauses." << std::endl;
+    communicationClient.succesfullyReceived += communicationClient.receiveClauses.size();
+
+    if (communicationClient.receivedUnits.size() > 0) { // prcess all unit clauses
+        cancelUntil(0);   // jump to level 0!
+        for (int i = 0 ; i < communicationClient.receivedUnits.size() ; ++ i) {
+            const Lit& unit = communicationClient.receivedUnits[i];
+            if (value(unit) == l_False) { return 1; }  // we found a conflict
+            else if (value(unit) == l_Undef) {
+                uncheckedEnqueue(unit);              // enqueue unit
+                if (propagate() != CRef_Undef) { return 1; }  // report conflict, if necessary
+            }
+        }
+    } // finished processing units
+
+    if (communicationClient.receivedEquivalences.size() > 0) {  // process all equivalent literals
+        eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences, false);  // tell object about these equivalences, ignore setting a dependency
+    }
+
+    for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
+        Clause& c = ca[ communicationClient.receiveClauses[i] ]; // take the clause and propagate / enqueue it
+
+        if (c.size() < 2) {
+            if (c.size() == 0) {
+                std::cerr << "c empty clause has been shared!" << std::endl;
+                ok = false; return 1;
+            }
+            // has to be unit clause!
+            addUnitToProof(c[0]); // add the clause to the proof
+            if (value(c[0]) == l_Undef) { uncheckedEnqueue(c[0]); }
+            else if (value(c[0]) == l_False) {
+                ok = false; return 1;
+            }
+            c.mark();
+            ok = (propagate() == CRef_Undef);
+            if (!ok) {   // adding this clause failed?
+                std::cerr << "c adding received clause failed" << std::endl;
+                return 1;
+            }
+        } else {
+            for (int j = 0 ; j < c.size(); ++ j) {   // propagate inside the clause!
+                if (var(c[j]) > nVars()) {
+                    std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
+                    assert(false && "received variables have to be smaller than maximum!");
                 }
-                // has to be unit clause!
-                addUnitToProof(c[0]); // add the clause to the proof
-                if (value(c[0]) == l_Undef) { uncheckedEnqueue(c[0]); }
-                else if (value(c[0]) == l_False) {
-                    ok = false; return 1;
-                }
-                c.mark();
-                ok = (propagate() == CRef_Undef);
-                if (!ok) {   // adding this clause failed?
-                    std::cerr << "c adding received clause failed" << std::endl;
-                    return 1;
-                }
-            } else {
-                for (int j = 0 ; j < c.size(); ++ j) {   // propagate inside the clause!
-                    if (var(c[j]) > nVars()) {
-                        std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
-                        assert(false && "received variables have to be smaller than maximum!");
+                if (value(c[j]) == l_True) { c.mark(1); break; }     // this clause is already satisfied -> remove it! (we are on level 0!)
+                else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; c.shrink(1); }     // this literal is mapped to false -> remove it!
+            }
+            // TODO: here could be more filters for received clauses to be rejected (e.g. PSM?!)
+            if (!c.mark()) {
+                communication->nrReceivedCls ++;
+                if (c.size() == 0) { ok = false; return 1; }
+                else if (c.size() == 1) {
+                    addUnitToProof(c[0]); // add the clause to the proof
+                    if (value(c[0]) == l_Undef) { uncheckedEnqueue(c[0]); }
+                    else if (value(c[0]) == l_False) {
+                        ok = false; return 1;
                     }
-                    if (value(c[j]) == l_True) { c.mark(1); break; }     // this clause is already satisfied -> remove it! (we are on level 0!)
-                    else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; c.shrink(1); }     // this literal is mapped to false -> remove it!
-                }
-                // TODO: here could be more filters for received clauses to be rejected (e.g. PSM?!)
-                if (!c.mark()) {
-                    communication->nrReceivedCls ++;
-                    if (c.size() == 0) { ok = false; return 1; }
-                    else if (c.size() == 1) {
-                        addUnitToProof(c[0]); // add the clause to the proof
-                        if (value(c[0]) == l_Undef) { uncheckedEnqueue(c[0]); }
-                        else if (value(c[0]) == l_False) {
-                            ok = false; return 1;
-                        }
-                        c.mark();
-                        ok = (propagate() == CRef_Undef);
-                        if (!ok) { return 1; }
-                    } else { // attach the clause, if its not a unit clause!
-                        addToProof(ca[communicationClient.receiveClauses[i]]);   // the shared clause stays in the solver, hence add this clause to the proof!
-                        learnts.push(communicationClient.receiveClauses[i]);
-                        if (communication->doBumpClauseActivity) {
-                            ca[communicationClient.receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
-                        }
-                        attachClause(communicationClient.receiveClauses[i]);
+                    c.mark();
+                    ok = (propagate() == CRef_Undef);
+                    if (!ok) { return 1; }
+                } else { // attach the clause, if its not a unit clause!
+                    addToProof(ca[communicationClient.receiveClauses[i]]);   // the shared clause stays in the solver, hence add this clause to the proof!
+                    learnts.push(communicationClient.receiveClauses[i]);
+                    if (communication->doBumpClauseActivity) {
+                        ca[communicationClient.receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
                     }
+                    attachClause(communicationClient.receiveClauses[i]);
                 }
             }
         }
     }
-    // everything worked nicely
-    return 0;
+}
+// everything worked nicely
+return 0;
 }
 
 inline
 void Solver::updateDynamicLimits(bool failed, bool sizeOnly)
 {
-    if( !communicationClient.useDynamicLimits ) return; // do not do anything with the ratios
+    if (!communicationClient.useDynamicLimits) { return; }  // do not do anything with the ratios
     if (! failed) { communicationClient.succesfullySend ++; }
 
     bool fulfillRatio = (double) conflicts * communicationClient.sendRatio < communicationClient.succesfullySend; // send more than ratio clauses?

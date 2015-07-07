@@ -96,7 +96,9 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
             if (c.size() > 1) {
                 assert(!c.can_be_deleted() && "clause should not be deleted already");
             }
-            c.updateExtraInformation(data.variableExtraInfo(var(nl)));
+            #ifdef PCASSO
+            c.setPTLevel(data.dependencyLevel(var(nl)));
+            #endif
 
             // unit propagation
             if (c.size() == 0) {

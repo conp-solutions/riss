@@ -205,30 +205,30 @@ class Clause
         unsigned extra_info : 64;
         #endif
 
-        ClauseHeader(void) : 
-             mark (0)
-            ,locked (0)
-            ,learnt (0)
-            ,has_extra (0)
-            ,reloced (0)
-            ,lbd (0)
-	    ,wasPropagated  (0)
-            ,usedInAnalyze  (0)
-            ,isCore  (0)
-            ,canbedel  (0)
-            ,can_subsume  (0)
-            ,can_strengthen  (0)
-            ,size (0)
+        ClauseHeader(void) :
+            mark(0)
+            , locked(0)
+            , learnt(0)
+            , has_extra(0)
+            , reloced(0)
+            , lbd(0)
+            , wasPropagated(0)
+            , usedInAnalyze(0)
+            , isCore(0)
+            , canbedel(0)
+            , can_subsume(0)
+            , can_strengthen(0)
+            , size(0)
             #ifdef PCASSO
-            , pt_level  (0)
-            , shared  (0)
-            , shCleanDelay (0)
+            , pt_level(0)
+            , shared(0)
+            , shCleanDelay(0)
             #endif
             #ifdef CLS_EXTRA_INFO
-            , extra_info (0)
+            , extra_info(0)
             #endif
         {}
-        
+
         ClauseHeader(volatile ClauseHeader& rhs)
         {
             mark = rhs.mark;
@@ -237,7 +237,7 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
-	    wasPropagated = rhs.wasPropagated;
+            wasPropagated = rhs.wasPropagated;
             usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
             canbedel = rhs.canbedel;
@@ -262,7 +262,7 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
-	    wasPropagated = rhs.wasPropagated;
+            wasPropagated = rhs.wasPropagated;
             usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
             canbedel = rhs.canbedel;
@@ -412,10 +412,10 @@ class Clause
 
     bool wasPropagated() const { return header.wasPropagated; }
     void setPropagated() { header.wasPropagated = 1; }
-    
+
     bool wasUsedInAnalyze() const { return header.usedInAnalyze; }
     void setUsedInAnalyze() { header.usedInAnalyze; }
-    
+
     void         print(bool nl = false) const
     {
         for (int i = 0; i < size(); i++) {
@@ -546,6 +546,7 @@ class Clause
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level)
     {
+        assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
         header.pt_level = _pt_level;
     }
 

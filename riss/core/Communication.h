@@ -35,21 +35,21 @@ enum WaitState {
  */
 class ClauseRingBuffer
 {
-    /** item for the pool, remembers the sender so that own clauses are not received again
+    /** item for the pool, remembers the sender so that own clauses are not received again, the type (and the dependencies)
      */
     struct poolItem {
-        std::vector<Lit> data;      /** the actual clause */
+        std::vector<Lit> data;      /** the actual clause, equivalence class or multiple units */
         unsigned author : 30;       /** the author of the clause */
         unsigned multiunits : 1;    /** is a multiple unit clauses */
         unsigned equivalence: 1;    /** is a set of equivalent literals */
-#ifdef PCASSO
-	int dependencyLevel;        /** store depth in the partition tree where this share-element depends on */
-#endif
-        poolItem() : author( ~(0) ), multiunits(0), equivalence(0)   /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
-#ifdef PCASSO
-	, dependencyLevel(0)
-#endif	
-	{}
+        #ifdef PCASSO
+        int dependencyLevel;        /** store depth in the partition tree where this share-element depends on */
+        #endif
+        poolItem() : author(~(0)), multiunits(0), equivalence(0)     /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
     };
 
     Lock dataLock;                  /** lock that protects the access to the task data structures */
@@ -72,25 +72,25 @@ class ClauseRingBuffer
     {
         return pool[position].multiunits;
     }
-    
+
     int getEquivalence(const unsigned position) const
     {
         return pool[position].equivalence;
     }
-    
+
     /** return actual vector to data */
     const std::vector<Lit>& getData(const unsigned position) const
     {
         return pool[position].data;
     }
 
-#ifdef PCASSO
+    #ifdef PCASSO
     int getDependency(const unsigned position) const
     {
-      return pool[position].dependency;
+        return pool[position].dependencyLevel;
     }
-#endif
-    
+    #endif
+
     /** get the clause of the given position to the pool
      * @param position index of the clause that should be received
      * @param allocator clause allocator of the solver that receives clauses (clauses are copied directly into the allocator
@@ -146,41 +146,53 @@ class ClauseRingBuffer
 
     /** adds a clause to the next position of the pool
      * used template type should be Clause, vec<Lit> or Lit*
+     * Note: in case of multiple units make sure that all assingments have the same dependency level!
      * @param authorID id of the author thread, to be stored with the clause
      * @param clause std::vector that stores the clause to be added
+     * @param clauseSize number of elements in clause container
+     * @param dependencyLevel dependency of currently shared object
+     * @param variableInformation object that can tell dependencies per variable
+     * @param multiUnits container represents multiple unit clauses
+     * @param equivalence container represents equivalence class
      */
+
+    #ifdef PCASSO
+    template<typename T, typename V> // can be either clause or vector
+    void addClause(int authorID, const T& clause, const int& clauseSize, const int& dependencyLevel, const V& variableInformation, bool multiUnits = false, bool equivalence = false)
+    #else
     template<typename T> // can be either clause or vector
-    void addClause(int authorID, const T& clause, int clauseSize, bool multiUnits = false, bool equivalence = false)
+    void addClause(int authorID, const T& clause, const int& clauseSize, bool multiUnits = false, bool equivalence = false)
+    #endif
     {
         lock();
-	
+
         // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
         // overwrite current position (starts with 0)
         std::vector<Lit>& poolClause = pool[addHereNext].data;
         // if there has been a clause at this position before, then this clause is removed right now ...
         if (pool[addHereNext].author != -1 && proofMaster != 0) { proofMaster->delFromProof(poolClause, lit_Undef, -1, false); }     // can work only on the global proof
 
-        assert( ( !multiUnits || !equivalence ) && "cannot have both properties" );
+        assert((!multiUnits || !equivalence) && "cannot have both properties");
         pool[addHereNext].author = authorID;
-	pool[addHereNext].multiunits = multiUnits;
-	pool[addHereNext].equivalence = equivalence;
+        pool[addHereNext].multiunits = multiUnits;
+        pool[addHereNext].equivalence = equivalence;
 
         poolClause.resize(clauseSize);
         for (int i = 0 ; i < clauseSize; ++i) { poolClause[i] = clause[i]; }
 
         if (proofMaster != 0) {  // can work only on the global proof
-	  if( multiUnits ) {
-	    for( int i = 0 ; i < clauseSize; ++ i ) {
-	      proofMaster->addUnitToProof( clause[i], -1, false );
-	    }
-	  } else if ( equivalence ) {
-	    for( int i = 1 ; i < clauseSize; ++ i ) {
-	      proofMaster->addEquivalenceToProof( clause[0], clause[i], -1, false );
-	    }
-	  } else {
-	    proofMaster->addToProof(poolClause, lit_Undef, -1, false); 
-	  }
-	}     
+            if (multiUnits) {
+                for (int i = 0 ; i < clauseSize; ++ i) {
+                    proofMaster->addUnitToProof(clause[i], -1, false);
+                }
+            } else if (equivalence) {
+                for (int i = 1 ; i < clauseSize; ++ i) {
+                    proofMaster->addEquivalenceToProof(clause[0], clause[i], -1, false);
+                }
+            } else {
+                proofMaster->addToProof(poolClause, lit_Undef, -1, false);
+            }
+        }
 
         // push pointer to the next position
         // stay in the pool!
@@ -216,63 +228,70 @@ class ClauseRingBuffer
         unlock();
     }
 
-    
+
     /** copy shared element into local receive data structure (sort type, handle variable info (and dependency for Pcasso)
      * @param position of the element that is currently received
      * @param allocator allocator object of calling solver
      * @param clauses vector to clause references of newly added clauses
      * @param receivedUnits vector of unit clauses that are received
+     * @param receivedUnitsDependencies dependencylevel for each unit clause
      * @param receivedEquivalences vector of equivalent literal classes (separated by lit_Undef)
+     * @param receivedEquivalencesDependencies dependencyLevel for each received equivalence class (one dependency per lit_Undef)
      * @param receiveData object that knows dependencies per variable, and can tell whether variable is allowed for receiving
      * Note: should be run when read-locked
      */
     template <typename T>
-    void incorporateReceiveItem( unsigned position, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<Lit>& receivedEquivalences, T& receiveData) {
-		        if( getMultiUnit(position) ) {
-			  const std::vector<Lit>& units = getData(position);
-			  for( int j = 0 ; j < units.size(); ++ j ) {
-			    if ( receiveData.canBeReceived( var( units[j] ) ) ){ // we are allowed to receive that unit clause due to simplification
-			      receivedUnits.push ( units[j] ); // receive unit
-#ifdef PCASSO
-			      // store dependency level
-			      receiveData.setDependency( var(units[j]), getDependency(position) );
-#endif
-			    }
-			  }
-			} else if ( getEquivalence(position) ) {
-			  const std::vector<Lit>& eeSCC = getData(position);
-			  int usedSCCliterals = 0;
-			  const int oldSize = receivedEquivalences.size();
-			  for( int j = 0 ; j < eeSCC.size(); ++ j ) {
-			    if ( receiveData.canBeReceived( var( eeSCC[j] ) ) ){ // we are allowed to receive that unit clause due to simplification
-			      receivedEquivalences.push ( eeSCC[j] ); // receive unit
-			      usedSCCliterals ++;
-#ifdef PCASSO
-			      if( used > 1 ) receiveData.setDependency( var(eeSCC[j]), getDependency(position) ); // store dependency level
-#endif
-			    }
-			  }
-			  if( usedSCCliterals == 1 ) receivedEquivalences.pop(); // remove the single literal again, as its a trivial SCC
-			  else {
-			    receivedEquivalences.push( lit_Undef ); // add a terminal symbol, so that next class can be added
-#ifdef PCASSO
-			    receiveData.setDependency( var(receivedEquivalences[oldSize]), getDependency(position) ); // set dependency for variable that has been added first (where it was not sure whether it would be kept)
-#endif
-			  }
-			} else {
-			  // usual clause
-			  const std::vector<Lit>& lits = getData(position);
-			  for( int i = 0 ; i < lits.size(); ++ i ) {                    // check soundness of receiving
-			    if ( ! receiveData.canBeReceived( var(lits[i] ) ) ) return; // if a literal in the clause is locked, do not receive it
-			  }
-			  // otherwise, receiving is fine at the moment
-			  clauses.push_back(getClause(position, allocator));                 // create clause directly in clause allocator
-#ifdef PCASSO
-			  allocator[ clauses.last() ].setPTLevel( getDependency(position) ); // set dependency of this clause
-#endif
-			}
+    #ifdef PCASSO
+    void incorporateReceiveItem(unsigned position, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<int>& receivedUnitsDependencies, vec<Lit>& receivedEquivalences, vec<int>& receivedEquivalencesDependencies,  T& receiveData)
+    {
+    #else
+    void incorporateReceiveItem(unsigned position, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<Lit>& receivedEquivalences, T& receiveData)
+    {
+    #endif
+        if (getMultiUnit(position)) {
+            const std::vector<Lit>& units = getData(position);
+            for (int j = 0 ; j < units.size(); ++ j) {
+                if (receiveData.canBeReceived(var(units[j]))) {      // we are allowed to receive that unit clause due to simplification
+                    receivedUnits.push(units[j]);    // receive unit
+                    #ifdef PCASSO
+                    receivedUnitsDependencies. push(getDependency(position));   // store dependency level
+                    #endif
+                }
+            }
+        } else if (getEquivalence(position)) {
+            const std::vector<Lit>& eeSCC = getData(position);
+            int usedSCCliterals = 0;
+            const int oldSize = receivedEquivalences.size();
+            for (int j = 0 ; j < eeSCC.size(); ++ j) {
+                if (receiveData.canBeReceived(var(eeSCC[j]))) {      // we are allowed to receive that unit clause due to simplification
+                    receivedEquivalences.push(eeSCC[j]);    // receive unit
+                    usedSCCliterals ++;
+                    #ifdef PCASSO
+                    if (usedSCCliterals > 1) { receiveData.setDependency(var(eeSCC[j]), getDependency(position)); }    // store dependency level
+                    #endif
+                }
+            }
+            if (usedSCCliterals == 1) { receivedEquivalences.pop(); }  // remove the single literal again, as its a trivial SCC
+            else {
+                receivedEquivalences.push(lit_Undef);   // add a terminal symbol, so that next class can be added
+                #ifdef PCASSO
+                receivedEquivalencesDependencies.push(getDependency(position));    // set dependency for equivalence class, if there are at least 2 literals
+                #endif
+            }
+        } else {
+            // usual clause
+            const std::vector<Lit>& lits = getData(position);
+            for (int i = 0 ; i < lits.size(); ++ i) {                     // check soundness of receiving
+                if (! receiveData.canBeReceived(var(lits[i]))) { return; }      // if a literal in the clause is locked, do not receive it
+            }
+            // otherwise, receiving is fine at the moment
+            clauses.push_back(getClause(position, allocator));                 // create clause directly in clause allocator
+            #ifdef PCASSO
+            allocator[ clauses[clauses.size() - 1] ].setPTLevel(getDependency(position));   // set dependency of this clause
+            #endif
+        }
     }
-    
+
     /** copy all clauses into the clauses std::vector that have been received since the last call to this method
      * @param authorID id of the author thread, to be stored with the clause
      * note: only an approximation
@@ -283,7 +302,7 @@ class ClauseRingBuffer
         //std::cerr << "c [COMM] thread " << authorID << " called receive with last seen " << lastSeenIndex << ", addHere: " << addHereNext << std::endl;
         clauses.clear();
 #warning use read- and write-lock here!
-	lock();
+        lock();
         // incorporate all clauses that are stored BEFORE addHereNext
         unsigned returnIndex = addHereNext == 0 ? poolSize - 1 : addHereNext - 1;
 
@@ -298,7 +317,7 @@ class ClauseRingBuffer
                 for (unsigned i = startIndex; i < stopIndex; ++ i) {   // do copy the last clause!
                     // receive only, if calling thread was not the author
                     if (getAuthor(i) != authorID) {
-		      
+
 
                     }
                 }
@@ -435,12 +454,12 @@ class Communicator
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
 
-    
+
     // methods
   public:
-    
+
     vec<Lit> assumptions;
-    
+
     // seet default values, ownLock is set to initial sleep
     Communicator(const int id, CommunicationData* communicationData) :
         ownLock(new SleepLock())
@@ -465,9 +484,9 @@ class Communicator
         , lbdChange(0.0)   // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.02)
         , sendRatio(0.1)   // how many of the learned clauses should be shared? 10%?
         , doBumpClauseActivity(false)
-	, sendIncModel(true)           // allow sending with variables where the number of models potentially increased
-	, sendDecModel(false)          // allow sending with variables where the number of models potentially deecreased
-	, useDynamicLimits(true)       // update sharing limits dynamically
+        , sendIncModel(true)           // allow sending with variables where the number of models potentially increased
+        , sendDecModel(false)          // allow sending with variables where the number of models potentially deecreased
+        , useDynamicLimits(true)       // update sharing limits dynamically
         , nrSendCls(0)
         , nrRejectSendSizeCls(0)
         , nrRejectSendLbdCls(0)
@@ -582,16 +601,35 @@ class Communicator
      */
     Riss::Solver* getSolver() { return solver; }
 
+    unsigned currentDependencyLevel() const
+    {
+        // FIXME to be adapted to the actual tree
+#warning USE TREE INFORMATION HERE!
+        assert(false && "this method should do something useful");
+        return INT32_MAX; // return highest possible value
+    };
+
     /** adds a clause to the next position of the pool
      * @param clause std::vector that stores the clause to be added (could be Clause, vec<Lit> or Lit*
      * @param toSendSize number of literals in the parameter clause
+     * @param dependencyLevel dependencylevel of currently shared object
      * @param multiUnits we do not add one clause, but multiple unit clauses
      * @param equivalences we share a class of equivalent literals
      */
+    #ifdef PCASSO
+    template<typename T, typename V> // can be either clause or vector, do not name variable information explicitely
+    void addClause(const T& clause, const int& toSendSize, int& dependencyLevel, const V& variableInformation, bool multiUnits = false, bool equivalences = false)
+    #else
     template<typename T> // can be either clause or vector
-    void addClause(const T& clause, int toSendSize, bool multiUnits = false, bool equivalences = false)
+    void addClause(const T& clause, const int& toSendSize, bool multiUnits = false, bool equivalences = false)
+    #endif
     {
+        #ifdef PCASSO
+        assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
+        data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences);
+        #else
         data->getBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences);
+        #endif
     }
 
     /** copy all clauses into the clauses std::vector that have been received since the last call to this method
@@ -644,7 +682,7 @@ class Communicator
     bool sendDecModel;            // allow sending with variables where the number of models potentially deecreased
     bool useDynamicLimits;        // update sharing limits dynamically
     bool sendEquivalences;        // share equivalence information
-    
+
     unsigned nrSendCls;           // how many clauses have been send via this communicator
     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd

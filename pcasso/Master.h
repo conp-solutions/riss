@@ -35,6 +35,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/Statistics-mt.h"
 #include "riss/utils/System.h"
 
+// configurations
+#include "riss/core/CoreConfig.h"  // configuration object for riss
+#include "pfolio/PfolioConfig.h"   // configuration object for priss
+
 // libs
 #include <pthread.h>
 #include <semaphore.h>
@@ -63,6 +67,7 @@ class Master
 
     /** configuration with which each solver is initialized */
     static Riss::CoreConfig defaultSolverConfig;
+    static Riss::PfolioConfig defaultPfolioConfig;
 
     struct Parameter {
         int    verb;

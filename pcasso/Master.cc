@@ -85,9 +85,11 @@ static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
 static BoolOption    priss("SPLITTER", "use-priss",  "Uses Priss as instance solver\n", false);
 
-static vector<unsigned short int> hardwareCores; // set of available hardware cores
+static vector<unsigned short int> hardwareCores; // set of available hardware cores, used to pin the threads to cores
 
+// instantiate static members of the class
 CoreConfig Master::defaultSolverConfig;
+PfolioConfig Master::defaultPfolioConfig;
 
 Master::Master(Parameter p) :
     maxVar(0),
@@ -733,7 +735,7 @@ Master::solveInstance(void* data)
         solver = new SolverRiss(&defaultSolverConfig);
     } else {
         // TODO: how many threads for priss? commandline option?
-        solver = new SolverPriss(&defaultSolverConfig, 2);
+        solver = new SolverPriss(&defaultPfolioConfig, 2);
     }
     assert(tData.solver == nullptr);
     tData.solver = solver;

@@ -120,13 +120,13 @@ int main(int argc, char** argv)
     try {
 
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
-	PfolioConfig pfolioConfig(string(opt_config == 0 ? "" : opt_config));
+        PfolioConfig pfolioConfig(string(opt_config == 0 ? "" : opt_config));
         foundHelp = pfolioConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
-	
+
         if (foundHelp) { exit(0); }   // stop after printing the help information
 
-        PSolver S( &pfolioConfig ); // set up a portfolio solver for DRUP proofs
+        PSolver S(&pfolioConfig);   // set up a portfolio solver for DRUP proofs
 
         double initial_time = cpuTime();
 
