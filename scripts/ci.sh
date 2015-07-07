@@ -20,8 +20,12 @@ repo_dir="$(dirname "$script_dir")"
 echo "Build all targets"
 cd $repo_dir
 
+# make directories for debug and release builds
 if [ ! -d "build" ]; then
     mkdir build
+fi
+if [ ! -d "release" ]; then
+    mkdir release
 fi
 
 # test debug and release version
@@ -29,13 +33,23 @@ build_types=('Debug' 'Release')
 
 # store exit code for fuzzchecker-runs to provide that debug and release are both build once
 exitcode=0
+
 # write error msg for fuzz-runs that will be displayed at the bottom of the log
 # but for building errors (there the script exits immediately)
 error_msg=""
 
 for build_type in "${build_types[@]}"
 do
-    cd $repo_dir/build
+    # different build folder for debug build and release build
+    # splitting the two builds speeds up local building
+    if [ "$build_type" == "Release" ]; then
+        cd $repo_dir/release
+    else
+        cd $repo_dir/build
+    fi
+
+    # make all
+    echo "$build_type build"
     cmake -DCMAKE_BUILD_TYPE=$build_type ..
     make all
 
@@ -75,7 +89,11 @@ do
         fi
     done
 
+    # display error message for all fuzz-runs
     echo $error_msg
+
+    # delete wrapper script
+    rm solver-wrapper.sh
 done
 
 exit $exitcode

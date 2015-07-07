@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)
 
 project("riss-toolbox")
 
@@ -71,8 +71,10 @@ endif()
 
 
 # Dependencies:
-# 
+#
+find_package(Git)
 include_directories(${PROJECT_SOURCE_DIR})
+include(GitSignature)
 
 # Compile flags:
 # 
