@@ -479,6 +479,9 @@ class Communicator
     void addClause(const vec<Lit>& clause)
     {
         data->getBuffer().addClause(id, clause);
+#ifdef PCASSO
+#error check for tree in pcasso!
+#endif	
     }
 
     /** copy all clauses into the clauses std::vector that have been received since the last call to this method
