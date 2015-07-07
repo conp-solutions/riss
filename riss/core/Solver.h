@@ -415,6 +415,9 @@ class Solver
     {
         bool activeReplacements;                    // replaced by also points to offsets somewhere
         vec<Riss::Lit> equivalencesStack;   // stack of literal classes that represent equivalent literals which have to be processed
+#ifdef PCASSO
+        vec<int> dependencyStack;           // store dependency for each SCC on the stack
+#endif
         Solver* solver;
       public:
         vec<Riss::Lit> replacedBy;          // stores which variable has been replaced by which literal
@@ -438,6 +441,9 @@ class Solver
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
                 equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
+#ifdef PCASSO
+		dependencyStack.push( dependencyLevel );
+#endif
                 if (doShare) {
                     temporary.clear();
                     temporary.push(a);
@@ -459,7 +465,10 @@ class Solver
         {
             for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
-
+#ifdef PCASSO
+	    dependencyStack.push( dependencyLevel );
+#endif
+	    
             if (doShare) {  // tell priss about shared equivalences
                 temporary.clear();
                 for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }

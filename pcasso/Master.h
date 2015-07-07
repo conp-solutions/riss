@@ -66,8 +66,8 @@ class Master
     // void killUnsatChildren(int tDataIndex);
 
     /** configuration with which each solver is initialized */
-    static Riss::CoreConfig defaultSolverConfig;
-    static Riss::PfolioConfig defaultPfolioConfig;
+    Riss::CoreConfig defaultSolverConfig;
+    Riss::PfolioConfig defaultPfolioConfig;
 
     struct Parameter {
         int    verb;

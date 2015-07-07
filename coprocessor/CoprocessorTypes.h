@@ -302,8 +302,8 @@ class CoprocessorData
     bool outputsProof() const { return false; }
     #endif
 
-    // handling equivalent literals
-    void addEquivalences(const std::vector<Riss::Lit>& list);
+    /// handling equivalent literals, not a constant list to be able to share it in priss (will not alter the list)
+    void addEquivalences(const vector< Riss::Lit >& list);
     void addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2);
     Riss::vec< Riss::Lit >& getEquivalences();
     Riss::vec< Riss::Lit >& replacedBy() { return solver->eqInfo.replacedBy; }
@@ -344,6 +344,23 @@ class CoprocessorData
         #else
         return 0;
         #endif
+    }
+    
+    /** share units or a clause
+     * Note: equivalences are autoatically shared when they are added
+     */
+    template <typename T>
+#ifdef PCASSO
+    void share( T* data, int dataSize, unsigned dependencyLevel, bool multiUnit = false)
+#else
+    void share( T* data, int dataSize, bool multiUnit)
+#endif
+    {
+#ifdef PCASSO
+      solver->updateSleep(data,dataSize, dependencyLevel, multiUnit);
+#else
+      solver->updateSleep(data,dataSize, multiUnit);
+#endif
     }
 
 };
@@ -1521,7 +1538,7 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 inline void CoprocessorData::addEquivalences(const std::vector< Riss::Lit >& list)
 {
     assert((list.size() != 2 || list[0] != list[1]) && "do not allow to add a std::pair of the same literals");
-    solver->eqInfo.addEquivalenceClass(list);
+    solver->eqInfo.addEquivalenceClass(list); // will also share the SCC
 }
 
 inline void CoprocessorData::addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2)
