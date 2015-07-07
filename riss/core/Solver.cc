@@ -340,8 +340,11 @@ void Solver::reserveVars(Var v)
 
 
 
-bool Solver::addClause_(vec<Lit>& ps)
+bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
 {
+  
+#warning Norbert: implement noRedundancyCheck
+  
     assert(decisionLevel() == 0);
     if (!ok) { return false; }
 
