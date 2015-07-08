@@ -114,7 +114,8 @@ int main(int argc, char** argv)
     BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
-    StringOption opt_config("MAIN", "pconfig", "the configuration to be used for the portfolio solver", 0);
+    StringOption opt_config  ("MAIN", "pconfig", "the configuration to be used for the portfolio solver", 0);
+    StringOption opt_ppconfig("MAIN", "ppconfig", "the configuration to be used for the simplifier", 0);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
     try {
@@ -124,10 +125,12 @@ int main(int argc, char** argv)
         foundHelp = pfolioConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
 
-        if (foundHelp) { exit(0); }   // stop after printing the help information
-
         PSolver S(&pfolioConfig);   // set up a portfolio solver for DRUP proofs
 
+	if( (const char*) opt_ppconfig != nullptr ) {
+	  S.setGlobalSimplifierConfig ( string(opt_ppconfig) );
+	}
+	
         double initial_time = cpuTime();
 
         S.verbosity = verb;

@@ -20,13 +20,14 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     :
     Config(&configOptions, presetOptions)
 
-    , opt_proofCounting("PFOLIO - PROOF", "pc",  "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0)
-    , opt_verboseProof("PFOLIO - PROOF", "pv",  "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), 0)
-    , opt_internalProofCheck("PFOLIO - PROOF", "pic", "use internal proof checker during run time", false, 0)
-    , opt_verbosePfolio("PFOLIO - PROOF ", "ppv", "verbose pfolio execution", false, 0)
+    , opt_proofCounting("PFOLIO - PROOF", "pc",  "enable avoiding duplicate clauses in the pfolio DRUP proof", true, optionListPtr)
+    , opt_verboseProof("PFOLIO - PROOF", "pv",  "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), optionListPtr)
+    , opt_internalProofCheck("PFOLIO - PROOF", "pic", "use internal proof checker during run time", false, optionListPtr)
+    , opt_verbosePfolio("PFOLIO - PROOF", "ppv", "verbose pfolio execution", false, optionListPtr)
 
-    , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64))
+    , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64), optionListPtr)
     , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
+    , opt_firstPPconfig("PFOLIO - INIT", "pp1setup", "coprocessor configuration for first solver", 0, optionListPtr)
 
     , opt_share("SEND", "ps", "enable clause sharing for all clients", true, optionListPtr)
     , opt_receive("SEND", "pr", "enable receiving clauses for all clients", true, optionListPtr)

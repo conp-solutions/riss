@@ -28,7 +28,10 @@ class PSolver
     bool initialized;
     int threads;
 
-    Riss::vec<Riss::Solver*>             solvers;
+    Coprocessor::CP3Config*    globalSimplifierConfig; /// configuration object for global simplifier
+    Coprocessor::Preprocessor* globalSimplifier;       /// global object that initially runs simplification on the formula for all solvers together
+    
+    Riss::vec<Riss::Solver*> solvers;
     CoreConfig*              configs;   // the configuration for each solver
     Coprocessor::CP3Config*  ppconfigs; // the configuration for each preprocessor
 
@@ -40,6 +43,7 @@ class PSolver
     OnlineProofChecker* opc;      // check the proof on the fly during its creation
 
     std::string defaultConfig;            // name of the configuration that should be used
+    std::string defaultSimplifierConfig;  // name of the configuration that should be used by the global simplification
 
     // Output for DRUP unsat proof
     FILE* drupProofFile;
@@ -68,6 +72,9 @@ class PSolver
 
     Coprocessor::CP3Config& getPPConfig(const int solverID);
 
+    /** set global pp config */
+    void setGlobalSimplifierConfig( const string& _config ){ defaultSimplifierConfig = _config; }
+    
     //
     // solve the formula in parallel, including communication and all that
     //

@@ -634,7 +634,9 @@ class Solver
 
     // Operations on clauses:
     //
+public:  // FIXME: could also declare PSolver as friend somewhere
     void     attachClause(CRef cr);                    // Attach a clause to watcher lists.
+protected:
     void     detachClause(CRef cr, bool strict = false);      // Detach a clause to watcher lists.
 
     void     removeClause(CRef cr, bool strict = false);      // Detach and free a clause.

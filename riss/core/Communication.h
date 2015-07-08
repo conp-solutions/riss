@@ -504,7 +504,9 @@ class Communicator
         , nrRejectSendSizeCls(0)
         , nrRejectSendLbdCls(0)
         , nrReceivedCls(0)
+	, nrSendMultiUnits(0)
 	, nrReceivedMultiUnits(0)
+	, nrSendEEs(0)
 	, nrReceivedEEs(0)
     {
         // do create the solver here, or from the outside?
@@ -710,7 +712,9 @@ class Communicator
     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd
     unsigned nrReceivedCls;       // how many clauses have been received (there is no filter yet!!)
+    unsigned nrSendMultiUnits;   // number of shared multi units
     unsigned nrReceivedMultiUnits; // how many multi-unit packages have been sent
+    unsigned nrSendEEs;           // number of shared EEs
     unsigned nrReceivedEEs;       // how many equivalence SCC have been sent
 
 };

@@ -184,7 +184,7 @@ if (! communication->sendEquivalences && equivalences) { return 0; }  // do not 
     }
     if (rejectSend && !multiUnits && !equivalences) { return 0; }  // do nothing here, as there are variables in the clause that should not be sent
     else {
-        if (keep == 1 && equivalences) { return 0; }  // do not share equivalence of one literal
+        if (keep == 1 && equivalences) { return 0; }      // do not share equivalence of one literal
         else if (keep == 0 && multiUnits) { return 0; }   // do not share "no" units
     }
 
@@ -201,7 +201,7 @@ if (! communication->sendEquivalences && equivalences) { return 0; }  // do not 
 
         // filter sending:
         if (toSendSize > communicationClient.currentSendSizeLimit) {
-            updateDynamicLimits(true);    // update failed limits!
+            updateDynamicLimits(true);    // update failed limits! (only happens if we share a clause)
             communication->nrRejectSendSizeCls++;
             return 0; // TODO: parameter, adaptive?
         }
@@ -211,21 +211,26 @@ if (! communication->sendEquivalences && equivalences) { return 0; }  // do not 
             int lbd = computeLBD(*toSend, toSendSize);
 
             if (lbd > communicationClient.currentSendLbdLimit) {
-                updateDynamicLimits(true);    // update failed limits!
+                updateDynamicLimits(true);    // update failed limits! (only happens if we share a clause)
                 communication->nrRejectSendLbdCls++;
                 return 0; //TODO: parameter (adaptive?)
             }
         }
     }
 
+    communication->nrSendMultiUnits = (multiUnits ? communication->nrSendMultiUnits + 1 : communication->nrSendMultiUnits );
+    communication->nrSendEEs = (equivalences ? communication->nrSendEEs + 1 : communication->nrSendEEs );
+    
     #ifdef PCASSO
     VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
     communication->addClause(*toSend, toSendSize, dependencyLevel, vi, multiUnits, equivalences);
     #else
     communication->addClause(*toSend, toSendSize, multiUnits, equivalences);
     #endif
-    updateDynamicLimits(false); // a clause could be send
-    communication->nrSendCls++;
+    if( ! equivalences && !multiUnits ) { // update limits only if a clause was sent
+      updateDynamicLimits(false); // a clause could be send
+      communication->nrSendCls = communication->nrSendCls++;
+    }
 
 } else if (communication->getDoReceive()) {         // receive (only at level 0)
 

@@ -93,6 +93,7 @@ class Preprocessor
     Riss::lbool preprocessScheduled();
     Riss::lbool performSimplificationScheduled(std::string techniques);
 
+    /** take a given model and modify it such that its a model for the actual input formula again */
     void extendModel(Riss::vec<Riss::lbool>& model);
 
     /* TODO:

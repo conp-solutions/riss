@@ -1,9 +1,12 @@
 /***************************************************************************************[PSolver.h]
-Copyright (c) 2014,      Norbert Manthey, All rights reserved.
+Copyright (c) 2014-2015,      Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 #include "pfolio/PSolver.h"
 
+#include "coprocessor/Coprocessor.h"
 #include <assert.h>
+
+
 
 using namespace Coprocessor;
 using namespace std;
@@ -23,6 +26,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , pfolioConfig(* privateConfig)
     , initialized(false)
     , threads(pfolioConfig.threads)
+    , globalSimplifierConfig(0)
+    , globalSimplifier(0)  
     , data(0)
     , threadIDs(0)
     , proofMaster(0)
@@ -38,6 +43,10 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     configs   = new CoreConfig        [ threads ];
     ppconfigs = new CP3Config         [ threads ];
     communicators = new Communicator* [ threads ];
+    
+    // set preprocessor, if there is one selected
+    if( (const char*)pfolioConfig.opt_firstPPconfig != 0 ) ppconfigs[0].addPreset(string(pfolioConfig.opt_firstPPconfig));
+    
     for (int i = 0 ; i < threads; ++ i) {
         communicators[i] = 0;
     }
@@ -62,6 +71,9 @@ PSolver::~PSolver()
 
     sleep(0.2);
 
+    if( globalSimplifier != 0 ) delete globalSimplifier;
+    if( globalSimplifierConfig != 0 ) delete globalSimplifierConfig;
+    
     for (int i = 0 ; i < solvers.size(); ++ i) {
         delete solvers[i]; // free all solvers
         if (communicators != 0 && communicators[i] != 0) { delete communicators[i]; }
@@ -146,7 +158,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
         for (int j = 0 ; j < ps.size(); ++ j) {
             while (solvers[i]->nVars() <= var(ps[j])) { solvers[i]->newVar(); }
         }
-        bool ret2 = solvers[i]->addClause_(ps); // if a solver failed adding the clause, then the state for all solvers is bad as well
+        bool ret2 = solvers[i]->addClause_(ps, i != 0); // if a solver failed adding the clause, then the state for all solvers is bad as well, avoid redundancy check for all but the first solver
         if (pfolioConfig.opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; } // TODO remove after debug
         ret = ret2 && ret;
     }
@@ -180,14 +192,19 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      * but only in the very first iteration!
      */
     if (!initialized) {
-        ret = solvers[0]->preprocess();
+	assert( globalSimplifierConfig == 0 && globalSimplifier == 0 && "so far we did not setup global solver and simplifier" );
+         
+	globalSimplifierConfig = new Coprocessor::CP3Config( defaultSimplifierConfig.c_str() );
+	globalSimplifier = new Coprocessor::Preprocessor(solvers[0] , *globalSimplifierConfig, threads); // use simplifier with the given number of threads
+        ret = globalSimplifier->preprocess();
+	
         // solved by simplification?
         if (ret == l_False) { return ret; }
         else if (ret == l_True) {
             winningSolver = 0;
             model.clear();
-            model.capacity(solvers[winningSolver]->model.size());
-            for (int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i) { model.push(solvers[winningSolver]->model[i]); }
+	    solvers[winningSolver]->model.copyTo( model );
+	    if( globalSimplifier != 0 ) globalSimplifier->extendModel( model );
             return ret;
         }
     }
@@ -213,13 +230,19 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             solvers[i]->reserveVars(solvers[0]->nVars());
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
-            for (int j = 0 ; j < solvers[0]->clauses.size(); ++ j) {
-                solvers[i]->addClause(solvers[0]->ca[ solvers[0]->clauses[j] ]);   // import the clause of solver 0 into solver i; does not add to the proof
+	    
+	    solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
+	    solvers[0]->ca.copyTo( solvers[i]->ca );           // have information about clauses
+	    solvers[0]->clauses.copyTo( solvers[i]->clauses ); // copy clauses silently without the proof, no redundancy check required
+	    solvers[0]->learnts.copyTo( solvers[i]->learnts ); // copy clauses silently without the proof, no redundancy check required
+	    
+	    // attach all clauses
+	    for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
+                solvers[i]->attachClause( solvers[i]->clauses[j] );   // import the clause of solver 0 into solver i; does not add to the proof
             }
-            for (int j = 0 ; j < solvers[0]->learnts.size(); ++ j) {
-                solvers[i]->addClause(solvers[0]->ca[ solvers[0]->learnts[j] ]);   // import the learnt clause of solver 0 into solver i; does not add to the proof
+            for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
+                solvers[i]->attachClause( solvers[i]->learnts[j] );   // import the clause of solver 0 into solver i; does not add to the proof
             }
-            solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
             cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
         }
 
@@ -286,7 +309,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (communicators[i]->isWinner() && communicators[i]->getReturnValue() != l_Undef) { winningSolver = i; break; }
     }
 
-    if (verbosity > 0) { cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl; }
+    if (verbosity > 0) { cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") as " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl; }
 
     // return model, if there is a winning thread!
     if (winningSolver < threads) {
@@ -295,10 +318,10 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         */
         ret = communicators[ winningSolver ]->getReturnValue();
         if (ret == l_True) {
-            model.clear();
-            model.capacity(solvers[winningSolver]->model.size());
-            for (int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i) { model.push(solvers[winningSolver]->model[i]); }
-
+	    model.clear();
+	    solvers[winningSolver]->model.copyTo( model );
+	    if( globalSimplifier != 0 ) globalSimplifier->extendModel( model );
+            
             if (false && verbosity > 2) {
                 cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;
                 cerr << "c clauses: " << endl; for (int i = 0 ; i < solvers[winningSolver]->clauses.size(); ++ i) { cerr << "c " << solvers[winningSolver]->ca[solvers[winningSolver]->clauses[i]] << endl; }
@@ -321,6 +344,14 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                  <<  "  \t|\t" << communicators[i]->nrReceivedCls
                  <<  "  \t|\t" << communicators[i]->nrRejectSendSizeCls
                  <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls <<  "  \t|"
+                 << endl;
+        }
+        cerr << "c thread  S-EE\t|\t R-EE\t|\t SUs\t|\t RUs\t" << endl;
+        for (int i = 0 ; i < threads; ++ i) {
+            cerr << "c " << i << " : " << communicators[i]->nrSendEEs
+                 <<  "  \t|\t" << communicators[i]->nrReceivedEEs
+                 <<  "  \t|\t" << communicators[i]->nrSendMultiUnits
+                 <<  "  \t|\t" << communicators[i]->nrReceivedMultiUnits
                  << endl;
         }
 
