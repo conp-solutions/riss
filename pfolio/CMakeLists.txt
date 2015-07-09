@@ -28,7 +28,7 @@ add_executable(${PROJECT_NAME} Main.cc)
 if(STATIC_BINARIES)
   target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-lib-static coprocessor-lib-shared)
+  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-lib-shared coprocessor-lib-shared)
 endif()
 
 # Create a symlink for other names

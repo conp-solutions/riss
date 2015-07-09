@@ -39,7 +39,12 @@ class XorReasoning : public Technique
     int xorLimit, xorSteps;
     int foundEmptyLists, xorUnits, allUsed, xorDeducedUnits, eqs;
     int addedTernaryXors, addedQuadraryXors;
+    int participatingXorClauses, participatingXorVariables;  // count number of participating clauses/variables
+    float clauseRatio, variableRatio; // count ratio of participating clauses/variables
 
+    Riss::vec<Riss::Var> xorBackdoor;
+    Riss::MarkArray backdoorVariables;
+    
     /** compare two literals */
     struct VarLt {
         std::vector< std::vector <int> >& data;
