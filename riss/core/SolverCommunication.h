@@ -167,7 +167,11 @@ if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0;
 
 if (communication->getDoSend() && toSend != 0) {     // send
 
-if (! communication->sendEquivalences && equivalences) { return 0; }  // do not share equivalences
+if (! communication->sendEquivalences && equivalences) { 
+#warning remove after debug
+  cerr << "c reject equivalences due to disabled option" << endl;
+  return 0;
+}  // do not share equivalences
 
     // check, whether the clause is allowed to be sent
     bool rejectSend = false;
@@ -229,7 +233,7 @@ if (! communication->sendEquivalences && equivalences) { return 0; }  // do not 
     #endif
     if( ! equivalences && !multiUnits ) { // update limits only if a clause was sent
       updateDynamicLimits(false); // a clause could be send
-      communication->nrSendCls = communication->nrSendCls++;
+      communication->nrSendCls++;
     }
 
 } else if (communication->getDoReceive()) {         // receive (only at level 0)

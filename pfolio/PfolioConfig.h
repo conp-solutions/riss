@@ -38,7 +38,7 @@ class PfolioConfig : public Config
 
     IntOption  threads;
     StringOption opt_defaultSetup;          // presets to run priss in given setup (DRUP, BMC, ...)
-    StringOption opt_firstPPconfig;         // configuration for preprocessor of first solver object
+//     StringOption opt_firstPPconfig;         // configuration for preprocessor of first solver object
 
     // sharing options
     BoolOption opt_share;

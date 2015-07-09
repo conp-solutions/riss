@@ -27,7 +27,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
 
     , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64), optionListPtr)
     , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
-    , opt_firstPPconfig("PFOLIO - INIT", "pp1setup", "coprocessor configuration for first solver", 0, optionListPtr)
+//     , opt_firstPPconfig("PFOLIO - INIT", "pp1setup", "coprocessor configuration for first solver", 0, optionListPtr)
 
     , opt_share("SEND", "ps", "enable clause sharing for all clients", true, optionListPtr)
     , opt_receive("SEND", "pr", "enable receiving clauses for all clients", true, optionListPtr)

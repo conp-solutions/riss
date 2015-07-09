@@ -362,6 +362,17 @@ class CoprocessorData
       solver->updateSleep(data,dataSize, multiUnit);
 #endif
     }
+    
+    /** convenient wrapper for the method share to share multiple unit clauses with other workers */
+    void sendUnits(Riss::vec< Riss::Lit >& literalStorage, uint32_t beginIndex, int unitsToShare) {
+      
+      Riss::Lit* headPointer = & (literalStorage[beginIndex] ); // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
+#ifdef PCASSO
+    share( &headPointer, unitsToShare , currentDependencyLevel(), true); // give some value to the method, it will trace the dependencies for multi-units automatically
+#else
+    share( &headPointer, unitsToShare , true);
+#endif
+    }
 
 };
 

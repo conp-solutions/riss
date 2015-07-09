@@ -32,7 +32,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , threadIDs(0)
     , proofMaster(0)
     , opc(0)
-    , defaultConfig(configName == 0 ? "" : string(configName))   // setup the configuration
+    , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == nullptr ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
     , verbosity(0)
     , verbEveryConflicts(0)
@@ -45,7 +45,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     communicators = new Communicator* [ threads ];
     
     // set preprocessor, if there is one selected
-    if( (const char*)pfolioConfig.opt_firstPPconfig != 0 ) ppconfigs[0].addPreset(string(pfolioConfig.opt_firstPPconfig));
+//     if( (const char*)pfolioConfig.opt_firstPPconfig != 0 ) ppconfigs[0].addPreset(string(pfolioConfig.opt_firstPPconfig));
     
     for (int i = 0 ; i < threads; ++ i) {
         communicators[i] = 0;
@@ -244,6 +244,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                 solvers[i]->attachClause( solvers[i]->learnts[j] );   // import the clause of solver 0 into solver i; does not add to the proof
             }
             cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
+	    solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
 
         // copy the formula of the solver 0 number of thread times
@@ -426,6 +427,11 @@ void PSolver::createThreadConfigs()
         if (threads > 2) { configs[2].parseOptions("-var-decay-b=0.85 var-decay-e=0.85"); }
         if (threads > 3) { configs[3].parseOptions("-K=0.7 -R=1.5 -var-decay-b=0.85 var-decay-e=0.85"); }
         // TODO: set more for higher numbers
+    } else if ( defaultConfig == "FULLSHARE" ) {
+      cerr << "c setup FULLSHARE configurations" << endl;
+      if (threads > 1) { ppconfigs[1].parseOptions("-enabled_cp3 -cp3_stats -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000"); }
+      if (threads > 2) { ppconfigs[2].parseOptions("-enabled_cp3 -cp3_stats -probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000"); }
+      if (threads > 3) { ppconfigs[3].parseOptions("-enabled_cp3 -cp3_stats -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3 -inprocess -cp3_inp_cons=10000"); }
     }
 }
 
