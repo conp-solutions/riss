@@ -654,6 +654,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_xor_keepUsed    ;
     Riss::BoolOption opt_xor_findSubsumed;
     Riss::BoolOption opt_xor_findResolved;
+    Riss::IntOption  opt_xor_backdoor;
 
     Riss::BoolOption opt_xor_dropPure;
     Riss::IntOption  opt_xor_encodeSize;

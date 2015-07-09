@@ -613,6 +613,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_xor_keepUsed       (_cat_xor, "xorKeepUsed",  "continue to simplify kept xors", true,                                                           optionListPtr, &opt_xor),
     opt_xor_findSubsumed   (_cat_xor, "xorFindSubs",  "try to recover XORs that are partially subsumed", true,                                          optionListPtr, &opt_xor),
     opt_xor_findResolved   (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false,                                          optionListPtr, &opt_xor),
+    opt_xor_backdoor       (_cat_xor, "xorBackdoor",  "work on XOR backdoor, is size is smaller equal", 0, IntRange(0, INT32_MAX),                      optionListPtr, &opt_xor),
     opt_xor_dropPure       (_cat_xor, "xorDropPure",  "drop XORs with a literal that occurs only once", false,                                          optionListPtr, &opt_xor),
     opt_xor_encodeSize     (_cat_xor, "xorEncSize",   "size of xors that are encoded back (<=2 ^= none)", 2, IntRange(2, INT32_MAX),                    optionListPtr, &opt_xor),
     opt_xor_checkNewSubsume(_cat_xor, "xorEncSubs",   "perform subsumption checks with newly added XOR clauses", false,                                 optionListPtr, &opt_xor),
