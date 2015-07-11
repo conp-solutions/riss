@@ -118,6 +118,7 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+    BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
@@ -162,6 +163,12 @@ int main(int argc, char** argv)
             cerr << "c tool-parameters: " << s.str() << endl;
             exit(0);
         }
+        
+        if( opt_showParam ) { // print remaining parameters
+	  cerr << "c call after parsing options: ";
+	  for( int i = 0 ; i < argc; ++i ) cerr << " " << argv[i];
+	  cerr << endl;
+	}
 
         Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
@@ -284,7 +291,7 @@ int main(int argc, char** argv)
         S.budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
-            if (res != nullptr) { fclose(res); res == nullptr; }
+            if (res != nullptr) { fclose(res); res = nullptr; }
             if (S.proofFile != nullptr) {
                 fclose(S.proofFile);   // close the current file
                 S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
