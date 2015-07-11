@@ -1,0 +1,32 @@
+# --------------------------------------- MiniSATi OPTIONS ----------------------------------------------
+
+# general
+reduce-frac {0.1, 0.3, 0.5, 0.75, 0.85, 0.95} [0.5]          # Reduces the learnt clauses with this factor
+
+
+# MiPi-SAT
+prob-step-width {0, 100, 300, 600, 1200, 2400, 4800} [0]     # Perform failed literals and detection of necessary assignments each n times
+prob-limit [1, 3200] [100] i                                 # Limit how many variables with highest activity should be probed
+
+# Minit-SAT
+pol-act-init {false, true} [false]                           # Initializes polarity and activity of variables
+
+
+# 1430ED
+block-rst {false, true} [false]                              # Use blocking restart technique
+R {1.1, 1.4, 2.7, 3.2, 4.1, 4.9} [1.4]                       # The constant used to block restart
+reduce-confl-limit {10000, 15000, 30000} [15000]             # Number of conflicts after wich the databse will be reduced
+size-lbd-queue [10, 200] [50] i                              # The size of moving average for LBD (restarts)
+size-trail-queue{10, 1000, 5000, 10000, 20000} [5000]        # The size of moving average for trail (block restarts)
+lbd-core-th {4, 5, 6, 7, 10, 15} [5]                         # LBD Threshold for saving learnt clause infinte 
+# SimpSolver Options
+cla-prep-lim {-1, 2000000, 4800000} [-1]                     # Turn off pre-processing if number of clause exceeds this limit. Feature is turned off by negative value
+elim-clear-watch {false, true} [false]                       # Always clear watch list if a variable is eliminated
+
+
+# ContraSAT
+pq-order {false,true} [false]                                # Use priority queue to decide the order in which literals are implied
+
+
+# CIR
+cir-bump {0, 6000, 9973, 12000, 15000} [0]                   # Activates CIR with bump ratio for VSIDS score (choose large: 9973)

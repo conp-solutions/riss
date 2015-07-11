@@ -1,0 +1,5 @@
+smac_scenarios/instances/example_instances/test/qcplin2006.6215.cnf
+smac_scenarios/instances/example_instances/test/qcplin2006.37487.cnf
+smac_scenarios/instances/example_instances/test/qcplin2006.4455.cnf
+smac_scenarios/instances/example_instances/test/qcplin2006.48775.cnf
+smac_scenarios/instances/example_instances/test/qcplin2006.34621.cnf
