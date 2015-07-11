@@ -36,6 +36,7 @@ option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
 # Print option settings
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "Verbose warnings ${WARNINGS}")
@@ -63,8 +64,8 @@ endif()
 
 # tuning for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_EXE_LINKER_FLAGS    "-s")  # strip binary
-  set(CMAKE_SHARED_LINKER_FLAGS "-s")  # strip shared libs
+  set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -s")  # strip binary
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")  # strip shared libs
 endif()
 
 
