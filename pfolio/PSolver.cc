@@ -430,7 +430,7 @@ void PSolver::createThreadConfigs()
     } else if ( defaultConfig == "FULLSHARE" ) {
       cerr << "c setup FULLSHARE configurations" << endl;
       if (threads > 1) { ppconfigs[1].parseOptions("-enabled_cp3 -cp3_stats -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000"); }
-      if (threads > 2) { ppconfigs[2].parseOptions("-enabled_cp3 -cp3_stats -probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000"); }
+      if (threads > 2) { ppconfigs[2].parseOptions("-enabled_cp3 -cp3_stats -probe -pr-probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000"); }
       if (threads > 3) { ppconfigs[3].parseOptions("-enabled_cp3 -cp3_stats -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3 -inprocess -cp3_inp_cons=10000"); }
     }
 }

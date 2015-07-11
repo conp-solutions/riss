@@ -165,6 +165,8 @@ class Solver
     void    toDimacs(FILE* f, Clause& c, vec<Var>& map, Var& max);
     void printLit(Lit l);
     void printClause(CRef c);
+    void dumpAndExit(const char* filename);  // print the current formula without assumptions (p line, trail, clauses)
+    
     // Convenience versions of 'toDimacs()':
     void    toDimacs(const char* file);
     void    toDimacs(const char* file, Lit p);

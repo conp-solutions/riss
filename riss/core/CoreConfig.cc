@@ -131,6 +131,8 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_rMax   (_cr, "rMax",    "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX),            optionListPtr),
     opt_rMaxInc(_cr, "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &opt_rMax),
 
+    printOnSolveTo          ("DEBUG",    "printOnSolve",    "print formula present at call solve to given filename and exit", 0, optionListPtr),
+    
     search_schedule         ("SCHEDULE", "sschedule",       "specify configs to be schedules", 0,                                                     optionListPtr),
     scheduleConflicts       ("SCHEDULE", "sscheConflicts",  "initial conflicts for schedule", 10000000, IntRange(1, INT32_MAX),                       optionListPtr, &search_schedule),
     scheduleDefaultConflicts("SCHEDULE", "sscheDConflicts", "initial conflicts for default", 3000000, IntRange(1, INT32_MAX),                         optionListPtr, &search_schedule),

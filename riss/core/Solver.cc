@@ -2696,9 +2696,54 @@ void Solver::applyConfiguration()
 }
 
 
+void Solver::dumpAndExit(const char* filename) {
+  FILE* f = fopen(filename, "w");
+      if (f == nullptr) {
+	  fprintf(stderr, "could not open file %s\n", filename), exit(1);
+      }
+      fprintf(f, "c CNF dumped by Riss\n");
+      
+      if ( !okay() ) {   // unsat
+	  fprintf(f, "p cnf 0 1\n0\n"); // print the empty clause
+	  return;
+      }
+
+	  // count level 0 assignments
+	  int level0 = 0;
+	  for (int i = 0; i < trail.size(); ++i) {
+	      if (level(var(trail[i])) == 0) {
+		  ++level0;
+	      } else break;
+	  }
+	  // print header, if activated
+	  fprintf(f, "p cnf %u %i\n", (nVars()) , level0 + clauses.size());
+      
+      // print assignments
+      for (int i = 0; i < trail.size(); ++i) {
+	  if (level(var(trail[i])) == 0) {
+	    stringstream s;
+	    s << trail[i];
+	    fprintf(f, "%s 0\n", s.str().c_str() );
+	  } else break; // stop after first level
+      }
+      // print clauses
+      for (int i = 0; i < clauses.size(); ++i) {
+	  stringstream s;
+	  s << ca[ clauses[i] ];
+	  fprintf(f, "%s 0\n", s.str().c_str() );
+      }
+      fclose(f);
+      exit(1);
+}
+
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    // print formula of the call?
+    if( (const char*)config.printOnSolveTo != 0 ) {
+      dumpAndExit( (const char*)config.printOnSolveTo );
+    }
+  
     totalTime.start();
     startedSolving = true;
     model.clear();

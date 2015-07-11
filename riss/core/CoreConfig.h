@@ -135,6 +135,8 @@ class CoreConfig : public Config
     IntOption opt_rMax;
     DoubleOption opt_rMaxInc;
 
+    StringOption printOnSolveTo; // print formula of the solver once ::solve_ is called, and exit afterwards
+    
     StringOption search_schedule;
     IntOption    scheduleConflicts;
     IntOption    scheduleDefaultConflicts;

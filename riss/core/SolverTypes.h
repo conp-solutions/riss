@@ -1199,11 +1199,11 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l)
 /** print a clause into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Clause& c)
 {
-    other << "[";
+//     other << "[ ";
     for (int i = 0 ; i < c.size(); ++ i) {
-        other << " " << c[i];
+        other << c[i] << " ";
     }
-    other << "]";
+//     other << "]";
     return other;
 }
 
