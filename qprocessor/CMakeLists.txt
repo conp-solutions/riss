@@ -1,23 +1,26 @@
-# Project definitions:
+# Project definitions
 # 
 project(qprocessor)
 
-# Dependencies:
+# 
+# Dependencies
 # 
 
-# Executables:
 # 
-add_executable(${PROJECT_NAME} Main.cc)
+# Executables
+# 
+add_executable(qprocessor Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} riss-lib-static coprocessor-lib-static)
+  target_link_libraries(qprocessor riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(qprocessor riss-lib-shared coprocessor-lib-shared)
 endif()
 
-# Installation:
 # 
-install(TARGETS   ${PROJECT_NAME} RUNTIME DESTINATION bin)
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+# Installation
+# 
+install(TARGETS   qprocessor RUNTIME DESTINATION bin)
+install(DIRECTORY qprocessor
+        DESTINATION include/qprocessor
         FILES_MATCHING PATTERN "*.h")

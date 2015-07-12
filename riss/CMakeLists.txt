@@ -33,37 +33,37 @@ set(LIB_SOURCES
     librissc.cc
     ${VERSION_CC})
 
-add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-object OBJECT ${LIB_SOURCES})
+add_library(riss-lib-static STATIC ${LIB_SOURCES})
+add_library(riss-lib-shared SHARED ${LIB_SOURCES})
+add_library(riss-lib-object OBJECT ${LIB_SOURCES})
 # This extra libraries are build for pcasso, because pcasso needs some
 # extensions to the riss source code
-add_library(${PROJECT_NAME}-pcasso-lib-static STATIC ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-pcasso-lib-shared SHARED ${LIB_SOURCES})
+add_library(riss-pcasso-lib-static STATIC ${LIB_SOURCES})
+add_library(riss-pcasso-lib-shared SHARED ${LIB_SOURCES})
 
 message(STATUS "Libs: ${ZLIB_LIBRARY} ${LIBRT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}")
 
-target_link_libraries(${PROJECT_NAME}-lib-shared z pthread rt)
-target_link_libraries(${PROJECT_NAME}-lib-static z pthread rt)
-target_link_libraries(${PROJECT_NAME}-pcasso-lib-shared z pthread rt)
-target_link_libraries(${PROJECT_NAME}-pcasso-lib-static z pthread rt)
+target_link_libraries(riss-lib-shared z pthread rt)
+target_link_libraries(riss-lib-static z pthread rt)
+target_link_libraries(riss-pcasso-lib-shared z pthread rt)
+target_link_libraries(riss-pcasso-lib-static z pthread rt)
 
-set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}")
-set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}" 
-                                                 VERSION ${VERSION}
-                                                 SOVERSION ${SOVERSION})
-set_target_properties(${PROJECT_NAME}-pcasso-lib-static PROPERTIES
-                                                        OUTPUT_NAME "${PROJECT_NAME}-pcasso"
-                                                        COMPILE_FLAGS "-DPCASSO")
-set_target_properties(${PROJECT_NAME}-pcasso-lib-shared PROPERTIES
-                                                        OUTPUT_NAME "${PROJECT_NAME}-pcasso"
-                                                        COMPILE_FLAGS "-DPCASSO"
-                                                        VERSION ${VERSION}
-                                                        SOVERSION ${SOVERSION})
+set_target_properties(riss-lib-static PROPERTIES
+                                      OUTPUT_NAME "riss")
+set_target_properties(riss-lib-shared PROPERTIES
+                                      OUTPUT_NAME "riss" 
+                                      VERSION ${VERSION}
+                                      SOVERSION ${SOVERSION})
+set_target_properties(riss-pcasso-lib-static PROPERTIES
+                                             OUTPUT_NAME "riss-pcasso"
+                                             COMPILE_FLAGS "-DPCASSO")
+set_target_properties(riss-pcasso-lib-shared PROPERTIES
+                                             OUTPUT_NAME "riss-pcasso"
+                                             COMPILE_FLAGS "-DPCASSO"
+                                             VERSION ${VERSION}
+                                             SOVERSION ${SOVERSION})
 
-git_signature(PROJECT_NAME ${PROJECT_NAME}
+git_signature(PROJECT_NAME "riss"
               SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/utils/version.cmake
               VERSION ${VERSION}
               DESTINATION ${VERSION_CC})
@@ -71,37 +71,37 @@ git_signature(PROJECT_NAME ${PROJECT_NAME}
 # 
 # Executables
 # 
-add_executable(${PROJECT_NAME}-core core/Main.cc)
-add_executable(${PROJECT_NAME}-simp simp/Main.cc)
+add_executable(riss-core core/Main.cc)
+add_executable(riss-simp simp/Main.cc)
 
 message("-- DRAT proofs ${DRATPROOF}")
 if(DRATPROOF)
-    set_target_properties(${PROJECT_NAME}-core PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
-    set_target_properties(${PROJECT_NAME}-simp PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
+    set_target_properties(riss-core PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
+    set_target_properties(riss-simp PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
 endif()
 
 # Create a symlink to the binary as shortcut
-add_custom_command(TARGET  ${PROJECT_NAME}-core POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
-add_custom_command(TARGET  ${PROJECT_NAME}-simp POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
+add_custom_command(TARGET  riss-core POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink riss-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
+add_custom_command(TARGET  riss-simp POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink riss-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static coprocessor-lib-static)
-  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-static coprocessor-lib-static)
+  target_link_libraries(riss-core riss-lib-static coprocessor-lib-static)
+  target_link_libraries(riss-simp riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-shared coprocessor-lib-shared)
-  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-shared coprocessor-lib-shared)
+  target_link_libraries(riss-core riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(riss-simp riss-lib-shared coprocessor-lib-shared)
 endif()
 
 # Installation:
 # 
-install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}-pcasso-lib-static ${PROJECT_NAME}-pcasso-lib-shared
-                ${PROJECT_NAME}-core ${PROJECT_NAME}-simp 
+install(TARGETS riss-lib-static riss-lib-shared riss-pcasso-lib-static riss-pcasso-lib-shared
+                riss-core riss-simp 
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY ${PROJECT_NAME}/mtl ${PROJECT_NAME}/utils ${PROJECT_NAME}/core ${PROJECT_NAME}/simp
-        DESTINATION include/${PROJECT_NAME}
+install(DIRECTORY riss/mtl riss/utils riss/core riss/simp
+        DESTINATION include/riss
         FILES_MATCHING PATTERN "*.h")

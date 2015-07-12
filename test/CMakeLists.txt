@@ -1,18 +1,14 @@
-# Project definitions:
+# Project definitions
 # 
 project(test)
 
-
-# Dependencies:
 # 
-
-
-# Executables:
+# Executables
 # 
-add_executable(${PROJECT_NAME}-memory memory.cc)
+add_executable(test-memory memory.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME}-memory riss-lib-static coprocessor-lib-static)
+  target_link_libraries(test-memory riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME}-memory riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(test-memory riss-lib-shared coprocessor-lib-shared)
 endif()

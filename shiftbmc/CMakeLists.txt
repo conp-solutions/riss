@@ -1,8 +1,9 @@
-# Project definitions:
+# Project definitions
 # 
 project(shiftbmc)
 
-# Executables:
+# 
+# Executables
 # 
 add_executable(shiftbmc       shiftbmc.cc)
 add_executable(shiftbmc-abc   shiftbmc.cc)
@@ -17,10 +18,10 @@ else()
   target_link_libraries(shiftbmc-abc    riss-lib-shared coprocessor-lib-shared pfolio-lib-shared picosat-lib-shared aiger-lib-shared)
 endif()
 
-
-# Installation:
 # 
-install(TARGETS   ${PROJECT_NAME} RUNTIME DESTINATION bin)
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+# Installation
+# 
+install(TARGETS   shiftbmc RUNTIME DESTINATION bin)
+install(DIRECTORY shiftbmc
+        DESTINATION include/shiftbmc
         FILES_MATCHING PATTERN "*.h")

@@ -40,18 +40,18 @@ set(LIB_SOURCES
     xor.cc
     ${VERSION_CC})
 
-add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-object OBJECT ${LIB_SOURCES})
+add_library(coprocessor-lib-static STATIC ${LIB_SOURCES})
+add_library(coprocessor-lib-shared SHARED ${LIB_SOURCES})
+add_library(coprocessor-lib-object OBJECT ${LIB_SOURCES})
 
-set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}")
-set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}" 
-                                                 VERSION ${VERSION}
-                                                 SOVERSION ${SOVERSION})
+set_target_properties(coprocessor-lib-static PROPERTIES
+                                             OUTPUT_NAME "coprocessor")
+set_target_properties(coprocessor-lib-shared PROPERTIES
+                                             OUTPUT_NAME "coprocessor" 
+                                             VERSION ${VERSION}
+                                             SOVERSION ${SOVERSION})
 
-git_signature(PROJECT_NAME ${PROJECT_NAME}
+git_signature(PROJECT_NAME "coprocessor"
               SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake
               DESTINATION ${VERSION_CC}
               VERSION ${VERSION})
@@ -59,22 +59,22 @@ git_signature(PROJECT_NAME ${PROJECT_NAME}
 # 
 # Executables
 # 
-add_executable(${PROJECT_NAME} Main.cc)
+add_executable(coprocessor Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} riss-lib-static ${PROJECT_NAME}-lib-static)
+  target_link_libraries(coprocessor riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} riss-lib-shared ${PROJECT_NAME}-lib-shared)
+  target_link_libraries(coprocessor riss-lib-shared coprocessor-lib-shared)
 endif()
 
 # 
 # Installation
 # 
-install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}
+install(TARGETS coprocessor-lib-static coprocessor-lib-shared coprocessor
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+install(DIRECTORY coprocessor
+        DESTINATION include/coprocessor
         FILES_MATCHING PATTERN "*.h")
