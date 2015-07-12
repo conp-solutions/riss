@@ -363,8 +363,9 @@ class ClauseRingBuffer
  */
 class CommunicationData
 {
-    ClauseRingBuffer ringbuffer; /** buffer that stores the shared clauses */
-
+    ClauseRingBuffer clauseBuffer;  /** buffer that stores the shared clauses */
+    ClauseRingBuffer specialBuffer; /** buffer for multiunits and equivalences (should not be missed, and not overwritten too regularly) */
+  
     Lock dataLock;               /** lock that protects the access to the task data structures */
     SleepLock masterLock;        /** lock that enables the master thread to sleep during waiting for child threads */
 
@@ -372,21 +373,26 @@ class CommunicationData
 
   public:
 
+    /** @param buffersize sets up a buffer with the given number of elements, and another buffer with quarter the number of elements */
     CommunicationData(const int buffersize) :
-        ringbuffer(buffersize)
+        clauseBuffer(buffersize),
+        specialBuffer(buffersize / 4)
     {
-
     }
 
     SleepLock& getMasterLock() { return masterLock; };
 
     /** set the handle for the proof master in the ringbuffer */
-    void setProofMaster(ProofMaster *pm) { ringbuffer.setProofMaster(pm); }
+    void setProofMaster(ProofMaster *pm) { clauseBuffer.setProofMaster(pm); }
 
 
     /** return a reference to the ringbuffer
      */
-    ClauseRingBuffer& getBuffer() { return ringbuffer; }
+    ClauseRingBuffer& getBuffer() { return clauseBuffer; }
+    
+    /** return a reference to the ringbuffer
+     */
+    ClauseRingBuffer& getSpecialBuffer() { return specialBuffer; }
 
     /** clears the std::vector of units to send
      * should be called by the master thread only!
@@ -458,7 +464,8 @@ class Communicator
     State state;
 
     int myLastTaskID;
-    unsigned lastSeenIndex;    // position of the last clause that has been incorporated
+    unsigned lastSeenIndex;         // position of the last clause that has been incorporated
+    unsigned lastSeenSpecialIndex;  // position of the last clause that has been incorporated
     bool doSend;               // should this thread send clauses
     bool doReceive;            // should this thread receive clauses
 
@@ -486,6 +493,7 @@ class Communicator
         , state(waiting)
         , myLastTaskID(-1)
         , lastSeenIndex(0)
+	, lastSeenSpecialIndex(0)
         , doSend(true)              // should this thread send clauses
         , doReceive(true)
         , protectAssumptions(false) // should the size limit check also consider assumed variables?
@@ -503,6 +511,10 @@ class Communicator
 	, sendEquivalences(true)       // share equivalence information
         , receiveEqiuvalences(false)   // receive equivalence information
 	
+	, vivifyReceivedClause(false)
+        , resendVivified(false)
+	, vivifiedLiterals(0)
+	
         , nrSendCls(0)
         , nrRejectSendSizeCls(0)
         , nrRejectSendLbdCls(0)
@@ -511,6 +523,10 @@ class Communicator
 	, nrReceivedMultiUnits(0)
 	, nrSendEEs(0)
 	, nrReceivedEEs(0)
+	, nrReceiveAttempts(0)
+	, nrSendCattempt(0)
+	, nrSendMattempt(0)
+	, nrSendEattempt(0)
     {
         // do create the solver here, or from the outside?
         // solver = new Solver();
@@ -636,20 +652,22 @@ class Communicator
      * @param multiUnits we do not add one clause, but multiple unit clauses
      * @param equivalences we share a class of equivalent literals
      */
-    #ifdef PCASSO
+#ifdef PCASSO
     template<typename T, typename V> // can be either clause or vector, do not name variable information explicitely
     void addClause(const T& clause, const int& toSendSize, int& dependencyLevel, const V& variableInformation, bool multiUnits = false, bool equivalences = false)
-    #else
+#else
     template<typename T> // can be either clause or vector
     void addClause(const T& clause, const int& toSendSize, bool multiUnits = false, bool equivalences = false)
-    #endif
+#endif
     {
-        #ifdef PCASSO
+#ifdef PCASSO
         assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
-        data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences);
-        #else
-        data->getBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences);
-        #endif
+        if( !multiUnits && !equivalences ) data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel );   // usual buffer
+	else data->getSpecialBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences); // special buffer
+#else
+        if( !multiUnits && !equivalences ) data->getBuffer().addClause(id, clause, toSendSize);    // usual buffer
+	else data->getSpecialBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences); // special buffer
+#endif
     }
 
     /** copy all clauses into the clauses std::vector that have been received since the last call to this method
@@ -669,11 +687,13 @@ class Communicator
 #endif
     {
         if (!doReceive) { return; }
-        //unsigned int oldLastSeen = lastSeenIndex;
+        // receive from special buffer first
 #ifdef PCASSO
-        lastSeenIndex = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+        lastSeenIndex        = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
 #else
-	lastSeenIndex = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	lastSeenIndex        = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
 #endif
     }
 
@@ -712,6 +732,10 @@ class Communicator
     bool sendEquivalences;        // share equivalence information
     bool receiveEqiuvalences;     // receive equivalences
 
+    bool vivifyReceivedClause;    // apply vivification to received clauses?
+    bool resendVivified;          // send shrinked clause back
+    int vivifiedLiterals;         // number of literals that have been eliminated by vivification of received clause
+    
     unsigned nrSendCls;           // how many clauses have been send via this communicator
     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd
@@ -720,6 +744,7 @@ class Communicator
     unsigned nrReceivedMultiUnits; // how many multi-unit packages have been sent
     unsigned nrSendEEs;           // number of shared EEs
     unsigned nrReceivedEEs;       // how many equivalence SCC have been sent
+    unsigned nrReceiveAttempts,nrSendCattempt,nrSendMattempt,nrSendEattempt; // number of tries to receive/send certain data types
 
 };
 

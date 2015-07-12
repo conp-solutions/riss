@@ -39,6 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/mtl/Alg.h"
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Map.h"
+#include "riss/mtl/Sort.h"
 #include "riss/mtl/Alloc.h"
 
 // for parallel stuff
@@ -600,7 +601,17 @@ class Clause
     #else
     { return 0; }
     #endif
+    
+    template <class LessThan> 
+    friend void sort(Clause& c, LessThan lt);
 };
+
+
+template <class LessThan> 
+void sort(Clause& c, LessThan lt)
+{
+    sort((Lit*)&(c.data[0]), c.size(), lt);
+}
 
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:

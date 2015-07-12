@@ -167,6 +167,11 @@ if (communication->isAborted()) {
 if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0; }
 
 if (communication->getDoSend() && toSend != 0) {     // send
+  
+  // count attempts
+  communication->nrSendCattempt = (!multiUnits && !equivalences ) ? communication->nrSendCattempt + 1 : communication->nrSendCattempt;
+  communication->nrSendMattempt = multiUnits ? communication->nrSendMattempt + 1 : communication->nrSendMattempt;
+  communication->nrSendEattempt = equivalences ? communication->nrSendEattempt + 1 : communication->nrSendEattempt ;
 
 if (! communication->sendEquivalences && equivalences) { 
 #warning remove after debug
@@ -246,7 +251,7 @@ if (! communication->sendEquivalences && equivalences) {
 } else if (communication->getDoReceive()) {         // receive (only at level 0)
 
 // TODO: add parameter that forces to restart!
-// if( communication->
+  communication->nrReceiveAttempts ++;
 
 // not at level 0? nothing to do
 if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
@@ -334,6 +339,38 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
             }
             // TODO: here could be more filters for received clauses to be rejected (e.g. PSM?!)
             if (!c.mark()) {
+	      
+	      // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
+		    if( c.size() > 1 && communication->vivifyReceivedClause ) {
+		      if( ! reverseMinimization.enabled ) { // enable reverseMinimization to be able to use it
+			reverseMinimization.enabled = true;
+			reverseMinimization.assigns.growTo(nVars()+ 1, l_Undef); // grow assignment
+			reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
+		      }
+		      unsigned int lbd = ca[communicationClient.receiveClauses[i]].size();
+		      const unsigned int beforeSize = ca[communicationClient.receiveClauses[i]].size();
+		      bool shrinkedClause = false;
+#ifdef PCASSO
+		      unsigned dependency = ca[communicationClient.receiveClauses[i]].getPTLevel();
+		      shrinkedClausereverseLearntClause( ca[communicationClient.receiveClauses[i]], lbd, dependency);
+		      if( shrinkedClause ) {
+			ca[communicationClient.receiveClauses[i]].setPTLevel( dependency ); // update dependency accordingly
+		      }
+#else
+		      unsigned dependency = currentDependencyLevel();
+		      shrinkedClause = reverseLearntClause( ca[communicationClient.receiveClauses[i]], lbd, dependency);
+#endif
+		      communication->vivifiedLiterals += beforeSize - ca[communicationClient.receiveClauses[i]].size();
+		      if( shrinkedClause && communication->resendVivified ) { // re-share clause (should be performed only by one thread per group
+#ifdef PCASSO
+			updateSleep( &(ca[communicationClient.receiveClauses[i]]), ca[communicationClient.receiveClauses[i]].size(), dependency );
+#else
+			updateSleep( &(ca[communicationClient.receiveClauses[i]]), ca[communicationClient.receiveClauses[i]].size() );
+#endif
+		      }
+		      // could re-share clause, but another thread might also shorten the clause, and hence this would be useless
+		    }
+	      
                 communication->nrReceivedCls ++;
                 if (c.size() == 0) { ok = false; return 1; }
                 else if (c.size() == 1) {

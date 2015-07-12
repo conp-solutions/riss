@@ -449,8 +449,7 @@ bool Probing::prAnalyze(CRef confl)
                 }
                 learntUnits.push(~p);
             } else {
-                static bool didit = false;
-                if (!didit) { cerr << "[TODO] have more advanced learning routine for level 1 ?!?" << endl; didit = true; }
+#warning have more advanced learning routine for level 2, could also lead to unit clause ?!? TODO
                 break;
             }
         }

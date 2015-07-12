@@ -922,10 +922,12 @@ protected:
     };
 
     /** reduce the literals inside the clause by performing vivification in the opposite order the literals have been added to the trail
+     * @param learned_clause pointer to the clause that should be minimized (can be vec<Lit> or Clause)
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
-    bool reverseLearntClause(Riss::vec< Riss::Lit >& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel);
+    template <typename T>
+    bool reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel);
 
     /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause
@@ -1400,10 +1402,136 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
     return propagate() != CRef_Undef;
 }
 
+
+
+template<typename T>
+inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned& dependencyLevel)
+{
+    #ifdef PCASSO
+#warning implement dependencyLevel correctly!
+    #endif
+    if (!reverseMinimization.enabled || lbd > searchconfiguration.lbLBDReverseClause) { return false; }
+
+    // sort literal in the clause
+    sort(learned_clause, TrailPosition_Gt(vardata));
+    assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
+
+    reverseMinimization.attempts ++;
+
+    // update minimization trail with top level units (if there have been new ones)
+    const int levelZeroUnits = trail_lim.size() == 0 ? trail.size() : trail_lim[0];
+    assert( (trail_lim.size() > 0 || decisionLevel () == 0) && "if there is no trail lim, then we have not done any decision until now" );
+    for (int i = reverseMinimization.trail.size() ; i < levelZeroUnits; ++i) {
+        reverseMinimization.uncheckedEnqueue(trail[i]);
+    }
+
+    // perform vivification
+    int keptLits = 0;
+    for (int i = 0; i < learned_clause.size(); ++ i) {
+        const Lit l = learned_clause[i];
+        if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
+            learned_clause[keptLits++ ] = l; // keep literal
+        } else if (reverseMinimization.value(l) == l_True) {
+            learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
+            break;
+        } else {
+            assert(reverseMinimization.value(l) == l_False && "there only exists three values");
+            // continue, as this clause is minimized
+            reverseMinimization.revMindroppedLiterals ++;
+            continue;
+        }
+
+        // propagate the current literal
+        int trailHead = trail.size();
+        reverseMinimization.uncheckedEnqueue(~l);
+
+        CRef    confl     = CRef_Undef;
+        watches.cleanAll();
+        while (trailHead < reverseMinimization.trail.size()) {
+            const Lit p   = reverseMinimization.trail[trailHead++];     // 'p' is enqueued fact to propagate.
+            vec<Watcher>&  ws  = watches[p];                // do not modify watch list!
+            Watcher        *i, *end;
+            // propagate longer clauses here!
+            for (i = (Watcher*)ws, end = i + ws.size();  i != end; i++) {
+                if (i->isBinary()) {   // handle binary clauses as usual (no write access necessary!)
+                    const Lit& imp = i->blocker();
+                    if (reverseMinimization.value(imp) == l_False) {
+                        confl = i->cref();              // store the conflict
+                        trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
+                        break;
+                    }
+                    continue;
+                }
+                // Try to avoid inspecting the clause:
+                const Lit blocker = i->blocker();
+                if (reverseMinimization.value(blocker) == l_True) { // keep binary clauses, and clauses where the blocking literal is satisfied
+                    continue;
+                }
+
+                // Make sure the false literal is data[1]:
+                const CRef cr = i->cref();
+                const Clause&  c = ca[cr];
+
+                // Look for new watch:
+                Lit impliedLit = lit_Undef;
+                for (int k = 0; k < c.size(); k++) {
+                    if (reverseMinimization.value(c[k]) == l_Undef) {
+                        if (impliedLit != lit_Undef) {
+                            impliedLit = c[k];  // if there is exactly one left
+                        } else {
+                            impliedLit == lit_Error;                   // there are multiple left
+                            break;
+                        }
+                    } else if (reverseMinimization.value(c[k]) == l_True) {
+                        impliedLit = lit_Error;
+                        break;
+                    }
+                }
+
+                if (impliedLit != lit_Error) {    // the clause is unit or conflict
+                    if (impliedLit == lit_Undef) {  // conflict
+                        confl = i->cref();
+                        trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
+                    } else {
+                        reverseMinimization.uncheckedEnqueue(impliedLit);
+                    }
+                }
+            NextClause:;
+            }
+
+        }
+
+        // found a conflict during reverse propagation
+        if (confl != CRef_Undef) {
+            if (i + 1 < learned_clause.size()) { reverseMinimization.revMinConflicts ++; } // count cases when the technique was succesful
+            break;
+        }
+
+    } // end of looping over all literals of the clause
+
+    // perform backtracking
+    for (int i = levelZeroUnits ; i < reverseMinimization.trail.size(); ++ i) {
+        reverseMinimization.assigns[ var(reverseMinimization.trail[i]) ] = l_Undef;
+    }
+    reverseMinimization.trail.shrink(reverseMinimization.trail.size() - levelZeroUnits );
+
+    // remove all redundant literals
+    if (keptLits < learned_clause.size()) {
+        reverseMinimization.succesfulReverseMinimizations ++;
+        reverseMinimization.revMincutOffLiterals += (learned_clause.size() - keptLits);
+        assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
+        learned_clause.shrink(learned_clause.size() - keptLits);
+        assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
+        return true;
+    }
+    return false; // clause was not changed, LBD should not be recomputed
+}
+
+
+
 /************************************************************
  * Compute LBD functions
  *************************************************************/
-
 template<typename T>
 inline int Solver::computeLBD(const T& lits, const int& litsSize)
 {

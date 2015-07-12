@@ -11,6 +11,13 @@ Copyright (c) 2014-2015,      Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
+
+// pfolio todos
+#warning be able to disable output completely, use inc/decmodel flags
+#warning error shrink received clauses with reverseMinimization, share reduced clauses again (cite siert)
+#warning have another buffer for equivalences and multi-units, that should not be missed
+#warning set communicator settings incarnation specific, have a way to pass options from cmdline to each incarnation (have one long string as option, split that string)
+
 namespace Riss
 {
 
@@ -218,7 +225,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             cerr << "c initialization of " << threads << " threads: failed" << endl;
             return l_Undef;
         } else {
-            cerr << "c initialization of " << threads << " threads: succeeded" << endl;
+            if( verbosity > 0 ) cerr << "c initialization of " << threads << " threads: succeeded" << endl;
         }
         if (proofMaster != 0 && pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("c initialized parallel solvers", -1); }
 
@@ -243,7 +250,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
                 solvers[i]->attachClause( solvers[i]->learnts[j] );   // import the clause of solver 0 into solver i; does not add to the proof
             }
-            cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
+            if( verbosity > 1 ) cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
 	    solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
 
@@ -266,7 +273,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     } else {
         // already initialized -- simply print the summary
         for (int i = 0; i < solvers.size(); ++ i) {
-            cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
+            if( verbosity > 1 ) cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
         }
     }
     /*
@@ -310,7 +317,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (communicators[i]->isWinner() && communicators[i]->getReturnValue() != l_Undef) { winningSolver = i; break; }
     }
 
-    if (verbosity > 0) { cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") as " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl; }
+    if (verbosity > 0) { if( verbosity > 0 ) cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") as " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl; }
 
     // return model, if there is a winning thread!
     if (winningSolver < threads) {
@@ -334,28 +341,37 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             conflict.capacity(solvers[winningSolver]->conflict.size());
             for (int i = 0 ; i < solvers[winningSolver]->conflict.size(); ++ i) { conflict.push(solvers[winningSolver]->conflict[i]); }
         } else {
-            cerr << "c winning thread returned UNKNOWN" << endl;
+            if( verbosity > 0 ) cerr << "c winning thread returned UNKNOWN" << endl;
         }
     } else { ret = l_Undef; }
 
     if (verbosity > 0) {
-        cerr << "c thread  S  \t|\t R   \t|\t sRej \t|\t lRej \t|" << endl;
+        if( verbosity > 0 ) cerr << "c thread  S  \t|\t R   \t|\t sRej \t|\t lRej \t|\t vivLits \t|" << endl;
         for (int i = 0 ; i < threads; ++ i) {
-            cerr << "c " << i << " : " << communicators[i]->nrSendCls
+            if( verbosity > 0 ) cerr << "c " << i << " : " << communicators[i]->nrSendCls
                  <<  "  \t|\t" << communicators[i]->nrReceivedCls
                  <<  "  \t|\t" << communicators[i]->nrRejectSendSizeCls
-                 <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls <<  "  \t|"
+                 <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls 
+                 <<  "  \t|\t" << communicators[i]->vivifiedLiterals << "\t|"
                  << endl;
         }
-        cerr << "c thread  S-EE\t|\t R-EE\t|\t SUs\t|\t RUs\t" << endl;
+        if( verbosity > 0 ) cerr << "c thread  S-EE\t|\t R-EE\t|\t SUs\t|\t RUs\t" << endl;
         for (int i = 0 ; i < threads; ++ i) {
-            cerr << "c " << i << " : " << communicators[i]->nrSendEEs
+            if( verbosity > 0 ) cerr << "c " << i << " : " << communicators[i]->nrSendEEs
                  <<  "  \t|\t" << communicators[i]->nrReceivedEEs
                  <<  "  \t|\t" << communicators[i]->nrSendMultiUnits
                  <<  "  \t|\t" << communicators[i]->nrReceivedMultiUnits
                  << endl;
         }
-
+        if( verbosity > 0 ) cerr << "attempts:" << endl;
+        if( verbosity > 0 ) cerr << "c thread  SCls\t|\tS-EE\t|\tS-U\t|\tRec\t" << endl;
+        for (int i = 0 ; i < threads; ++ i) {
+            if( verbosity > 0 ) cerr << "c " << i << " : " << communicators[i]->nrSendCattempt
+                 <<  "  \t|\t" << communicators[i]->nrSendMattempt
+                 <<  "  \t|\t" << communicators[i]->nrSendEattempt
+                 <<  "  \t|\t" << communicators[i]->nrReceiveAttempts
+                 << endl;
+        }
     }
 
 
@@ -389,7 +405,7 @@ void PSolver::createThreadConfigs()
     };
 
     if (defaultConfig.size() > 0) {
-        cerr << "c setup pfolio with config " << defaultConfig << endl;
+        if( verbosity > 1 ) cerr << "c setup pfolio with config " << defaultConfig << endl;
     }
 
     for (int t = 0 ; t < threads; ++ t) {
@@ -428,7 +444,7 @@ void PSolver::createThreadConfigs()
         if (threads > 3) { configs[3].parseOptions("-K=0.7 -R=1.5 -var-decay-b=0.85 var-decay-e=0.85"); }
         // TODO: set more for higher numbers
     } else if ( defaultConfig == "FULLSHARE" ) {
-      cerr << "c setup FULLSHARE configurations" << endl;
+      if( verbosity > 1 ) cerr << "c setup FULLSHARE configurations" << endl;
       if (threads > 1) { 
 	ppconfigs[1].parseOptions("-enabled_cp3 -shareTime=2 -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000");
       }
@@ -444,7 +460,7 @@ void PSolver::createThreadConfigs()
 void PSolver::addInputClause_(vec< Lit >& ps)
 {
     if (opc != 0) {
-        // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+        // if( verbosity > 1 ) cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
         opc->addParsedclause(ps);
     }
     return;
@@ -494,6 +510,15 @@ bool PSolver::initializeThreads()
         communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
 	// could set receiveEquivalences here, but that should be more up to the actual solver configurations
 
+	// setup thread specific settings
+#warning have option for thread specific settings, or have local flags that can be controlled via the CoreConfig object
+	if( defaultConfig == "FULLSHARE" ) {
+	  if( i == 1 ) { // apply received clause vivification, and sent shrinked clauses back
+	    communicators[i]->vivifyReceivedClause=true;
+	    communicators[i]->resendVivified=true;
+	  }
+	}
+	
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);
 
@@ -619,7 +644,7 @@ void PSolver::kill()
         err = pthread_join(threadIDs[i], (void**)&status);
         if (err != 0) { cerr << "c joining a thread resulted in a failure with status " << *status << endl; }
     }
-    cerr << "c finished killing" << endl;
+    if( verbosity > 1 ) cerr << "c finished killing" << endl;
 }
 
 void* runWorkerSolver(void* data)
@@ -698,7 +723,7 @@ void PSolver::setDrupFile(FILE* drupFile)
 {
     // set file for the first solver
     if (!initialized && solvers.size() > 0) {
-        cerr << "c set DRUP file for solver 0" << endl;
+        if( verbosity > 1 ) cerr << "c set DRUP file for solver 0" << endl;
         solvers[0]->proofFile = drupFile;
     }
     // set own file handle to initialize the proof master afterwards
