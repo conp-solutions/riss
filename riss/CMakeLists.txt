@@ -35,6 +35,7 @@ set(LIB_SOURCES
 
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+add_library(${PROJECT_NAME}-lib-object OBJECT ${LIB_SOURCES})
 # This extra libraries are build for pcasso, because pcasso needs some
 # extensions to the riss source code
 add_library(${PROJECT_NAME}-pcasso-lib-static STATIC ${LIB_SOURCES})

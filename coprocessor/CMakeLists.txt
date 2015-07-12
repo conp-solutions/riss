@@ -42,6 +42,7 @@ set(LIB_SOURCES
 
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+add_library(${PROJECT_NAME}-lib-object OBJECT ${LIB_SOURCES})
 
 set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
                                                  OUTPUT_NAME "${PROJECT_NAME}")
