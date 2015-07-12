@@ -500,6 +500,9 @@ class Communicator
         , sendIncModel(true)           // allow sending with variables where the number of models potentially increased
         , sendDecModel(false)          // allow sending with variables where the number of models potentially deecreased
         , useDynamicLimits(true)       // update sharing limits dynamically
+	, sendEquivalences(true)       // share equivalence information
+        , receiveEqiuvalences(false)   // receive equivalence information
+	
         , nrSendCls(0)
         , nrRejectSendSizeCls(0)
         , nrRejectSendLbdCls(0)
@@ -707,6 +710,7 @@ class Communicator
     bool sendDecModel;            // allow sending with variables where the number of models potentially deecreased
     bool useDynamicLimits;        // update sharing limits dynamically
     bool sendEquivalences;        // share equivalence information
+    bool receiveEqiuvalences;     // receive equivalences
 
     unsigned nrSendCls;           // how many clauses have been send via this communicator
     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size

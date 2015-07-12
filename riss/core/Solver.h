@@ -1193,6 +1193,8 @@ protected:
         float currentSendSizeLimit;                /// dynamic limit to control send size
         float currentSendLbdLimit;                 /// dynamic limit to control send lbd
 
+        bool receiveEE;                            /// indicate that EE is received by this client (turn off, if no inprocessing)
+        
         int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
         int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
 
@@ -1208,7 +1210,7 @@ protected:
         bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
         bool useDynamicLimits;                     /// update sharing limits dynamically
 
-        CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), succesfullySend(0), succesfullyReceived(0),
+        CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
             sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
     } communicationClient;

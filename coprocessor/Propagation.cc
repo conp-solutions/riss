@@ -123,7 +123,6 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
 
     // tell the solvers in the portfolio setup that we found unit clauses
     if( lastSharedUnit < solver->trail.size() ) {
-      cerr << "c debug: send multi units: " << solver->trail.size() - lastSharedUnit << endl;
       data.sendUnits( solver->trail, lastSharedUnit, solver->trail.size() - lastSharedUnit );
     }
     

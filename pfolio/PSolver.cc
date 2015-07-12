@@ -429,9 +429,15 @@ void PSolver::createThreadConfigs()
         // TODO: set more for higher numbers
     } else if ( defaultConfig == "FULLSHARE" ) {
       cerr << "c setup FULLSHARE configurations" << endl;
-      if (threads > 1) { ppconfigs[1].parseOptions("-enabled_cp3 -cp3_stats -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000"); }
-      if (threads > 2) { ppconfigs[2].parseOptions("-enabled_cp3 -cp3_stats -probe -pr-probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000"); }
-      if (threads > 3) { ppconfigs[3].parseOptions("-enabled_cp3 -cp3_stats -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3 -inprocess -cp3_inp_cons=10000"); }
+      if (threads > 1) { 
+	ppconfigs[1].parseOptions("-enabled_cp3 -shareTime=2 -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000");
+      }
+      if (threads > 2) { 
+	ppconfigs[2].parseOptions("-enabled_cp3 -shareTime=2 -probe -pr-probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000");
+      }
+      if (threads > 3) { 
+	ppconfigs[3].parseOptions("-enabled_cp3 -shareTime=2 -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3 -inprocess -cp3_inp_cons=10000");
+      }
     }
 }
 
@@ -451,7 +457,7 @@ bool PSolver::initializeThreads()
     // get space for thread ids
     threadIDs = new pthread_t [threads];
 
-    data = new CommunicationData(16000);   // space for 16K clauses
+    data = new CommunicationData(privateConfig->opt_storageSize);   // space for clauses
 
 
     // the portfolio should print proofs
@@ -486,6 +492,7 @@ bool PSolver::initializeThreads()
         communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
         communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
         communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
+	// could set receiveEquivalences here, but that should be more up to the actual solver configurations
 
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);

@@ -29,6 +29,8 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
 //     , opt_firstPPconfig("PFOLIO - INIT", "pp1setup", "coprocessor configuration for first solver", 0, optionListPtr)
 
+    , opt_storageSize("PFOLIO - INIT", "storageSize", "Number of clauses in one ring buffer.", 16000, IntRange(1, INT32_MAX), optionListPtr)
+    
     , opt_share("SEND", "ps", "enable clause sharing for all clients", true, optionListPtr)
     , opt_receive("SEND", "pr", "enable receiving clauses for all clients", true, optionListPtr)
 
@@ -44,7 +46,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_doBumpClauseActivity("SEND", "bumpSentCA", "bump activity of received clauses", false, optionListPtr)
     , opt_sendIncModel("SEND", "sendIncModel", "allow sending with variables where the number of models potentially increased", true, optionListPtr)
     , opt_sendDecModel("SEND", "sendDecModel", "llow sending with variables where the number of models potentially deecreased", false, optionListPtr)
-    , opt_useDynamicLimits("SEND", "dynLimits", "update sharing limits dynamically", true, optionListPtr)
+    , opt_useDynamicLimits("SEND", "dynLimits", "update sharing limits dynamically", false, optionListPtr)
     , opt_sendEquivalences("SEND", "shareEE", "share equivalent literals", true, optionListPtr)
 
 {}

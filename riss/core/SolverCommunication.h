@@ -45,6 +45,7 @@ void Solver::setCommunication(Communicator* comm)
     communicationClient.sendIncModel = communication->sendIncModel; // allow sending with variables where the number of models potentially increased
     communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
     communicationClient.useDynamicLimits = communication->useDynamicLimits;
+    communicationClient.receiveEE = communication->receiveEqiuvalences;
 }
 
 inline
@@ -179,17 +180,22 @@ if (! communication->sendEquivalences && equivalences) {
     for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
         const Var v = var((*toSend)[i]);   // get variable to analyze
         rejectSend = (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
-        if (multiUnits || equivalences) { continue; } // jump over this literal, so that it is not shared
-        else {
-            if (rejectSend) { break; }
-            else { (*toSend)[keep++] = (*toSend)[i]; } // keep literal
-        }
+	
+	if (!rejectSend) { (*toSend)[keep++] = (*toSend)[i]; } // keep literal
+	else { // otherwise check how to proceed with variable that is 
+	  if (multiUnits || equivalences) { continue; } // jump over this literal, so that it is not shared
+	  else break;   // do not share a clause with that literal
+	}
 #warning: check here, whether the clause contains a variable that is too high, and hence should not be sent (could be done via above flags)
     }
-    if (rejectSend && !multiUnits && !equivalences) { return 0; }  // do nothing here, as there are variables in the clause that should not be sent
+    if (rejectSend && !multiUnits && !equivalences) { 
+      return 0; 
+    }  // do nothing here, as there are variables in the clause that should not be sent
     else {
-        if (keep == 1 && equivalences) { return 0; }      // do not share equivalence of one literal
-        else if (keep == 0 && multiUnits) { return 0; }   // do not share "no" units
+        if (keep <= 1 && equivalences) { return 0; }      // do not share equivalence of one literal
+        else if (keep == 0 && multiUnits) {    // do not share "no" units
+	  return 0; 
+	} 
     }
 
     toSendSize = keep; // set to number of elements that can be shared
@@ -222,8 +228,9 @@ if (! communication->sendEquivalences && equivalences) {
         }
     }
 
-    communication->nrSendMultiUnits = (multiUnits ? communication->nrSendMultiUnits + 1 : communication->nrSendMultiUnits );
-    communication->nrSendEEs = (equivalences ? communication->nrSendEEs + 1 : communication->nrSendEEs );
+    communication->nrSendMultiUnits = (multiUnits ? communication->nrSendMultiUnits + toSendSize : communication->nrSendMultiUnits );
+    communication->nrSendEEs = (equivalences ? communication->nrSendEEs + toSendSize : communication->nrSendEEs );
+    
     
     #ifdef PCASSO
     VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
@@ -279,16 +286,21 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 if (propagate() != CRef_Undef) { return 1; }  // report conflict, if necessary
             }
         }
-	communication->nrReceivedMultiUnits ++;
+	communication->nrReceivedMultiUnits += communicationClient.receivedUnits.size();
     } // finished processing units
 
     if (communicationClient.receivedEquivalences.size() > 0) {  // process all equivalent literals
+      if( communicationClient.receiveEE ) {
 #ifdef PCASSO
         eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences,  communicationClient.eeDependencies, false);  // use fast-import for pcasso, do not share again
 #else
         eqInfo.addEquivalenceClass(communicationClient.receivedEquivalences, false);  // tell object about these equivalences, do not share again, ignore setting a dependency
 #endif
-	communication->nrReceivedEEs ++;
+	communication->nrReceivedEEs += communicationClient.receivedEquivalences.size();
+      } else {  // do not receive EE, hence, simply clear the vectors again
+	communicationClient.receivedEquivalences.clear();
+	communicationClient.eeDependencies.clear();
+      }
     }
 
     for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {

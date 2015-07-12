@@ -4071,6 +4071,7 @@ lbool Solver::inprocess(lbool status)
         // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
         if (coprocessor != 0 && useCoprocessorIP) {
             if (coprocessor->wantsToInprocess()) {
+		communicationClient.receiveEE = true; // enable receive EE after first inprocessing (as there will be another one)
                 inprocessCalls ++;
                 inprocessTime.start();
                 status = coprocessor->inprocess();
