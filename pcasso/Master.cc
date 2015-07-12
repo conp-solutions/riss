@@ -84,7 +84,10 @@ static Int64Option   MSverbosity("SPLITTER", "verbosity", "verbosity of the mast
 static BoolOption    Portfolio("SPLITTER", "portfolio",  "Portfolio mode.\n", false);
 static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX));     // depends on option above!
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
-static BoolOption    priss("SPLITTER", "use-priss",  "Uses Priss as instance solver\n", false);
+
+// Options for Priss
+static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver\n", false);
+static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss threads))\n", 2, IntRange(1, 64));
 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
@@ -732,8 +735,7 @@ Master::solveInstance(void* data)
     if (!priss) {
         solver = new SolverRiss(&defaultSolverConfig);
     } else {
-        // TODO: how many threads for priss? commandline option?
-        solver = new SolverPriss(&defaultSolverConfig, 2);
+        solver = new SolverPriss(&defaultSolverConfig, priss_threads);
     }
     assert(tData.solver == nullptr);
     tData.solver = solver;
