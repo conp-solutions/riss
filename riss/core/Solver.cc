@@ -251,6 +251,11 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     searchconfiguration.phase_saving = config.opt_phase_saving;
     searchconfiguration.restarts_type = config.opt_restarts_type;
 
+    // communication
+    communicationClient.receiveEE      = config.opt_receiveEquivalences;
+    communicationClient.refineReceived = config.opt_refineReceivedClauses;
+    communicationClient.resendRefined  = config.opt_resendRefinedClauses;
+    
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
 

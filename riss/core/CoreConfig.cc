@@ -97,6 +97,10 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_var_act_bump_mode       (_cs,  "varActB",                "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2),                 optionListPtr),
     opt_cls_act_bump_mode       (_cs,  "clsActB",                "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
 
+    opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
+    opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
+    opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
+    
     opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
 
     opt_probing_step_width  ("MiPiSAT",     "prob-step-width",   "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX),              optionListPtr),

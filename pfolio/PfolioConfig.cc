@@ -27,7 +27,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
 
     , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64), optionListPtr)
     , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
-//     , opt_firstPPconfig("PFOLIO - INIT", "pp1setup", "coprocessor configuration for first solver", 0, optionListPtr)
+    , opt_incarnationSetups("PFOLIO - INIT", "pIncSetup", "incarnation configurations [N]confign[N+1]configN+1", 0, optionListPtr)
 
     , opt_storageSize("PFOLIO - INIT", "storageSize", "Number of clauses in one ring buffer.", 16000, IntRange(1, INT32_MAX), optionListPtr)
     

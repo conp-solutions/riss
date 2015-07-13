@@ -51,6 +51,11 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     ppconfigs = new CP3Config         [ threads ];
     communicators = new Communicator* [ threads ];
     
+    incarnationConfigs.resize( threads ); // add a string for each configuration
+    if( (const char*)pfolioConfig.opt_incarnationSetups != nullptr ) {
+      parseConfigurations( string(pfolioConfig.opt_incarnationSetups) );
+    }
+    
     // set preprocessor, if there is one selected
 //     if( (const char*)pfolioConfig.opt_firstPPconfig != 0 ) ppconfigs[0].addPreset(string(pfolioConfig.opt_firstPPconfig));
     
@@ -70,6 +75,36 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     solvers.push(new Solver(&configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
+
+void PSolver::parseConfigurations(const string& combinedConfigurations)
+{
+  assert( threads == incarnationConfigs.size() && "have enough space for the threads already" );
+  
+  string workingCopy = combinedConfigurations;
+  int pos = 0;
+  do { // there might be more
+    pos = workingCopy.find("[" );    // find opening bracket
+    if( pos == string::npos ) break; // no more opening bracket
+    workingCopy = workingCopy.substr( pos + 1 );   // next should be the number of the thread
+
+    int closePos = workingCopy.find("]" );
+    if( closePos == string::npos ) break; // no more opening bracket
+    
+    int number = -1;
+    stringstream s;
+    s << workingCopy.substr(0, closePos); // this is the part where the number is located
+    if( s.str().empty() ) break; // no valid number
+    s >> number;                 // extract the number
+    if( number < 1 || number > threads ) continue; // invalid thread number
+    
+    pos = workingCopy.find("[", closePos + 1); //
+    int endPos = ( pos == string::npos ) ? workingCopy.size() : pos; // point to end of the string
+    
+    incarnationConfigs[ number - 1 ] = workingCopy.substr(closePos+1, pos-2 );
+    
+  } while ( pos != string::npos ) ;
+}
+
 
 PSolver::~PSolver()
 {
@@ -414,8 +449,8 @@ void PSolver::createThreadConfigs()
 
     if (defaultConfig.size() == 0) {
         for (int t = 0 ; t < threads; ++ t) {
-            configs[t].setPreset(Configs[t]);
-            // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
+	  if( incarnationConfigs[t].size() == 0 ) configs[t].setPreset(Configs[t]);  // assign preset, if no cmdline was specified
+	  else configs[t].setPreset(incarnationConfigs[t]);                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "BMC") {
         // thread 1 runs with empty (default) configurations
@@ -514,8 +549,7 @@ bool PSolver::initializeThreads()
 #warning have option for thread specific settings, or have local flags that can be controlled via the CoreConfig object
 	if( defaultConfig == "FULLSHARE" ) {
 	  if( i == 1 ) { // apply received clause vivification, and sent shrinked clauses back
-	    communicators[i]->vivifyReceivedClause=true;
-	    communicators[i]->resendVivified=true;
+
 	  }
 	}
 	

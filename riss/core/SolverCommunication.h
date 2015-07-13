@@ -339,9 +339,12 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
             }
             // TODO: here could be more filters for received clauses to be rejected (e.g. PSM?!)
             if (!c.mark()) {
+	      // set isAnalzyed and isPropagated, such that this clause is not sent again
+	      c.setPropagated();
+	      c.setUsedInAnalyze();
 	      
 	      // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
-		    if( c.size() > 1 && communication->vivifyReceivedClause ) {
+		    if( c.size() > 1 && communicationClient.refineReceived ) {
 		      if( ! reverseMinimization.enabled ) { // enable reverseMinimization to be able to use it
 			reverseMinimization.enabled = true;
 			reverseMinimization.assigns.growTo(nVars()+ 1, l_Undef); // grow assignment
@@ -361,7 +364,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 		      shrinkedClause = reverseLearntClause( ca[communicationClient.receiveClauses[i]], lbd, dependency);
 #endif
 		      communication->vivifiedLiterals += beforeSize - ca[communicationClient.receiveClauses[i]].size();
-		      if( shrinkedClause && communication->resendVivified ) { // re-share clause (should be performed only by one thread per group
+		      if( shrinkedClause && communicationClient.resendRefined ) { // re-share clause (should be performed only by one thread per group
 #ifdef PCASSO
 			updateSleep( &(ca[communicationClient.receiveClauses[i]]), ca[communicationClient.receiveClauses[i]].size(), dependency );
 #else

@@ -1196,6 +1196,8 @@ protected:
         float currentSendLbdLimit;                 /// dynamic limit to control send lbd
 
         bool receiveEE;                            /// indicate that EE is received by this client (turn off, if no inprocessing)
+        bool refineReceived;                       /// apply vivification to received clauses
+	bool resendRefined;                        /// send refined received clauses again
         
         int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
         int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted

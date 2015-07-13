@@ -42,8 +42,9 @@ class PSolver
     ProofMaster* proofMaster;     // in a portfolio setup, use the proof master for generating DRUP proofs
     OnlineProofChecker* opc;      // check the proof on the fly during its creation
 
-    std::string defaultConfig;            // name of the configuration that should be used
-    std::string defaultSimplifierConfig;  // name of the configuration that should be used by the global simplification
+    std::string defaultConfig;                     // name of the configuration that should be used
+    std::string defaultSimplifierConfig;           // name of the configuration that should be used by the global simplification
+    std::vector< std::string > incarnationConfigs; // strings of incarnation configurations
 
     // Output for DRUP unsat proof
     FILE* drupProofFile;
@@ -125,6 +126,12 @@ class PSolver
 
     void budgetOff(); // reset the search bugdet
 
+    /** parse the combined configurations 
+     * Format: [N]configN[N+1]configN+1... 
+     * and split them into the data strcuture incarnationConfigs 
+     */
+    void parseConfigurations( const std::string& combinedConfigurations );
+    
   protected:
 
     /** initialize all the thread configurations

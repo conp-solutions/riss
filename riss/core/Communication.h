@@ -511,8 +511,6 @@ class Communicator
 	, sendEquivalences(true)       // share equivalence information
         , receiveEqiuvalences(false)   // receive equivalence information
 	
-	, vivifyReceivedClause(false)
-        , resendVivified(false)
 	, vivifiedLiterals(0)
 	
         , nrSendCls(0)
@@ -732,8 +730,6 @@ class Communicator
     bool sendEquivalences;        // share equivalence information
     bool receiveEqiuvalences;     // receive equivalences
 
-    bool vivifyReceivedClause;    // apply vivification to received clauses?
-    bool resendVivified;          // send shrinked clause back
     int vivifiedLiterals;         // number of literals that have been eliminated by vivification of received clause
     
     unsigned nrSendCls;           // how many clauses have been send via this communicator
