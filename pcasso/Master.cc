@@ -86,11 +86,19 @@ static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
 static BoolOption    priss("SPLITTER", "use-priss",  "Uses Priss as instance solver\n", false);
 
-static vector<unsigned short int> hardwareCores; // set of available hardware cores
+static StringOption prissConfig("WORKER - CONFIG", "priss-config", "config string used to initialize priss incarnations", 0);
+static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string used to initialize riss incarnations", 0);
 
-CoreConfig Master::defaultSolverConfig;
+static vector<unsigned short int> hardwareCores; // set of available hardware cores, used to pin the threads to cores
+
+// instantiate static members of the class
+
 
 Master::Master(Parameter p) :
+
+    defaultSolverConfig((const char*)prissConfig == 0 ? "" : prissConfig),
+    defaultPfolioConfig((const char*)rissConfig == 0 ? ""  : rissConfig),
+
     maxVar(0),
     model(0),
     param(p),
@@ -730,10 +738,13 @@ Master::solveInstance(void* data)
     // create a solver object
     InstanceSolver* solver;
     if (!priss) {
-        solver = new SolverRiss(&defaultSolverConfig);
+        solver = new SolverRiss(& master.defaultSolverConfig);
     } else {
         // TODO: how many threads for priss? commandline option?
-        solver = new SolverPriss(&defaultSolverConfig, 2);
+//         @Franzi: Norbert: yes! and a way to control it per level
+//         either: always a fixed number, or:
+//         X on level 0, and X/2 on all the other levels, calculate from number of threads given to pcasso, and the chosen policy
+        solver = new SolverPriss(& master.defaultPfolioConfig, 2);
     }
     assert(tData.solver == nullptr);
     tData.solver = solver;
@@ -946,11 +957,11 @@ Master::splitInstance(void* data)
     // create a solver object
     SplitterSolver* S;
     if (split_mode == 1) {
-        S = new VSIDSSplitting(&defaultSolverConfig);
+        S = new VSIDSSplitting(& master.defaultSolverConfig);
         //((VSIDSSplitting *)S)->setTimeOut(split_timeout);
     }
     if (split_mode == 2) {
-        S = new LookaheadSplitting(&defaultSolverConfig);
+        S = new LookaheadSplitting(& master.defaultSolverConfig);
         ((LookaheadSplitting *)S)->setTimeOut(split_timeout);
     }
     tData.solver = S;

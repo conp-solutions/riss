@@ -25,6 +25,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdlib.h>
 #include <stdio.h>
 
+#if __cplusplus <= 199711L
+    // be backward compatible, and define pointer to 0 as follows
+    #define nullptr 0
+#endif
+
 namespace Riss
 {
 

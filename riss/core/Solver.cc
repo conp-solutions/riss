@@ -78,6 +78,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , var_inc(1)
     , watches(WatcherDeleted(ca))
 //  , watchesBin            (WatcherDeleted(ca))
+    , eqInfo(this)
 
     , reverseMinimization(config.opt_use_reverse_minimization)  // reverse minimization hack
 
@@ -203,8 +204,6 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , activityBasedRemoval(config.opt_act_based)
     , lbd_core_threshold(config.opt_lbd_core_thresh)
     , learnts_reduce_fraction(config.opt_l_red_frac)
-
-
     // bi-asserting learned clauses
     , isBiAsserting(false)
     , allowBiAsserting(false)
@@ -222,20 +221,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , useCoprocessorIP(config.opt_usePPip)
 
     // communication to other solvers that might be run in parallel
-    , communication(0)
-    , currentTries(0)
-    , receiveEvery(0)
-    , currentSendSizeLimit(0)
-    , currentSendLbdLimit(0)
-    , succesfullySend(0)
-    , succesfullyReceived(0)
-    , sendSize(0)
-    , sendLbd(0)
-    , sendMaxSize(0)
-    , sendMaxLbd(0)
-    , sizeChange(0)
-    , lbdChange(0)
-    , sendRatio(0)
+    , sharingTimePoint(config.sharingType)
 {
 
     // Parameters (user settable):
@@ -270,6 +256,12 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     searchconfiguration.phase_saving = config.opt_phase_saving;
     searchconfiguration.restarts_type = config.opt_restarts_type;
 
+    // communication
+    communicationClient.receiveEE      = config.opt_receiveEquivalences;
+    communicationClient.refineReceived = config.opt_refineReceivedClauses;
+    communicationClient.resendRefined  = config.opt_resendRefinedClauses;
+    communicationClient.doReceive      = config.opt_receiveData;
+
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
 
@@ -286,6 +278,7 @@ Solver::~Solver()
 {
     if (big != 0)         { big->BIG::~BIG(); delete big; big = 0; }   // clean up!
     if (coprocessor != 0) { delete coprocessor; coprocessor = 0; }
+    if (deleteConfig) { delete privateConfig; }
 }
 
 
@@ -302,7 +295,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     varFlags. push(VarFlags(sign));
 
 //     assigns  .push(l_Undef);
-    vardata  .push(mkVarData(CRef_Undef, 0));
+    vardata  .push(mkVarData(CRef_Undef, -1));
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
 //     seen     .push(0);
@@ -348,7 +341,7 @@ void Solver::reserveVars(Var v)
 
     // get space for reverse data structures watches
     if (reverseMinimization.enabled) {
-        reverseMinimization.assigns.push(l_Undef);
+        reverseMinimization.assigns.capacity(v + 1);
         reverseMinimization.trail.capacity(v + 1);
     }
 
@@ -358,13 +351,13 @@ void Solver::reserveVars(Var v)
 
 
 
-bool Solver::addClause_(vec<Lit>& ps)
+bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
 {
     assert(decisionLevel() == 0);
     if (!ok) { return false; }
 
     // Check if clause is satisfied and remove false/duplicate literals:
-    sort(ps);
+    if (! noRedundancyCheck) { sort(ps); }  // sort only, if necessary
 
     // analyze for DRUP - add if necessary!
     Lit p; int i, j, flag = 0;
@@ -380,10 +373,10 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     if (!config.opt_hpushUnit) {   // do not analyzes clauses for being satisfied or simplified
         for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-            if (value(ps[i]) == l_True || ps[i] == ~p) {
+            if (value(ps[i]) == l_True || ps[i] == ~p) { // noRedundancyCheck breaks the second property, which is ok, as it also not fails
                 return true;
             } else if (value(ps[i]) != l_False && ps[i] != p) {
-                ps[j++] = p = ps[i];
+                ps[j++] = p = ps[i]; // assigning p is not relevant for noRedundancyCheck
             }
         ps.shrink_(i - j);
     }
@@ -534,11 +527,11 @@ bool Solver::satisfied(const Clause& c) const
 /******************************************************************
  * Minimisation with binary reolution
  ******************************************************************/
-bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned int& lbd)
+bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned int& lbd, unsigned& dependencyLevel)
 {
 
     // Find the LBD measure
-    // const unsigned int lbd = computeLBD(out_learnt);
+    // const unsigned int lbd = computeLBD(out_learnt,out_learnt.size());
     const Lit p = ~out_learnt[0];
 
     if (lbd <= searchconfiguration.lbLBDMinimizingClause) {
@@ -552,8 +545,8 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
             if (lbd_marker.isCurrentStep(var(imp)) && value(imp) == l_True) {
                 nb++;
                 lbd_marker.reset(var(imp));
-                #ifdef CLS_EXTRA_INFO
-                extraInfo = extraInfo >= ca[wbin[k].cref()].extraInformation() ? extraInfo : ca[wbin[k].cref()].extraInformation();
+                #ifdef PCASSO
+                dependencyLevel = dependencyLevel >= ca[wbin[k].cref()].getPTLevel() ? dependencyLevel : ca[wbin[k].cref()].getPTLevel();
                 #endif
             }
         }
@@ -578,8 +571,11 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
 /******************************************************************
  * Minimisation with binary implication graph
  ******************************************************************/
-bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd)
+bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& dependencyLevel)
 {
+    #ifdef PCASSO
+#warning implement dependencyLevel correctly!
+    #endif
     if (lbd <= searchconfiguration.uhle_minimizing_lbd) { // should not touch the very first literal!
         const Lit p = learned_clause[0]; // this literal cannot be removed!
         const uint32_t cs = learned_clause.size(); // store the size of the initial clause
@@ -667,8 +663,11 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd)
 
 /** check whether there is an AND-gate that can be used to simplify the given clause
  */
-bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd)
+bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& dependencyLevel)
 {
+    #ifdef PCASSO
+#warning implement dependencyLevel correctly!
+    #endif
     if (lbd <= config.erRewrite_lbd) {
         if (config.opt_rer_extractGates || (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2)) {
             if ((config.opt_rer_rewriteNew && !config.opt_rer_as_learned)
@@ -791,7 +790,7 @@ Lit Solver::pickBranchLit()
 |
 |________________________________________________________________________________________________@*/
 
-int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo)
+int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int& lbd,  unsigned& dependencyLevel)
 {
     isBiAsserting = false; // yet, the currently learned clause is not bi-asserting
     int pathC = 0;
@@ -826,6 +825,15 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             c[0] =  c[1], c[1] = tmp;
         }
 
+        if (!c.wasUsedInAnalyze()) {  // share clauses only, if they are used during resolutions in conflict analysis
+            #ifdef PCASSO
+            updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
+            #else
+            updateSleep(&c, c.size());
+            #endif
+            c.setUsedInAnalyze();
+        }
+
         resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 
         if (!foundFirstLearnedClause) {  // dynamic adoption only until first learned clause!
@@ -836,7 +844,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
             if (config.opt_update_lbd == 1) {    // update lbd during analysis, if allowed
                 if (c.learnt()  && c.lbd() > 2) {
-                    unsigned int nblevels = computeLBD(c);
+                    unsigned int nblevels = computeLBD(c, c.size());
                     if (nblevels + 1 < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
                         if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);
@@ -857,8 +865,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             }
         }
 
-        #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
-        extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
+        #ifdef PCASSO // if resolution is done, then take also care of the participating clause!
+        dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
         #endif
 
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++) {
@@ -978,7 +986,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     DOUT(if (config.opt_rer_debug) cerr << "c learned clause (before mini): " << out_learnt << endl;);
 
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
-    lbd = computeLBD(out_learnt);
+    lbd = computeLBD(out_learnt, out_learnt.size());
     bool recomputeLBD = false; // current lbd is valid
     if (decisionLevel() > 0 && out_learnt.size() > decisionLevel() && out_learnt.size() > config.opt_learnDecMinSize && config.opt_learnDecPrecent != -1) {  // is it worth to check for decisionClause?
         if (lbd > (config.opt_learnDecPrecent * decisionLevel() + 99) / 100) {
@@ -1006,7 +1014,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         // Simplify conflict clause:
         //
         int i, j;
-        uint64_t minimize_extra_info = extraInfo;
+        uint64_t minimize_dependencyLevel = dependencyLevel;
         out_learnt.copyTo(analyze_toclear);
         if (searchconfiguration.ccmin_mode == 2) {
             uint32_t abstract_level = 0;
@@ -1016,11 +1024,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
 
             for (i = j = 1; i < out_learnt.size(); i++) {
-                minimize_extra_info = extraInfo;
+                minimize_dependencyLevel = dependencyLevel;
                 if (reason(var(out_learnt[i])) == CRef_Undef) {
                     out_learnt[j++] = out_learnt[i]; // keep, since we cannot resolve on decisino literals
-                } else if (!litRedundant(out_learnt[i], abstract_level, extraInfo)) {
-                    extraInfo = minimize_extra_info; // not minimized, thus, keep the old value
+                } else if (!litRedundant(out_learnt[i], abstract_level, dependencyLevel)) {
+                    dependencyLevel = minimize_dependencyLevel; // not minimized, thus, keep the old value
                     out_learnt[j++] = out_learnt[i]; // keep, since removing the literal would probably introduce new levels
                 }
             }
@@ -1040,9 +1048,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                             break;
                         }
                     }
-                    #ifdef CLS_EXTRA_INFO
+                    #ifdef PCASSO
                     if (k == c.size()) {
-                        extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
+                        dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
                     }
                     #endif
                 }
@@ -1065,24 +1073,24 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
              */
 
         if (out_learnt.size() <= searchconfiguration.lbSizeMinimizingClause) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
-            recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd); // code in this method should execute below code until determining correct backtrack level
+            if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd, dependencyLevel); // code in this method should execute below code until determining correct backtrack level
         }
 
         if (out_learnt.size() <= searchconfiguration.uhle_minimizing_size) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
-            recomputeLBD = searchUHLE(out_learnt, lbd);
+            if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            recomputeLBD = searchUHLE(out_learnt, lbd, dependencyLevel);
         }
 
         if (searchconfiguration.use_reverse_minimization && out_learnt.size() <= searchconfiguration.lbSizeReverseClause) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
-            recomputeLBD = reverseLearntClause(out_learnt, lbd);
+            if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            recomputeLBD = reverseLearntClause(out_learnt, lbd, dependencyLevel);
         }
 
         // rewrite clause only, if one of the two systems added information
         if (out_learnt.size() <= 0) {   // FIXME not used yet
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
-            recomputeLBD = erRewrite(out_learnt, lbd);
+            if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            recomputeLBD = erRewrite(out_learnt, lbd, dependencyLevel);
         }
     } // end working on usual learnt clause (minimize etc.)
 
@@ -1129,7 +1137,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     assert(out_btlevel < decisionLevel() && "there should be some backjumping");
 
     // Compute LBD, if the current value is not the right value
-    if (recomputeLBD) { lbd = computeLBD(out_learnt); }
+    if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }
+
     lbd = isBiAsserting ? lbd + 1 : lbd; // for bi-asserting clauses the LBD has to be one larger (approximation), because it is not known whether the one literal would glue the other one
 
     #ifdef UPDATEVARACTIVITY
@@ -1158,9 +1167,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         varBumpActivity(varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd));
     }
 
-    #ifdef CLS_EXTRA_INFO // current version of extra info measures the height of the proof. height of new clause is max(resolvents)+1
-    extraInfo ++;
-    #endif
     return 0;
 
 }
@@ -1168,8 +1174,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
 // Check if 'p' can be removed. 'abstract_levels' is used to abort early if the algorithm is
 // visiting literals at levels that cannot be removed later.
-bool Solver::litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo)
+bool Solver::litRedundant(Riss::Lit p, uint32_t abstract_levels, unsigned int& dependencyLevel)
 {
+#warning: implement dependencyLevel properly into analysis!
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0) {
@@ -1180,8 +1187,8 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo)
             Lit tmp = c[0];
             c[0] =  c[1], c[1] = tmp;
         }
-        #ifdef CLS_EXTRA_INFO // if minimization is done, then take also care of the participating clause!
-        extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
+        #ifdef PCASSO // if minimization is done, then take also care of the participating clause!
+        dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
         #endif
         for (int i = 1; i < c.size(); i++) {
             Lit p  = c[i];
@@ -1204,123 +1211,6 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo)
     return true;
 }
 
-
-bool Solver::reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd)
-{
-    if (!reverseMinimization.enabled || lbd > searchconfiguration.lbLBDReverseClause) { return false; }
-
-    // sort literal in the clause
-    sort(learned_clause, TrailPosition_Gt(vardata));
-    assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
-
-    reverseMinimization.attempts ++;
-
-    // update minimization trail with top level units (if there have been new ones)
-    for (int i = reverseMinimization.trail.size() ; i < trail_lim[0]; ++i) {
-        reverseMinimization.uncheckedEnqueue(trail[i]);
-    }
-
-    // perform vivification
-    int keptLits = 0;
-    for (int i = 0; i < learned_clause.size(); ++ i) {
-        const Lit l = learned_clause[i];
-        if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
-            learned_clause[keptLits++ ] = l; // keep literal
-        } else if (reverseMinimization.value(l) == l_True) {
-            learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
-            break;
-        } else {
-            assert(reverseMinimization.value(l) == l_False && "there only exists three values");
-            // continue, as this clause is minimized
-            reverseMinimization.revMindroppedLiterals ++;
-            continue;
-        }
-
-        // propagate the current literal
-        int trailHead = trail.size();
-        reverseMinimization.uncheckedEnqueue(~l);
-
-        CRef    confl     = CRef_Undef;
-        watches.cleanAll();
-        while (trailHead < reverseMinimization.trail.size()) {
-            const Lit p   = reverseMinimization.trail[trailHead++];     // 'p' is enqueued fact to propagate.
-            vec<Watcher>&  ws  = watches[p];                // do not modify watch list!
-            Watcher        *i, *end;
-            // propagate longer clauses here!
-            for (i = (Watcher*)ws, end = i + ws.size();  i != end; i++) {
-                if (i->isBinary()) {   // handle binary clauses as usual (no write access necessary!)
-                    const Lit& imp = i->blocker();
-                    if (reverseMinimization.value(imp) == l_False) {
-                        confl = i->cref();              // store the conflict
-                        trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
-                        break;
-                    }
-                    continue;
-                }
-                // Try to avoid inspecting the clause:
-                const Lit blocker = i->blocker();
-                if (reverseMinimization.value(blocker) == l_True) { // keep binary clauses, and clauses where the blocking literal is satisfied
-                    continue;
-                }
-
-                // Make sure the false literal is data[1]:
-                const CRef cr = i->cref();
-                const Clause&  c = ca[cr];
-
-                // Look for new watch:
-                Lit impliedLit = lit_Undef;
-                for (int k = 0; k < c.size(); k++) {
-                    if (reverseMinimization.value(c[k]) == l_Undef) {
-                        if (impliedLit != lit_Undef) {
-                            impliedLit = c[k];  // if there is exactly one left
-                        } else {
-                            impliedLit == lit_Error;                   // there are multiple left
-                            break;
-                        }
-                    } else if (reverseMinimization.value(c[k]) == l_True) {
-                        impliedLit = lit_Error;
-                        break;
-                    }
-                }
-
-                if (impliedLit != lit_Error) {    // the clause is unit or conflict
-                    if (impliedLit == lit_Undef) {  // conflict
-                        confl = i->cref();
-                        trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
-                    } else {
-                        reverseMinimization.uncheckedEnqueue(impliedLit);
-                    }
-                }
-            NextClause:;
-            }
-
-        }
-
-        // found a conflict during reverse propagation
-        if (confl != CRef_Undef) {
-            if (i + 1 < learned_clause.size()) { reverseMinimization.revMinConflicts ++; } // count cases when the technique was succesful
-            break;
-        }
-
-    } // end of looping over all literals of the clause
-
-    // perform backtracking
-    for (int i = trail_lim[0]; i < reverseMinimization.trail.size(); ++ i) {
-        reverseMinimization.assigns[ var(reverseMinimization.trail[i]) ] = l_Undef;
-    }
-    reverseMinimization.trail.shrink(reverseMinimization.trail.size() - trail_lim[0]);
-
-    // remove all redundant literals
-    if (keptLits < learned_clause.size()) {
-        reverseMinimization.succesfulReverseMinimizations ++;
-        reverseMinimization.revMincutOffLiterals += (learned_clause.size() - keptLits);
-        assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
-        learned_clause.shrink(learned_clause.size() - keptLits);
-        assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
-        return true;
-    }
-    return false; // clause was not changed, LBD should not be recomputed
-}
 
 /*_________________________________________________________________________________________________
 |
@@ -1367,7 +1257,7 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 }
 
 
-void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uint64_t extraInfo)
+void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const unsigned dependencyLevel)
 {
     /*
      *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
@@ -1486,7 +1376,14 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
+            if (!c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
+                #ifdef PCASSO
+                updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
+                #else
+                updateSleep(&c, c.size());  // shorter clauses are shared immediately!
+                #endif
+                c.setPropagated();
+            }
             if (value(first) == l_False) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
@@ -1501,7 +1398,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                 // if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
 
                 if (c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
-                    int newLbd = computeLBD(c);
+                    int newLbd = computeLBD(c, c.size());
                     if (newLbd < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
                         if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);   // LBD of clause improved, so that its not considered for deletion
@@ -1956,15 +1853,12 @@ lbool Solver::search(int nof_conflicts)
             learnt_clause.clear();
             if (config.opt_biAsserting && lastBiAsserting + config.opt_biAssiMaxEvery <= conflicts) { allowBiAsserting = true; }  // use bi-asserting only once in a while!
 
-            uint64_t extraInfo = 0;
+            unsigned dependencyLevel = 0;
             analysisTime.start();
             // perform learnt clause derivation
-            int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, extraInfo);
+            int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, dependencyLevel);
             analysisTime.stop();
             allowBiAsserting = false;
-            #ifdef CLS_EXTRA_INFO
-            maxResHeight = extraInfo;
-            #endif
 
             assert((!isBiAsserting || ret == 0) && "cannot be multi unit and bi asserting at the same time");
 
@@ -1977,9 +1871,9 @@ lbool Solver::search(int nof_conflicts)
             // add the new clause(s) to the solver, perform more analysis on them
             if (ret > 0) {   // multiple learned clauses
                 if (l_False == handleMultipleUnits(learnt_clause)) { return l_False; }
-                updateSleep(&learnt_clause, true);   // share multiple unit clauses!
+                updateSleep(&learnt_clause, learnt_clause.size(), true);   // share multiple unit clauses!
             } else { // treat usual learned clause!
-                if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, extraInfo)) { return l_False; }
+                if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, dependencyLevel)) { return l_False; }
             }
 
             varDecayActivity();
@@ -1999,7 +1893,6 @@ lbool Solver::search(int nof_conflicts)
                 if (verbosity > 1) { fprintf(stderr, "c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel()); }
                 return l_False;
             }
-
             if (decisionLevel() == 0) {
                 simplifyIterations ++;
                 if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still, and we are on level 0 (collected before)
@@ -2008,7 +1901,7 @@ lbool Solver::search(int nof_conflicts)
             if (!withinBudget()) { return l_Undef; }   // check whether we can still do conflicts
 
             // check for communication to the outside (for example in the portfolio solver)
-            int result = updateSleep(0);
+            int result = updateSleep((vec<Lit>*)0x0, 0, 0);  // just receive
             if (-1 == result) {
                 // interrupt via communication
                 return l_Undef;
@@ -2734,10 +2627,54 @@ void Solver::applyConfiguration()
     sumLBD = 0;
 }
 
+void Solver::dumpAndExit(const char* filename)
+{
+    FILE* f = fopen(filename, "w");
+    if (f == nullptr) {
+        fprintf(stderr, "could not open file %s\n", filename), exit(1);
+    }
+    fprintf(f, "c CNF dumped by Riss\n");
+
+    if (!okay()) {     // unsat
+        fprintf(f, "p cnf 0 1\n0\n"); // print the empty clause
+        return;
+    }
+
+    // count level 0 assignments
+    int level0 = 0;
+    for (int i = 0; i < trail.size(); ++i) {
+        if (level(var(trail[i])) == 0) {
+            ++level0;
+        } else { break; }
+    }
+    // print header, if activated
+    fprintf(f, "p cnf %u %i\n", (nVars()) , level0 + clauses.size());
+
+    // print assignments
+    for (int i = 0; i < trail.size(); ++i) {
+        if (level(var(trail[i])) == 0) {
+            stringstream s;
+            s << trail[i];
+            fprintf(f, "%s 0\n", s.str().c_str());
+        } else { break; } // stop after first level
+    }
+    // print clauses
+    for (int i = 0; i < clauses.size(); ++i) {
+        stringstream s;
+        s << ca[ clauses[i] ];
+        fprintf(f, "%s 0\n", s.str().c_str());
+    }
+    fclose(f);
+    exit(1);
+}
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    // print formula of the call?
+    if ((const char*)config.printOnSolveTo != 0) {
+        dumpAndExit((const char*)config.printOnSolveTo);
+    }
     totalTime.start();
     startedSolving = true;
     model.clear();
@@ -2752,10 +2689,6 @@ lbool Solver::solve_()
 
 
     printHeader();
-
-    if (decisionLevel() == 0) {
-        if (processOtfss(otfss)) { return l_False ; }    // process otfss info before it became invalid
-    }
 
     // preprocess
     if (status == l_Undef) {   // TODO: freeze variables of assumptions!
@@ -3084,7 +3017,6 @@ void Solver::relocAll(ClauseAllocator& to)
         }
     }
     clauses.shrink_(clauses.size() - keptClauses);
-
     // handle all clause pointers from OTFSS
     keptClauses = 0;
     for (int i = 0 ; i < otfss.info.size(); ++ i) {
@@ -3279,7 +3211,7 @@ void Solver::rerInitRewriteInfo()
 
 }
 
-Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo)
+Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLearnedClause, unsigned int& lbd, unsigned& dependencyLevel)
 {
     if (! config.opt_restrictedExtendedResolution) { return rerUsualProcedure; }
     DOUT(if (config.opt_rer_debug) cerr << "c analyze clause for RER" << endl;);
@@ -3832,7 +3764,7 @@ bool Solver::interleavedClauseStrengthening()
 
     // perform reducer algorithm for some of the last good learned clauses - also adding the newly learnt clauses
     int backtrack_level; unsigned int nblevels;   // helper variable (more or less borrowed from search method
-    uint64_t extraInfo;           // helper variable (more or less borrowed from search method
+    unsigned dependencyLevel;           // helper variable (more or less borrowed from search method
     vec<Lit> learnt_clause;       // helper variable (more or less borrowed from search method
     // do the loop
     const int end = learnts.size();
@@ -3892,7 +3824,7 @@ bool Solver::interleavedClauseStrengthening()
                 if (config.nanosleep != 0) { nanosleep(config.nanosleep); }    // sleep for a few nano seconds
                 learnt_clause.clear(); // prepare for analysis
                 printConflictTrail(confl);
-                int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, extraInfo);
+                int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, dependencyLevel);
                 cancelUntil(0);
                 if (ret == 0) {
                     addCommentToProof("learnt clause");
@@ -3900,8 +3832,8 @@ bool Solver::interleavedClauseStrengthening()
                     if (learnt_clause.size() == 1) {
                         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");
                         topLevelsSinceLastLa ++;
-                        #ifdef CLS_EXTRA_INFO
-                        vardata[var(learnt_clause[0])].extraInfo = extraInfo;
+                        #ifdef PCASSO
+                        vardata[var(learnt_clause[0])].dependencyLevel = dependencyLevel;
                         #endif
                         if (value(learnt_clause[0]) == l_Undef) {  // propagate unit clause!
                             uncheckedEnqueue(learnt_clause[0]);
@@ -3917,8 +3849,8 @@ bool Solver::interleavedClauseStrengthening()
                     } else {
                         const CRef cr = ca.alloc(learnt_clause, true);
                         ca[cr].setLBD(nblevels);
-                        #ifdef CLS_EXTRA_INFO
-                        ca[cr].setExtraInformation(extraInfo);
+                        #ifdef PCASSO
+                        ca[cr].setPTLevel(dependencyLevel);
                         #endif
                         learnts.push(cr); // this is the learned clause only, has nothing to do with the other clause!
                         attachClause(cr); // for now, we'll also use this clause!
@@ -4021,21 +3953,6 @@ bool Solver::interleavedClauseStrengthening()
     DOUT(if (config.opt_ics_debug) cerr << "c finished ICS" << endl;);
     return true;
 }
-uint64_t Solver::defaultExtraInfo() const
-{
-    /** overwrite this method! */
-    return 0;
-}
-
-uint64_t Solver::variableExtraInfo(const Var& v) const
-{
-    /** overwrite this method! */
-    #ifdef CLS_EXTRA_INFO
-    return vardata[v].extraInfo;
-    #else
-    return 0;
-    #endif
-}
 
 void Solver::setPreprocessor(Coprocessor::Preprocessor* cp)
 {
@@ -4102,6 +4019,7 @@ lbool Solver::inprocess(lbool status)
         if (coprocessor != 0 && useCoprocessorIP) {
             if (coprocessor->wantsToInprocess()) {
                 if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still (collected before)
+                communicationClient.receiveEE = true; // enable receive EE after first inprocessing (as there will be another one)
                 inprocessCalls ++;
                 inprocessTime.start();
                 status = coprocessor->inprocess();
@@ -4187,14 +4105,14 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
     return l_Undef;
 }
 
-lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo)
+lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, unsigned& dependencyLevel)
 {
     // when this method is called, backjumping has been done already!
     rerReturnType rerClause = rerUsualProcedure;
     if (doAddVariablesViaER && !isBiAsserting) {  // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
         assert(!isBiAsserting && "does not work if isBiasserting is changing something afterwards!");
         extResTime.start();
-        rerClause = restrictedExtendedResolution(learnt_clause, nblevels, extraInfo);
+        rerClause = restrictedExtendedResolution(learnt_clause, nblevels, dependencyLevel);
         extResTime.stop();
     } else if (isBiAsserting) { resetRestrictedExtendedResolution(); }   // do not have two clauses in a row for rer, if one of them is bi-asserting!
 
@@ -4208,13 +4126,13 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
     // parallel portfolio: send the learned clause!
-    updateSleep(&learnt_clause);
+    if (sharingTimePoint == 0 || learnt_clause.size() < 3) { updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel); }  // shorter clauses are shared immediately!
 
     if (learnt_clause.size() == 1) {
         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");
         topLevelsSinceLastLa ++;
-        #ifdef CLS_EXTRA_INFO
-        vardata[var(learnt_clause[0])].extraInfo = extraInfo;
+        #ifdef PCASSO
+        vardata[var(learnt_clause[0])].dependencyLevel = dependencyLevel;
         #endif
         if (value(learnt_clause[0]) == l_Undef) {uncheckedEnqueue(learnt_clause[0]); nbUn++;}
         else if (value(learnt_clause[0]) == l_False) { return l_False; }  // otherwise, we have a top level conflict here!
@@ -4270,7 +4188,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
                 isBiAsserting = false; // handled the current conflict clause, set this flag to false again
             }
         }
-
+        DOUT(if (config.opt_printDecisions > 1) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;);
 
 
         if (analyzeNewLearnedClause(cr)) {     // check whether this clause can be used to imply new backbone literals!
@@ -4291,6 +4209,7 @@ void Solver::printSearchProgress()
                (int)nbReduceDB, nLearnts(), (int)nbDL2, (int)nbRemovedClauses, progressEstimate() * 100);
     }
 }
+
 void Solver::clearOtfss(Solver::OTFSS& data)
 {
     data.info.clear();
