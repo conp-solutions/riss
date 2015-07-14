@@ -407,7 +407,7 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -dontTrust", false);
     } else if (optionSet == "plain_DECLEARN") {
         parseOptions(" -learnDecP=100 -learnDecMS=6", false);
-    } else if (optionSet == "plain_PLAINBIASSERTING") {
+    } else if (optionSet == "plain_BIASSERTING") {
         parseOptions(" -biAsserting -biAsFreq=4", false);
     } else if (optionSet == "plain_LBD") {
         parseOptions(" -lbdIgnL0 -lbdupd=0", false);

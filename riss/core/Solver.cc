@@ -204,6 +204,14 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , lbd_core_threshold(config.opt_lbd_core_thresh)
     , learnts_reduce_fraction(config.opt_l_red_frac)
 
+
+  // bi-asserting learned clauses
+  , isBiAsserting        (false)
+  , allowBiAsserting     (false)
+  , lastBiAsserting      (0)
+  , biAssertingPostCount (0)
+  , biAssertingPreCount  (0)
+
     // UHLE for learnt clauses
     , searchUHLEs(0)
     , searchUHLElits(0)
@@ -785,6 +793,7 @@ Lit Solver::pickBranchLit()
 
 int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo)
 {
+    isBiAsserting = false; // yet, the currently learned clause is not bi-asserting
     int pathC = 0;
     Lit p     = lit_Undef;
     int pathLimit = 0; // for bi-asserting clauses
@@ -879,6 +888,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                     out_learnt.push(q);
                     isOnlyUnit = false; // we found a literal from another level, thus the multi-unit clause cannot be learned
                 }
+            } else {
+		        if (units == 0 && varFlags[var(q)].seen && allowBiAsserting ) { 
+		          if( pathLimit == 0 ) biAssertingPreCount ++;	// count how often learning produced a bi-asserting clause
+		          pathLimit = 1; // store that the current learnt clause is a biasserting clause!
+		        }
             }
         }
 
@@ -1069,7 +1083,21 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         int max_i = 1;
         int decLevelLits = 1;
         // Find the first literal assigned at the next-highest level:
-        {
+        if( config.opt_biAsserting ) {
+	          int currentLevel = level(var(out_learnt[max_i]));
+	          for (int i = 1; i < out_learnt.size(); i++){
+	            if( level(var(out_learnt[i])) == decisionLevel() ) { // if there is another literal of the decision level (other than the first one), then the clause is bi-asserting
+	              isBiAsserting = true;
+	              // move this literal to the next free position at the front!
+	              const Lit tmp = out_learnt[i]; 
+	              out_learnt[i] = out_learnt[decLevelLits];
+	              out_learnt[decLevelLits] = tmp;
+	              if( max_i == decLevelLits ) max_i = i; // move the literal with the second highest level correctly
+	              decLevelLits ++;
+	            } // the level of the literals of the current level should not become the backtracking level, hence, this literal is not moved to this position
+	            else if (level(var(out_learnt[max_i])) == decisionLevel() || level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) max_i = i; // use any literal, as long as the backjump level is the same as the current level
+	          }
+	    } else {
             for (int i = 2; i < out_learnt.size(); i++) {
                 if (level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) {
                     max_i = i;
@@ -1080,14 +1108,15 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         const Lit p             = out_learnt[max_i];
         out_learnt[max_i] = out_learnt[1];
         out_learnt[1]     = p;
-        out_btlevel       = level(var(p));  // otherwise, use the level of the variable that is moved to the front!
+        if( out_learnt.size() == 2 && isBiAsserting ) out_btlevel = 0; // for binary bi-asserting clauses, jump back to level 0 always!
+        else out_btlevel       = level(var(p));  // otherwise, use the level of the variable that is moved to the front!
     }
 
     assert(out_btlevel < decisionLevel() && "there should be some backjumping");
 
     // Compute LBD, if the current value is not the right value
     if (recomputeLBD) { lbd = computeLBD(out_learnt); }
-
+    lbd = isBiAsserting ? lbd + 1 : lbd; // for bi-asserting clauses the LBD has to be one larger (approximation), because it is not known whether the one literal would glue the other one
 
     #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -1911,15 +1940,19 @@ lbool Solver::search(int nof_conflicts)
             l1conflicts = (decisionLevel() != 1 ? l1conflicts : l1conflicts + 1);
 
             learnt_clause.clear();
+    	    if( config.opt_biAsserting && lastBiAsserting + config.opt_biAssiMaxEvery <= conflicts ) allowBiAsserting = true; // use bi-asserting only once in a while!
 
             uint64_t extraInfo = 0;
             analysisTime.start();
             // perform learnt clause derivation
             int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, extraInfo);
             analysisTime.stop();
+	      allowBiAsserting = false;
             #ifdef CLS_EXTRA_INFO
             maxResHeight = extraInfo;
             #endif
+
+            assert( (!isBiAsserting || ret == 0) && "cannot be multi unit and bi asserting at the same time" );
 
             DOUT(if (config.opt_rer_debug) cerr << "c analyze returns with " << ret << " , jumpLevel " << backtrack_level << " and set of literals " << learnt_clause << endl;);
 
@@ -2819,6 +2852,10 @@ lbool Solver::solve_()
                rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits, rerExtractedGates);
         printf("c ER rewrite: %d cls, %d lits\n", erRewriteClauses, erRewriteRemovedLits);
         printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits);
+	    printf("c bi-asserting: %ld pre-Mini, %ld post-Mini, %.3lf rel-pre, %.3lf rel-post\n", biAssertingPreCount, biAssertingPostCount, 
+		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPreCount / (double)totalLearnedClauses,
+		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPostCount / (double)totalLearnedClauses
+		  );
         printf("c search-UHLE: %d attempts, %d rem-lits\n", searchUHLEs, searchUHLElits);
         printf("c revMin: %d tries %d succesful %d dropped %d cut %d conflicts\n", reverseMinimization.attempts, reverseMinimization.succesfulReverseMinimizations, reverseMinimization.revMindroppedLiterals, reverseMinimization.revMinConflicts, reverseMinimization.revMincutOffLiterals);
         printf("c decisionClauses: %d\n", learnedDecisionClauses);
@@ -4118,11 +4155,12 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 {
     // when this method is called, backjumping has been done already!
     rerReturnType rerClause = rerUsualProcedure;
-    if (doAddVariablesViaER) {  // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
+  if( doAddVariablesViaER && !isBiAsserting ) { // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
+    assert( !isBiAsserting && "does not work if isBiasserting is changing something afterwards!" );
         extResTime.start();
         rerClause = restrictedExtendedResolution(learnt_clause, nblevels, extraInfo);
         extResTime.stop();
-    }
+  } else if ( isBiAsserting ) resetRestrictedExtendedResolution(); // do not have two clauses in a row for rer, if one of them is bi-asserting!
 
     lbdQueue.push(nblevels);
     sumLBD += nblevels;
@@ -4187,9 +4225,16 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 
         // attach unit only, if  rer does allow it
         if (rerClause != rerDontAttachAssertingLit) {
+          if( !isBiAsserting ) {
             uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
-        }
         DOUT(if (config.opt_printDecisions > 1) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;);
+          } else { 
+	        biAssertingPostCount++;
+	        lastBiAsserting = conflicts; // store number of conflicts for the last occurred bi-asserting clause so that the distance can be calculated
+	        isBiAsserting = false; // handled the current conflict clause, set this flag to false again
+	      }
+        }
+
 
 
         if (analyzeNewLearnedClause(cr)) {     // check whether this clause can be used to imply new backbone literals!
