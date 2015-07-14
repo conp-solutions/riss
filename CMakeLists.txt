@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)
 
 project("riss-toolbox")
 
@@ -37,7 +37,7 @@ option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
 # Print option settings
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Build type ${CMAKE_BUILD_TYPE}")
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "aiger-tools ${AIGER-TOOLS}")
@@ -72,8 +72,10 @@ endif()
 
 
 # Dependencies:
-# 
+#
+find_package(Git)
 include_directories(${PROJECT_SOURCE_DIR})
+include(GitSignature)
 
 # Compile flags:
 # 
@@ -147,8 +149,7 @@ if(AIGER-TOOLS)
 
 endif()
 
-
 # Combined riss and coprocessor library. This makes linking against riss with
 # the usage of coprocessor simpler (you only have to link against one lib).
-include(MergeStaticLibs)
-merge_static_libs(riss-coprocessor riss-lib-static coprocessor-lib-static)
+add_library(riss-coprocessor-lib-static STATIC $<TARGET_OBJECTS:riss-lib-object> $<TARGET_OBJECTS:coprocessor-lib-object>)
+set_target_properties(riss-coprocessor-lib-static PROPERTIES OUTPUT_NAME "riss-coprocessor")
