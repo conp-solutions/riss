@@ -739,7 +739,7 @@ Master::solveInstance(void* data)
 
 //    // Davide> Give the pt_level to the solver
     solver->curPTLevel = tData.nodeToSolve->getPTLevel();
-#error also set unsatPTlevel to this level
+    solver->unsatPTLevel = tData.nodeToSolve->getPTLevel();
 
     if (Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel) {   // a portfolio node should be solved
         const int nodeLevel = tData.nodeToSolve->getLevel();
@@ -784,7 +784,7 @@ Master::solveInstance(void* data)
     min = min <= master.polarity.size() ? min : master.polarity.size();
 
     for( int i = 0 ; i < min; ++ i ) {
-      solver->setpolarity(i, master.polarity[i]);
+      solver->setPolarity(i, master.polarity[i]);
     }
       }
     master.unlock();
@@ -798,7 +798,7 @@ Master::solveInstance(void* data)
       min = min <= master.activity.size() ? min : master.activity.size();
 
       for( int i = 0 ; i < min; ++ i ) {
-	solver->setActivity(i, master.activity[i] );
+	    solver->setActivity(i, master.activity[i] );
       }
       }
     master.unlock();
@@ -912,7 +912,6 @@ Master::solveInstance(void* data)
 
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
-#error continue here
             toplevelVariables = solver->getNumberOfTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }

@@ -54,15 +54,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #endif
 
 //
-// if PCASSO is compiled, use virtual methods
-//
-#ifdef PCASSO
-    #define PCASSOVIRTUAL virtual
-#else
-    #define PCASSOVIRTUAL
-#endif
-
-//
 // forward declarations
 //
 namespace Coprocessor
@@ -80,17 +71,19 @@ class ExperimentalTechniques;
 class BIG;
 }
 
-#ifdef PCASSO
-namespace Pcasso
-{
-class PcassoClient;
-}
-#endif
-
 
 // since template methods need to be in headers ...
 extern Riss::IntOption opt_verboseProof;
 extern Riss::BoolOption opt_rupProofOnly;
+
+// forward declaration of friend class
+#ifdef PCASSO
+namespace Pcasso
+{
+    class SolverRiss;
+}
+#endif
+
 
 namespace Riss
 {
@@ -117,7 +110,7 @@ class Solver
     friend class Riss::IncSolver; // for bmc
 
     #ifdef PCASSO
-    friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
+    friend class Pcasso::SolverRiss; // PcassoClient is allowed to access all the solver data structures
     #endif
 
     CoreConfig* privateConfig; // do be able to construct object without modifying configuration
@@ -129,18 +122,18 @@ class Solver
     //
     Solver(CoreConfig* externalConfig = 0, const char* configName = 0);
 
-    PCASSOVIRTUAL
+    
     ~Solver();
     /// tell the solver to delete the configuration it just received
     void setDeleteConfig() { deleteConfig = true; }
 
     // Problem specification:
     //
-    PCASSOVIRTUAL
+    
     Var     newVar(bool polarity = true, bool dvar = true, char type = 'o');     // Add a new variable with parameters specifying variable mode.
     void    reserveVars(Var v);
 
-    PCASSOVIRTUAL
+    
     bool    addClause(const vec<Lit>& ps);                      /// Add a clause to the solver.
 
     bool    addClause(const Clause& ps);                        /// Add a clause to the solver (all clause invariants do not need to be checked)
@@ -149,7 +142,7 @@ class Solver
     bool    addClause(Lit p, Lit q);                            /// Add a binary clause to the solver.
     bool    addClause(Lit p, Lit q, Lit r);                     /// Add a ternary clause to the solver.
 
-    PCASSOVIRTUAL
+    
     bool    addClause_(vec<Lit>& ps);                           /// Add a clause to the solver without making superflous internal copy. Will
     /// change the passed vector 'ps'.
     void    addInputClause_(vec<Lit>& ps);                      /// Add a clause to the online proof checker
@@ -546,25 +539,25 @@ class Solver
     // Main internal methods:
     //
     void     insertVarOrder(Var x);                                                    // Insert a variable in the decision order priority queue.
-    PCASSOVIRTUAL
+    
     Lit      pickBranchLit();                                                          // Return the next decision variable.
     void     newDecisionLevel();                                                       // Begins a new decision level.
-    PCASSOVIRTUAL
+    
     void     uncheckedEnqueue(Lit p, CRef from = CRef_Undef,                           // Enqueue a literal. Assumes value of literal is undefined.
                               bool addToProof = false, const uint64_t extraInfo = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
     bool     enqueue(Lit p, CRef from = CRef_Undef);                                   // Test if fact 'p' contradicts current state, enqueue otherwise.
-    PCASSOVIRTUAL
+    
     CRef     propagate(bool duringAddingClauses = false);                              // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
     void     cancelUntil(int level);                                                   // Backtrack until a certain level.
-    PCASSOVIRTUAL
+    
     int      analyze(CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo);               // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
     void     analyzeFinal(Lit p, vec<Lit>& out_conflict);                              // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo);                           // (helper method for 'analyze()')
-    PCASSOVIRTUAL
+    
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
-    PCASSOVIRTUAL
+    
     lbool    solve_();                                                                 // Main solve method (assumptions given in 'assumptions').
-    PCASSOVIRTUAL
+    
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
   public:
@@ -585,7 +578,7 @@ class Solver
     //
     void     attachClause(CRef cr);                    // Attach a clause to watcher lists.
     void     detachClause(CRef cr, bool strict = false);      // Detach a clause to watcher lists.
-    PCASSOVIRTUAL
+    
     void     removeClause(CRef cr, bool strict = false);      // Detach and free a clause.
     bool     locked(const Clause& c) const;            // Returns TRUE if a clause is a reason for some implication in the current state.
     bool     satisfied(const Clause& c) const;         // Returns TRUE if a clause is satisfied in the current state.
@@ -604,7 +597,7 @@ class Solver
      */
     bool minimisationWithBinaryResolution(vec<Lit>& out_learnt, unsigned int& lbd);
 
-    PCASSOVIRTUAL
+    
     void     relocAll(ClauseAllocator& to);
 
     // Misc:
@@ -1144,13 +1137,6 @@ class Solver
     float sendRatio;                           /// How big should the ratio of send clauses be?
 
 // [END] modifications for parallel assumption based solver
-
-// Modifications for Pcasso
-    #ifdef PCASSO
-    Pcasso::PcassoClient* pcassoClient;
-
-    #endif
-// END modifications for Pcasso
 
 
 };

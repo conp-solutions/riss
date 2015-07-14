@@ -8,7 +8,8 @@ namespace Pcasso
 SolverPriss::SolverPriss(CoreConfig *config, int threadsToUse) :
     solver(threadsToUse),
     coreConfig(config),
-    curPTLevel(0)
+    curPTLevel(0),
+    unsatPTLevel(0)
 {
 }
 
@@ -63,6 +64,11 @@ inline bool     SolverPriss::okay() const                { return true; } // FIX
 inline void     SolverPriss::interrupt()                 { solver.interrupt(); }
 inline lbool    SolverPriss::solveLimited(const Riss::vec<Riss::Lit>& assumps) { return solver.solveLimited(assumps); }
 inline void     SolverPriss::setConfBudget(int64_t x)    { solver.setConfBudget(x); }
+inline void     SolverPriss::setPolarity(Var var, bool polarity)  { }//solver.setPolarity(var,polarity); }
+inline bool     SolverPriss::getPolarity(Var var)         { return false; } //solver.getPolarity(var); }
+inline void     SolverPriss::setActivity(Var var, double activity){ }//solver.varSetActivity(var, activity); }
+inline double   SolverPriss::getActivity(Var var)         { return 0; } //solver.varGetActivity(var); }
+inline void     SolverPriss::reserveVars(Riss::Var var)  { solver.reserveVars(var); }
 
 inline void     SolverPriss::setVerbosity(int verbosity) { solver.verbosity = verbosity; }
 inline uint64_t SolverPriss::getStarts()                 { return 0; } // FIXME: solver.starts; }
