@@ -159,6 +159,13 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_hpushUnit       (_misc, "delay-units", "does not propagate unit clauses until solving is initialized", false,        optionListPtr),
     opt_simplifyInterval(_misc, "sInterval",  "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr),
 
+ opt_otfss ("SEARCH -- OTFSS", "otfss", "perform otfss during conflict analysis", false, optionListPtr ),
+ opt_otfssL ("SEARCH -- OTFSS", "otfssL", "otfss for learnt clauses", false, optionListPtr ),
+ opt_otfssMaxLBD ("SEARCH -- OTFSS", "otfssMLDB", "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) , optionListPtr ),
+#ifndef NDEBUG
+ debug_otfss ("SEARCH -- OTFSS", "otfss-d", "print debug output", false, optionListPtr ),
+#endif
+
     opt_learnDecPrecent("CORE -- CONFLICT ANALYSIS", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off", -1, IntRange(-1, 100) ,    optionListPtr),
     opt_learnDecMinSize("CORE -- CONFLICT ANALYSIS", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) ,                         optionListPtr),
     opt_learnDecRER    ("CORE -- CONFLICT ANALYSIS", "learnDecRER", "consider decision clauses for RER?", false ,                                                                  optionListPtr),

@@ -192,6 +192,7 @@ int main(int argc, char** argv)
 
         // Set limit on CPU-time:
         if (cpu_lim != INT32_MAX) {
+	    receivedInterupt = true; // make sure the next interrupt hits exit
             rlimit rl;
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
@@ -204,6 +205,7 @@ int main(int argc, char** argv)
 
         // Set limit on virtual memory:
         if (mem_lim != INT32_MAX) {
+	    receivedInterupt = true; // make sure the next interrupt hits exit
             rlim_t new_mem_lim = (rlim_t)mem_lim * 1024 * 1024;
             rlimit rl;
             getrlimit(RLIMIT_AS, &rl);
