@@ -44,7 +44,7 @@ class XorReasoning : public Technique
 
     Riss::vec<Riss::Var> xorBackdoor;
     Riss::MarkArray backdoorVariables;
-    
+
     /** compare two literals */
     struct VarLt {
         std::vector< std::vector <int> >& data;

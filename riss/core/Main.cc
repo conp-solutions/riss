@@ -163,12 +163,12 @@ int main(int argc, char** argv)
             cerr << "c tool-parameters: " << s.str() << endl;
             exit(0);
         }
-        
-        if( opt_showParam ) { // print remaining parameters
-	  cerr << "c call after parsing options: ";
-	  for( int i = 0 ; i < argc; ++i ) cerr << " " << argv[i];
-	  cerr << endl;
-	}
+
+        if (opt_showParam) {  // print remaining parameters
+            cerr << "c call after parsing options: ";
+            for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
+            cerr << endl;
+        }
 
         Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
