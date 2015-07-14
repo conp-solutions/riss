@@ -889,6 +889,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                     isOnlyUnit = false; // we found a literal from another level, thus the multi-unit clause cannot be learned
                 }
             } else {
+                if (level(var(q)) == 0) { clauseReductSize --; }  // this literal does not count into the size of the clause!
                 if (units == 0 && varFlags[var(q)].seen && allowBiAsserting) {
                     if (pathLimit == 0) { biAssertingPreCount ++; }    // count how often learning produced a bi-asserting clause
                     pathLimit = 1; // store that the current learnt clause is a biasserting clause!
@@ -896,6 +897,19 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             }
         }
 
+        // OTFSS is possible here
+        if (!foundFirstLearnedClause && currentSize + 1 == clauseReductSize) {  // OTFSS, but on the reduct!
+            if (config.opt_otfss && (!c.learnt()  // apply otfss only for clauses that are considered to be interesting!
+                                     || (config.opt_otfssL && c.learnt() && c.lbd() <= config.opt_otfssMaxLBD))) {
+                #ifdef PCASSO
+#warning add dependency to otfss info
+                #else
+                otfss.revealedClause ++;
+                otfss.info.push({ confl, p });   // add pair to vector to be processed afterwards
+                #endif
+                DOUT(if (config.debug_otfss) cerr << "c OTFSS can remove literal " << p << " from " << c << endl;);
+            }
+        }
         if (!isOnlyUnit && units > 0) { break; }   // do not consider the next clause, because we cannot continue with units
 
         // Select next clause to look at:
@@ -1985,7 +1999,11 @@ lbool Solver::search(int nof_conflicts)
                 if (verbosity > 1) { fprintf(stderr, "c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel()); }
                 return l_False;
             }
-            if (decisionLevel() == 0) { simplifyIterations ++; }
+
+            if (decisionLevel() == 0) {
+                simplifyIterations ++;
+                if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still, and we are on level 0 (collected before)
+            }
 
             if (!withinBudget()) { return l_Undef; }   // check whether we can still do conflicts
 
@@ -2735,6 +2753,10 @@ lbool Solver::solve_()
 
     printHeader();
 
+    if (decisionLevel() == 0) {
+        if (processOtfss(otfss)) { return l_False ; }    // process otfss info before it became invalid
+    }
+
     // preprocess
     if (status == l_Undef) {   // TODO: freeze variables of assumptions!
         status = preprocess();
@@ -2841,6 +2863,7 @@ lbool Solver::solve_()
                preprocessCalls, preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessCalls, inprocessTime.getCpuTime(), inprocessTime.getWallClockTime());
         printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt, learntUnit);
         printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits);
+        printf("c otfss: %d (l1: %d ),cls: %d ,units: %d ,binaries: %d, eagerCandidates: %d\n", otfss.otfsss, otfss.otfsssL1, otfss.otfssClss, otfss.otfssUnits, otfss.otfssBinaries, otfss.revealedClause);
         printf("c learning: %ld cls, %lf avg. size, %lf avg. LBD, %ld maxSize\n",
                (int64_t)totalLearnedClauses,
                sumLearnedClauseSize / totalLearnedClauses,
@@ -3061,6 +3084,16 @@ void Solver::relocAll(ClauseAllocator& to)
         }
     }
     clauses.shrink_(clauses.size() - keptClauses);
+
+    // handle all clause pointers from OTFSS
+    keptClauses = 0;
+    for (int i = 0 ; i < otfss.info.size(); ++ i) {
+        ca.reloc(otfss.info[i].cr, to);
+        if (!to[ otfss.info[i].cr ].mark()) {
+            otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
+        }
+    }
+    otfss.info.shrink_(otfss.info.size() - keptClauses);
 }
 
 
@@ -3352,6 +3385,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
             rerLits.push(currentLearnedClause[0]);   // store literal
 
             if (rerLits.size() >= config.opt_rer_windowSize) {
+                clearOtfss(otfss);   // avoid collision with otfss, hence, discard all collected otfss info
 
                 // perform RER step
                 // add all the RER clauses with the fresh variable (and set up the new variable properly!
@@ -4049,6 +4083,7 @@ lbool Solver::preprocess()
     // restart, triggered by the solver
     // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
     if (coprocessor != 0 && useCoprocessorPP) {
+        if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still (collected before)
         preprocessCalls++;
         preprocessTime.start();
         status = coprocessor->preprocess();
@@ -4066,6 +4101,7 @@ lbool Solver::inprocess(lbool status)
         // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
         if (coprocessor != 0 && useCoprocessorIP) {
             if (coprocessor->wantsToInprocess()) {
+                if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still (collected before)
                 inprocessCalls ++;
                 inprocessTime.start();
                 status = coprocessor->inprocess();
@@ -4254,6 +4290,96 @@ void Solver::printSearchProgress()
                (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals,
                (int)nbReduceDB, nLearnts(), (int)nbDL2, (int)nbRemovedClauses, progressEstimate() * 100);
     }
+}
+void Solver::clearOtfss(Solver::OTFSS& data)
+{
+    data.info.clear();
+}
+
+
+bool Solver::processOtfss(Solver::OTFSS& data)
+{
+    assert(decisionLevel() == 0 && "perform lazy otfss only on level 0");
+
+    data.tmpPropagateLits.clear();
+    if (data.info.size() > 0) { data.otfsss ++; }
+
+    // mark all clauses that have been marked before
+    for (int i = 0 ; i < data.info.size(); ++ i) {
+        Clause& c = ca[ data.info[i].cr ];
+        if (c.mark() != 0) { c.set_delete(true); }
+    }
+
+    // run over all clauses and delete the literal from the infomation block, if its still present (having a clause multiple times in the vector with different literals should be fine)
+    for (int i = 0 ; i < data.info.size(); ++ i) {
+        Clause& c = ca[ data.info[i].cr ];
+        const Lit& removeLit = data.info[i].shrinkLit;
+
+        if (c.size() < 2 || c.mark() != 0 || c.can_be_deleted()) { continue; }   // ignore units and satified/marked clauses
+
+
+        DOUT(if (config.debug_otfss) cerr << "c OTFSS rewrite clause " << c << endl;);
+        if (c.size() == 2) {
+            if (c[0] == removeLit || c[1] == removeLit) {  // literal must not be in the clause anymore, because clause was in list multiple times
+                const Lit other = toLit(toInt(c[0]) ^ toInt(c[1]) ^ toInt(removeLit));
+                data.tmpPropagateLits.push(other);
+                data.otfssUnits ++; data.otfssClss++;
+                c.set_delete(true); // tell the clause it must go, will be satisfied after unit propagation anyways
+            }
+        } else if (c.size() == 3) {
+            if (c[0] == removeLit || c[1] == removeLit || c[2] == removeLit) { // literal must not be in the clause anymore, because clause was in list multiple times
+                detachClause(data.info[i].cr);   // is detached from all watch lists for longer clauses
+                if (c[0] == removeLit) { c[0] = c[2]; c.pop(); }  // move last literal forward, shrink the clause
+                else if (c[1] == removeLit) { c[1] = c[2]; c.pop(); }    // move last literal forward, shrink the clause
+                else { c.pop(); }  // shrink the clause, remove the last literal
+                attachClause(data.info[i].cr);   // added as binary watch again
+                data.otfssBinaries ++; data.otfssClss++;
+                c.mark(1); // mark clause, so that its not processed twice, is undone afterwards again
+            }
+        } else {
+
+            for (int j = 0 ; j < c.size(); ++ j) {  // check the whole clause whether it contains the literal
+                if (c[j] == removeLit) {  // we found the literal to be removed
+                    data.otfssClss++;
+                    c[j] = c[ c.size() - 1 ]; // move last literal forward
+                    c.pop();                  // remove the literal
+                    c.mark(1);                // mark clause, so that its not processed twice, is undone afterwards again
+                    if (j < 2) {              // the literal was a watched literal
+                        vec<Watcher>&  ws  = watches[ ~removeLit ];
+                        for (int k = 0 ; k < ws.size(); ++ k) {
+                            if (ws[k].cref() == data.info[i].cr) {
+                                for (; k + 1 < ws.size(); ++k) { ws[k] = ws[k + 1]; } // copy all other elements forward TODO test fast remove
+                                ws.pop(); // remove last element from list
+                                break;
+                            }
+                        }
+                        const Lit otherWatchedLit = c[ 1 - j ];                              // the first two literals are the watched literals
+                        DOUT(if (config.debug_otfss) cerr << "c add clause to watch list of literal " << ~c[j] << " with blocking lit " << otherWatchedLit << endl;);
+                        watches[ ~ c[j] ].push(Watcher(data.info[i].cr, otherWatchedLit, 1));   // updates the blocking literal, add as long clause watch
+                    }
+                    break;
+                }
+            }
+
+        }
+
+        DOUT(if (config.debug_otfss) cerr << "c        into clause " << c << endl;);
+    }
+
+    // reset all marks of all the clauses that have not been marked before
+    for (int i = 0 ; i < data.info.size(); ++ i) {
+        Clause& c = ca[ data.info[i].cr ];
+        if (!c.can_be_deleted()) { c.mark(0); }  // remove mark flag again
+    }
+
+    // enqueue all found unit clauses, propagate afterwards (all new clauses are present already)
+    for (int i = 0 ; i < data.tmpPropagateLits.size() ; ++ i) {
+        const Lit& propLit = data.tmpPropagateLits[i];
+        if (value(propLit) == l_False) { return true; }
+        else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
+    }
+    if (propagate() != CRef_Undef) { return true; }  // we found a conflict wrt the shrinked clauses
+    return false; // we did not find a conflict
 }
 
 Solver::ConfigurationScheduler::ConfigurationScheduler()

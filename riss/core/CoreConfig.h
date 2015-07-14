@@ -159,6 +159,13 @@ class CoreConfig : public Config
     BoolOption opt_hpushUnit;
     IntOption opt_simplifyInterval;
 
+    BoolOption opt_otfss;
+    BoolOption opt_otfssL;
+    IntOption opt_otfssMaxLBD;
+    #ifndef NDEBUG
+    BoolOption debug_otfss;
+    #endif
+
     IntOption opt_learnDecPrecent; // learn decision clauses instead of others
     IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause
     BoolOption opt_learnDecRER;    // use decision learned clauses for restricted extended resolution?

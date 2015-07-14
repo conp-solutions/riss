@@ -796,6 +796,36 @@ class Solver
 
     int simplifyIterations; // number of visiting level 0 until simplification is to be performed
     int learnedDecisionClauses;
+
+    /** all info neede to perform lazy on the fly self subsumption */
+    struct OTFSS {
+        int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause; // otfss stats
+
+        /** store for each clause which literal can be removed */
+        struct OtfssInfo {
+            Riss::CRef cr;
+            Lit shrinkLit;
+            #ifdef PCASSO
+            int dependencyLevel;
+            #endif
+        };
+
+        vec<OtfssInfo> info;        // clauses that have to be processed
+        vec<Lit> tmpPropagateLits;  // literals that should be propagated after otfss
+        OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0) {}
+
+    } otfss;
+
+    /** run over the stored clauses and remove the indicated literal
+     *  remove from watch list if necessary
+     *  @return true, if a conflict was found (hence, the formula is unsatisfiable)
+     */
+    bool processOtfss(Riss::Solver::OTFSS& data);
+
+    /** remove all clauses from temporary storage due to some global (untracable ) changes on the formula */
+    void clearOtfss(Riss::Solver::OTFSS& data);
+
+
     bool doAddVariablesViaER; // indicator for allowing ER or not
 
     // stats for learning clauses
