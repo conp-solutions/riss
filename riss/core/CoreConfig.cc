@@ -97,9 +97,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_var_act_bump_mode       (_cs,  "varActB",                "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2),                 optionListPtr),
     opt_cls_act_bump_mode       (_cs,  "clsActB",                "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
 
+    opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences", true,                                                                             optionListPtr),
+    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse)", 0, IntRange(0, 2) ,                                                     optionListPtr),
     opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
     opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
     opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
+    
     
     opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
 
@@ -141,8 +144,6 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     scheduleConflicts       ("SCHEDULE", "sscheConflicts",  "initial conflicts for schedule", 10000000, IntRange(1, INT32_MAX),                       optionListPtr, &search_schedule),
     scheduleDefaultConflicts("SCHEDULE", "sscheDConflicts", "initial conflicts for default", 3000000, IntRange(1, INT32_MAX),                         optionListPtr, &search_schedule),
     sscheduleGrowFactor     ("SCHEDULE", "sscheInc",        "increment for conflicts per schedule round", 1.3, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &search_schedule),
-
-    sharingType("COMMUNICATION", "shareTime", "when to share clause (0=new,1=prop,2=analyse)", 0, IntRange(0, 2) , optionListPtr),
 
     #ifndef NDEBUG
     localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA", false,                                                    optionListPtr),

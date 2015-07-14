@@ -164,7 +164,7 @@ if (communication->isAborted()) {
 }
 
 // if there should not be communication
-if (! communication->getDoSend() && ! communication->getDoReceive()) { return 0; }
+if (! communication->getDoSend() && (! communication->getDoReceive() || !communicationClient.doReceive ) ) { return 0; }
 
 if (communication->getDoSend() && toSend != 0) {     // send
   
@@ -248,7 +248,7 @@ if (! communication->sendEquivalences && equivalences) {
       communication->nrSendCls++;
     }
 
-} else if (communication->getDoReceive()) {         // receive (only at level 0)
+} else if (communication->getDoReceive() && communicationClient.doReceive  ) {         // receive (only at level 0)
 
 // TODO: add parameter that forces to restart!
   communication->nrReceiveAttempts ++;
@@ -318,27 +318,35 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
             }
             // has to be unit clause!
             addUnitToProof(c[0]); // add the clause to the proof
-            if (value(c[0]) == l_Undef) { uncheckedEnqueue(c[0]); }
+            if (value(c[0]) == l_Undef) { 
+	      uncheckedEnqueue(c[0]);
+	      ok = (propagate() == CRef_Undef);
+	      if (!ok) {   // adding this clause failed?
+		  std::cerr << "c adding received clause failed" << std::endl;
+		  return 1;
+	      }
+	    }
             else if (value(c[0]) == l_False) {
                 ok = false; return 1;
             }
-            c.mark();
-            ok = (propagate() == CRef_Undef);
-            if (!ok) {   // adding this clause failed?
-                std::cerr << "c adding received clause failed" << std::endl;
-                return 1;
-            }
+            // in case of SAT simply mark the clause as being irrelevant
+            c.mark(1);
+            
         } else {
             for (int j = 0 ; j < c.size(); ++ j) {   // propagate inside the clause!
                 if (var(c[j]) > nVars()) {
                     std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
                     assert(false && "received variables have to be smaller than maximum!");
                 }
+                cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << endl;
                 if (value(c[j]) == l_True) { c.mark(1); break; }     // this clause is already satisfied -> remove it! (we are on level 0!)
-                else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; c.shrink(1); }     // this literal is mapped to false -> remove it!
+                else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; --j; c.shrink(1); }     // this literal is mapped to false -> remove it! repeat check for this position
+                else {
+		  assert( level( var(c[j]) ) != 0 && "all level 0 variables have to be removed here already" );
+		}
             }
             // TODO: here could be more filters for received clauses to be rejected (e.g. PSM?!)
-            if (!c.mark()) {
+            if ( c.mark() == 0) {
 	      // set isAnalzyed and isPropagated, such that this clause is not sent again
 	      c.setPropagated();
 	      c.setUsedInAnalyze();
@@ -346,29 +354,40 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 	      // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
 		    if( c.size() > 1 && communicationClient.refineReceived ) {
 		      if( ! reverseMinimization.enabled ) { // enable reverseMinimization to be able to use it
+			cerr << "c initialize reverseMinimization during receiving" << endl;
 			reverseMinimization.enabled = true;
 			reverseMinimization.assigns.growTo(nVars()+ 1, l_Undef); // grow assignment
 			reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
 		      }
-		      unsigned int lbd = ca[communicationClient.receiveClauses[i]].size();
-		      const unsigned int beforeSize = ca[communicationClient.receiveClauses[i]].size();
+		      unsigned int lbd = c.size();
+		      const unsigned int beforeSize = c.size();
 		      bool shrinkedClause = false;
 #ifdef PCASSO
-		      unsigned dependency = ca[communicationClient.receiveClauses[i]].getPTLevel();
-		      shrinkedClausereverseLearntClause( ca[communicationClient.receiveClauses[i]], lbd, dependency);
+		      unsigned dependency = c.getPTLevel();
+		      shrinkedClause = reverseLearntClause( c, lbd, dependency);
 		      if( shrinkedClause ) {
-			ca[communicationClient.receiveClauses[i]].setPTLevel( dependency ); // update dependency accordingly
+			c.setPTLevel( dependency ); // update dependency accordingly
 		      }
 #else
 		      unsigned dependency = currentDependencyLevel();
-		      shrinkedClause = reverseLearntClause( ca[communicationClient.receiveClauses[i]], lbd, dependency);
+		      cerr << "c received clause(" << i << "): " << c << endl;
+		      {
+			stringstream s;
+		        s << "c sat: "; 
+			for( int k  = 0 ; k < c.size(); ++ k ) s << " " << ( value( c[k] ) == l_True ) << "/" << ( value( c[k] ) == l_False );
+			s << endl;
+			cerr << s.str();
+		      }
+		      shrinkedClause = reverseLearntClause( c, lbd, dependency);
 #endif
-		      communication->vivifiedLiterals += beforeSize - ca[communicationClient.receiveClauses[i]].size();
+		      cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << endl;
+		      communication->vivifiedLiterals += beforeSize - c.size();
 		      if( shrinkedClause && communicationClient.resendRefined ) { // re-share clause (should be performed only by one thread per group
+			cerr << "c recend received clause(" << i << "): " << c << endl;
 #ifdef PCASSO
-			updateSleep( &(ca[communicationClient.receiveClauses[i]]), ca[communicationClient.receiveClauses[i]].size(), dependency );
+			updateSleep( &(c), c, dependency );
 #else
-			updateSleep( &(ca[communicationClient.receiveClauses[i]]), ca[communicationClient.receiveClauses[i]].size() );
+			updateSleep( &(c), c.size() );
 #endif
 		      }
 		      // could re-share clause, but another thread might also shorten the clause, and hence this would be useless

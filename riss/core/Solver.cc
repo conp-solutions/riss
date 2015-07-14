@@ -255,6 +255,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     communicationClient.receiveEE      = config.opt_receiveEquivalences;
     communicationClient.refineReceived = config.opt_refineReceivedClauses;
     communicationClient.resendRefined  = config.opt_resendRefinedClauses;
+    communicationClient.doReceive      = config.opt_receiveData;
     
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
@@ -289,7 +290,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     varFlags. push(VarFlags(sign));
 
 //     assigns  .push(l_Undef);
-    vardata  .push(mkVarData(CRef_Undef, 0));
+    vardata  .push(mkVarData(CRef_Undef, -1));
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
 //     seen     .push(0);
@@ -709,8 +710,8 @@ void Solver::cancelUntil(int level)
         for (int c = trail.size() - 1; c >= trail_lim[level]; c--) {
             Var      x  = var(trail[c]);
             varFlags [x].assigns = l_Undef;
-            vardata [x].dom = lit_Undef; // reset dominator
             vardata [x].reason = CRef_Undef; // TODO for performance this is not necessary, but for assertions and all that!
+//             vardata[x].level = -1; // reset level
             if (searchconfiguration.phase_saving > 1  || ((searchconfiguration.phase_saving == 1) && c > trail_lim.last())) {   // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
                 varFlags[x].polarity = sign(trail[c]);
             }

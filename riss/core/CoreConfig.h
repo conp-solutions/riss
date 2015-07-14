@@ -98,6 +98,8 @@ class CoreConfig : public Config
     IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
     IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
 
+    BoolOption opt_receiveData;           // participate in receiving
+    IntOption  sharingType;               // determine when learned clauses are shared
     BoolOption opt_receiveEquivalences;   // receive equivalenced (is turned automatically on after first succesful inprocessing)
     BoolOption opt_refineReceivedClauses; // apply viviification to received clauses
     BoolOption opt_resendRefinedClauses;  // resend refined clauses
@@ -145,8 +147,6 @@ class CoreConfig : public Config
     IntOption    scheduleConflicts;
     IntOption    scheduleDefaultConflicts;
     DoubleOption sscheduleGrowFactor;
-
-    IntOption    sharingType;  // determine when learned clauses are shared
 
     #ifndef NDEBUG
     BoolOption localLookaheadDebug;

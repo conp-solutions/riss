@@ -316,7 +316,7 @@ class Solver
 
     struct VarData {
         CRef reason; int level;
-        Lit dom;      /// for lhbr
+	Lit dom;
         int32_t position; /// for hack
         #ifdef PCASSO
         unsigned dependencyLevel;
@@ -328,17 +328,10 @@ class Solver
                      #ifdef PCASSO
                      , 0
                      #endif
-                    }; return d;
+                    }; 
+	return d;
     }
-    static inline VarData mkVarData(CRef cr, int l, int _cost)
-    {
-        VarData d = {cr, l, lit_Undef, _cost
-                     #ifdef PCASSO
-                     , 0
-                     #endif
-                    }; return d;
-    }
-
+    
   public:
 
     // movd watcher data structure to solver types!
@@ -1198,6 +1191,7 @@ protected:
         bool receiveEE;                            /// indicate that EE is received by this client (turn off, if no inprocessing)
         bool refineReceived;                       /// apply vivification to received clauses
 	bool resendRefined;                        /// send refined received clauses again
+	bool doReceive;                            /// receive clauses
         
         int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
         int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
@@ -1214,7 +1208,8 @@ protected:
         bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
         bool useDynamicLimits;                     /// update sharing limits dynamically
 
-        CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false), succesfullySend(0), succesfullyReceived(0),
+        CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false), 
+            refineReceived(false), resendRefined(false), doReceive(true), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
             sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
     } communicationClient;
@@ -1416,7 +1411,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
     // sort literal in the clause
     sort(learned_clause, TrailPosition_Gt(vardata));
-    assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
+    assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
 
     reverseMinimization.attempts ++;
 
@@ -1429,11 +1424,15 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
     // perform vivification
     int keptLits = 0;
+    cerr << "c rev minimize clause with " << learned_clause << " lits: " << learned_clause << endl;
     for (int i = 0; i < learned_clause.size(); ++ i) {
         const Lit l = learned_clause[i];
+	assert( level(var(l) ) != 0 && "there should not be any literal of the top level in the clause" );
+DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
         if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
             learned_clause[keptLits++ ] = l; // keep literal
         } else if (reverseMinimization.value(l) == l_True) {
+DOUT(   cerr << "c add implied lit " << l << " and abort" << endl; );
             learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
             break;
         } else {
@@ -1460,6 +1459,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
                     if (reverseMinimization.value(imp) == l_False) {
                         confl = i->cref();              // store the conflict
                         trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
+DOUT(   cerr << "reverse minimization hit a conflict during propagation" << endl; );
                         break;
                     }
                     continue;
@@ -1505,6 +1505,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
         // found a conflict during reverse propagation
         if (confl != CRef_Undef) {
+	  DOUT(   cerr << "reverse minimization hit a conflict during propagation (" << i << ") with conflict " << ca[confl] << endl; );
             if (i + 1 < learned_clause.size()) { reverseMinimization.revMinConflicts ++; } // count cases when the technique was succesful
             break;
         }
@@ -1521,9 +1522,9 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     if (keptLits < learned_clause.size()) {
         reverseMinimization.succesfulReverseMinimizations ++;
         reverseMinimization.revMincutOffLiterals += (learned_clause.size() - keptLits);
-        assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
+        assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
         learned_clause.shrink(learned_clause.size() - keptLits);
-        assert(level(var(learned_clause[0])) == decisionLevel() && "first literal is conflict literal (or now assertion literal)");
+        assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
         return true;
     }
     return false; // clause was not changed, LBD should not be recomputed

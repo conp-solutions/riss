@@ -40,6 +40,7 @@ class PfolioConfig : public Config
     StringOption opt_defaultSetup;          // presets to run priss in given setup (DRUP, BMC, ...)
 //     StringOption opt_firstPPconfig;         // configuration for preprocessor of first solver object
     StringOption opt_incarnationSetups;     // configurations for all the incarnations
+    StringOption opt_ppconfig;              // configuration for global preprocessor
 
     IntOption  opt_storageSize;             // size of the storage for clause sharing
 

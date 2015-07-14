@@ -56,6 +56,11 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
       parseConfigurations( string(pfolioConfig.opt_incarnationSetups) );
     }
     
+    // set global coprocessor configuratoin
+    if( (const char*)pfolioConfig.opt_ppconfig != nullptr ) {
+      defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
+    }
+    
     // set preprocessor, if there is one selected
 //     if( (const char*)pfolioConfig.opt_firstPPconfig != 0 ) ppconfigs[0].addPreset(string(pfolioConfig.opt_firstPPconfig));
     
