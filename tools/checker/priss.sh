@@ -17,7 +17,7 @@
 #
 # run riss without printing a proof
 #gdb --args ./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? 
-./priss $1 -threads=2 -storageSize=16000 -pIncSetup="[1] -no-receive -actStart=2048 -init-act=3 [2] -refRec" -mem-lim=2048 /tmp/riss-out-$$ $param #> /dev/null 2> /dev/null
+./priss $1 -threads=2 -storageSize=16000 -pIncSetup="[1] -no-receive -actStart=2048 -init-act=3 [2] -refRec -printDec=0" -mem-lim=2048 /tmp/riss-out-$$ $param #> /dev/null 2> /dev/null
 #./pcasso $1 -mem-lim=2048 /tmp/riss-out-$$ $param #> /dev/null 2> /dev/null
 status=$?
 cat /tmp/riss-out-$$

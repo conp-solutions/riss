@@ -108,6 +108,9 @@ inline
 #endif
 // int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 {
+  
+  const bool localDebug = false; // for temporarly debugging this method
+  
 if (communication == 0) { return 0; }     // no communication -> do nothing!
 
 // nothing to send, do only receive every reveiceEvery tries!
@@ -307,13 +310,17 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 	communicationClient.eeDependencies.clear();
       }
     }
+    
+    if( qhead < trail.size() ) {                // if we have something to be propagated
+      if( propagate() != CRef_Undef ) return 1; // return the error, if there was an error
+    }
 
     for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
         Clause& c = ca[ communicationClient.receiveClauses[i] ]; // take the clause and propagate / enqueue it
 
         if (c.size() < 2) {
             if (c.size() == 0) {
-                std::cerr << "c empty clause has been shared!" << std::endl;
+//                 std::cerr << "c empty clause has been shared!" << std::endl;
                 ok = false; return 1;
             }
             // has to be unit clause!
@@ -322,7 +329,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 	      uncheckedEnqueue(c[0]);
 	      ok = (propagate() == CRef_Undef);
 	      if (!ok) {   // adding this clause failed?
-		  std::cerr << "c adding received clause failed" << std::endl;
+// 		  std::cerr << "c adding received clause failed" << std::endl;
 		  return 1;
 	      }
 	    }
@@ -335,10 +342,10 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
         } else {
             for (int j = 0 ; j < c.size(); ++ j) {   // propagate inside the clause!
                 if (var(c[j]) > nVars()) {
-                    std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
+//                     std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
                     assert(false && "received variables have to be smaller than maximum!");
                 }
-                cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << endl;
+//                 cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << endl;
                 if (value(c[j]) == l_True) { c.mark(1); break; }     // this clause is already satisfied -> remove it! (we are on level 0!)
                 else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; --j; c.shrink(1); }     // this literal is mapped to false -> remove it! repeat check for this position
                 else {
@@ -370,20 +377,20 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 		      }
 #else
 		      unsigned dependency = currentDependencyLevel();
-		      cerr << "c received clause(" << i << "): " << c << endl;
+DOUT(		      if( localDebug ) { cerr << "c received clause(" << i << "): " << c << endl;
 		      {
 			stringstream s;
 		        s << "c sat: "; 
 			for( int k  = 0 ; k < c.size(); ++ k ) s << " " << ( value( c[k] ) == l_True ) << "/" << ( value( c[k] ) == l_False );
 			s << endl;
 			cerr << s.str();
-		      }
+		      } } );
 		      shrinkedClause = reverseLearntClause( c, lbd, dependency);
 #endif
-		      cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << endl;
+// 		      cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << endl;
 		      communication->vivifiedLiterals += beforeSize - c.size();
 		      if( shrinkedClause && communicationClient.resendRefined ) { // re-share clause (should be performed only by one thread per group
-			cerr << "c recend received clause(" << i << "): " << c << endl;
+// 			cerr << "c recend received clause(" << i << "): " << c << endl;
 #ifdef PCASSO
 			updateSleep( &(c), c, dependency );
 #else
@@ -414,6 +421,9 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 }
             }
         }
+	if( qhead < trail.size() ) {                // if we have something to be propagated
+	  if( propagate() != CRef_Undef ) return 1; // return the error, if there was an error
+	}
     }
 }
 // everything worked nicely

@@ -1415,37 +1415,29 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
     reverseMinimization.attempts ++;
 
+    const bool localDebug = false; // for temporarly debugging this method
+    
+    DOUT( 
+    if( false ) {
+    for( int i = 0 ; i < nVars(); ++ i ) {
+      cerr << "c value var " << i+1 << " sat: " << (reverseMinimization.value(i) == l_True)
+                                    << " unsat: " << (reverseMinimization.value(i) == l_False)
+				    << " undef: " << (reverseMinimization.value(i) == l_Undef) << endl;
+    } } );
+    
     // update minimization trail with top level units (if there have been new ones)
     const int levelZeroUnits = trail_lim.size() == 0 ? trail.size() : trail_lim[0];
     assert( (trail_lim.size() > 0 || decisionLevel () == 0) && "if there is no trail lim, then we have not done any decision until now" );
+    int trailHead = reverseMinimization.trail.size(); // before reverse minimization propagate all other literals
     for (int i = reverseMinimization.trail.size() ; i < levelZeroUnits; ++i) {
         reverseMinimization.uncheckedEnqueue(trail[i]);
     }
 
     // perform vivification
     int keptLits = 0;
-    cerr << "c rev minimize clause with " << learned_clause << " lits: " << learned_clause << endl;
+    if( localDebug ) cerr << "c rev minimize clause with " << learned_clause << " trail: " << reverseMinimization.trail << endl;
     for (int i = 0; i < learned_clause.size(); ++ i) {
-        const Lit l = learned_clause[i];
-	assert( level(var(l) ) != 0 && "there should not be any literal of the top level in the clause" );
-DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
-        if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
-            learned_clause[keptLits++ ] = l; // keep literal
-        } else if (reverseMinimization.value(l) == l_True) {
-DOUT(   cerr << "c add implied lit " << l << " and abort" << endl; );
-            learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
-            break;
-        } else {
-            assert(reverseMinimization.value(l) == l_False && "there only exists three values");
-            // continue, as this clause is minimized
-            reverseMinimization.revMindroppedLiterals ++;
-            continue;
-        }
-
-        // propagate the current literal
-        int trailHead = trail.size();
-        reverseMinimization.uncheckedEnqueue(~l);
-
+	// first propagate, then add literals. this way, the empty clause could be learned
         CRef    confl     = CRef_Undef;
         watches.cleanAll();
         while (trailHead < reverseMinimization.trail.size()) {
@@ -1454,14 +1446,23 @@ DOUT(   cerr << "c add implied lit " << l << " and abort" << endl; );
             Watcher        *i, *end;
             // propagate longer clauses here!
             for (i = (Watcher*)ws, end = i + ws.size();  i != end; i++) {
+	      
+		if( localDebug ) cerr << "c propagate " << p << " on clause " << ca[i->cref()] << endl;
+	      
                 if (i->isBinary()) {   // handle binary clauses as usual (no write access necessary!)
                     const Lit& imp = i->blocker();
                     if (reverseMinimization.value(imp) == l_False) {
                         confl = i->cref();              // store the conflict
                         trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
-DOUT(   cerr << "reverse minimization hit a conflict during propagation" << endl; );
+DOUT(   if( localDebug ) {cerr << "reverse minimization hit a conflict during propagation" << endl; 
+	cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << endl;
+	cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << endl; }
+);
                         break;
-                    }
+                    } else if ( reverseMinimization.value(imp) == l_Undef) { // imply other literal
+		      if( localDebug ) { cerr << "c enqueue " << imp << " due to " << ca[ i->cref() ] << endl; }
+		      reverseMinimization.uncheckedEnqueue(imp);
+		    }
                     continue;
                 }
                 // Try to avoid inspecting the clause:
@@ -1478,10 +1479,10 @@ DOUT(   cerr << "reverse minimization hit a conflict during propagation" << endl
                 Lit impliedLit = lit_Undef;
                 for (int k = 0; k < c.size(); k++) {
                     if (reverseMinimization.value(c[k]) == l_Undef) {
-                        if (impliedLit != lit_Undef) {
+                        if (impliedLit == lit_Undef) {
                             impliedLit = c[k];  // if there is exactly one left
                         } else {
-                            impliedLit == lit_Error;                   // there are multiple left
+                            impliedLit = lit_Error;                   // there are multiple left
                             break;
                         }
                     } else if (reverseMinimization.value(c[k]) == l_True) {
@@ -1495,20 +1496,47 @@ DOUT(   cerr << "reverse minimization hit a conflict during propagation" << endl
                         confl = i->cref();
                         trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
                     } else {
+		        if( localDebug ) { cerr << "c enqueue " << impliedLit << " due to " << ca[ i->cref() ] << endl; }
                         reverseMinimization.uncheckedEnqueue(impliedLit);
                     }
                 }
-            NextClause:;
             }
 
         }
 
         // found a conflict during reverse propagation
         if (confl != CRef_Undef) {
-	  DOUT(   cerr << "reverse minimization hit a conflict during propagation (" << i << ") with conflict " << ca[confl] << endl; );
+	  
+DOUT(   if( localDebug ) {cerr << "reverse minimization hit a conflict during propagation (" << i << ") with conflict " << ca[confl] << endl; 
+	cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << endl;
+	cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << endl; }
+);
             if (i + 1 < learned_clause.size()) { reverseMinimization.revMinConflicts ++; } // count cases when the technique was succesful
             break;
         }
+        
+        if( i == learned_clause.size() ) break;
+	
+        const Lit l = learned_clause[i];
+	assert( level(var(l) ) != 0 && "there should not be any literal of the top level in the clause" );
+// DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
+        if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
+            learned_clause[keptLits++ ] = l; // keep literal
+        } else if (reverseMinimization.value(l) == l_True) {
+// DOUT(   cerr << "c add implied lit " << l << " and abort" << endl; );
+            learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
+            break;
+        } else {
+            assert(reverseMinimization.value(l) == l_False && "there only exists three values");
+            // continue, as this clause is minimized
+            reverseMinimization.revMindroppedLiterals ++;
+            continue;
+        }
+
+        // propagate the current literal in next iteration of the loop
+        if( localDebug ) cerr << "c enqueue next literal: " << ~l << " (pos: " << i << " / " << learned_clause.size() << ")" << endl;
+        reverseMinimization.uncheckedEnqueue(~l);
+	
 
     } // end of looping over all literals of the clause
 
