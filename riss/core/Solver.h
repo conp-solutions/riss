@@ -846,12 +846,12 @@ class Solver
     std::vector< int > analyzePosition; // for full probing approximation
     std::vector< int > analyzeLimits; // all combination limits for full probing
 
-  /// for generating bi-asserting clauses instead of first UIP clauses
-  bool isBiAsserting;		// indicate whether the current learned clause is bi-asserting or not
-  bool allowBiAsserting;	// conflict analysis is allowed to produce bi-asserting clauses
-  uint32_t lastBiAsserting;	// store number of conflicts when the last bi-asserting clause has been learnd
-  uint64_t biAssertingPostCount, biAssertingPreCount;	// count number of biasserting clauses (after minimization, before minimization)
-    
+    /// for generating bi-asserting clauses instead of first UIP clauses
+    bool isBiAsserting;       // indicate whether the current learned clause is bi-asserting or not
+    bool allowBiAsserting;    // conflict analysis is allowed to produce bi-asserting clauses
+    uint32_t lastBiAsserting; // store number of conflicts when the last bi-asserting clause has been learnd
+    uint64_t biAssertingPostCount, biAssertingPreCount;   // count number of biasserting clauses (after minimization, before minimization)
+
     // UHLE during search with learnt clauses:
     uint32_t searchUHLEs, searchUHLElits;
 
