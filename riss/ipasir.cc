@@ -31,19 +31,22 @@
  * IN THE SOFTWARE.
  *
  */
-#ifndef RISS_ipasir_h_INCLUDED
-#define RISS_ipasir_h_INCLUDED
 
 #include "riss/librissc.h" // include actual C-interface of Riss
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Return the name and the version of the incremental SAT
  * solving library.
  */
-inline
 const char * ipasir_signature()
 {
-    return riss_signature();
+#warning return a dynamic version of the signature here!
+    //return riss_signature();
+  return "riss505";
 }
 
 /**
@@ -54,7 +57,6 @@ const char * ipasir_signature()
  * Required state: N/A
  * State after: INPUT
  */
-inline
 void * ipasir_init()
 {
     return riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
@@ -68,7 +70,6 @@ void * ipasir_init()
  * Required state: INPUT or SAT or UNSAT
  * State after: undefined
  */
-inline
 void ipasir_release(void * solver)
 {
     riss_destroy(solver);
@@ -89,7 +90,6 @@ void ipasir_release(void * solver)
  * negation overflow).  This applies to all the literal
  * arguments in API functions.
  */
-inline
 void ipasir_add(void * solver, int lit_or_zero)
 {
     riss_add(solver, lit_or_zero);
@@ -103,7 +103,6 @@ void ipasir_add(void * solver, int lit_or_zero)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT
  */
-inline
 void ipasir_assume(void * solver, int lit)
 {
     riss_assume(solver, lit);
@@ -119,7 +118,6 @@ void ipasir_assume(void * solver, int lit)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-inline
 int ipasir_solve(void * solver)
 {
     return riss_sat(solver);
@@ -175,4 +173,6 @@ void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * s
     riss_set_termination_callback(solver, state, terminate);
 }
 
+#ifdef __cplusplus
+}
 #endif

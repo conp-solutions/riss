@@ -24,13 +24,13 @@ include_directories(${LIBRT_INCLUDES})
 set(VERSION_CC ${CMAKE_CURRENT_SOURCE_DIR}/utils/version.cc)
 set(LIB_SOURCES
     librissc.cc
+    ipasir.cc
     core/CoreConfig.cc
     core/Solver.cc
     simp/SimpSolver.cc
     utils/Options.cc
     utils/Statistics-mt.cc
     utils/System.cc
-    librissc.cc
     ${VERSION_CC})
 
 add_library(riss-lib-static STATIC ${LIB_SOURCES})

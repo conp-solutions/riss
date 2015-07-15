@@ -177,8 +177,8 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     communication->nrSendEattempt = equivalences ? communication->nrSendEattempt + 1 : communication->nrSendEattempt ;
 
     if (! communication->sendEquivalences && equivalences) {
-#warning remove after debug
-        cerr << "c reject equivalences due to disabled option" << endl;
+// #warning remove after debug
+//         cerr << "c reject equivalences due to disabled option" << endl;
         return 0;
     }  // do not share equivalences
 

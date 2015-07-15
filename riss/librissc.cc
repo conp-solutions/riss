@@ -7,6 +7,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 using namespace Riss;
 
+#include "riss/librissc.h"
+
 /** struct that stores the necessary data for a preprocessor */
 struct libriss {
     Riss::Solver* solver;
@@ -180,7 +182,7 @@ extern "C" {
      * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
      */
     int
-    riss_sat(void* riss, const int& nOfConflicts)
+    riss_sat(void* riss, const int64_t& nOfConflicts)
     {
         libriss* solver = (libriss*) riss;
         if (nOfConflicts == -1) { solver->solver->budgetOff(); }
