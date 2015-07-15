@@ -2065,13 +2065,17 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                         proofClause.push_back(~repr); proofClause.push_back(ee[j]);
                         CRef cr = ca.alloc(proofClause, false);
                         data.addToProof(ca[cr]); // tell proof about the new clause!
-                        ca[cr].setExtraInformation(data.defaultExtraInfo());   // setup extra information for this clause!
+                        #ifdef PCASSO
+                        ca[cr].setPTLevel(data.currentDependencyLevel());   // setup extra information for this clause!
+                        #endif
                         data.clss.push_back(cr);
                         proofClause[0] = repr; proofClause[1] = ~ee[j];
                         cr = ca.alloc(proofClause, false);
                         data.addToProof(ca[cr]); // tell proof about the new clause!
                         data.clss.push_back(cr);
-                        ca[cr].setExtraInformation(data.defaultExtraInfo());   // setup extra information for this clause!
+                        #ifdef PCASSO
+                        ca[cr].setPTLevel(data.currentDependencyLevel());   // setup extra information for this clause!
+                        #endif
                     }
                 } else {
                     if (setValue == l_True) {
@@ -2079,7 +2083,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                             if (data.value(ee[j]) == l_True) { continue; }
                             else if (data.value(ee[j]) == l_False) { data.setFailed(); break; }
                             else {
-                                data.enqueue(ee[j], data.defaultExtraInfo());   // enqueue the literal itself!
+                                data.enqueue(ee[j], data.currentDependencyLevel());   // enqueue the literal itself!
                                 data.addCommentToProof("added by EE class");
                                 data.addUnitToProof(ee[j]);
                             }
@@ -2090,7 +2094,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                             if (data.value(ee[j]) == l_False) { continue; }
                             else if (data.value(ee[j]) == l_True) { data.setFailed(); break; }
                             else {
-                                data.enqueue(~ee[j], data.defaultExtraInfo());   // enqueue the complement!
+                                data.enqueue(~ee[j], data.currentDependencyLevel());   // enqueue the complement!
                                 data.addCommentToProof("added by EE class");
                                 data.addUnitToProof(~ee[j]);
                             }
@@ -2162,7 +2166,9 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                                 }
 
                                 c.sort(); // sort the clause!
-                                c.updateExtraInformation(data.defaultExtraInfo());   // since it cannot be traced which clauses participated, we assume the worst case to be on the safe side!
+                                #ifdef PCASSO
+                                c.setPTLevel(data.currentDependencyLevel());   // since it cannot be traced which clauses participated, we assume the worst case to be on the safe side!
+                                #endif
 
                                 int n = 1, removed = 0;
                                 for (int m = 1; m < c.size(); ++ m) {
@@ -2198,7 +2204,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                                     }
                                 } else if (c.size() == 1) {
                                     c.set_delete(true); // remove this clause from the current formula !
-                                    if (data.enqueue(c[0], data.defaultExtraInfo()) == l_False) { return newBinary; }
+                                    if (data.enqueue(c[0], data.currentDependencyLevel()) == l_False) { return newBinary; }
                                 } else if (c.size() == 0) {
                                     data.setFailed();
                                     DOUT(if (config.ee_debug_out > 2) cerr << "c applying EE failed due getting an empty clause" << endl;);

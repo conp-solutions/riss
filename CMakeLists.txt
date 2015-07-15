@@ -37,6 +37,7 @@ option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
 # Print option settings
+message(STATUS "Build type ${CMAKE_BUILD_TYPE}")
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "aiger-tools ${AIGER-TOOLS}")
@@ -65,8 +66,8 @@ endif()
 
 # tuning for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_EXE_LINKER_FLAGS    "-s")  # strip binary
-  set(CMAKE_SHARED_LINKER_FLAGS "-s")  # strip shared libs
+  set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -s")  # strip binary
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")  # strip shared libs
 endif()
 
 
@@ -148,8 +149,7 @@ if(AIGER-TOOLS)
 
 endif()
 
-
 # Combined riss and coprocessor library. This makes linking against riss with
 # the usage of coprocessor simpler (you only have to link against one lib).
-include(MergeStaticLibs)
-merge_static_libs(riss-coprocessor riss-lib-static coprocessor-lib-static)
+add_library(riss-coprocessor-lib-static STATIC $<TARGET_OBJECTS:riss-lib-object> $<TARGET_OBJECTS:coprocessor-lib-object>)
+set_target_properties(riss-coprocessor-lib-static PROPERTIES OUTPUT_NAME "riss-coprocessor")

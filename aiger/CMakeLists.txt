@@ -1,31 +1,33 @@
-# Project definitions:
+# Project definitions
 # 
 # aiger tools by Biere
 project(aiger)
 version("1.9.6")
 
-# Dependencies:
+# 
+# Dependencies
 # 
 find_package(Threads)
 
 include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
 
-# Libraries:
+# 
+# Libraries
 # 
 set(LIB_SOURCES
     aiger.c
     simpaig.c
     aigfuzzlayers.c)
 
-add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+add_library(aiger-lib-static STATIC ${LIB_SOURCES})
+add_library(aiger-lib-shared SHARED ${LIB_SOURCES})
 
-set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}")
-set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}" 
-                                                 VERSION ${VERSION}
-                                                 SOVERSION ${SOVERSION})
+set_target_properties(aiger-lib-static PROPERTIES
+                                       OUTPUT_NAME "aiger")
+set_target_properties(aiger-lib-shared PROPERTIES
+                                       OUTPUT_NAME "aiger" 
+                                       VERSION ${VERSION}
+                                       SOVERSION ${SOVERSION})
 
 # List of all executables
 set(TOOLS aig-plain-bmc
@@ -71,7 +73,7 @@ if(AIGER-TOOLS)
                     COMMENT "Build all aiger tools"
                     DEPENDS ${TOOLS})
 
-  target_link_libraries(abc-demo       abc m dl readline ${CMAKE_THREAD_LIBS_INIT})
+  target_link_libraries(abc-demo abc m dl readline ${CMAKE_THREAD_LIBS_INIT})
 
   if(STATIC_BINARIES)
     target_link_libraries(aigbmc         picosat-lib-static)
@@ -79,7 +81,7 @@ if(AIGER-TOOLS)
 
     # link each executable
     foreach(TOOL ${TOOLS})
-      target_link_libraries(${TOOL} ${PROJECT_NAME}-lib-static)
+      target_link_libraries(${TOOL} aiger-lib-static)
     endforeach()
 
   else()
@@ -88,7 +90,7 @@ if(AIGER-TOOLS)
 
     # link each executable
     foreach(TOOL ${TOOLS})
-      target_link_libraries(${TOOL} ${PROJECT_NAME}-lib-shared)
+      target_link_libraries(${TOOL} aiger-lib-shared)
     endforeach()
 
   endif()
@@ -98,6 +100,6 @@ if(AIGER-TOOLS)
 endif()
 
 # installation of libraries
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+install(DIRECTORY aiger
+        DESTINATION include/aiger
         FILES_MATCHING PATTERN "*.h")

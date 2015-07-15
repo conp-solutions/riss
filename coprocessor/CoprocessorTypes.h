@@ -196,7 +196,7 @@ class CoprocessorData
 // semantic:
     bool ok();                                             // return ok-state of solver
     void setFailed();                                      // found UNSAT, set ok state to false
-    Riss::lbool enqueue(const Riss::Lit& l, const uint64_t extraInfo = 0);  // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
+    Riss::lbool enqueue(const Riss::Lit& l, const unsigned dependencyLevel = 0);  // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
     Riss::lbool value(const Riss::Lit& l) const ;           // return the assignment of a literal
     void resetAssignment(const Riss::Var v);               // set the polarity of a variable to l_Undef -- Note: be careful with this!
 
@@ -302,8 +302,8 @@ class CoprocessorData
     bool outputsProof() const { return false; }
     #endif
 
-    // handling equivalent literals
-    void addEquivalences(const std::vector<Riss::Lit>& list);
+    /// handling equivalent literals, not a constant list to be able to share it in priss (will not alter the list)
+    void addEquivalences(const vector< Riss::Lit >& list);
     void addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2);
     Riss::vec< Riss::Lit >& getEquivalences();
     Riss::vec< Riss::Lit >& replacedBy() { return solver->eqInfo.replacedBy; }
@@ -326,10 +326,55 @@ class CoprocessorData
         for (int i = 0 ; i < solver->trail.size(); ++ i) { std::cerr << " " << solver->trail[i]; }
     }
 
-    /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
-    bool usesExtraInfo() const { return solver->usesExtraInfo(); }
-    uint64_t defaultExtraInfo() const { return solver->defaultExtraInfo(); }
-    uint64_t variableExtraInfo(const Riss::Var& v) const { return solver->variableExtraInfo(v); }
+    /** return dependencyLevel of the given variable */
+    unsigned dependencyLevel(const Riss::Var& v)
+    {
+        #ifdef PCASSO
+        solver->vardata[ v ]. dependencyLevel;
+        #else
+        return 0;
+        #endif
+    }
+
+    /** return the dependency level of the node the solver is operating on*/
+    unsigned currentDependencyLevel() const
+    {
+        #ifdef PCASSO
+        return solver->currentDependencyLevel();
+        #else
+        return 0;
+        #endif
+    }
+
+    /** share units or a clause
+     * Note: equivalences are autoatically shared when they are added
+     */
+    template <typename T>
+    #ifdef PCASSO
+    void share(T* data, int dataSize, unsigned dependencyLevel, bool multiUnit = false)
+    #else
+    void share(T* data, int dataSize, bool multiUnit)
+    #endif
+    {
+        #ifdef PCASSO
+        solver->updateSleep(data, dataSize, dependencyLevel, multiUnit);
+        #else
+        solver->updateSleep(data, dataSize, multiUnit);
+        #endif
+    }
+
+    /** convenient wrapper for the method share to share multiple unit clauses with other workers */
+    void sendUnits(Riss::vec< Riss::Lit >& literalStorage, uint32_t beginIndex, int unitsToShare)
+    {
+
+        Riss::Lit* headPointer = & (literalStorage[beginIndex]);  // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
+        #ifdef PCASSO
+        share(&headPointer, unitsToShare , currentDependencyLevel(), true);  // give some value to the method, it will trace the dependencies for multi-units automatically
+        #else
+        share(&headPointer, unitsToShare , true);
+        #endif
+    }
+
 };
 
 /** class representing the binary implication graph of the formula */
@@ -407,6 +452,7 @@ class BIG
     uint32_t getStart(const Riss::Lit& l) { return start != 0 && var(l) < duringCreationVariables ? start[ Riss::toInt(l) ] : 0; }
     /** get indexes of BIG scan algorithm */
     uint32_t getStop(const Riss::Lit& l) { return stop != 0 && var(l) < duringCreationVariables  ? stop[ Riss::toInt(l) ] : 0; }
+
 };
 
 /** Comperator for Variable Riss::Heap of BVE */
@@ -675,15 +721,18 @@ inline bool CoprocessorData::isInterupted()
 }
 
 
-inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit& l, const uint64_t extraInfo)
+inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit& l, const unsigned int dependencyLevel)
 {
     if (false || global_debug_out) { std::cerr << "c enqueue " << l << " with previous value " << (solver->value(l) == l_Undef ? "undef" : (solver->value(l) == l_False ? "unsat" : " sat ")) << std::endl; }
     if (solver->value(l) == l_False) {
         solver->ok = false; // set state to false
         return l_False;
     } else if (solver->value(l) == l_Undef) {
+        #ifdef PCASSO
+        solver->uncheckedEnqueue(l, dependencyLevel);
+        #else
         solver->uncheckedEnqueue(l);
-        // if( extraInfo != 0 ) solver.vardata[ var(l) ] ... // make use of extra information!
+        #endif
         return l_True;
     }
     return l_Undef;
@@ -1501,7 +1550,7 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 inline void CoprocessorData::addEquivalences(const std::vector< Riss::Lit >& list)
 {
     assert((list.size() != 2 || list[0] != list[1]) && "do not allow to add a std::pair of the same literals");
-    solver->eqInfo.addEquivalenceClass(list);
+    solver->eqInfo.addEquivalenceClass(list); // will also share the SCC
 }
 
 inline void CoprocessorData::addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2)

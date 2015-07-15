@@ -65,6 +65,8 @@ class CoreConfig : public Config
     BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
     DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
+    BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
+    IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;
     IntOption opt_lb_lbd_minimzing_clause;
 
@@ -97,6 +99,12 @@ class CoreConfig : public Config
     IntOption opt_vsids_distance; // interpolate between VSIDS and VMTF, update afte rthis number of conflict
     IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
     IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
+
+    BoolOption opt_receiveData;           // participate in receiving
+    IntOption  sharingType;               // determine when learned clauses are shared
+    BoolOption opt_receiveEquivalences;   // receive equivalenced (is turned automatically on after first succesful inprocessing)
+    BoolOption opt_refineReceivedClauses; // apply viviification to received clauses
+    BoolOption opt_resendRefinedClauses;  // resend refined clauses
 
     BoolOption opt_pq_order;           // If true, use a priority queue to decide the order in which literals are implied
     // and what antecedent is used.  The priority attempts to choose an antecedent
@@ -135,6 +143,8 @@ class CoreConfig : public Config
     IntOption opt_rMax;
     DoubleOption opt_rMaxInc;
 
+    StringOption printOnSolveTo; // print formula of the solver once ::solve_ is called, and exit afterwards
+
     StringOption search_schedule;
     IntOption    scheduleConflicts;
     IntOption    scheduleDefaultConflicts;
@@ -156,6 +166,13 @@ class CoreConfig : public Config
 
     BoolOption opt_hpushUnit;
     IntOption opt_simplifyInterval;
+
+    BoolOption opt_otfss;
+    BoolOption opt_otfssL;
+    IntOption opt_otfssMaxLBD;
+    #ifndef NDEBUG
+    BoolOption debug_otfss;
+    #endif
 
     IntOption opt_learnDecPrecent; // learn decision clauses instead of others
     IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause

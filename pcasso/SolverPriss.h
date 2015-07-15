@@ -17,7 +17,7 @@ namespace Pcasso
 class SolverPriss : public InstanceSolver
 {
   public:
-    SolverPriss(Riss::CoreConfig *config, int threadsToUse);
+    SolverPriss(Riss::PfolioConfig *config, int threadsToUse);
 
     ~SolverPriss();
 
@@ -57,9 +57,9 @@ class SolverPriss : public InstanceSolver
     inline unsigned int getLiteralPTLevel(const Riss::Lit& l) const { return 0; } // FIXME: return correct PT level
 
   private:
-    Riss::CoreConfig*   coreConfig;
+    Riss::PfolioConfig*   coreConfig;
     // TODO: varPT not working yet
-    Riss::vec<unsigned> varPT;             // storing the PT level of each variable
+    Riss::vec<unsigned> varPT;             // storing the PT level of each variable // FIXME Norbert: this has to be implemented for Priss, please send a kind reminder "in time" :)
 };
 }
 

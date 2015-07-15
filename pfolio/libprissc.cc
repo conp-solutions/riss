@@ -31,7 +31,7 @@ extern "C" {
         if (threads < 1) { threads = 1; }   // make sure that the number of available threads makes sense ...
         else if (threads > 64) { threads = 64; }
         libpriss* priss = new libpriss;
-        priss->solver = new Riss::PSolver(threads, presetConfig);
+        priss->solver = new Riss::PSolver(0, presetConfig, threads); // overwrite threads of configuration with the given parameter
         return priss;
     }
 

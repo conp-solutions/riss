@@ -37,6 +37,7 @@ class Propagation : public Technique
 
     /** perform usual unit propagation, but shrinks clause sizes also physically
      *  will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
+     *  Note: will share the propagated unit clauses with the other threads in the portfolio solver
      *  @return l_Undef, if no conflict has been found, l_False if there has been a conflict
      */
     Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = nullptr, const Riss::Var ignore = var_Undef);

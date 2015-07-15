@@ -49,20 +49,20 @@ void printStats(Solver& solver)
     double cpu_time = cpuTime();
 
     double mem_used = memUsedPeak();
-    printf("c restarts              : %"PRIu64" (%"PRIu64" conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts / solver.starts);
-    printf("c blocked restarts      : %"PRIu64" (multiple: %"PRIu64") \n", solver.nbstopsrestarts, solver.nbstopsrestartssame);
-    printf("c last block at restart : %"PRIu64"\n", solver.lastblockatrestart);
-    printf("c nb ReduceDB           : %"PRIu64"\n", solver.nbReduceDB);
-    printf("c nb removed Clauses    : %"PRIu64"\n", solver.nbRemovedClauses);
-    printf("c nb learnts DL2        : %"PRIu64"\n", solver.nbDL2);
-    printf("c nb learnts size 2     : %"PRIu64"\n", solver.nbBin);
-    printf("c nb learnts size 1     : %"PRIu64"\n", solver.nbUn);
+    printf("c restarts              : %" PRIu64 " (%" PRIu64 " conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts / solver.starts);
+    printf("c blocked restarts      : %" PRIu64 " (multiple: %" PRIu64 ") \n", solver.nbstopsrestarts, solver.nbstopsrestartssame);
+    printf("c last block at restart : %" PRIu64 "\n", solver.lastblockatrestart);
+    printf("c nb ReduceDB           : %" PRIu64 "\n", solver.nbReduceDB);
+    printf("c nb removed Clauses    : %" PRIu64 "\n", solver.nbRemovedClauses);
+    printf("c nb learnts DL2        : %" PRIu64 "\n", solver.nbDL2);
+    printf("c nb learnts size 2     : %" PRIu64 "\n", solver.nbBin);
+    printf("c nb learnts size 1     : %" PRIu64 "\n", solver.nbUn);
 
-    printf("c conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
-    printf("c decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions * 100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time);
-    printf("c propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations / cpu_time);
-    printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
-    printf("c nb reduced Clauses    : %"PRIu64"\n", solver.nbReducedClauses);
+    printf("c conflicts             : %-12" PRIu64 "   (%.0f /sec)\n", solver.conflicts   , cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
+    printf("c decisions             : %-12" PRIu64 "   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions * 100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time);
+    printf("c propagations          : %-12" PRIu64 "   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations / cpu_time);
+    printf("c conflict literals     : %-12" PRIu64 "   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
+    printf("c nb reduced Clauses    : %" PRIu64 "\n", solver.nbReducedClauses);
 
     printf("c Memory used           : %.2f MB\n", mem_used);
 
@@ -118,6 +118,7 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+    BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
@@ -163,6 +164,12 @@ int main(int argc, char** argv)
             exit(0);
         }
 
+        if (opt_showParam) {  // print remaining parameters
+            cerr << "c call after parsing options: ";
+            for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
+            cerr << endl;
+        }
+
         Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
@@ -185,6 +192,7 @@ int main(int argc, char** argv)
 
         // Set limit on CPU-time:
         if (cpu_lim != INT32_MAX) {
+            receivedInterupt = true; // make sure the next interrupt hits exit
             rlimit rl;
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
@@ -197,6 +205,7 @@ int main(int argc, char** argv)
 
         // Set limit on virtual memory:
         if (mem_lim != INT32_MAX) {
+            receivedInterupt = true; // make sure the next interrupt hits exit
             rlim_t new_mem_lim = (rlim_t)mem_lim * 1024 * 1024;
             rlimit rl;
             getrlimit(RLIMIT_AS, &rl);
@@ -284,7 +293,7 @@ int main(int argc, char** argv)
         S.budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
-            if (res != nullptr) { fclose(res); res == nullptr; }
+            if (res != nullptr) { fclose(res); res = nullptr; }
             if (S.proofFile != nullptr) {
                 fclose(S.proofFile);   // close the current file
                 S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file

@@ -25,7 +25,7 @@ class VSIDSSplitting : public SplitterSolver
     // more global data structure
     Riss::vec<Riss::Lit>  learnt_clause;
     Riss::vec<Riss::CRef> otfssClauses;
-    uint64_t extraInfo;
+    unsigned dependencyLevel;
 
   public:
     VSIDSSplitting(Riss::CoreConfig* config);

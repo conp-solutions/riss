@@ -37,6 +37,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     Solver* solver = data.getSolver();
     // propagate all literals that are on the trail but have not been propagated
     DOUT(if (config.up_debug_out > 0) cerr << "c call propagate. already propagated: " << lastPropagatedLiteral << ", total to proapgate: " << solver->trail.size() << endl;) ;
+    uint32_t lastSharedUnit = lastPropagatedLiteral;
     for (; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++) {
         const Lit l = solver->trail[lastPropagatedLiteral];
         DOUT(if (config.up_debug_out > 0) cerr << "c UP propagating " << l << endl;);
@@ -96,7 +97,9 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
             if (c.size() > 1) {
                 assert(!c.can_be_deleted() && "clause should not be deleted already");
             }
-            c.updateExtraInformation(data.variableExtraInfo(var(nl)));
+            #ifdef PCASSO
+            c.setPTLevel(data.dependencyLevel(var(nl)));
+            #endif
 
             // unit propagation
             if (c.size() == 0) {
@@ -118,6 +121,12 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         removedLiterals += count;
     }
 
+    // tell the solvers in the portfolio setup that we found unit clauses
+    if (lastSharedUnit < solver->trail.size()) {
+        data.sendUnits(solver->trail, lastSharedUnit, solver->trail.size() - lastSharedUnit);
+    }
+
+    // do not propagate these literals inside the solver again
     solver->qhead = lastPropagatedLiteral;
 
     if (!modifiedFormula) { unsuccessfulSimplification(); }   // this call did not change anything

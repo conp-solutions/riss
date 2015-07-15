@@ -2,6 +2,10 @@
 
 ## v5.0.3
 
+ * added (lazy) OTFSS to the solver
+ * added learning biasserting clauses
  * parameter dependencies
  * parameter dependencies can be used to reduce printed help
  * can print parameters into PCS file, according to specified dependency level
+ * parameters to control vivification of shared clauses
+ * enables receiving equivalences before the first try to perform inprocessing
