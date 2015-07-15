@@ -847,7 +847,7 @@ class Solver
 
     /** all info neede to perform lazy on the fly self subsumption */
     struct OTFSS {
-        int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause; // otfss stats
+        int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause, removedSat; // otfss stats
 
         /** store for each clause which literal can be removed */
         struct OtfssInfo {
@@ -860,7 +860,7 @@ class Solver
 
         vec<OtfssInfo> info;        // clauses that have to be processed
         vec<Lit> tmpPropagateLits;  // literals that should be propagated after otfss
-        OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0) {}
+        OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0), removedSat(0) {}
 
     } otfss;
 
