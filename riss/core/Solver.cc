@@ -826,7 +826,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             c[0] =  c[1], c[1] = tmp;
         }
 
-        if ( sharingTimePoint == 2 && !c.wasUsedInAnalyze()) {  // share clauses only, if they are used during resolutions in conflict analysis
+        if (sharingTimePoint == 2 && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
             #ifdef PCASSO
             updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
             #else
@@ -1823,24 +1823,24 @@ lbool Solver::search(int nof_conflicts)
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
     for (;;) {
         propagationTime.start();
-	const int beforeTrail = trail.size();
+        const int beforeTrail = trail.size();
         CRef confl = propagate();
         propagationTime.stop();
 
-        if (decisionLevel() == 0 ) {
-	  if( outputsProof()) {   // add the units to the proof that have been added by being propagated on level 0
-            for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }
-	  }
-	  // send all units that have been propagated on level 0! (other thread might not see the same clauses as this thread)
-	  const int unitsToShare = trail.size() - beforeTrail;
-	  if( unitsToShare > 0 ) {
-	    Lit* headPointer = & (trail[beforeTrail]);  // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
-	    #ifdef PCASSO
-	    updateSleep(&headPointer, unitsToShare , currentDependencyLevel(), true);  // give some value to the method, it will trace the dependencies for multi-units automatically
-	    #else
-	    updateSleep(&headPointer, unitsToShare , true);
-	    #endif
-	  }
+        if (decisionLevel() == 0) {
+            if (outputsProof()) {   // add the units to the proof that have been added by being propagated on level 0
+                for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }
+            }
+            // send all units that have been propagated on level 0! (other thread might not see the same clauses as this thread)
+            const int unitsToShare = trail.size() - beforeTrail;
+            if (unitsToShare > 0) {
+                Lit* headPointer = & (trail[beforeTrail]);  // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
+                #ifdef PCASSO
+                updateSleep(&headPointer, unitsToShare , currentDependencyLevel(), true);  // give some value to the method, it will trace the dependencies for multi-units automatically
+                #else
+                updateSleep(&headPointer, unitsToShare , true);
+                #endif
+            }
         }
 
         if (confl != CRef_Undef) {
@@ -4243,22 +4243,22 @@ bool Solver::processOtfss(Solver::OTFSS& data)
         if (c.mark() != 0) { c.setLocked(); }
     }
 
-    DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail: " << trail << endl; );
-    
+    DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail: " << trail << endl;);
+
     // run over all clauses and delete the literal from the infomation block, if its still present (having a clause multiple times in the vector with different literals should be fine)
     for (int i = 0 ; i < data.info.size(); ++ i) {
         Clause& c = ca[ data.info[i].cr ];
         const Lit& removeLit = data.info[i].shrinkLit;
 
         if (c.size() < 2 || c.mark() != 0 || c.isLocked()) { continue; }   // ignore units and satified/marked clauses
-	data.removedSat = ( value(removeLit) == l_True ) ? data.removedSat + 1 : data.removedSat ;
+        data.removedSat = (value(removeLit) == l_True) ? data.removedSat + 1 : data.removedSat ;
 
         DOUT(if (config.debug_otfss) cerr << "c OTFSS rewrite clause " << c << endl;);
         if (c.size() == 2) {
             if (c[0] == removeLit || c[1] == removeLit) {  // literal must not be in the clause anymore, because clause was in list multiple times
                 const Lit other = toLit(toInt(c[0]) ^ toInt(c[1]) ^ toInt(removeLit));
                 data.tmpPropagateLits.push(other);
-		DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << other << endl; );
+                DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << other << endl;);
                 data.otfssUnits ++; data.otfssClss++;
                 c.setLocked(); // tell the clause it must go, will be satisfied after unit propagation anyways
             }
@@ -4268,19 +4268,18 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 if (c[0] == removeLit) { c[0] = c[2]; c.pop(); }  // move last literal forward, shrink the clause
                 else if (c[1] == removeLit) { c[1] = c[2]; c.pop(); }    // move last literal forward, shrink the clause
                 else { c.pop(); }  // shrink the clause, remove the last literal
-                assert( c.size() == 2 && "clause has to be binary now");
+                assert(c.size() == 2 && "clause has to be binary now");
                 attachClause(data.info[i].cr);   // added as binary watch again
                 data.otfssBinaries ++; data.otfssClss++;
                 c.mark(1); // mark clause, so that its not processed twice, is undone afterwards again
-		assert( ( value( c[0] ) != l_False || value( c[1] ) != l_False ) && "otherwise the clause would have been found before" );
-		if( value( c[0] ) == l_False ) {
-		  data.tmpPropagateLits.push( c[1] );
-		  DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << c[1] << endl; );
-		}
-		else if( value( c[1] ) == l_False ) {
-		  data.tmpPropagateLits.push( c[0] );
-		  DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << c[0] << endl; ); 
-		}
+                assert((value(c[0]) != l_False || value(c[1]) != l_False) && "otherwise the clause would have been found before");
+                if (value(c[0]) == l_False) {
+                    data.tmpPropagateLits.push(c[1]);
+                    DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << c[1] << endl;);
+                } else if (value(c[1]) == l_False) {
+                    data.tmpPropagateLits.push(c[0]);
+                    DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << c[0] << endl;);
+                }
             }
         } else {
 
@@ -4291,7 +4290,7 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                     c.pop();                  // remove the literal
                     c.mark(1);                // mark clause, so that its not processed twice, is undone afterwards again
                     if (j < 2) {              // the literal was a watched literal
-		        assert( (value(removeLit) == l_True || value( c[ 1 - j ] ) != l_False) && "the two watched literals of the clause should be free (true of undef" );
+                        assert((value(removeLit) == l_True || value(c[ 1 - j ]) != l_False) && "the two watched literals of the clause should be free (true of undef");
                         vec<Watcher>&  ws  = watches[ ~removeLit ];
                         for (int k = 0 ; k < ws.size(); ++ k) {
                             if (ws[k].cref() == data.info[i].cr) {
@@ -4300,29 +4299,29 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                                 break;
                             }
                         }
-                        
+
                         // check that we do not watch a literal that is false already
-                        if( value( c[j] ) == l_False ) {
-			  DOUT(if (config.debug_otfss) cerr << "c first watch was false:: " << c[ j ] << endl; );
-			  int freePosition = 2;
-			  for( ; freePosition < c.size(); ++ freePosition ) {
-			    if( value( c[freePosition] ) != l_False ) break;
-			  }
-			  if( c.size() == freePosition ) { // unit
-			    DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << c[ 1 - j ] << endl; );
-			    data.tmpPropagateLits.push( c[ 1 - j ]  ); // this clause became unit clause
-			  } else { // move free literal forward before attaching clause again
-			    const Lit tmpLit = c[j];  // swap literals
-			    c[j] = c[freePosition];   // could remove the false literal here, but then the clause might become binary and would have to be placed in another watch list
-			    c[freePosition] = tmpLit;
-			  }
-			}
-                        
+                        if (value(c[j]) == l_False) {
+                            DOUT(if (config.debug_otfss) cerr << "c first watch was false:: " << c[ j ] << endl;);
+                            int freePosition = 2;
+                            for (; freePosition < c.size(); ++ freePosition) {
+                                if (value(c[freePosition]) != l_False) { break; }
+                            }
+                            if (c.size() == freePosition) {  // unit
+                                DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << c[ 1 - j ] << endl;);
+                                data.tmpPropagateLits.push(c[ 1 - j ]);    // this clause became unit clause
+                            } else { // move free literal forward before attaching clause again
+                                const Lit tmpLit = c[j];  // swap literals
+                                c[j] = c[freePosition];   // could remove the false literal here, but then the clause might become binary and would have to be placed in another watch list
+                                c[freePosition] = tmpLit;
+                            }
+                        }
+
                         // attach to the list of the new literal
                         const Lit otherWatchedLit = c[ 1 - j ];                                 // the first two literals are the watched literals
                         DOUT(if (config.debug_otfss) cerr << "c add clause to watch list of literal " << ~c[j] << " with blocking lit " << otherWatchedLit << endl;);
                         watches[ ~ c[j] ].push(Watcher(data.info[i].cr, otherWatchedLit, 1));   // updates the blocking literal, add as long clause watch
-			
+
                     }
                     break;
                 }
@@ -4346,10 +4345,10 @@ bool Solver::processOtfss(Solver::OTFSS& data)
         if (value(propLit) == l_False) { return true; }
         else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
     }
-    DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after enqueue: " << trail << endl; );
-    bool failed = propagate() != CRef_Undef; 
-    DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after propagate: " << trail << endl; );
-    if( failed ) ok = false;
+    DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after enqueue: " << trail << endl;);
+    bool failed = propagate() != CRef_Undef;
+    DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after propagate: " << trail << endl;);
+    if (failed) { ok = false; }
     return failed;
 }
 

@@ -308,7 +308,7 @@ int main(int argc, char** argv)
 
         // check model of the formula
         if (ret == l_True && opt_checkModel && argc != 1) {  // check the model if the formla was given via a file!
-	    gzFile in = gzopen(argv[1], "rb"); // re-read file
+            gzFile in = gzopen(argv[1], "rb"); // re-read file
             if (check_DIMACS(in, S.model)) {
                 printf("c verified model\n");
             } else {

@@ -130,7 +130,7 @@ int main(int argc, char** argv)
             for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
             cerr << endl;
         }
-        
+
         PSolver S(&pfolioConfig);   // set up a portfolio solver for DRUP proofs
 
         double initial_time = cpuTime();

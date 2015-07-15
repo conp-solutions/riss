@@ -188,7 +188,7 @@ bool check_DIMACS(gzFile input_stream, vec<lbool>& model)
             bool satisfied = false;
             for (;;) {
                 parsed_lit = parseInt(in);
-// 		cerr << "c parsed number: " << parsed_lit << endl;
+//      cerr << "c parsed number: " << parsed_lit << endl;
                 if (parsed_lit == 0) { break; }
                 variable = abs(parsed_lit) - 1;
                 const Lit l = (parsed_lit > 0) ? mkLit(variable) : ~mkLit(variable);
