@@ -503,7 +503,12 @@ class Clause
     void unlock()
     {
         header.locked = 0;
-    };
+    }
+    
+    /** set lock variable without actually locking  */
+    void setLocked() {
+      header.locked = 1;
+    }
 
     void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
     inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; }  shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }

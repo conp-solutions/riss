@@ -4226,7 +4226,7 @@ bool Solver::processOtfss(Solver::OTFSS& data)
     // mark all clauses that have been marked before
     for (int i = 0 ; i < data.info.size(); ++ i) {
         Clause& c = ca[ data.info[i].cr ];
-        if (c.mark() != 0) { c.set_delete(true); }
+        if (c.mark() != 0) { c.setLocked(); }
     }
 
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail: " << trail << endl; );
@@ -4236,7 +4236,7 @@ bool Solver::processOtfss(Solver::OTFSS& data)
         Clause& c = ca[ data.info[i].cr ];
         const Lit& removeLit = data.info[i].shrinkLit;
 
-        if (c.size() < 2 || c.mark() != 0 || c.can_be_deleted()) { continue; }   // ignore units and satified/marked clauses
+        if (c.size() < 2 || c.mark() != 0 || c.isLocked()) { continue; }   // ignore units and satified/marked clauses
 	data.removedSat = ( value(removeLit) == l_True ) ? data.removedSat + 1 : data.removedSat ;
 
         DOUT(if (config.debug_otfss) cerr << "c OTFSS rewrite clause " << c << endl;);
@@ -4246,7 +4246,7 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 data.tmpPropagateLits.push(other);
 		DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << other << endl; );
                 data.otfssUnits ++; data.otfssClss++;
-                c.set_delete(true); // tell the clause it must go, will be satisfied after unit propagation anyways
+                c.setLocked(); // tell the clause it must go, will be satisfied after unit propagation anyways
             }
         } else if (c.size() == 3) {
             if (c[0] == removeLit || c[1] == removeLit || c[2] == removeLit) { // literal must not be in the clause anymore, because clause was in list multiple times
@@ -4322,7 +4322,8 @@ bool Solver::processOtfss(Solver::OTFSS& data)
     // reset all marks of all the clauses that have not been marked before
     for (int i = 0 ; i < data.info.size(); ++ i) {
         Clause& c = ca[ data.info[i].cr ];
-        if (!c.can_be_deleted()) { c.mark(0); }  // remove mark flag again
+        if (!c.isLocked()) { c.mark(0); }  // remove mark flag again
+        c.unlock();                        // unlock
     }
 
     // enqueue all found unit clauses, propagate afterwards (all new clauses are present already)
