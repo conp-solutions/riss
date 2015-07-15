@@ -100,7 +100,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_cls_act_bump_mode       (_cs,  "clsActB",                "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
 
     opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences", true,                                                                             optionListPtr),
-    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse)", 0, IntRange(0, 2) ,                                                     optionListPtr),
+    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse)", 1, IntRange(0, 2) ,                                                     optionListPtr),
     opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
     opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
     opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),

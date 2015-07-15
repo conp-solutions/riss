@@ -544,7 +544,7 @@ class StringOption : public Option
     {
         const char* span = str;
 
-        if (!match(span, "-") || !match(span, name) || !match(span, "=")) {
+	if (!match(span, "-") || !match(span, name) || !match(span, "=")) {
             return false;
         }
 

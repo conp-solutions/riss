@@ -12,12 +12,14 @@
 #param="-config=Riss427 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -lbd-core-th=5"
 #param="-threads=3 -storageSize=16000 -pIncSetup=\"[1] -no-receive -actStart=2048 -init-act=3 [2] -refRec -resRefRec -enabled_cp3 -shareTime=2 -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000 [3] -enabled_cp3 -shareTime=2 -probe -pr-probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000\" -ppconfig=\"-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early\""
 
+
+
 #
 # select between printing a proof and not printing a proof
 #
 # run riss without printing a proof
 #gdb --args ./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? 
-./priss $1 -threads=2 -storageSize=16000 -pIncSetup="[1] -no-receive -actStart=2048 -init-act=3 [2] -refRec -printDec=0" -mem-lim=2048 /tmp/riss-out-$$ $param #> /dev/null 2> /dev/null
+./priss $1 -threads=4 -showUnusedParam -ppconfig="Riss427:plain_XOR:-cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early" -psetup=alpha -mem-lim=2048 $param > /tmp/riss-out-$$  #> /dev/null 2> /dev/null
 #./pcasso $1 -mem-lim=2048 /tmp/riss-out-$$ $param #> /dev/null 2> /dev/null
 status=$?
 cat /tmp/riss-out-$$

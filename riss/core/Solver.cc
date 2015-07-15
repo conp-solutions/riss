@@ -221,6 +221,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , useCoprocessorIP(config.opt_usePPip)
 
     // communication to other solvers that might be run in parallel
+    , communication(0)
     , sharingTimePoint(config.sharingType)
 {
 
@@ -825,7 +826,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             c[0] =  c[1], c[1] = tmp;
         }
 
-        if (!c.wasUsedInAnalyze()) {  // share clauses only, if they are used during resolutions in conflict analysis
+        if ( sharingTimePoint == 2 && !c.wasUsedInAnalyze()) {  // share clauses only, if they are used during resolutions in conflict analysis
             #ifdef PCASSO
             updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
             #else
@@ -1376,7 +1377,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            if (!c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
+            if (sharingTimePoint == 1 && !c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
                 #ifdef PCASSO
                 updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
                 #else
@@ -1822,11 +1823,24 @@ lbool Solver::search(int nof_conflicts)
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
     for (;;) {
         propagationTime.start();
+	const int beforeTrail = trail.size();
         CRef confl = propagate();
         propagationTime.stop();
 
-        if (decisionLevel() == 0 && outputsProof()) {   // add the units to the proof that have been added by being propagated on level 0
+        if (decisionLevel() == 0 ) {
+	  if( outputsProof()) {   // add the units to the proof that have been added by being propagated on level 0
             for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }
+	  }
+	  // send all units that have been propagated on level 0! (other thread might not see the same clauses as this thread)
+	  const int unitsToShare = trail.size() - beforeTrail;
+	  if( unitsToShare > 0 ) {
+	    Lit* headPointer = & (trail[beforeTrail]);  // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
+	    #ifdef PCASSO
+	    updateSleep(&headPointer, unitsToShare , currentDependencyLevel(), true);  // give some value to the method, it will trace the dependencies for multi-units automatically
+	    #else
+	    updateSleep(&headPointer, unitsToShare , true);
+	    #endif
+	  }
         }
 
         if (confl != CRef_Undef) {

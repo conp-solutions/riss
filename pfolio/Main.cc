@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     StringOption opt_config("MAIN", "pconfig", "the configuration to be used for the portfolio solver", 0);
-
+    BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
     try {
@@ -125,6 +125,12 @@ int main(int argc, char** argv)
         foundHelp = pfolioConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
 
+        if (opt_showParam) {  // print remaining parameters
+            cerr << "c call after parsing options: ";
+            for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
+            cerr << endl;
+        }
+        
         PSolver S(&pfolioConfig);   // set up a portfolio solver for DRUP proofs
 
         double initial_time = cpuTime();

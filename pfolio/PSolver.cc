@@ -494,6 +494,44 @@ void PSolver::createThreadConfigs()
         if (threads > 3) {
             ppconfigs[3].parseOptions("-enabled_cp3 -shareTime=2 -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3 -inprocess -cp3_inp_cons=10000");
         }
+    } else if ( defaultConfig == "alpha" ) {
+    
+      if (threads > 0) {
+	ppconfigs[0].parseOptions("-revMin -init-act=3 -actStart=2048 -no-receive");
+	configs[0].parseOptions("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1");
+      }
+      if (threads > 1) {
+	ppconfigs[1].parseOptions("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+	configs[1].parseOptions("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1");
+      }
+      if (threads > 2) {
+	ppconfigs[2].parseOptions("-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec ");
+	configs[2].parseOptions("-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec -shareTime=1");
+      }
+      if (threads > 3) {
+	ppconfigs[3].parseOptions("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+	configs[3].parseOptions("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1");
+      }
+      if (threads > 4) {
+	ppconfigs[4].parseOptions("-revMin -init-act=4 -actStart=2048 -refRec ");
+	configs[4].parseOptions("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2");
+      }
+      if (threads > 5) {
+	ppconfigs[5].parseOptions("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+	configs[5].parseOptions("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec  -shareTime=2");
+      }
+      if (threads > 6) {
+	ppconfigs[6].parseOptions("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+	configs[6].parseOptions("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2");
+      }
+      if (threads > 7) {
+	ppconfigs[7].parseOptions("-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec ");
+	configs[7].parseOptions("-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2");	
+      }
+      for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+         if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+         else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+      }
     }
 }
 
@@ -513,7 +551,7 @@ bool PSolver::initializeThreads()
     // get space for thread ids
     threadIDs = new pthread_t [threads];
 
-    data = new CommunicationData(privateConfig->opt_storageSize);   // space for clauses
+    data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
 
 
     // the portfolio should print proofs
