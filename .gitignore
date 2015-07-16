@@ -37,6 +37,7 @@ tools/checker/solver-wrapper.sh
 
 # example formulas and bugs
 *.cnf
+*.cnf.gz
 
 # backup files
 *~
