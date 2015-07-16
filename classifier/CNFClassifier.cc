@@ -13,7 +13,7 @@
 #include <math.h>
 
 #include "riss/mtl/Sort.h"
-#include "knn.cc"
+//#include "knn.cc"
 
 using namespace Riss;
 using namespace std;
@@ -101,7 +101,7 @@ string CNFClassifier::getConfig(Solver& S)
     vector<double> features; // temporary storage
     extractFeatures(features); // also print the formula name!!
 
-    return computeKNN("dataset", 5, features);
+//    return computeKNN("dataset", 5, features);
 }
 
 
