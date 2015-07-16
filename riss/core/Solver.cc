@@ -2683,33 +2683,39 @@ void Solver::dumpAndExit(const char* filename)
 }
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
-lbool Solver::solve_()
+lbool Solver::solve_(int preprocessCall)
 {
-    // print formula of the call?
-    if ((const char*)config.printOnSolveTo != 0) {
-        dumpAndExit((const char*)config.printOnSolveTo);
-    }
-    totalTime.start();
-    startedSolving = true;
-    model.clear();
-    conflict.clear();
-    if (!ok) { return l_False; }
-    applyConfiguration();
-    solves++;
-
-    lbool initValue = initSolve(solves);
-    if (initValue != l_Undef)  { return initValue; }
     lbool   status        = l_Undef;
+    cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
+    if( preprocessCall < 2 ) {
+      
+      // print formula of the call?
+      if ((const char*)config.printOnSolveTo != 0) {
+	  dumpAndExit((const char*)config.printOnSolveTo);
+      }
+      totalTime.start();
+      startedSolving = true;
+      model.clear();
+      conflict.clear();
+      if (!ok) { return l_False; }
+      applyConfiguration();
+      solves++;
+
+      lbool initValue = initSolve(solves);
+      if (initValue != l_Undef)  { return initValue; }
+      
 
 
-    printHeader();
+      printHeader();
 
-    // preprocess
-    if (status == l_Undef) {   // TODO: freeze variables of assumptions!
-        status = preprocess();
-        if (config.ppOnly) { return l_Undef; }
+      // preprocess
+      if (status == l_Undef) {   // TODO: freeze variables of assumptions!
+	  status = preprocess();
+	  if (config.ppOnly || preprocessCall == 1 ) { return status; } // stop also if preprocessing should be done only
+      }
+
     }
-
+    
     if (verbosity >= 1) {
         printf("c | solve clauses: %12d  solve variables: %12d                                            |\n", nClauses(), nVars());
         printf("c =========================================================================================================\n");
@@ -3977,6 +3983,13 @@ void Solver::setPreprocessor(Coprocessor::CP3Config* _config)
 {
     assert(coprocessor == 0 && "there should not exist a preprocessor when this method is called");
     coprocessor = new Coprocessor::Preprocessor(this, *_config);
+}
+
+Coprocessor::Preprocessor* Solver::swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor)
+{
+    Coprocessor::Preprocessor* oldPreprocessor = coprocessor;
+    coprocessor = newPreprocessor;
+    return oldPreprocessor;
 }
 
 void Solver::printHeader()

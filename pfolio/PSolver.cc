@@ -238,13 +238,19 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration!
      */
-    if (!initialized) {
+    if (!initialized && defaultSimplifierConfig.size() != 0) {
         assert(globalSimplifierConfig == 0 && globalSimplifier == 0 && "so far we did not setup global solver and simplifier");
 
         globalSimplifierConfig = new Coprocessor::CP3Config(defaultSimplifierConfig.c_str());
         globalSimplifier = new Coprocessor::Preprocessor(solvers[0] , *globalSimplifierConfig, threads); // use simplifier with the given number of threads
-        ret = globalSimplifier->preprocess();
+	
+	Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
+	
+	ret = solvers[0]->solve_(1); // solve until preprocessing
+	
+	solvers[0]->swapPreprocessor(internalPreprocessor); // ignore return value, as we still know this pointer
 
+	if (verbosity > 0) { cerr << "c solver0 with " << solvers[0]->nVars() << " variables, and " << solvers[0]->clauses.size() << " clauses" << endl; }
         // solved by simplification?
         if (ret == l_False) { return ret; }
         else if (ret == l_True) {
@@ -278,11 +284,13 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
 
-            solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
+            solvers[i]->addUnitClauses(solvers[0]->trail);     // copy all the unit clauses, adds to the proof
             solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
             solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
             solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
-
+	    solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
+	    solvers[i]->rebuildOrderHeap();
+	    
             // attach all clauses
             for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
                 solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
@@ -454,8 +462,14 @@ void PSolver::createThreadConfigs()
 
     if (defaultConfig.size() == 0) {
         for (int t = 0 ; t < threads; ++ t) {
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
-            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+            if (incarnationConfigs[t].size() == 0) {  // assign preset, if no cmdline was specified
+	      configs[t].setPreset(Configs[t]);
+	      ppconfigs[t].setPreset(Configs[t]);
+	    }   
+            else { 
+	      configs[t].setPreset(incarnationConfigs[t]);
+	      ppconfigs[t].setPreset(incarnationConfigs[t]);
+	    }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "BMC") {
         // thread 1 runs with empty (default) configurations
@@ -498,7 +512,7 @@ void PSolver::createThreadConfigs()
 
         if (threads > 0) {
             ppconfigs[0].parseOptions("-revMin -init-act=3 -actStart=2048 -no-receive");
-            configs[0].parseOptions("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1");
+            configs[0].parseOptions("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1 -verb=1");
         }
         if (threads > 1) {
             ppconfigs[1].parseOptions("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");

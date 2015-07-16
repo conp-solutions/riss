@@ -117,7 +117,7 @@ if (communication == 0) { return 0; }     // no communication -> do nothing!
 if (toSend == 0 && communicationClient.currentTries++ < communicationClient.receiveEvery) { return 0; }
 communicationClient.currentTries = 0;
 
-                                   // check current state, e.g. wait for master to do something!
+// check current state, e.g. wait for master to do something!
 if (!communication->isWorking()) {
 if (communication->isAborted()) {
         interrupt();
@@ -177,8 +177,8 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     communication->nrSendEattempt = equivalences ? communication->nrSendEattempt + 1 : communication->nrSendEattempt ;
 
     if (! communication->sendEquivalences && equivalences) {
-#warning remove after debug
-        cerr << "c reject equivalences due to disabled option" << endl;
+// #warning remove after debug
+//    	     cerr << "c reject equivalences due to disabled option" << endl;
         return 0;
     }  // do not share equivalences
 

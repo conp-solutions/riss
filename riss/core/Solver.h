@@ -153,7 +153,7 @@ class Solver
     //
     bool    simplify();                             /// Removes already satisfied clauses.
     bool    solve(const vec<Lit>& assumps);         /// Search for a model that respects a given set of assumptions.
-    lbool   solveLimited(const vec<Lit>& assumps);  /// Search for a model that respects a given set of assumptions (With resource constraints).
+    lbool   solveLimited(const vec<Lit>& assumps, int preprocessCall = 0);  /// Search for a model that respects a given set of assumptions (With resource constraints).
     bool    solve();                                /// Search without assumptions.
     bool    solve(Lit p);                           /// Search for a model that respects a single assumption.
     bool    solve(Lit p, Lit q);                    /// Search for a model that respects two assumptions.
@@ -349,7 +349,9 @@ class Solver
     int lastIndexRed;
     bool                ok;               // If FALSE, the constraints are already unsatisfiable. No part of the solver state may be used!
     double              cla_inc;          // Amount to bump next clause with.
+  public:
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
+  protected: 
     double              var_inc;          // Amount to bump next variable with.
   public: // TODO FIXME undo after debugging!
     OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
@@ -609,10 +611,20 @@ class Solver
 
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
 
-    lbool    solve_();                                                                 // Main solve method (assumptions given in 'assumptions').
-
+public:
+    /** Main solve method (assumptions given in 'assumptions') 
+     * @param preprocessCall control how to perform initialization and preprocessing
+     *        0 usual behavior
+     *        1 perform until preprocessing
+     *        2 leave out everything above preprocessing
+     * @return status of the formula
+     */
+    lbool    solve_(int preprocessCall = 0);                                           
+    
+protected:
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
+    
   public:
     void     rebuildOrderHeap();
     void     varSetActivity(Var v, double value);      // set activity for a given variable
@@ -1132,6 +1144,11 @@ class Solver
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
+    
+    /** replace the current instance of coprocessor with the new one 
+        @return pointer to the old coprocessor
+     */
+    Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
 
     bool useCoprocessorPP;
     bool useCoprocessorIP;
@@ -1404,7 +1421,7 @@ inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.cl
 inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_() == l_True; }
 inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
 inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
-inline lbool    Solver::solveLimited(const vec<Lit>& assumps) { assumps.copyTo(assumptions); return solve_(); }
+inline lbool    Solver::solveLimited(const vec<Lit>& assumps, int preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
 inline void     Solver::setRandomSeed(double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay()      const   { return ok; }
 
