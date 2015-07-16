@@ -7,7 +7,7 @@ OBJ = $(SRC:src/%.cc=build/%.o)
 DEP = $(OBJ:.o=.d)
 
 CXX = g++
-CXXFLAGS = -pthread -Wall -Wextra -MMD
+CXXFLAGS = -pthread -Wall -Wextra -MMD -std=c++11
 LDFLAGS = -pthread
 
 LIBRARIES = -L"lib" -lpca -larmadillo -lboost_program_options

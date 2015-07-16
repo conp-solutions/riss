@@ -6,26 +6,25 @@
 #include <stdexcept>
 #include <random>
 #include <vector>
-#include "../../matsave.cc"
+#include "../../src/pcasave.cc"
 
 using namespace std;
 namespace stats {
-
-// pca::pca()
-// 	: num_vars_(0),
-// 	  num_records_(0),
-// 	  record_buffer_(1000),
-// 	  solver_("dc"),
-// 	  do_normalize_(false),
-// 	  do_bootstrap_(false),
-// 	  num_bootstraps_(10),
-// 	  bootstrap_seed_(1),
-// 	  num_retained_(1),
-// 	  energy_(1)
-// {}
-
-
+  
 pca::pca()
+  	: num_vars_(0),
+	  num_records_(0),
+	  record_buffer_(1000),
+	  solver_("dc"),
+	  do_normalize_(false),
+	  do_bootstrap_(false),
+	  num_bootstraps_(10),
+	  bootstrap_seed_(1),
+	  num_retained_(1),
+	  energy_(1)
+{}
+
+pca::pca(string dummy)
 	   :data_(1000, num_vars_CC),
 	    eigval_boot_(num_bootstraps_CC, num_vars_CC),
 	    proj_eigvec_(num_vars_CC, num_vars_CC)
@@ -38,7 +37,7 @@ pca::pca()
 	do_bootstrap_ = do_bootstrap_CC;
 	num_bootstraps_ = num_bootstraps_CC;
         bootstrap_seed_ = 1;
-	num_retained_ = num_vars_;
+	num_retained_ = num_retained_CC;
 	energy_ = energy_CC;
 	energy_boot_ = energy_boot_CC;
 	eigval_ = eigval_CC;
@@ -46,10 +45,33 @@ pca::pca()
 	princomp_ = princomp_CC;
 	mean_ = mean_CC;
 	sigma_ = sigma_CC;
-	
 	assert_num_vars_();
 	set_num_retained(num_retained_);
-	
+}
+
+pca::pca(long num_vars)
+	: num_vars_(num_vars),
+	  num_records_(0),
+	  record_buffer_(1000),
+	  solver_("dc"),
+	  do_normalize_(false),
+	  do_bootstrap_(false),
+	  num_bootstraps_(10),
+	  bootstrap_seed_(1),
+	  num_retained_(num_vars_),
+	  data_(record_buffer_, num_vars_),
+	  energy_(1),
+	  energy_boot_(num_bootstraps_),
+	  eigval_(num_vars_),
+	  eigval_boot_(num_bootstraps_, num_vars_),
+	  eigvec_(num_vars_, num_vars_),
+	  proj_eigvec_(num_vars_, num_vars_),
+	  princomp_(record_buffer_, num_vars_),
+	  mean_(num_vars_),
+	  sigma_(num_vars_)
+{
+	assert_num_vars_();
+	initialize_();
 }
 
 pca::~pca()
@@ -266,6 +288,9 @@ std::vector<double> pca::get_principal(long eigen_index) const {
 	return std::move(utils::extract_column_vector(princomp_, eigen_index));
 }
 
+std::vector<double> pca::get_principalrow(long eigen_index) const {
+	return std::move(utils::extract_row_vector(princomp_, eigen_index));
+}
 double pca::check_eigenvectors_orthogonal() const {
 	return std::abs(arma::det(eigvec_));
 }
@@ -407,8 +432,10 @@ void pca::load(const std::string& basename) {
 
 void pca::saveCC() {
   
-  ofstream ofs ("matsave.cc", ofstream::out); //TODO pecision
+  ofstream ofs ("pcasave.cc", ofstream::out); //TODO pecision
   ofs.precision(10);
+  ofs << "#include <armadillo>" << endl;
+  ofs << "#include <string>" << endl << endl;
   ofs << "long num_vars_CC = " << num_vars_ << ";" << endl;
   ofs << "long num_records_CC = " << num_records_ << ";" << endl;
   //cout << "long record_buffer_ = " << pca.get_

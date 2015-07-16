@@ -7,6 +7,8 @@
 #include <string>
 #include <sstream>
 #include <armadillo>
+
+using namespace std;
 /**
  * @brief A namespace for statistical analysis
  */
@@ -20,6 +22,8 @@ public:
 	 * @brief Constructor
 	 */
 	pca();
+	
+	pca(string dummy);
 	/**
 	 * @brief Constructor
 	 * @param num_vars Number of variables
@@ -236,6 +240,8 @@ public:
 	 * @throws std:range_error if eigen_index is out of range
 	 */
 	std::vector<double> get_principal(long eigen_index) const;
+	std::vector<double> get_principalrow(long eigen_index) const;
+
 	/**
 	 * @brief Returns the mean values (average) of the records assigned to pca.
 	 *  The vector's size equals the number of variables

@@ -62,7 +62,7 @@ DoubleOption    gainth("CLASSIFY", "gainth", "The Information Gain TH of the att
 DoubleOption    timeout("CLASSIFY", "timeout", "The the timeout for SAT solving.\n", 900, DoubleRange(0.0, false, DOUBLE_MAX, false));
 DoubleOption    classifytime("CLASSIFY", "classifytime", "The estimated time to classify an instance by the complete model.\n", 5, DoubleRange(0.0, true, DOUBLE_MAX, false));
 
-StringOption featuresoutput ("CLASSIFY", "out"," Output file to write features into");
+StringOption featuresoutput("CLASSIFY", "out", " Output file to write features into");
 
 StringOption plotFile("CLASSIFY", "plotfile", "If given, the values used to compute distributions are written to this file.");
 StringOption attrFile("CLASSIFY", "dataset", "the (input/output) file with computed values in weka format", "weka.arff");
@@ -182,13 +182,14 @@ void dumpData()
     fout.flush();
 }
 
-inline char* replaceStr(string str, char old, char newch) {
-	char* res = new char[str.size()+1];
-	for (int i = 0; i < str.size(); ++i) {
-		res[i] = (str[i] == old) ? newch : str[i];
-	}
-	res[str.size()]='\0';
-	return res;
+inline char* replaceStr(string str, char old, char newch)
+{
+    char* res = new char[str.size() + 1];
+    for (int i = 0; i < str.size(); ++i) {
+        res[i] = (str[i] == old) ? newch : str[i];
+    }
+    res[str.size()] = '\0';
+    return res;
 }
 
 void printFeatures(int argc, char** argv)
@@ -270,86 +271,84 @@ void printFeatures(int argc, char** argv)
 
     // in output features the actual calculation is done
     cnfclassifier->extractFeatures(features); // also print the formula name!!
-/*  Creates or writes into the output file
- * 
- */
-  
-	vector<string> names = cnfclassifier->getFeaturesNames();
-	
-	if (featuresoutput) {
-	  featuresout.open(featuresoutput, ios_base::in);
-	  
-	  if (!featuresout.is_open()){
-	    cout << "Create and write features in file  " << featuresoutput << "...";
-	    featuresout.clear();
-	    featuresout.open(featuresoutput, ios_base::in | ios_base::out | ios_base::app);
-	    featuresout.precision(4);
-	    
-	    featuresout << "instance ";
-	    
-	    for (int k = 0; k < features.size(); ++k) {
-	      featuresout << replaceStr(names[k], ' ', '_') << " ";
-	    }
-	    featuresout << endl;
-	    
-	    featuresout << cnffile << " " ;
-	    for (int k = 0; k < features.size(); ++k) {
-	      featuresout << features[k] << " ";
-	    }
-	    featuresout << endl;
-	  }
-	  else {
-	    cout << "Write Features into file " << featuresoutput << "..."; 
-	    featuresout.close();
-	    featuresout.open(featuresoutput,   ios_base::in | ios_base::out | ios_base::app);
-	    featuresout.precision(4);
-	    
-	    featuresout << cnffile << " " ;
-	    
-	    for (int k = 0; k < features.size(); ++k) {
-	      featuresout << features[k] << " ";
-	    }
-	    featuresout << endl;	  
-	    
-	  }
-	  featuresout.flush();
-	  featuresout.close();
-	  cout << " written." <<  endl;
-	}
-	 
-	if (argc > 1) {
-	  for (int k = 0; k < features.size(); ++k) {
-	    cout << features[k] << " ";
-	  }
-	  cout << endl;
-	}
-	else {
-	  cout << "instance ";
-  	  for (int k = 0; k < names.size(); ++k) {
-	    cout << replaceStr(names[k], ' ', '_') << " ";
-	  }
-	  cout << endl;
-	}
-	
-/*	
+    /*  Creates or writes into the output file
+     *
+     */
 
-    if (verb > 1) {
-        cout.setf(ios::fixed);
-        cout.precision(4);
-        vector<string> names = cnfclassifier->getFeaturesNames();
-        for (int k = 0; k < features.size(); ++k) {
-            cout << "c " << names[k] << "  :  " << features[k] << endl;
+    vector<string> names = cnfclassifier->getFeaturesNames();
+
+    if (featuresoutput) {
+        featuresout.open(featuresoutput, ios_base::in);
+
+        if (!featuresout.is_open()) {
+            cout << "Create and write features in file  " << featuresoutput << "...";
+            featuresout.clear();
+            featuresout.open(featuresoutput, ios_base::in | ios_base::out | ios_base::app);
+            featuresout.precision(4);
+
+            featuresout << "instance ";
+
+            for (int k = 0; k < features.size(); ++k) {
+                featuresout << replaceStr(names[k], ' ', '_') << " ";
+            }
+            featuresout << endl;
+
+            featuresout << cnffile << " " ;
+            for (int k = 0; k < features.size(); ++k) {
+                featuresout << features[k] << " ";
+            }
+            featuresout << endl;
+        } else {
+            cout << "Write Features into file " << featuresoutput << "...";
+            featuresout.close();
+            featuresout.open(featuresoutput,   ios_base::in | ios_base::out | ios_base::app);
+            featuresout.precision(4);
+
+            featuresout << cnffile << " " ;
+
+            for (int k = 0; k < features.size(); ++k) {
+                featuresout << features[k] << " ";
+            }
+            featuresout << endl;
+
         }
+        featuresout.flush();
+        featuresout.close();
+        cout << " written." <<  endl;
     }
-    time1 = cpuTime() - time1;
-    dumpData();
-   }
-*/
+
+    if (argc > 1) {
+        for (int k = 0; k < features.size(); ++k) {
+            cout << features[k] << " ";
+        }
+        cout << endl;
+    } else {
+        cout << "instance ";
+        for (int k = 0; k < names.size(); ++k) {
+            cout << replaceStr(names[k], ' ', '_') << " ";
+        }
+        cout << endl;
+    }
+
+    /*
+
+        if (verb > 1) {
+            cout.setf(ios::fixed);
+            cout.precision(4);
+            vector<string> names = cnfclassifier->getFeaturesNames();
+            for (int k = 0; k < features.size(); ++k) {
+                cout << "c " << names[k] << "  :  " << features[k] << endl;
+            }
+        }
+        time1 = cpuTime() - time1;
+        dumpData();
+       }
+    */
     if (fileoutput)
-    { (*fileout).close(); } 
+    { (*fileout).close(); }
 }
 
-std::string getConfig( gzFile& in )
+std::string getConfig(gzFile& in)
 {
     CoreConfig coreConfig;
     Solver S(coreConfig);
@@ -363,7 +362,7 @@ std::string getConfig( gzFile& in )
     // here convert the found unit clauses of the solver back as real clauses!
     if (S.trail.size() > 0) {
         S.buildReduct();
-        vec<Lit> ps;ps.push(lit_Undef);
+        vec<Lit> ps; ps.push(lit_Undef);
         for (int j = 0; j < S.trail.size(); ++j) {
             const Lit l = S.trail[j];
             ps[0] = l;
@@ -478,8 +477,7 @@ int main(int argc, char** argv)
                 if (attr && fileoutput) {
                     configuration->printRunningInfo();
                 }
-            }
-        else 	printFeatures(argc, argv);
+            } else { printFeatures(argc, argv); }
             time1 = cpuTime();
             if (!(runtimesInfo) && classify) {
                 Classifier classifier(*configuration, prefixClassifier);

@@ -30,6 +30,8 @@ class Trainer {
     
     void solvePCA(string out);
     
+    void solveIFGR(string out);
+
     void writeData(string out);
     
     void writeCC();
@@ -41,9 +43,12 @@ class Trainer {
     int amountFiles;
     int standardClass;
     int classAppearance[];
-    pair<int,int> solved;
+    pair<int,int> solved; //<solved, notsolved>
     
-    vector<double> divisors;      
+    vector<double> divisors;
+    
+    double calculateEntropy( vector<double>& classValues,vector<double>& values);
+    double calculateIntristicInformation ( vector<double>& values );
 
     
 };

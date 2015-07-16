@@ -13,7 +13,7 @@
 #include <math.h>
 
 #include "riss/mtl/Sort.h"
-#include "knntool-src/knn.cc"
+#include "knn.cc"
 
 using namespace Riss;
 using namespace std;
@@ -80,16 +80,16 @@ CNFClassifier::~CNFClassifier()
 {
 
 }
-string CNFClassifier::getConfig( Solver& S )
+string CNFClassifier::getConfig(Solver& S)
 //string CNFClassifier::getConfig ( Riss::Solver& S, std::string dbName)
 {
-    #warning MIGHT BE DONE OUTSIDE OF THIS METHOD
+#warning MIGHT BE DONE OUTSIDE OF THIS METHOD
     S.verbosity = 0;
 
     // here convert the found unit clauses of the solver back as real clauses!
     if (S.trail.size() > 0) {
         S.buildReduct();
-        vec<Lit> ps;ps.push(lit_Undef);
+        vec<Lit> ps; ps.push(lit_Undef);
         for (int j = 0; j < S.trail.size(); ++j) {
             const Lit l = S.trail[j];
             ps[0] = l;
@@ -97,11 +97,11 @@ string CNFClassifier::getConfig( Solver& S )
             S.clauses.push(cr);
         }
     }
-    
+
     vector<double> features; // temporary storage
     extractFeatures(features); // also print the formula name!!
 
-  return computeKNN ( "dataset", 5, features );
+    return computeKNN("dataset", 5, features);
 }
 
 

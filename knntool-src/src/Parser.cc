@@ -142,7 +142,7 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
   string line;
   int col = 0;
   int notSolved = 0, solved = 0;
-  
+  bool decideFastest = true;
    for (int i = 0; i < amountClasses; ++i) T.classCols.push_back(vector<int>());
   
    while( getline (featuresFile, line) )
@@ -156,10 +156,12 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
 	  col++;
 	  continue;
 	}
-	
-	if ( T.allTimes[col][standardClass] != -1 ) cnfclass = standardClass;
-	else cnfclass = getFastestClass(T.allTimes[col]);	
-	
+	if (decideFastest){
+	  if ( T.allTimes[col][standardClass] != -1 ) cnfclass = standardClass;
+	  else cnfclass = getFastestClass(T.allTimes[col]);	
+	} else {
+	  cnfclass = getFastestClass(T.allTimes[col]);	
+	}
 	    if (cnfclass == T.allTimes[col].size()) {
 	      cnfclass = 100; //TODO standartClass
 	      notSolved ++;
@@ -171,7 +173,7 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
 	      solved++;
 	      for ( int j = 0; j < dimension; ++j ){
 		double temp = atof(Get(line, T.featureIdents[j].first).c_str());
-		if (isinf(temp) || temp > 10e+99) 
+		if (std::isinf(temp) || temp > 10e+99) 
 		  temp = double(10e+99);    //TODO really naive way, might implement a better one
 		  T.features[j].push_back(temp);
 	      }

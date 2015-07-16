@@ -5,6 +5,7 @@
 #include <fstream>
 #include "Trainer.h"
 #include "Parser.h"
+#include "knn.h"
 
 namespace 
 { 
@@ -20,7 +21,10 @@ int main(int argc, char** argv)
 { 
   
   int timeout;
+  int k;
   double threshold;
+  double zero;
+  string dataset;
   
   try 
   {
@@ -33,6 +37,11 @@ int main(int argc, char** argv)
     desc.add_options()  
   /////////////////////////////////////////////////////////////////////
       ("help,h", 								"Print help messages")
+      ("igr",									"Uses the Information Gain Ratio for training")
+      ("zero,z",		po::value<double>(&zero),			"sets the virtual zero")
+      ("k", 			po::value<int>(&k),				"k for knn")
+      ("classify",								"classifys the input feature-vector (uses pca)")
+      ("classifyigr",		po::value<std::string>(&dataset),		"classifys the input feature-vector (information gain ratio)")
       ("input-files", 		po::value<vector<std::string> >()->required(), 	"Specify input/output-files <times.dat> <features.csv> <output>")
       ("featurecalc,c", 	po::value<std::string>(),			"Select the classes with respect to the time which is needed for the feature-calculation")
       ("timeout,t", 		po::value<int>(&timeout)->required(),		"Specify the timeout which is used to select 'solved' instances")
@@ -73,62 +82,91 @@ int main(int argc, char** argv)
       return ERROR_IN_COMMAND_LINE; 
     } 
  /////////////////////////////////////////////////////////////////////
-
-  if(vm["input-files"].as<vector<std::string> >().size() != 3){
-    cerr << "Wrong Input" << endl;
-    exit(1);
+  
+  if (vm.count("classifyigr")){
+    cerr << "Zero:\t" << zero << endl;
+    cerr << "k:\t" << k << endl;
+//     readInputVector();
+    cerr << "Dataset:" << dataset << endl;
+    computeIgrKNN(k, zero, dataset);   
+    exit(0);
   }
   
-  cout << "Times File:\t\t\t" << vm["input-files"].as<vector<std::string> >()[0] << endl;
-  cout << "Feature File:\t\t\t" << vm["input-files"].as<vector<std::string> >()[1] << endl;
-  cout << "Outputfile:\t\t\t" << vm["input-files"].as<vector<std::string> >()[2] << endl;
-  cout << "Timeout:\t\t\t" << timeout << "s" << endl;
-  
- // file-handling
-  ifstream featuresFile (vm["input-files"].as<vector<std::string> >()[1].c_str(), ios_base::in);
-  ifstream timesFile (vm["input-files"].as<vector<std::string> >()[0].c_str(), ios_base::in);
-  
-  if(!featuresFile) {
-    cerr << "ERROR cannot open file " << vm["features"].as<std::string>() << " for reading" << endl;
-    exit(1);
-  }  
-  if(!timesFile) {
-    cerr << "ERROR cannot open file " << vm["times"].as<std::string>() << " for reading" << endl;
-    exit(1);
+  else if (vm.count("classify")){
+    cerr << "Zero:\t" << zero << endl;
+    cerr << "k:\t" << k << endl;
+//     readInputVector();
+    computeKNN(k, zero);
+    exit(0);
+    
   }
-  
-  if ( vm.count("featurecalc") ) {
-    ifstream featureCalculation ( vm["featurecalc"].as<std::string>().c_str(), ios_base::in);
-   
-    if(!timesFile) {
-      cerr << "c ERROR cannot open file " << vm["featurecalc"].as<std::string>() << " for reading" << endl;
+  else {
+    if(vm["input-files"].as<vector<std::string> >().size() != 3){
+      cerr << "Wrong Input" << endl;
       exit(1);
     }
-  }
+    
+    cout << "Times File:\t\t\t" << vm["input-files"].as<vector<std::string> >()[0] << endl;
+    cout << "Feature File:\t\t\t" << vm["input-files"].as<vector<std::string> >()[1] << endl;
+    cout << "Outputfile:\t\t\t" << vm["input-files"].as<vector<std::string> >()[2] << endl;
+    cout << "Timeout:\t\t\t" << timeout << "s" << endl;
+    
+  // file-handling
+    ifstream featuresFile (vm["input-files"].as<vector<std::string> >()[1].c_str(), ios_base::in);
+    ifstream timesFile (vm["input-files"].as<vector<std::string> >()[0].c_str(), ios_base::in);
+    
+    if(!featuresFile) {
+      cerr << "ERROR cannot open file " << vm["features"].as<std::string>() << " for reading" << endl;
+      exit(1);
+    }  
+    if(!timesFile) {
+      cerr << "ERROR cannot open file " << vm["times"].as<std::string>() << " for reading" << endl;
+      exit(1);
+    }
+    
+    if ( vm.count("featurecalc") ) {
+      ifstream featureCalculation ( vm["featurecalc"].as<std::string>().c_str(), ios_base::in);
+    
+      if(!timesFile) {
+	cerr << "c ERROR cannot open file " << vm["featurecalc"].as<std::string>() << " for reading" << endl;
+	exit(1);
+      }
+    }
+  
   
   //start parsing
     
-  Trainer T;
-  cout << endl << "Begin Parsing..." << endl << endl;
-  
-  parseFiles(T, featuresFile, timesFile, timeout);
-  
-  timesFile.close();
-  featuresFile.close();
-  
-  cout << "Success!" << endl << endl;
-  cout << "Begin the training (using PCA) ..." << endl << endl;  
-  
-  //start training
-  
-  T.solvePCA(vm["input-files"].as<vector<std::string> >()[2]);
-  
-  cout << endl;
-  cout << "Success!" << endl;
-  
-  if ( vm.count("generateheader") ) T.writeCC();
-  else T.writeData(vm["input-files"].as<vector<std::string> >()[2]);
- 
+    Trainer T;
+    cout << endl << "Begin Parsing..." << endl << endl;
+    
+    parseFiles(T, featuresFile, timesFile, timeout);
+    
+    timesFile.close();
+    featuresFile.close();
+    
+    cout << "Success!" << endl << endl;
+    cout << "Begin the training (using PCA) ..." << endl << endl;  
+    
+    //start training
+    if (vm.count("igr")){
+    
+      cout << "Begin the training (using Information Gain Ratio) ..." << endl << endl;  
+      
+      T.solveIFGR(vm["input-files"].as<vector<std::string> >()[2]);
+          
+      cout << endl;
+      cout << "Success!" << endl;
+      exit(0);
+    }
+    
+    T.solvePCA(vm["input-files"].as<vector<std::string> >()[2]);
+    
+    cout << endl;
+    cout << "Success!" << endl;
+    
+    if ( vm.count("generateheader") ) T.writeCC();
+    else T.writeData(vm["input-files"].as<vector<std::string> >()[2]);
+  }
   
   
  
