@@ -123,7 +123,7 @@ int getTimes(Trainer& T,int amountClasses, ifstream& timesFile)
     for (int i = 0; i < amountClasses; ++i){
     sstime >> tmp1;
       if ( tmp1 == "-" ) {
-	T.allTimes[col].push_back(-1);
+	T.allTimes[col].push_back(-1); // not solved instances are marked with -1
       }
       else {
 	T.allTimes[col].push_back(atof(tmp1.c_str()));
@@ -137,13 +137,18 @@ int getTimes(Trainer& T,int amountClasses, ifstream& timesFile)
   return col;
 }
 
-pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[], int standardClass, int timeout, int amountClasses, int dimension) {
+pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[], int standardClass, int timeout, int amountClasses, int dimension, int amountFiles) {
   
   string line;
   int col = 0;
   int notSolved = 0, solved = 0;
-  bool decideFastest = true;
-   for (int i = 0; i < amountClasses; ++i) T.classCols.push_back(vector<int>());
+  bool decideFastest = true; //TODO implement as flag
+  
+  for (int i = 0; i < amountFiles; ++i){
+   validTimes(T.allTimes[i], timeout); // check if timeout is in the expected range, insert's -1 if time is < timeout or even not solved (it's still -1)
+  }
+  
+  for (int i = 0; i < amountClasses; ++i) T.classCols.push_back(vector<int>());
   
    while( getline (featuresFile, line) )
    {
@@ -151,14 +156,19 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
     
       if (T.instances[col] == instance){	      // lines must match!
 	int cnfclass;
-	
-	if (!validTimes(T.allTimes[col], timeout)){
+/*	
+	if (!validTimes(T.allTimes[col], timeout)){ 
 	  col++;
 	  continue;
-	}
+	} //TODO check if it is better kicking all the instances which are solved by all configurations
+	*/
 	if (decideFastest){
 	  if ( T.allTimes[col][standardClass] != -1 ) cnfclass = standardClass;
-	  else cnfclass = getFastestClass(T.allTimes[col]);	
+	  else {
+	    
+	    cnfclass = getFastestClass(T.allTimes[col]);	
+	    
+	  }
 	} else {
 	  cnfclass = getFastestClass(T.allTimes[col]);	
 	}
@@ -200,7 +210,7 @@ void parseFiles(Trainer& T, ifstream& featuresFile, ifstream& timesFile, int tim
   
   int standardClass = getStandardClass(T, amountClasses);
   int classAppearance[amountClasses] = {0};
-  pair<int, int> solved = select(T, featuresFile, classAppearance, standardClass, timeout, amountClasses, dimension);
+  pair<int, int> solved = select(T, featuresFile, classAppearance, standardClass, timeout, amountClasses, dimension, amountFiles);
     
   cout << "\tSuccesfully classified instances:\t" << solved.first << endl;
   cout << "\tNot solved instances:\t\t\t" << solved.second << endl;
