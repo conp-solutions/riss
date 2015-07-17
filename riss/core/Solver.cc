@@ -2683,11 +2683,11 @@ void Solver::dumpAndExit(const char* filename)
 }
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
-lbool Solver::solve_(int preprocessCall)
+lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
     cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
-    if( preprocessCall < 2 ) {
+    if( preprocessCall != SolveCallType::afterSimplification ) {
       
       // print formula of the call?
       if ((const char*)config.printOnSolveTo != 0) {
@@ -2708,10 +2708,12 @@ lbool Solver::solve_(int preprocessCall)
 
       printHeader();
 
+      if( preprocessCall == SolveCallType::initializeOnly ) return status;
+      
       // preprocess
       if (status == l_Undef) {   // TODO: freeze variables of assumptions!
 	  status = preprocess();
-	  if (config.ppOnly || preprocessCall == 1 ) { return status; } // stop also if preprocessing should be done only
+	  if (config.ppOnly || preprocessCall == SolveCallType::simplificationOnly ) { return status; } // stop also if preprocessing should be done only
       }
 
     }
@@ -3991,6 +3993,34 @@ Coprocessor::Preprocessor* Solver::swapPreprocessor(Coprocessor::Preprocessor* n
     coprocessor = newPreprocessor;
     return oldPreprocessor;
 }
+
+void Solver::printFullSolverState()
+{
+  cerr << "c FULL SOLVER STATE" << endl;
+  cerr << "c [SOLVER-STATE] trail: " << trail << endl;
+  cerr << "c [SOLVER-STATE] decisionLevel: " << decisionLevel() << endl;
+  cerr << "c [SOLVER-STATE] conflicts: " << conflicts << endl;
+  for( int i = 0 ; i < clauses.size(); ++ i ) {
+    cerr << "c [SOLVER-STATE] clause(" << i << ")@" << clauses[i] << ": " << ca[clauses[i]] << endl;  
+  }
+  for( int i = 0 ; i < learnts.size(); ++ i ) {
+    cerr << "c [SOLVER-STATE] learnt(" << i << ")@" << learnts[i] << ": " << ca[learnts[i]] << endl;  
+  }
+  cerr << "c [SOLVER-STATE] activities: " << activity << endl;
+  for( Var v = 0 ; v < nVars(); ++v ) {
+    for( int p = 0 ; p < 2; ++p) {
+      const Lit l = mkLit(v,p==1);
+      cerr << "c [SOLVER-STATE] watch list(" << l << "): ";
+      for( int i = 0 ; i < watches[l].size(); ++i ) {
+	cerr << " " << watches[l][i].cref();
+	if( watches[l][i].isBinary()  ) cerr << "b" ;
+      }
+      cerr << endl;
+    }
+  }
+  cerr << "c [SOLVER-STATE] decision heap: " << order_heap << endl;
+}
+
 
 void Solver::printHeader()
 {

@@ -114,12 +114,20 @@ class Solver
     #ifdef PCASSO
     friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
     #endif
-
+    
     CoreConfig* privateConfig; // do be able to construct object without modifying configuration
     bool deleteConfig;
     CoreConfig& config;
   public:
 
+    /** part of the solve method that is executed */
+    enum SolveCallType {
+      full = 0,
+      simplificationOnly = 1,
+      afterSimplification = 2,
+      initializeOnly = 3,
+    };
+    
     // Constructor/Destructor:
     //
     Solver(CoreConfig* externalConfig = 0, const char* configName = 0);
@@ -153,7 +161,7 @@ class Solver
     //
     bool    simplify();                             /// Removes already satisfied clauses.
     bool    solve(const vec<Lit>& assumps);         /// Search for a model that respects a given set of assumptions.
-    lbool   solveLimited(const vec<Lit>& assumps, int preprocessCall = 0);  /// Search for a model that respects a given set of assumptions (With resource constraints).
+    lbool   solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall = SolveCallType::full);  /// Search for a model that respects a given set of assumptions (With resource constraints).
     bool    solve();                                /// Search without assumptions.
     bool    solve(Lit p);                           /// Search for a model that respects a single assumption.
     bool    solve(Lit p, Lit q);                    /// Search for a model that respects two assumptions.
@@ -299,16 +307,15 @@ class Solver
     bool      rnd_pol;            // Use random polarities for branching heuristics.
     bool      rnd_init_act;       // Initialize variable activities with a small random value.
     double    garbage_frac;       // The fraction of wasted memory allowed before a garbage collection is triggered.
-
-
+    
     // Statistics: (read-only member variable)
     //
     uint64_t nbRemovedClauses, nbReducedClauses, nbDL2, nbBin, nbUn, nbReduceDB, solves, starts, decisions, rnd_decisions, propagations, conflicts, nbstopsrestarts, nbstopsrestartssame, lastblockatrestart;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
-  protected:
-
     void applyConfiguration(); // assigns relevant values of search configuration to data structures/counters
+    
+  protected:
 
     long curRestart;
     // Helper structures:
@@ -523,7 +530,7 @@ class Solver
 
     } eqInfo;
 
-  protected:
+
     vec<VarFlags> varFlags;
 
 //     vec<lbool>          assigns;          // The current assignments.
@@ -539,16 +546,21 @@ class Solver
     bool isFrozen(const Var& v) const { return varFlags[v].frozen; }
 
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
+    
+    vec<VarData>        vardata;          // Stores reason and level for each variable.
+    
   protected:
     vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
-    vec<VarData>        vardata;          // Stores reason and level for each variable.
+
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
     int                 realHead;         // indicate last literal that has been analyzed for unit propagation
     int                 simpDB_assigns;   // Number of top-level assignments since last execution of 'simplify()'.
     int64_t             simpDB_props;     // Remaining number of propagations that must be made before next execution of 'simplify()'.
     vec<Lit>            assumptions;      // Current set of assumptions provided to solve by the user.
+  public:
     Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
+  protected:
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
     MarkArray           lbd_marker;
@@ -619,7 +631,7 @@ public:
      *        2 leave out everything above preprocessing
      * @return status of the formula
      */
-    lbool    solve_(int preprocessCall = 0);                                           
+    lbool    solve_(const SolveCallType preprocessCall = SolveCallType::full);                                           
     
 protected:
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
@@ -694,6 +706,11 @@ protected:
 
     /// use the set preprocessor (if present) to simplify the current formula
     lbool preprocess();
+    
+    
+    /** print full solver state (trail,clauses,watch lists, acticities)*/
+    void printFullSolverState();
+    
   protected:
     lbool inprocess(lbool status); // inprocessing code
     lbool initSolve(int solves);   // set up the next call to solve
@@ -1421,7 +1438,7 @@ inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.cl
 inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_() == l_True; }
 inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
 inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
-inline lbool    Solver::solveLimited(const vec<Lit>& assumps, int preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
+inline lbool    Solver::solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
 inline void     Solver::setRandomSeed(double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay()      const   { return ok; }
 
