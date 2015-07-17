@@ -415,7 +415,7 @@ class Clause
     void setPropagated() { header.wasPropagated = 1; }
 
     bool wasUsedInAnalyze() const { return header.usedInAnalyze; }
-    void setUsedInAnalyze() { header.usedInAnalyze; }
+    void setUsedInAnalyze() { header.usedInAnalyze = 1; }
 
     void         print(bool nl = false) const
     {

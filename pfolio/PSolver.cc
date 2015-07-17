@@ -77,7 +77,6 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     }
 
     // setup the first solver!
-    cerr << "c add new solver at " << solvers.size() << " with default config: " << configs[0].presetConfig() << endl;
     solvers.push(new Solver(&configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
@@ -108,8 +107,6 @@ void PSolver::parseConfigurations(const string& combinedConfigurations)
 
         incarnationConfigs[ number - 1 ] = workingCopy.substr(closePos + 1, pos - 2);
 
-	cerr << "c for thread " << number-1 << " assign configuration " << workingCopy.substr(closePos + 1, pos - 2) << endl;
-	
     } while (pos != string::npos) ;
 }
 
@@ -246,7 +243,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
         globalSimplifierConfig = new Coprocessor::CP3Config(defaultSimplifierConfig.c_str());
         globalSimplifier = new Coprocessor::Preprocessor(solvers[0] , *globalSimplifierConfig, threads); // use simplifier with the given number of threads
-	
+
+
 	Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
 	
 	ret = solvers[0]->solve_(Solver::SolveCallType::simplificationOnly); // solve until preprocessing
@@ -289,7 +287,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
 
 	    // pseudo clone solver incarnations
-            solvers[i]->addUnitClauses(solvers[0]->trail);     // copy all the unit clauses, adds to the proof
+            solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
             solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
             solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
             solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
@@ -297,7 +295,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 	    solvers[0]->order_heap.copyOrderTo( solvers[i]->order_heap ); // rebuild order heap (use configuration of other heap, but use own acticities)
 	    solvers[0]->varFlags.copyTo( solvers[i]->varFlags );
 	    solvers[0]->vardata.copyTo( solvers[i]->vardata );
-	    
+
             // attach all clauses
             for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
                 solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
@@ -305,9 +303,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
                 solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
             }
-            
 	    solvers[i]->solve_( Solver::SolveCallType::initializeOnly ); // let solve initialize itself
-            
             if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
             solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
@@ -434,6 +430,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         for (int i = 0 ; i < threads; ++ i) {
             if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
+                                        <<  "  units: " << (communicators[i]->getSolver()->trail_lim.size() == 0 ? communicators[i]->getSolver()->trail.size() : communicators[i]->getSolver()->trail_lim[0])
                                         << endl;
         }
     }
@@ -789,8 +786,6 @@ void* runWorkerSolver(void* data)
 
         // do work
         lbool result l_Undef;
-	
-// 	if( info.getID() == 1 ) info.getSolver()->printFullSolverState();
         result = info.getSolver()->solveLimited(assumptions,Solver::SolveCallType::afterSimplification);
 
         info.setReturnValue(result);

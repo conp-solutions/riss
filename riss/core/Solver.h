@@ -114,7 +114,7 @@ class Solver
     #ifdef PCASSO
     friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
     #endif
-    
+
     CoreConfig* privateConfig; // do be able to construct object without modifying configuration
     bool deleteConfig;
     CoreConfig& config;
@@ -127,7 +127,6 @@ class Solver
       afterSimplification = 2,
       initializeOnly = 3,
     };
-    
     // Constructor/Destructor:
     //
     Solver(CoreConfig* externalConfig = 0, const char* configName = 0);
@@ -307,15 +306,16 @@ class Solver
     bool      rnd_pol;            // Use random polarities for branching heuristics.
     bool      rnd_init_act;       // Initialize variable activities with a small random value.
     double    garbage_frac;       // The fraction of wasted memory allowed before a garbage collection is triggered.
-    
+
+
     // Statistics: (read-only member variable)
     //
     uint64_t nbRemovedClauses, nbReducedClauses, nbDL2, nbBin, nbUn, nbReduceDB, solves, starts, decisions, rnd_decisions, propagations, conflicts, nbstopsrestarts, nbstopsrestartssame, lastblockatrestart;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
     void applyConfiguration(); // assigns relevant values of search configuration to data structures/counters
-    
   protected:
+
 
     long curRestart;
     // Helper structures:
@@ -530,7 +530,6 @@ class Solver
 
     } eqInfo;
 
-
     vec<VarFlags> varFlags;
 
 //     vec<lbool>          assigns;          // The current assignments.
@@ -546,13 +545,12 @@ class Solver
     bool isFrozen(const Var& v) const { return varFlags[v].frozen; }
 
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
-    
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     
-  protected:
-    vec<int>            nbpos;
-    vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
 
+//     vec<int>            nbpos;
+    vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
+  protected:
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
     int                 realHead;         // indicate last literal that has been analyzed for unit propagation
     int                 simpDB_assigns;   // Number of top-level assignments since last execution of 'simplify()'.
@@ -632,11 +630,10 @@ public:
      * @return status of the formula
      */
     lbool    solve_(const SolveCallType preprocessCall = SolveCallType::full);                                           
-    
+
 protected:
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
-    
   public:
     void     rebuildOrderHeap();
     void     varSetActivity(Var v, double value);      // set activity for a given variable
@@ -706,11 +703,8 @@ protected:
 
     /// use the set preprocessor (if present) to simplify the current formula
     lbool preprocess();
-    
-    
     /** print full solver state (trail,clauses,watch lists, acticities)*/
     void printFullSolverState();
-    
   protected:
     lbool inprocess(lbool status); // inprocessing code
     lbool initSolve(int solves);   // set up the next call to solve
@@ -1161,7 +1155,6 @@ protected:
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
-    
     /** replace the current instance of coprocessor with the new one 
         @return pointer to the old coprocessor
      */

@@ -826,7 +826,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             c[0] =  c[1], c[1] = tmp;
         }
 
-        if (sharingTimePoint == 2 && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
+        if (sharingTimePoint == 2 && (c.learnt() || c.isCoreClause()) && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
             #ifdef PCASSO
             updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
             #else
@@ -1377,7 +1377,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            if (sharingTimePoint == 1 && !c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
+            if (sharingTimePoint == 1 && (c.learnt() || c.isCoreClause()) && !c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
                 #ifdef PCASSO
                 updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
                 #else
@@ -4183,7 +4183,9 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
     // parallel portfolio: send the learned clause!
-    if (sharingTimePoint == 0 || learnt_clause.size() < 3) { updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel); }  // shorter clauses are shared immediately!
+    if (sharingTimePoint == 0 || learnt_clause.size() < 3) { 
+      updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel); 
+    }  // shorter clauses are shared immediately!
 
     if (learnt_clause.size() == 1) {
         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");
@@ -4229,7 +4231,9 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         ca[cr].setLBD(nblevels);
         if (nblevels <= 2) { nbDL2++; } // stats
         if (ca[cr].size() == 2) { nbBin++; } // stats
+        if (learnt_clause.size() < 3 ) {ca[cr].setUsedInAnalyze(); ca[cr].setPropagated(); } // this clause has been shared before, do not share it once more
         #ifdef CLS_EXTRA_INFO
+#warning  turn into Pcasso?
         ca[cr].setExtraInformation(extraInfo);
         #endif
         attachClause(cr);
