@@ -826,7 +826,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             c[0] =  c[1], c[1] = tmp;
         }
 
-        if (sharingTimePoint == 2 && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
+        if (sharingTimePoint == 2 && (c.learnt() || c.isCoreClause()) && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
             #ifdef PCASSO
             updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
             #else
@@ -1377,7 +1377,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
-            if (sharingTimePoint == 1 && !c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
+            if (sharingTimePoint == 1 && (c.learnt() || c.isCoreClause()) && !c.wasPropagated()) {  // share clauses only, if they are propagated (see Simon&Audemard SAT 2014)
                 #ifdef PCASSO
                 updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
                 #else
@@ -2683,33 +2683,41 @@ void Solver::dumpAndExit(const char* filename)
 }
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
-lbool Solver::solve_()
+lbool Solver::solve_(const SolveCallType preprocessCall)
 {
-    // print formula of the call?
-    if ((const char*)config.printOnSolveTo != 0) {
-        dumpAndExit((const char*)config.printOnSolveTo);
-    }
-    totalTime.start();
-    startedSolving = true;
-    model.clear();
-    conflict.clear();
-    if (!ok) { return l_False; }
-    applyConfiguration();
-    solves++;
-
-    lbool initValue = initSolve(solves);
-    if (initValue != l_Undef)  { return initValue; }
     lbool   status        = l_Undef;
+    cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
+    if( preprocessCall != SolveCallType::afterSimplification ) {
+      
+      // print formula of the call?
+      if ((const char*)config.printOnSolveTo != 0) {
+	  dumpAndExit((const char*)config.printOnSolveTo);
+      }
+      totalTime.start();
+      startedSolving = true;
+      model.clear();
+      conflict.clear();
+      if (!ok) { return l_False; }
+      applyConfiguration();
+      solves++;
+
+      lbool initValue = initSolve(solves);
+      if (initValue != l_Undef)  { return initValue; }
+      
 
 
-    printHeader();
+      printHeader();
 
-    // preprocess
-    if (status == l_Undef) {   // TODO: freeze variables of assumptions!
-        status = preprocess();
-        if (config.ppOnly) { return l_Undef; }
+      if( preprocessCall == SolveCallType::initializeOnly ) return status;
+      
+      // preprocess
+      if (status == l_Undef) {   // TODO: freeze variables of assumptions!
+	  status = preprocess();
+	  if (config.ppOnly || preprocessCall == SolveCallType::simplificationOnly ) { return status; } // stop also if preprocessing should be done only
+      }
+
     }
-
+    
     if (verbosity >= 1) {
         printf("c | solve clauses: %12d  solve variables: %12d                                            |\n", nClauses(), nVars());
         printf("c =========================================================================================================\n");
@@ -3979,6 +3987,41 @@ void Solver::setPreprocessor(Coprocessor::CP3Config* _config)
     coprocessor = new Coprocessor::Preprocessor(this, *_config);
 }
 
+Coprocessor::Preprocessor* Solver::swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor)
+{
+    Coprocessor::Preprocessor* oldPreprocessor = coprocessor;
+    coprocessor = newPreprocessor;
+    return oldPreprocessor;
+}
+
+void Solver::printFullSolverState()
+{
+  cerr << "c FULL SOLVER STATE" << endl;
+  cerr << "c [SOLVER-STATE] trail: " << trail << endl;
+  cerr << "c [SOLVER-STATE] decisionLevel: " << decisionLevel() << endl;
+  cerr << "c [SOLVER-STATE] conflicts: " << conflicts << endl;
+  for( int i = 0 ; i < clauses.size(); ++ i ) {
+    cerr << "c [SOLVER-STATE] clause(" << i << ")@" << clauses[i] << ": " << ca[clauses[i]] << endl;  
+  }
+  for( int i = 0 ; i < learnts.size(); ++ i ) {
+    cerr << "c [SOLVER-STATE] learnt(" << i << ")@" << learnts[i] << ": " << ca[learnts[i]] << endl;  
+  }
+  cerr << "c [SOLVER-STATE] activities: " << activity << endl;
+  for( Var v = 0 ; v < nVars(); ++v ) {
+    for( int p = 0 ; p < 2; ++p) {
+      const Lit l = mkLit(v,p==1);
+      cerr << "c [SOLVER-STATE] watch list(" << l << "): ";
+      for( int i = 0 ; i < watches[l].size(); ++i ) {
+	cerr << " " << watches[l][i].cref();
+	if( watches[l][i].isBinary()  ) cerr << "b" ;
+      }
+      cerr << endl;
+    }
+  }
+  cerr << "c [SOLVER-STATE] decision heap: " << order_heap << endl;
+}
+
+
 void Solver::printHeader()
 {
     if (verbosity >= 1) {
@@ -4140,7 +4183,9 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
     // parallel portfolio: send the learned clause!
-    if (sharingTimePoint == 0 || learnt_clause.size() < 3) { updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel); }  // shorter clauses are shared immediately!
+    if (sharingTimePoint == 0 || learnt_clause.size() < 3) { 
+      updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel); 
+    }  // shorter clauses are shared immediately!
 
     if (learnt_clause.size() == 1) {
         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");
@@ -4186,7 +4231,9 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         ca[cr].setLBD(nblevels);
         if (nblevels <= 2) { nbDL2++; } // stats
         if (ca[cr].size() == 2) { nbBin++; } // stats
+        if (learnt_clause.size() < 3 ) {ca[cr].setUsedInAnalyze(); ca[cr].setPropagated(); } // this clause has been shared before, do not share it once more
         #ifdef CLS_EXTRA_INFO
+#warning  turn into Pcasso?
         ca[cr].setExtraInformation(extraInfo);
         #endif
         attachClause(cr);

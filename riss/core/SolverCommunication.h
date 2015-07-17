@@ -46,6 +46,8 @@ void Solver::setCommunication(Communicator* comm)
     communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
     communicationClient.useDynamicLimits = communication->useDynamicLimits;
     communicationClient.receiveEE = communication->receiveEqiuvalences;
+    
+    assert( communication->nrSendCls == 0 && "cannot send clauses before initialization" );
 }
 
 inline

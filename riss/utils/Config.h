@@ -35,7 +35,7 @@ class Config
   public:
 
     Config(vec<Option*>* ptr, const std::string& presetOptions = "");
-
+    
     /** parse all options from the command line
       * @return true, if "help" has been found in the parameters
       */
