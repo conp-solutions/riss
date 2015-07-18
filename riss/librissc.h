@@ -24,7 +24,7 @@ Copyright (c) 2013-2015, Norbert Manthey, All rights reserved.
 // to represent formulas and the data type of truth values
 #include "stdint.h"
 
-// use these values to cpecify the model in extend model
+// use these values to specify the model in extend model
 #ifndef l_True
     #define l_True  0 // gcc does not do constant propagation if these are real constants.
 #endif
@@ -37,10 +37,10 @@ Copyright (c) 2013-2015, Norbert Manthey, All rights reserved.
     #define l_Undef 2
 #endif
 
-/** The internal variable representation of Riss ranges from 0 to n-1. However, this interface assumes that all
- *  passed variables range between 1 and n. All conversions are made within the Riss-library implementation.
+/** 
+ * The internal variable representation of Riss ranges from 0 to n-1. However, this interface assumes that all
+ * passed variables range between 1 and n. All conversions are made within the Riss-library implementation.
  */
-
 
 // only if compiling with g++! -> has to be a way with defines!
 #ifdef __cplusplus
@@ -65,8 +65,6 @@ extern void riss_set_randomseed(void* riss, double seed);
 /** free the resources of the solver, set the pointer to 0 afterwards */
 extern void riss_destroy(void*& riss);
 
-
-
 /** add a new variables in the solver
  * @return number of the newly generated variable
  */
@@ -76,8 +74,6 @@ extern int riss_new_variable(const void* riss) ;
  *  @return 0, if addition is ok. 1, if adding this literal (0) leads to a bad state of the solver
  */
 extern int riss_add(void* riss, const int& lit);
-
-
 
 /** add the given literal to the assumptions for the next solver call */
 extern void riss_assume(void* riss, const int& lit);
@@ -97,8 +93,6 @@ extern void riss_clear_prefered_decisions(void* riss);
  */
 extern void riss_set_termination_callback(void* riss, void* terminationState, int (*terminationCallbackMethod)(void* state));
 
-
-
 /** apply unit propagation (find units, not shrink clauses) and remove satisfied (learned) clauses from solver
  * @return 1, if simplification did not reveal an empty clause, 0 if an empty clause was found (or inconsistency by unit propagation)
  */
@@ -110,8 +104,6 @@ extern int riss_simplify(const void* riss) ;
  * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
  */
 extern int riss_sat(void* riss, const int64_t& nOfConflicts = -1);
-
-
 
 /** return the polarity of a variable in the model of the last solver run (if the result was sat)
  * @return 1 = literal is true, -1 = literal is false, 0 = value is unknown
