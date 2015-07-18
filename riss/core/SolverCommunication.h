@@ -85,6 +85,10 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
     } else {
         CRef cr = ca.alloc(ps, true);
         if (bump) { ca[cr].activity() += cla_inc; }   // same as in claBumpActivity
+        if (communicationClient.keepLonger ) ca[cr].resetCanBeDel(); // keep this clause for at least one removal round
+	ca[cr].setLBD( communicationClient.lbdFactor > 0 ? 
+	   (double)ca[cr].size() * communicationClient.lbdFactor 
+	   : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD/(double)sumLearnedClauseSize) * (double)ca[cr].size() ); // set LBD for received clause based on heuristics (TODO: also consider level cache)
         learnts.push(cr);
         attachClause(cr);
     }
@@ -419,6 +423,12 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                     if (communication->doBumpClauseActivity) {
                         ca[communicationClient.receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
                     }
+
+		    if (communicationClient.keepLonger ) ca[communicationClient.receiveClauses[i]].resetCanBeDel(); // keep this clause for at least one removal round
+		    ca[communicationClient.receiveClauses[i]].setLBD( communicationClient.lbdFactor > 0 ? 
+		      (double)ca[communicationClient.receiveClauses[i]].size() * communicationClient.lbdFactor 
+		      : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD/(double)sumLearnedClauseSize) * (double)ca[communicationClient.receiveClauses[i]].size() ); // set LBD for received clause based on heuristics (TODO: also consider level cache)
+                    
                     attachClause(communicationClient.receiveClauses[i]);
                 }
             }

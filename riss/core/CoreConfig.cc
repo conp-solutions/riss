@@ -106,6 +106,8 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
     opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away", false,                                                              optionListPtr),
     opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits", false,                                                                                     optionListPtr),
+    opt_keepLonger              ("CLAUSE SHARING", "keepLonger", "keep clauses for at least one remove round", false,                                                                     optionListPtr),
+    opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio", 0, DoubleRange(-10, true, 1, true), optionListPtr),
     
 
     opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),

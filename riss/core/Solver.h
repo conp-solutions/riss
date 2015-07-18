@@ -1271,11 +1271,14 @@ protected:
         bool useDynamicLimits;                     /// update sharing limits dynamically
         bool sendAll;                              /// ignore sharing limits
         bool receiveAll;                           /// ignore limits for reception
+        bool keepLonger;                           /// keep added clauses for at least one removal
+        
+        double lbdFactor;                          /// how to construct the LBD for a received clause (0 = set LBD of clause to 0, positive: relative to size of clause [0-1], negative: relative to average lbd/size ratio)
 
         CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false),
             refineReceived(false), resendRefined(false), doReceive(true), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
-            sendIncModel(false), sendDecModel(false), useDynamicLimits(false), sendAll(false), receiveAll(false) {}
+            sendIncModel(false), sendDecModel(false), useDynamicLimits(false), sendAll(false), receiveAll(false), keepLonger(false), lbdFactor(0) {}
     } communicationClient;
 
     class VariableInformation

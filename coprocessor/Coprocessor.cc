@@ -841,7 +841,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
         // none left so far
         else {
-            cerr << "c warning: cannot execute technique related to  " << execute << endl;
+	    char name[2];
+	    name[0] = execute; name[1] = 0;
+            cerr << "c warning: cannot execute technique related to  " << string(name) << endl;
         }
 
         // perform afte reach call

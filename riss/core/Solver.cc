@@ -264,6 +264,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     communicationClient.doReceive        = config.opt_receiveData;
     communicationClient.sendAll          = config.opt_sendAll;
     communicationClient.useDynamicLimits = config.opt_dynLimit;
+    communicationClient.keepLonger       = config.opt_keepLonger;
+    communicationClient.lbdFactor        = config.opt_recLBDfactor;
 
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
