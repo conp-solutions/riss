@@ -30,7 +30,7 @@ if(STATIC_BINARIES)
   # 
   add_library(libpca-static STATIC ${LIB_SOURCES})
   set_target_properties(libpca-static PROPERTIES OUTPUT_NAME "pca")
-  target_link_libraries(libpca-static "armadillo")
+  target_link_libraries(libpca-static "-larmadillo")
   add_dependencies(libpca-static armadillo-lib-static)
 else()
   ExternalProject_Add(armadillo-lib-shared
@@ -49,10 +49,6 @@ else()
   set_target_properties(libpca-shared PROPERTIES OUTPUT_NAME "pca"
                                                  VERSION ${VERSION}
                                                  SOVERSION ${SOVERSION})
-  target_link_libraries(libpca-shared "armadillo")
+  target_link_libraries(libpca-shared "-larmadillo")
   add_dependencies(libpca-shared armadillo-lib-shared)
 endif()
-
-# Just for convencience that we you can use #include <armadillo> instead
-# of #include "armadillo/armadillo"
-include_directories(${CMAKE_SOURCE_DIR}/armadillo)

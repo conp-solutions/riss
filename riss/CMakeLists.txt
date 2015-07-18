@@ -5,17 +5,15 @@ project(riss)
 
 option(DRATPROOF "Produce DRAFT-proofs (disabled by default)" OFF)
 
-
 # Dependencies:
 # 
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Librt REQUIRED)
 
-include_directories(${ZLIB_INCLUDE_DIR})
-include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
-include_directories(${LIBRT_INCLUDES})
-
+# include_directories(${ZLIB_INCLUDE_DIR})
+# include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
+# include_directories(${LIBRT_INCLUDES})
 
 # Libraries:
 # 
@@ -36,7 +34,7 @@ set(LIB_SOURCES
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
 
-message(STATUS "Libs: ${ZLIB_LIBRARY} ${LIBRT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}")
+# message(STATUS "Libs: ${ZLIB_LIBRARY} ${LIBRT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}")
 
 target_link_libraries(${PROJECT_NAME}-lib-shared z pthread rt)
 target_link_libraries(${PROJECT_NAME}-lib-static z pthread rt)

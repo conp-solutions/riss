@@ -39,6 +39,12 @@ message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "Verbose warnings ${WARNINGS}")
 
+# Find only static libraries - unfortunatly this is not sufficient for a
+# complete static binary
+if(STATIC_BINARIES)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
+endif()
+
 # Output directory definitions
 # 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
@@ -72,6 +78,9 @@ endif()
 # Dependencies:
 # 
 include_directories(${PROJECT_SOURCE_DIR})
+# Just for convencience that we you can use #include <armadillo> instead
+# of #include "armadillo/armadillo"
+include_directories(${PROJECT_SOURCE_DIR}/armadillo)
 
 # Compile flags:
 # 
@@ -95,6 +104,7 @@ add_subdirectory(risslibcheck/)
 add_subdirectory(classifier/)
 add_subdirectory(coprocessor/)
 add_subdirectory(libpca/)
+add_subdirectory(knntool/)
 add_subdirectory(mprocessor/)
 add_subdirectory(pcasso/)
 add_subdirectory(pfolio/)

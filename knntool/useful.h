@@ -12,12 +12,10 @@
 
 #include <cstdlib>
 
-using namespace std;
-
 // return n'th field or empty string
-string Get( const std::string & s, unsigned int n );
+std::string Get(const std::string & s, unsigned int n);
 
 
-string split(const std::string &s, unsigned int n,char delim);
+std::string split(const std::string &s, unsigned int n, char delim);
 
 #endif
