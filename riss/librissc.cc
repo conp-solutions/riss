@@ -2,9 +2,12 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
+#include <string>
+#include <algorithm> // std::remove
 #include "coprocessor/Coprocessor.h"
 #include "riss/utils/version.h"
 
+using namespace std;
 using namespace Riss;
 
 #include "riss/librissc.h"
@@ -56,13 +59,21 @@ void riss_reset_conflict_map(libriss* solver)
 
 extern "C" {
 
-
-    /** return the name of the solver and its version
+    /** return the name of the solver and its version. The signature must be a
+     *  valid C-identifier.
      *  @return string that contains the verison of the solver
      */
     extern const char* riss_signature()
     {
-        return signature;
+        // create a signature that can be used as C-identifier
+        // remove all periods (".") in the version string and use "riss_" as prefix
+        string signature = solverVersion;
+
+        // @see http://stackoverflow.com/a/5891643/2467158
+        signature.erase(remove(signature.begin(), signature.end(), '.'), signature.end());
+
+        // solver name as prefix
+        return ("riss_" + signature).c_str();
     }
 
     /** initialize a solver instance, and return a pointer to the maintain structure
