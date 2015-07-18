@@ -45,6 +45,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
+# Specify the paths in which the linker should search for libraries
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 # Tell CMake where to look for additional CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -92,6 +94,7 @@ add_subdirectory(riss/)
 add_subdirectory(risslibcheck/)
 add_subdirectory(classifier/)
 add_subdirectory(coprocessor/)
+add_subdirectory(libpca/)
 add_subdirectory(mprocessor/)
 add_subdirectory(pcasso/)
 add_subdirectory(pfolio/)
