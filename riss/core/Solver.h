@@ -1269,11 +1269,13 @@ protected:
         bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
         bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
         bool useDynamicLimits;                     /// update sharing limits dynamically
+        bool sendAll;                              /// ignore sharing limits
+        bool receiveAll;                           /// ignore limits for reception
 
         CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false),
             refineReceived(false), resendRefined(false), doReceive(true), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
-            sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
+            sendIncModel(false), sendDecModel(false), useDynamicLimits(false), sendAll(false), receiveAll(false) {}
     } communicationClient;
 
     class VariableInformation

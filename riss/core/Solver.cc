@@ -258,10 +258,12 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     searchconfiguration.restarts_type = config.opt_restarts_type;
 
     // communication
-    communicationClient.receiveEE      = config.opt_receiveEquivalences;
-    communicationClient.refineReceived = config.opt_refineReceivedClauses;
-    communicationClient.resendRefined  = config.opt_resendRefinedClauses;
-    communicationClient.doReceive      = config.opt_receiveData;
+    communicationClient.receiveEE        = config.opt_receiveEquivalences;
+    communicationClient.refineReceived   = config.opt_refineReceivedClauses;
+    communicationClient.resendRefined    = config.opt_resendRefinedClauses;
+    communicationClient.doReceive        = config.opt_receiveData;
+    communicationClient.sendAll          = config.opt_sendAll;
+    communicationClient.useDynamicLimits = config.opt_dynLimit;
 
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
@@ -2686,7 +2688,7 @@ void Solver::dumpAndExit(const char* filename)
 lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
-    cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
+//     cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
     if( preprocessCall != SolveCallType::afterSimplification ) {
       
       // print formula of the call?

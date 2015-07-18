@@ -41,6 +41,7 @@ class PfolioConfig : public Config
 //     StringOption opt_firstPPconfig;         // configuration for preprocessor of first solver object
     StringOption opt_incarnationSetups;     // configurations for all the incarnations
     StringOption opt_ppconfig;              // configuration for global preprocessor
+    StringOption opt_allIncPresets;         // to be added to all incarnations (after all other setups)
 
     IntOption  opt_storageSize;             // size of the storage for clause sharing
 

@@ -44,7 +44,7 @@ void Solver::setCommunication(Communicator* comm)
     communicationClient.sendRatio = communication->sendRatio;
     communicationClient.sendIncModel = communication->sendIncModel; // allow sending with variables where the number of models potentially increased
     communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
-    communicationClient.useDynamicLimits = communication->useDynamicLimits;
+    communicationClient.useDynamicLimits = communicationClient.useDynamicLimits || communication->useDynamicLimits; // one of the two overwrites the other
     communicationClient.receiveEE = communication->receiveEqiuvalences;
     
     assert( communication->nrSendCls == 0 && "cannot send clauses before initialization" );
@@ -210,7 +210,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
 
     toSendSize = keep; // set to number of elements that can be shared
 
-    if (!multiUnits && !equivalences) {  // check sharing limits, if its not units, and no equivalences
+    if (!multiUnits && !equivalences && !communicationClient.sendAll ) {  // check sharing limits, if its not units, and no equivalences
         // calculated size of the send clause
         int s = 0;
         if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!

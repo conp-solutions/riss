@@ -29,6 +29,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
     , opt_incarnationSetups("PFOLIO - INIT", "pIncSetup", "incarnation configurations [N]confign[N+1]configN+1", 0, optionListPtr)
     , opt_ppconfig("PFOLIO - INIT", "ppconfig", "the configuration to be used for the simplifier", 0, optionListPtr)
+    , opt_allIncPresets("PFOLIO - INIT", "pAllSetup", "add to all incarnations (after other setups)", 0, optionListPtr)
 
     , opt_storageSize("PFOLIO - INIT", "storageSize", "Number of clauses in one ring buffer (0 => 4000 x threads)", 0, IntRange(0, INT32_MAX), optionListPtr)
 

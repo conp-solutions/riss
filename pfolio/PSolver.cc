@@ -525,7 +525,7 @@ void PSolver::createThreadConfigs()
 
         if (threads > 0) {
             ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive");
-            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1 -verb=1");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1");
         }
         if (threads > 1) {
             ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
@@ -559,6 +559,52 @@ void PSolver::createThreadConfigs()
             if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
+    } else if (defaultConfig == "beta") {
+   if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec -shareTime=1 -sendAll");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec  -shareTime=0 -dynLimits");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    }
+    
+    
+    // assign common setup prefix
+    if( (const char*)pfolioConfig.opt_allIncPresets != 0 ) {
+      for (int t = 0 ; t < threads; ++ t) {
+	configs[t].setPreset(string(   pfolioConfig.opt_allIncPresets) );
+	ppconfigs[t].setPreset(string( pfolioConfig.opt_allIncPresets) );
+      }
     }
 }
 

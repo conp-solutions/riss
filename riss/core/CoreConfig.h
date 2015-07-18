@@ -105,6 +105,8 @@ class CoreConfig : public Config
     BoolOption opt_receiveEquivalences;   // receive equivalenced (is turned automatically on after first succesful inprocessing)
     BoolOption opt_refineReceivedClauses; // apply viviification to received clauses
     BoolOption opt_resendRefinedClauses;  // resend refined clauses
+    BoolOption opt_sendAll;               // ignore sharing limits
+    BoolOption opt_dynLimit;              // use dynamic sharing limits
 
     BoolOption opt_pq_order;           // If true, use a priority queue to decide the order in which literals are implied
     // and what antecedent is used.  The priority attempts to choose an antecedent

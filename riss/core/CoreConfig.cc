@@ -104,7 +104,9 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
     opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
     opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
-
+    opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away", false,                                                              optionListPtr),
+    opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits", false,                                                                                     optionListPtr),
+    
 
     opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
 
