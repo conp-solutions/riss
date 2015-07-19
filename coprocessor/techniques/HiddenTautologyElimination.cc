@@ -79,9 +79,9 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
     });
 
     // get active variables
-    if (lastDeleteTime() == 0)
+    if (lastModTime() == 0)
         for (Var v = 0; v < data.nVars(); ++ v) { activeVariables.push_back(v); }
-    else { data.getActiveVariables(lastDeleteTime(), activeVariables); }
+    else { data.getActiveVariables(lastModTime(), activeVariables); }
     // TODO: define an order?
 
     // run HTE for the whole queue, but parallel only if enabled via flag!
@@ -99,7 +99,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
     modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
     // get delete timer
-    updateDeleteTime(data.getMyDeleteTimer());
+    updateModTime(data.getMyModTimer());
 
     if (!modifiedFormula) { unsuccessfulSimplification(); }
 

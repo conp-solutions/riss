@@ -205,7 +205,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
             VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
             variable_heap = new Heap<VarOrderBVEHeapLt>(comp);
         }
-        data.getActiveVariables(lastDeleteTime(), *variable_heap, true);
+        data.getActiveVariables(lastModTime(), *variable_heap, true);
     } else {
         // initialze mark array the first time process() gets called
         if (duplicateMarker.size() == 0) {
@@ -216,7 +216,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
         else  if (duplicateMarker.size() < data.nVars()) {
             duplicateMarker.resize(data.nVars());
         }
-        data.getActiveVariables(lastDeleteTime(), variable_queue, &duplicateMarker);
+        data.getActiveVariables(lastModTime(), variable_queue, &duplicateMarker);
     }
 
     if (propagation.process(data, true) == l_False) {
@@ -329,7 +329,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
            && (stepper.inLimit() || data.unlimited())
           ) {
 
-        updateDeleteTime(data.getMyDeleteTimer());
+        updateModTime(data.getMyModTimer());
 
         dirtyOccs.nextStep();
         progressStats(data, true);
@@ -351,7 +351,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
         data.checkGarbage();
 
         // add active variables and clauses to variable heap and subsumption queues
-        data.getActiveVariables(lastDeleteTime(), touched_variables);
+        data.getActiveVariables(lastModTime(), touched_variables);
         touchedVarsForSubsumption(data, touched_variables);
 
         if (doStatistics) { subsimpTime = cpuTime() - subsimpTime; }
@@ -635,7 +635,7 @@ inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorDa
         CRef cr = list[cr_i];
         if (!c.can_be_deleted()) {
             data.addToProof(c, true);
-            // also updated deleteTimer
+            // also updated modTimer
             if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
                 data.removedClause(cr, variable_heap);
             } else {

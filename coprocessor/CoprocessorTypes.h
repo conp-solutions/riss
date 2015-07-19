@@ -72,10 +72,10 @@ class CoprocessorData
      * methods to update these structures
      * no statistical counters for each method, should be provided by each method!
      */
-    uint32_t numberOfVars;                // number of variables
-    uint32_t numberOfCls;                 // number of clauses during initialization
-    uint32_t numberOfTotalLiterals;       // number of total literals in the formula during initialization
-    ComplOcc occs;                        // list of clauses, per literal
+    uint32_t numberOfVars;                     // number of variables
+    uint32_t numberOfCls;                      // number of clauses during initialization
+    uint32_t numberOfTotalLiterals;            // number of total literals in the formula during initialization
+    ComplOcc occs;                             // list of clauses, per literal
     std::vector<int32_t> lit_occurrence_count; // number of literal occurrences in the formula
 
     bool hasLimit;                        // indicate whether techniques should be executed limited
@@ -85,16 +85,16 @@ class CoprocessorData
 
     Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
-    Riss::MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
+    Riss::MarkArray modTimer;             // store for each literal when (by which technique) it has been last modified
 
-    std::vector<Riss::Lit> undo;                     // store clauses that have to be undone for extending the model
+    std::vector<Riss::Lit> undo;          // store clauses that have to be undone for extending the model
     int lastCompressUndoLits;             // number of literals when the last compression took place
     int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
 
   private:
-    std::vector<Riss::Lit> equivalences;             // stack of literal classes that represent equivalent literals
-    std::vector<Riss::CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
-    std::vector<Riss::CRef> strengthening_queue;     // std::vector of clausereferences, which potentially can strengthen
+    std::vector<Riss::Lit> equivalences;            // stack of literal classes that represent equivalent literals
+    std::vector<Riss::CRef> subsume_queue;          // queue of clause references that potentially can subsume other clauses
+    std::vector<Riss::CRef> strengthening_queue;    // vector of clausereferences, which potentially can strengthen
 
     int countLitOcc(Riss::Lit l)
     {
@@ -234,7 +234,7 @@ class CoprocessorData
 
 // delete timers
     /** gives back the current times, increases for the next technique */
-    uint32_t getMyDeleteTimer();
+    uint32_t getMyModTimer();
     /** tell timer system that variable has been deleted (thread safe!) */
     void deletedVar(const Riss::Var v);
     /** fill the std::vector with all the literals that have been deleted after the given timer */
@@ -244,7 +244,7 @@ class CoprocessorData
     void getActiveVariables(const uint32_t myTimer, Riss::Heap < Comp >& heap, bool checkDuplicates = false);
 
     /** resets all delete timer */
-    void resetDeleteTimer();
+    void resetModTimer();
 
 // mark methods
     void mark1(Riss::Var x, Riss::MarkArray& array);
@@ -542,7 +542,7 @@ inline void CoprocessorData::init(uint32_t nVars)
     occs.resize(nVars * 2);
     lit_occurrence_count.resize(nVars * 2, 0);
     numberOfVars = nVars;
-    deleteTimer.create(nVars);
+    modTimer.create(nVars);
 
     //if there is still something in the queues, get rid of it!
     getStrengthClauses().clear();
@@ -553,7 +553,7 @@ inline void CoprocessorData::destroy()
 {
     ComplOcc().swap(occs); // free physical space of the std::vector
     std::vector<int32_t>().swap(lit_occurrence_count);
-    deleteTimer.destroy();
+    modTimer.destroy();
 }
 
 inline Riss::vec< Riss::CRef >& CoprocessorData::getClauses()
@@ -590,7 +590,7 @@ inline Riss::Var CoprocessorData::nextFreshVariable(char type)
     numberOfVars = solver->nVars();
     ma.resize(2 * nVars());
 
-    deleteTimer.resize(2 * nVars());
+    modTimer.resize(2 * nVars());
 
     occs.resize(2 * nVars());
     // std::cerr << "c resize occs to " << occs.size() << std::endl;
@@ -888,14 +888,17 @@ inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
 }
 
 
-inline uint32_t CoprocessorData::getMyDeleteTimer()
+inline uint32_t CoprocessorData::getMyModTimer()
 {
-    return deleteTimer.nextStep();
+    // if an overflow occurs, the step will be reset to 0, but also the whole
+    // array is memsetted to 0. So, there is no problem with an overflow and
+    // the modification time.
+    return modTimer.nextStep();
 }
 
 inline void CoprocessorData::deletedVar(const Riss::Var v)
 {
-    deleteTimer.setCurrentStep(v);
+    modTimer.setCurrentStep(v);
 }
 
 inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables,
@@ -904,7 +907,7 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vec
     // check for duplicate variables
     if (duplicateMarker != NULL) {
         for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
-            if (deleteTimer.getIndex(v) >= myTimer && !duplicateMarker->isCurrentStep(v)) {
+            if (modTimer.getIndex(v) >= myTimer && !duplicateMarker->isCurrentStep(v)) {
                 activeVariables.push_back(v);
             }
         }
@@ -912,7 +915,7 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vec
     // no check for duplicates
     else {
         for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
-            if (deleteTimer.getIndex(v) >= myTimer) {
+            if (modTimer.getIndex(v) >= myTimer) {
                 activeVariables.push_back(v);
             }
         }
@@ -927,7 +930,7 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Riss::He
     // check for duplicate variables
     if (checkDuplicates) {
         for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
-            if (deleteTimer.getIndex(v) >= myTimer && !heap.inHeap(v)) {
+            if (modTimer.getIndex(v) >= myTimer && !heap.inHeap(v)) {
                 heap.insert(v);
             }
         }
@@ -935,16 +938,16 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Riss::He
     // no check for duplicates
     else {
         for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
-            if (deleteTimer.getIndex(v) >= myTimer) {
+            if (modTimer.getIndex(v) >= myTimer) {
                 heap.insert(v);
             }
         }
     }
 }
 
-inline void CoprocessorData::resetDeleteTimer()
+inline void CoprocessorData::resetModTimer()
 {
-    deleteTimer.reset();
+    modTimer.reset();
 }
 
 
