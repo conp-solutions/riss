@@ -1,40 +1,69 @@
 /***************************************************************************************[PSolver.h]
-Copyright (c) 2014,      Norbert Manthey, All rights reserved.
+Copyright (c) 2014-2015,      Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 #include "pfolio/PSolver.h"
 
+#include "coprocessor/Coprocessor.h"
 #include <assert.h>
+
+
 
 using namespace Coprocessor;
 using namespace std;
 
+
+// pfolio todos
+#warning be able to disable output completely, use inc/decmodel flags
+#warning error shrink received clauses with reverseMinimization, share reduced clauses again (cite siert)
+#warning have another buffer for equivalences and multi-units, that should not be missed
+#warning set communicator settings incarnation specific, have a way to pass options from cmdline to each incarnation (have one long string as option, split that string)
+
 namespace Riss
 {
 
-BoolOption opt_share("PFOLIO", "ps",  "enable clause sharing for all clients", true, 0);
-BoolOption opt_proofCounting("PFOLIO", "pc",  "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0);
-IntOption  opt_verboseProof("PFOLIO", "pv",  "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), 0);
-BoolOption opt_internalProofCheck("PFOLIO", "pic", "use internal proof checker during run time", false, 0);
-BoolOption opt_verbosePfolio("PFOLIO", "ppv", "verbose pfolio execution", false, 0);
+
 
 /** main method that is executed by all worker threads */
 static void* runWorkerSolver(void* data);
 
-PSolver::PSolver(const int threadsToUse, const char* configName)
-    : initialized(false), threads(threadsToUse)
+PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int externalThreads)
+    :
+    privateConfig(externalConfig == 0 ? new PfolioConfig(configName) : externalConfig)
+    , deleteConfig(externalConfig == 0)
+    , pfolioConfig(* privateConfig)
+    , initialized(false)
+    , threads(pfolioConfig.threads)
+    , globalSimplifierConfig(0)
+    , globalSimplifier(0)
     , data(0)
     , threadIDs(0)
     , proofMaster(0)
     , opc(0)
-    , defaultConfig(configName == 0 ? "" : string(configName))   // setup the configuration
+    , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == nullptr ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
     , verbosity(0)
     , verbEveryConflicts(0)
 {
+    if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
+
     // setup the default configuration for all the solvers!
     configs   = new CoreConfig        [ threads ];
     ppconfigs = new CP3Config         [ threads ];
     communicators = new Communicator* [ threads ];
+
+    incarnationConfigs.resize(threads);   // add a string for each configuration
+    if ((const char*)pfolioConfig.opt_incarnationSetups != nullptr) {
+        parseConfigurations(string(pfolioConfig.opt_incarnationSetups));
+    }
+
+    // set global coprocessor configuratoin
+    if ((const char*)pfolioConfig.opt_ppconfig != nullptr) {
+        defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
+    }
+
+    // set preprocessor, if there is one selected
+//     if( (const char*)pfolioConfig.opt_firstPPconfig != 0 ) ppconfigs[0].addPreset(string(pfolioConfig.opt_firstPPconfig));
+
     for (int i = 0 ; i < threads; ++ i) {
         communicators[i] = 0;
     }
@@ -43,7 +72,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     createThreadConfigs();
 
     // here, DRUP proofs are created!
-    if (opt_internalProofCheck) {
+    if (pfolioConfig.opt_internalProofCheck) {
         opc = new OnlineProofChecker(drupProof);
     }
 
@@ -52,12 +81,45 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
 
+void PSolver::parseConfigurations(const string& combinedConfigurations)
+{
+    assert(threads == incarnationConfigs.size() && "have enough space for the threads already");
+
+    string workingCopy = combinedConfigurations;
+    int pos = 0;
+    do { // there might be more
+        pos = workingCopy.find("[");     // find opening bracket
+        if (pos == string::npos) { break; }  // no more opening bracket
+        workingCopy = workingCopy.substr(pos + 1);     // next should be the number of the thread
+
+        int closePos = workingCopy.find("]");
+        if (closePos == string::npos) { break; }  // no more opening bracket
+
+        int number = -1;
+        stringstream s;
+        s << workingCopy.substr(0, closePos); // this is the part where the number is located
+        if (s.str().empty()) { break; }  // no valid number
+        s >> number;                 // extract the number
+        if (number < 1 || number > threads) { continue; }  // invalid thread number
+
+        pos = workingCopy.find("[", closePos + 1); //
+        int endPos = (pos == string::npos) ? workingCopy.size() : pos;   // point to end of the string
+
+        incarnationConfigs[ number - 1 ] = workingCopy.substr(closePos + 1, pos - 2);
+
+    } while (pos != string::npos) ;
+}
+
+
 PSolver::~PSolver()
 {
 
     kill();
 
     sleep(0.2);
+
+    if (globalSimplifier != 0) { delete globalSimplifier; }
+    if (globalSimplifierConfig != 0) { delete globalSimplifierConfig; }
 
     for (int i = 0 ; i < solvers.size(); ++ i) {
         delete solvers[i]; // free all solvers
@@ -70,6 +132,8 @@ PSolver::~PSolver()
 
     if (threadIDs != 0) { delete [] threadIDs; threadIDs = 0; }
     if (data != 0) { delete data; data = 0; }
+
+    if (deleteConfig) { delete privateConfig; }
 }
 
 CoreConfig& PSolver::getConfig(const int solverID)
@@ -138,11 +202,11 @@ bool PSolver::addClause_(vec< Lit >& ps)
 {
     bool ret = true;
     for (int i = 0 ; i < solvers.size(); ++ i) {
-        for (int j = 0 ; j < ps.size(); ++ j) {
-            while (solvers[i]->nVars() <= var(ps[j])) { solvers[i]->newVar(); }
-        }
-        bool ret2 = solvers[i]->addClause_(ps); // if a solver failed adding the clause, then the state for all solvers is bad as well
-        if (opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; } // TODO remove after debug
+//         for (int j = 0 ; j < ps.size(); ++ j) {
+//             while (solvers[i]->nVars() <= var(ps[j])) { solvers[i]->newVar(); }
+//         }
+        bool ret2 = solvers[i]->addClause_(ps, i != 0); // if a solver failed adding the clause, then the state for all solvers is bad as well, avoid redundancy check for all but the first solver
+        if (pfolioConfig.opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; } // TODO remove after debug
         ret = ret2 && ret;
     }
     return ret;
@@ -174,15 +238,28 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration!
      */
-    if (!initialized) {
-        ret = solvers[0]->preprocess();
+    if (!initialized && defaultSimplifierConfig.size() != 0) {
+        assert(globalSimplifierConfig == 0 && globalSimplifier == 0 && "so far we did not setup global solver and simplifier");
+
+        globalSimplifierConfig = new Coprocessor::CP3Config(defaultSimplifierConfig.c_str());
+        globalSimplifier = new Coprocessor::Preprocessor(solvers[0] , *globalSimplifierConfig, threads); // use simplifier with the given number of threads
+
+
+	Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
+	
+	ret = solvers[0]->solve_(Solver::SolveCallType::simplificationOnly); // solve until preprocessing
+	
+	solvers[0]->swapPreprocessor(internalPreprocessor); // ignore return value, as we still know this pointer
+
+	if (verbosity > 0) { cerr << "c solver0 with " << solvers[0]->nVars() << " variables, and " << solvers[0]->clauses.size() << " clauses" << endl; }
         // solved by simplification?
         if (ret == l_False) { return ret; }
         else if (ret == l_True) {
             winningSolver = 0;
             model.clear();
-            model.capacity(solvers[winningSolver]->model.size());
-            for (int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i) { model.push(solvers[winningSolver]->model[i]); }
+            solvers[winningSolver]->model.copyTo(model);
+            if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
+            if( ret == l_True && verbosity > 0) cerr << "c solved formula with simplification" << endl;
             return ret;
         }
     }
@@ -196,9 +273,9 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             cerr << "c initialization of " << threads << " threads: failed" << endl;
             return l_Undef;
         } else {
-            cerr << "c initialization of " << threads << " threads: succeeded" << endl;
+            if (verbosity > 0) { cerr << "c initialization of " << threads << " threads: succeeded" << endl; }
         }
-        if (proofMaster != 0 && opt_verboseProof > 0) { proofMaster->addCommentToProof("c initialized parallel solvers", -1); }
+        if (proofMaster != 0 && pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("c initialized parallel solvers", -1); }
 
         /*
          * copy the formula from the first solver to all the other solvers
@@ -208,27 +285,40 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             solvers[i]->reserveVars(solvers[0]->nVars());
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
-            for (int j = 0 ; j < solvers[0]->clauses.size(); ++ j) {
-                solvers[i]->addClause(solvers[0]->ca[ solvers[0]->clauses[j] ]);   // import the clause of solver 0 into solver i; does not add to the proof
-            }
-            for (int j = 0 ; j < solvers[0]->learnts.size(); ++ j) {
-                solvers[i]->addClause(solvers[0]->ca[ solvers[0]->learnts[j] ]);   // import the learnt clause of solver 0 into solver i; does not add to the proof
-            }
+
+	    // pseudo clone solver incarnations
             solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
-            cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
+            solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
+            solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
+            solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
+	    solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
+	    solvers[0]->order_heap.copyOrderTo( solvers[i]->order_heap ); // rebuild order heap (use configuration of other heap, but use own acticities)
+	    solvers[0]->varFlags.copyTo( solvers[i]->varFlags );
+	    solvers[0]->vardata.copyTo( solvers[i]->vardata );
+
+            // attach all clauses
+            for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
+                solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+            }
+            for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
+                solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+            }
+	    solvers[i]->solve_( Solver::SolveCallType::initializeOnly ); // let solve initialize itself
+            if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
+            solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
 
         // copy the formula of the solver 0 number of thread times
         if (proofMaster != 0) {  // if a proof is generated, add all clauses that are currently present in solvers[0]
-            if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add irredundant clauses multiple times", -1); }
+            if (pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("add irredundant clauses multiple times", -1); }
             for (int j = 0 ; j < solvers[0]->clauses.size(); ++ j) {
                 proofMaster->addInputToProof(solvers[0]->ca[ solvers[0]->clauses[j] ], -1, threads); // so far, work on global proof
             }
-            if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add redundant clauses multiple times", -1); }
+            if (pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("add redundant clauses multiple times", -1); }
             for (int j = 0 ; j < solvers[0]->learnts.size(); ++ j) {
                 proofMaster->addInputToProof(solvers[0]->ca[ solvers[0]->learnts[j] ], -1, threads);  // so far, work on global proof
             }
-            if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add unit clauses of solver 0", -1); }
+            if (pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("add unit clauses of solver 0", -1); }
             proofMaster->addUnitsToProof(solvers[0]->trail, 0, false);   // incorporate all the units once more
         }
 
@@ -237,7 +327,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     } else {
         // already initialized -- simply print the summary
         for (int i = 0; i < solvers.size(); ++ i) {
-            cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
+            if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
         }
     }
     /*
@@ -249,13 +339,14 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         for (int j = 0; j < assumps.size(); ++ j) {  // make sure, everybody knows all the variables
             while (solvers[i]->nVars() <= var(assumps[j])) { solvers[i]->newVar(); }
         }
-        assumps.copyTo(communicators[i]->assumptions);
-        communicators[i]->setFormulaVariables(solvers[i]->newVar());   // for incremental calls, no ER is supported, so that everything should be fine until here! Note: be careful with this!
+#warning check whether necessary
+//         assumps.copyTo(communicators[i]->assumptions);
+        communicators[i]->setFormulaVariables(solvers[i]->nVars());   // for incremental calls, no ER is supported, so that everything should be fine until here! Note: be careful with this!
         communicators[i]->setWinner(false);
         assert((communicators[i]->isFinished() || communicators[i]->isWaiting()) && "all solvers should not touch anything!");
     }
 
-    if (proofMaster != 0 && opt_verboseProof > 0) { proofMaster->addCommentToProof("c start all solvers", -1); }
+    if (proofMaster != 0 && pfolioConfig.opt_verboseProof > 0) { proofMaster->addCommentToProof("c start all solvers", -1); }
     start(); // allow all solvers to start,
     waitFor(oneFinished);   // and wait until the first solver finishes
 
@@ -280,7 +371,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (communicators[i]->isWinner() && communicators[i]->getReturnValue() != l_Undef) { winningSolver = i; break; }
     }
 
-    if (verbosity > 0) { cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl; }
+    if (verbosity > 0) { if (verbosity > 0) { cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") as " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl; } }
 
     // return model, if there is a winning thread!
     if (winningSolver < threads) {
@@ -290,8 +381,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         ret = communicators[ winningSolver ]->getReturnValue();
         if (ret == l_True) {
             model.clear();
-            model.capacity(solvers[winningSolver]->model.size());
-            for (int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i) { model.push(solvers[winningSolver]->model[i]); }
+            solvers[winningSolver]->model.copyTo(model);
+            if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
 
             if (false && verbosity > 2) {
                 cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;
@@ -304,20 +395,44 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             conflict.capacity(solvers[winningSolver]->conflict.size());
             for (int i = 0 ; i < solvers[winningSolver]->conflict.size(); ++ i) { conflict.push(solvers[winningSolver]->conflict[i]); }
         } else {
-            cerr << "c winning thread returned UNKNOWN" << endl;
+            if (verbosity > 0) { cerr << "c winning thread returned UNKNOWN" << endl; }
         }
     } else { ret = l_Undef; }
 
     if (verbosity > 0) {
-        cerr << "c thread  S  \t|\t R   \t|\t sRej \t|\t lRej \t|" << endl;
+        if (verbosity > 0) { cerr << "c thread  S  \t|\t R   \t|\t sRej \t|\t lRej \t|\t vivLits \t|" << endl; }
         for (int i = 0 ; i < threads; ++ i) {
-            cerr << "c " << i << " : " << communicators[i]->nrSendCls
-                 <<  "  \t|\t" << communicators[i]->nrReceivedCls
-                 <<  "  \t|\t" << communicators[i]->nrRejectSendSizeCls
-                 <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls <<  "  \t|"
-                 << endl;
+            if (verbosity > 0) cerr << "c " << i << " : " << communicators[i]->nrSendCls
+                                        <<  "  \t|\t" << communicators[i]->nrReceivedCls
+                                        <<  "  \t|\t" << communicators[i]->nrRejectSendSizeCls
+                                        <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls
+                                        <<  "  \t|\t" << communicators[i]->vivifiedLiterals << "\t|"
+                                        << endl;
         }
-
+        if (verbosity > 0) { cerr << "c thread  S-EE\t|\t R-EE\t|\t SUs\t|\t RUs\t" << endl; }
+        for (int i = 0 ; i < threads; ++ i) {
+            if (verbosity > 0) cerr << "c " << i << " : " << communicators[i]->nrSendEEs
+                                        <<  "  \t|\t" << communicators[i]->nrReceivedEEs
+                                        <<  "  \t|\t" << communicators[i]->nrSendMultiUnits
+                                        <<  "  \t|\t" << communicators[i]->nrReceivedMultiUnits
+                                        << endl;
+        }
+        if (verbosity > 0) { cerr << "attempts:" << endl; }
+        if (verbosity > 0) { cerr << "c thread  SCls\t|\tS-EE\t|\tS-U\t|\tRec\t" << endl; }
+        for (int i = 0 ; i < threads; ++ i) {
+            if (verbosity > 0) cerr << "c " << i << " : " << communicators[i]->nrSendCattempt
+                                        <<  "  \t|\t" << communicators[i]->nrSendMattempt
+                                        <<  "  \t|\t" << communicators[i]->nrSendEattempt
+                                        <<  "  \t|\t" << communicators[i]->nrReceiveAttempts
+                                        << endl;
+        }
+        if (verbosity > 0) { cerr << "search data:" << endl; }
+        for (int i = 0 ; i < threads; ++ i) {
+            if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
+                                        <<  "  dec: " << communicators[i]->getSolver()->decisions
+                                        <<  "  units: " << (communicators[i]->getSolver()->trail_lim.size() == 0 ? communicators[i]->getSolver()->trail.size() : communicators[i]->getSolver()->trail_lim[0])
+                                        << endl;
+        }
     }
 
 
@@ -351,7 +466,7 @@ void PSolver::createThreadConfigs()
     };
 
     if (defaultConfig.size() > 0) {
-        cerr << "c setup pfolio with config " << defaultConfig << endl;
+        if (verbosity > 1) { cerr << "c setup pfolio with config " << defaultConfig << endl; }
     }
 
     for (int t = 0 ; t < threads; ++ t) {
@@ -360,8 +475,14 @@ void PSolver::createThreadConfigs()
 
     if (defaultConfig.size() == 0) {
         for (int t = 0 ; t < threads; ++ t) {
-            configs[t].setPreset(Configs[t]);
-            // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
+            if (incarnationConfigs[t].size() == 0) {  // assign preset, if no cmdline was specified
+	      configs[t].setPreset(Configs[t]);
+	      ppconfigs[t].setPreset(Configs[t]);
+	    }   
+            else { 
+	      configs[t].setPreset(incarnationConfigs[t]);
+	      ppconfigs[t].setPreset(incarnationConfigs[t]);
+	    }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "BMC") {
         // thread 1 runs with empty (default) configurations
@@ -370,7 +491,7 @@ void PSolver::createThreadConfigs()
         if (threads > 3) { configs[3].setPreset("SUHLE"); }
         for (int t = 4 ; t < threads; ++ t) {
             configs[t].setPreset(Configs[t]);
-            // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
+            // configs[t].setPreset("-solververb=2"); // set all solvers very verbose
         }
     } else if (defaultConfig == "PLAIN") {
         for (int t = 0 ; t < threads; ++ t) {
@@ -378,24 +499,73 @@ void PSolver::createThreadConfigs()
         }
     } else if (defaultConfig == "DRUP") {
         for (int t = 0 ; t < threads; ++ t) {
-            if (opt_verboseProof > 1) {
+            if (pfolioConfig.opt_verboseProof > 1) {
                 configs[t].opt_verboseProof = 1;
-                //configs[t].opt_verboseProof = true;
+                //configs[t].pfolioConfig.opt_verboseProof = true;
             }
         }
     } else if (defaultConfig == "RESTART") {
-        //configs[1].parseOptions("");
-        if (threads > 1) { configs[1].parseOptions("-K=0.7 -R=1.5"); }
-        if (threads > 2) { configs[2].parseOptions("-var-decay-b=0.85 var-decay-e=0.85"); }
-        if (threads > 3) { configs[3].parseOptions("-K=0.7 -R=1.5 -var-decay-b=0.85 var-decay-e=0.85"); }
+        //configs[1].setPreset("");
+        if (threads > 1) { configs[1].setPreset("-K=0.7 -R=1.5"); }
+        if (threads > 2) { configs[2].setPreset("-var-decay-b=0.85 var-decay-e=0.85"); }
+        if (threads > 3) { configs[3].setPreset("-K=0.7 -R=1.5 -var-decay-b=0.85 var-decay-e=0.85"); }
         // TODO: set more for higher numbers
+    } else if (defaultConfig == "FULLSHARE") {
+        if (verbosity > 1) { cerr << "c setup FULLSHARE configurations" << endl; }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-enabled_cp3 -shareTime=2 -ee -cp3_ee_it -cp3_ee_level=2 -inprocess -cp3_inp_cons=10000");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("-enabled_cp3 -shareTime=2 -probe -pr-probe -no-pr-vivi -pr-bins -pr-lhbr -inprocess -cp3_inp_cons=10000");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-enabled_cp3 -shareTime=2 -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3 -inprocess -cp3_inp_cons=10000");
+        }
+    } else if (defaultConfig == "alpha") {
+
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1 -verb=1");
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec -shareTime=1");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec  -shareTime=2");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
     }
 }
 
 void PSolver::addInputClause_(vec< Lit >& ps)
 {
     if (opc != 0) {
-        // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+        // if( verbosity > 1 ) cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
         opc->addParsedclause(ps);
     }
     return;
@@ -408,12 +578,12 @@ bool PSolver::initializeThreads()
     // get space for thread ids
     threadIDs = new pthread_t [threads];
 
-    data = new CommunicationData(16000);   // space for 16K clauses
+    data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
 
 
     // the portfolio should print proofs
     if (drupProofFile != 0) {
-        proofMaster = new ProofMaster(drupProofFile, threads, nVars(), opt_proofCounting, opt_verboseProof > 1);  // use a counting proof master
+        proofMaster = new ProofMaster(drupProofFile, threads, nVars(), pfolioConfig.opt_proofCounting, pfolioConfig.opt_verboseProof > 1);  // use a counting proof master
         proofMaster->setOnlineProofChecker(opc);     // tell proof master about the online proof checker
         data->setProofMaster(proofMaster);       // tell shared clauses pool about proof master (so that it adds shared clauses)
     }
@@ -428,15 +598,37 @@ bool PSolver::initializeThreads()
             solvers.push(new Solver(& configs[i]));      // solver 0 should exist already!
         }
 
+        // setup parameters for communication system
+        communicators[i]->protectAssumptions = pfolioConfig.opt_protectAssumptions;
+        communicators[i]->sendSize = pfolioConfig.opt_sendSize;
+        communicators[i]->sendLbd = pfolioConfig.opt_sendLbd;
+        communicators[i]->sendMaxSize = pfolioConfig.opt_sendMaxSize;
+        communicators[i]->sendMaxLbd = pfolioConfig.opt_sendMaxLbd;
+        communicators[i]->sizeChange = pfolioConfig.opt_sizeChange;
+        communicators[i]->lbdChange = pfolioConfig.opt_lbdChange;
+        communicators[i]->sendRatio = pfolioConfig.opt_sendRatio;
+        communicators[i]->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
+
+        communicators[i]->sendIncModel = pfolioConfig.opt_sendIncModel;
+        communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
+        communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
+        communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
+        // could set receiveEquivalences here, but that should be more up to the actual solver configurations
+
+        // setup thread specific settings
+#warning have option for thread specific settings, or have local flags that can be controlled via the CoreConfig object
+        if (defaultConfig == "FULLSHARE") {
+            if (i == 1) {  // apply received clause vivification, and sent shrinked clauses back
+
+            }
+        }
+
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);
-//     if( proofMaster != 0 ) { // for now, we do not use sharing
-//       cerr << "c for DRUP proofs, yet, sharing is disabled" << endl;
-//     }
-        if (! opt_share) {
-            communicators[i]->setDoReceive(false);   // no receive
-            communicators[i]->setDoSend(false);   // no sending
-        }
+
+        if (! pfolioConfig.opt_share) { communicators[i]->setDoSend(false); }   // no sending
+        if (!pfolioConfig.opt_receive) { communicators[i]->setDoReceive(false); }  // no sending
+
         // tell the communicator about the proof master
         communicators[i]->setProofMaster(proofMaster);
         // tell solver about its communication interface
@@ -460,7 +652,7 @@ bool PSolver::initializeThreads()
         }
         pthread_attr_destroy(&attr);
     }
-    solvers[0]->drupProofFile = 0; // set to 0, independently of the previous value
+    solvers[0]->proofFile = 0; // set to 0, independently of the previous value
     return failed;
 }
 
@@ -556,7 +748,7 @@ void PSolver::kill()
         err = pthread_join(threadIDs[i], (void**)&status);
         if (err != 0) { cerr << "c joining a thread resulted in a failure with status " << *status << endl; }
     }
-    cerr << "c finished killing" << endl;
+    if (verbosity > 1) { cerr << "c finished killing" << endl; }
 }
 
 void* runWorkerSolver(void* data)
@@ -594,7 +786,7 @@ void* runWorkerSolver(void* data)
 
         // do work
         lbool result l_Undef;
-        result = info.getSolver()->solveLimited(assumptions);
+        result = info.getSolver()->solveLimited(assumptions,Solver::SolveCallType::afterSimplification);
 
         info.setReturnValue(result);
         if (verbose) cerr << "c [THREAD] " << info.getID() << " result " <<
@@ -635,8 +827,8 @@ void PSolver::setDrupFile(FILE* drupFile)
 {
     // set file for the first solver
     if (!initialized && solvers.size() > 0) {
-        cerr << "c set DRUP file for solver 0" << endl;
-        solvers[0]->drupProofFile = drupFile;
+        if (verbosity > 1) { cerr << "c set DRUP file for solver 0" << endl; }
+        solvers[0]->proofFile = drupFile;
     }
     // set own file handle to initialize the proof master afterwards
     drupProofFile = drupFile;

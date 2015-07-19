@@ -23,37 +23,32 @@ class SolverRiss : public InstanceSolver
 
     Riss::Solver solver;
 
-    unsigned         curPTLevel;         // Davide> Contains the pt_level of curNode
-    unsigned int     lastLevel;        // option related to clause sharing
-    TreeNode*        tnode;
-    vector<unsigned> shared_indeces;
-    Statistics       localStat;        // Norbert> Local Statistics
+    unsigned int        curPTLevel;         // Davide> Contains the pt_level of curNode
+    TreeNode*           tnode;
+    Statistics          localStat;        // Norbert> Local Statistics
 
-    // enhanced solver functions for parallel needs
-    Riss::Var        newVar(bool polarity = true, bool dvar = true, char type = 'o');
-    bool             addClause_(Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0);
-    void             printClause(Riss::CRef cr);
+    // forwarding to Riss
+    Riss::Var           newVar(bool polarity = true, bool dvar = true, char type = 'o');
+    bool                addClause_(Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0);
+    inline int          nVars() const;
+    inline bool         okay() const;
+    inline void         interrupt();
+    inline Riss::lbool  solveLimited(const Riss::vec<Riss::Lit>& assumps);
+    inline void         setConfBudget(int64_t x);
+
+    // accessing members of Riss
+    inline void         setVerbosity(int verbosity);
+    inline uint64_t     getStarts();
+    inline uint64_t     getDecisions();
+    inline uint64_t     getConflicts();
+    inline void         getModel(Riss::vec<Riss::lbool>& model);
+    inline Riss::Lit    trailGet(const unsigned int index);         // return a specifit literal from the trail
 
     // for partitioning tree
-    void             setTimeOut(double timeout);                 // specify a number of seconds that is allowed to be executed
-    void             setupForPortfolio(const int nodeLevel);
-
-    inline int       nVars() const;
-    inline bool      okay() const;
-    inline void      interrupt();
-    inline Riss::lbool     solveLimited(const Riss::vec<Riss::Lit>& assumps);
-    inline void      setVerbosity(int verbosity);
-    inline void      setConfBudget(int64_t x);
-    // return a specifit literal from the trail
-    inline Riss::Lit trailGet(const unsigned int index);
-    // return the number of top level units from that are on the trail
-    inline unsigned int getTopLevelUnits() const    ;
-    inline unsigned int getNodePTLevel()          ;
-    inline uint64_t     getStarts()          ;
-    inline uint64_t     getDecisions()          ;
-    inline uint64_t     getConflicts()          ;
-    inline void         getModel(Riss::vec<Riss::lbool>& model);
-    inline unsigned int getLiteralPTLevel(const Riss::Lit& l) const { return 0; } // TODO: return correct PT level
+    void                setupForPortfolio(const int nodeLevel);
+    void                setTimeOut(double timeout);                               // FIXME: not implemented
+    inline unsigned int getNumberOfTopLevelUnits() const;                         // returns the trail size of Riss
+    inline unsigned int getLiteralPTLevel(const Riss::Lit& l) const { return 0; } // FIXME: return correct PT level
 
   private:
     Riss::CoreConfig*   coreConfig;

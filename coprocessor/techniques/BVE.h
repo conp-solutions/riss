@@ -112,6 +112,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
   protected:
 
     void progressStats(CoprocessorData& data, const bool cputime = false);      // prints statistics before/after each BVE-Run
+    bool hasToEliminate();                                                      // return whether there is something in the BVE queue
 
     // sequential functions:
     void sequentiellBVE(CoprocessorData& data, const bool force = false, const bool doStatistics = true);
@@ -189,7 +190,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
     inline int  tryResolve(const Riss::Clause& c, const Riss::Clause& d, const int v);
     inline bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit& l);
     inline char checkUpdatePrev(Riss::Lit& prev, const Riss::Lit& l);
-    bool findGates(CoprocessorData& data, const Riss::Var v, int& p_limit, int& n_limit, double& _gateTim, Riss::MarkArray * helper = NULL);
+    bool findGates(CoprocessorData& data, const Riss::Var v, int& p_limit, int& n_limit, double& _gateTim, Riss::MarkArray * helper = nullptr);
 
   public:
     /** converts arg into BVEWorkData*, runs bve of its part of the queue */

@@ -32,9 +32,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso/SplitterSolver.h"
 #include "pcasso/SolverPT.h"
 #include "pcasso/SolverRiss.h"
+#include "pcasso/SolverPriss.h"
 #include "pcasso/InstanceSolver.h"
 #include "pcasso/LookaheadSplitting.h"
 #include "pcasso/vsidsSplitting.h"
+#include "pcasso/version.h"
 
 using namespace Riss;
 using namespace std;
@@ -82,12 +84,21 @@ static Int64Option   MSverbosity("SPLITTER", "verbosity", "verbosity of the mast
 static BoolOption    Portfolio("SPLITTER", "portfolio",  "Portfolio mode.\n", false);
 static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX));     // depends on option above!
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
+static BoolOption    priss("SPLITTER", "use-priss",  "Uses Priss as instance solver\n", false);
 
-static vector<unsigned short int> hardwareCores; // set of available hardware cores
+static StringOption prissConfig("WORKER - CONFIG", "priss-config", "config string used to initialize priss incarnations", 0);
+static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string used to initialize riss incarnations", 0);
 
-CoreConfig Master::defaultSolverConfig;
+static vector<unsigned short int> hardwareCores; // set of available hardware cores, used to pin the threads to cores
+
+// instantiate static members of the class
+
 
 Master::Master(Parameter p) :
+
+    defaultSolverConfig((const char*)prissConfig == 0 ? "" : prissConfig),
+    defaultPfolioConfig((const char*)rissConfig == 0 ? ""  : rissConfig),
+
     maxVar(0),
     model(0),
     param(p),
@@ -152,15 +163,14 @@ Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 int
 Master::main(int argc, char **argv)
 {
-
-    fprintf(stderr, "c ***********************************************************************************************\n");
-    fprintf(stderr, "c * PCASSO - a Parallel, CooperAtive Sat SOlver                                                 *\n");
-    fprintf(stderr, "c * Author: Nobert Manthey                                                                      *\n");
-    fprintf(stderr, "c * Contributors:                                                                               *\n");
-    fprintf(stderr, "c * Davide Lanti (clause sharing, extended conflict analysis)                                   *\n");
-    fprintf(stderr, "c * Ahmed Irfan  (LA partitioning, information sharing      )                                   *\n");
-    fprintf(stderr, "c * This solver is based on Riss3g, Glucose 2.2 and Minisat 2.2                                 *\n");
-    fprintf(stderr, "c ***********************************************************************************************\n");
+    fprintf(stderr, "c ===============================[ Pcasso  %13s ]=================================================\n", Pcasso::gitSHA1);
+    fprintf(stderr, "c | PCASSO - a Parallel, CooperAtive Sat SOlver                                                           |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
+    fprintf(stderr, "c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+    fprintf(stderr, "c | Contributors:                                                                                         |\n");
+    fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
+    fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
 
     string filename = (argc == 1) ? "" : argv[1];
 
@@ -217,8 +227,8 @@ int Master::run()
                     // The children are NOT running, so I can delete every pool
                     lock();
                     threadData[i].nodeToSolve->setState(TreeNode::unsat, true);
+                    killUnsatChildren(i);  // says master has to be in lock
                     unlock();
-                    killUnsatChildren(i);
                 }
 
                 uncleans++;
@@ -226,11 +236,11 @@ int Master::run()
                 threadData[i].s = idle;
                 threadData[i].result = 0;
                 threadData[i].nodeToSolve = 0;
-                if (threadData[i].solver != NULL) {
+                if (threadData[i].solver != nullptr) {
                     delete threadData[i].solver;
                 }
-                threadData[i].solver = NULL;
-                if (threadData[i].handle != 0) { pthread_join(threadData[i].handle, NULL); }
+                threadData[i].solver = nullptr;
+                if (threadData[i].handle != 0) { pthread_join(threadData[i].handle, nullptr); }
                 threadData[i].handle = 0;
             }
         }
@@ -446,7 +456,7 @@ int Master::run()
 
     if (printModel) {
 
-        if (res != NULL) { fprintf(stderr, "c write model to file\n"); }
+        if (res != nullptr) { fprintf(stderr, "c write model to file\n"); }
 
         if (model != 0) {
             assert(solution == 10 && "the solution has to be 20");
@@ -455,7 +465,7 @@ int Master::run()
             // fprintf(out_state_file, "SAT %g\n", cpuTime()); // Davide> for statistics
 
             // print model only, if a file has been specified
-            if (res != NULL) {
+            if (res != nullptr) {
                 fprintf(res, "s SATISFIABLE\nv ");
                 /*
                 if( model.size() != maxVar ){
@@ -497,7 +507,7 @@ int Master::run()
 
             fprintf(stdout, "UNSATISFIABLE\n");
 
-            if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); }
+            if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); }
             fprintf(stdout, "s UNSATISFIABLE\n");
         } else {
             fprintf(stdout, "s INDETERMINATE\n");
@@ -523,7 +533,7 @@ int Master::run()
     for (unsigned int i = 0 ; i < threads ; ++i) {
         //    int err = 0;
         fprintf(stderr, "c try to cancel thread %d\n", i);
-        // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == NULL) continue;
+        // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == nullptr) continue;
         if (threadData[i].solver == 0) { continue; }
         threadData[i].solver->interrupt(); // Yeah, it takes time.
         // threadData[i].solver->kill();
@@ -540,7 +550,7 @@ int Master::run()
         int err = 0;
         if (MSverbosity > 1) { fprintf(stderr, "c try to join thread %d\n", i); }
         //    if( threadData[i].s == idle || threadData[i].handle == 0 ) continue;
-        if (threadData[i].solver != NULL) {
+        if (threadData[i].solver != nullptr) {
             if (threadData[i].handle != 0) {
                 err = pthread_join(threadData[i].handle, (void**)&status);
                 if (err == EINVAL) { fprintf(stderr, "c tried to cancel wrong thread\n"); }
@@ -726,66 +736,62 @@ Master::solveInstance(void* data)
 
 
     // create a solver object
-    //bool simp = solve_mode;
-    InstanceSolver* slvr = new SolverRiss(&defaultSolverConfig);
-    assert(tData.solver == NULL);
-    tData.solver = slvr;
-//     SolverPT& S = *slvr;
+    InstanceSolver* solver;
+    if (!priss) {
+        solver = new SolverRiss(& master.defaultSolverConfig);
+    } else {
+        // TODO: how many threads for priss? commandline option?
+//         @Franzi: Norbert: yes! and a way to control it per level
+//         either: always a fixed number, or:
+//         X on level 0, and X/2 on all the other levels, calculate from number of threads given to pcasso, and the chosen policy
+        solver = new SolverPriss(& master.defaultPfolioConfig, 2);
+    }
+    assert(tData.solver == nullptr);
+    tData.solver = solver;
 
-    // Davide> Give the position to the solver
-    //S.position = tData.nodeToSolve->getPosition();
-
-    // Davide> Give the pt_level to the solver
-    slvr->curPTLevel = tData.nodeToSolve->getPTLevel();
-    slvr->lastLevel = tData.nodeToSolve->getPTLevel();
+//    // Davide> Give the pt_level to the solver
+//    solver->curPTLevel = tData.nodeToSolve->getPTLevel();
 
     if (Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel) {   // a portfolio node should be solved
         const int nodeLevel = tData.nodeToSolve->getLevel();
         if (nodeLevel > 0) {   // root node is solved as usually
             cerr << "c solve portfolio node at level " << nodeLevel << endl;
-            slvr->setupForPortfolio(nodeLevel);
+            solver->setupForPortfolio(nodeLevel);
         }
     }
 
-    // Davide> Initialize the shared indeces to zero
-    for (unsigned int i = 0; i <= slvr->getNodePTLevel(); i++) { // Davide> I put my level, also
-        slvr->shared_indeces.push_back(0);
-    }
+//    // Davide> Initialize the shared indeces to zero
+//    for (unsigned int i = 0; i <= solver->curPTLevel; i++)   // Davide> I put my level, also
+//    { solver->shared_indeces.push_back(0); }
 
-    // Davide> Create the pool object for this node, and
-    //         push it in the set of pools
-    PcassoDavide::LevelPool* pool = new PcassoDavide::LevelPool(opt_pool_size);
-    // pool->setCode(S.position);
-    tData.nodeToSolve->lv_pool = pool;
+//    // Davide> Create the pool object for this node, and
+//    //         push it in the set of pools
+//    PcassoDavide::LevelPool* pool = new PcassoDavide::LevelPool(opt_pool_size);
+//    // pool->setCode(S.position);
+//    tData.nodeToSolve->lv_pool = pool;
 
-    // Davide> Associate the pt_node to the Solver
-    slvr->tnode = tData.nodeToSolve;
-    //ahmed> initialize the activity with random if partition level of the node is greater than zero and update activity & polarity is turned on
-    /*if(S.getNodePTLevel()>0 && S.update_act_pol) {
-        S.rnd_init_act =true;
-    }*/
+//    // Davide> Associate the pt_node to the Solver
+//    solver->tnode = tData.nodeToSolve;
+
     // setup the parameters, setup varCnt
-    slvr->setVerbosity(tData.master->param.verb);
-    while (master.varCnt() >= (unsigned int)slvr->nVars()) {
-        slvr->newVar();
+    solver->setVerbosity(tData.master->param.verb);
+    while (master.varCnt() >= (unsigned int) solver->nVars()) {
+        solver->newVar();
     }
 
     // feed the instance into the solver
-    vector< pair<vector<Lit>*, unsigned int> > clauses;
     assert(tData.nodeToSolve != 0);
-    tData.nodeToSolve->fillConstraintPathWithLevels(&clauses);
     vec<Lit> lits;
 
-    // Davide> conversion vector -> vec. Here the "new" constraints are added to the threa
-    // Davide> Many changes here, because clauses "now" is a vector of pairs
+    // add constraints to solver
+    vector< pair<vector<Lit>*, unsigned int> > clauses;
+    tData.nodeToSolve->fillConstraintPathWithLevels(&clauses);
     for (unsigned int i = 0 ; i < clauses.size(); ++i) {
         lits.clear();
         for (unsigned int j = 0 ; j < clauses[i].first->size(); ++ j) {
             lits.push((*clauses[i].first)[j]);
         }
-        //simp ? ((SimpSolver&)S).addClause(lits, clauses[i].second) : S.addClause(lits, clauses[i].second);
-        // if( clauses[i].second > 1 ) cout << "OK solveInstance" << endl;
-        slvr->addClause_(lits, clauses[i].second);
+        solver->addClause_(lits, clauses[i].second);
     }
 
     // add the formula to the solver
@@ -794,27 +800,25 @@ Master::solveInstance(void* data)
         for (int j = 0 ; j < master.formula()[i].size; ++j) {
             lits.push(master.formula()[i].lits[j]);
         }
-        slvr->addClause_(lits, 0);
-
+        solver->addClause_(lits, 0);
     }
 
     // copy the procedure as in the original main function
     int ret = 0;
     int initialUnits = 0;
-    //try {
-    if (!slvr->okay()) { ret = 20; }
+
     vec<Lit> dummy;
-    initialUnits = slvr->getTopLevelUnits();
+    initialUnits = solver->getNumberOfTopLevelUnits();
     if (MSverbosity > 1) { fprintf(stderr, "c start search with %d units\n", initialUnits); }
 
     // solve the instance with a timeout?
-    if (tData.timeout != -1) { slvr->setTimeOut(tData.timeout); }
-    if (tData.conflicts != -1) { slvr->setConfBudget(tData.conflicts); }
+    if (tData.timeout != -1)   { solver->setTimeOut(tData.timeout); }
+    if (tData.conflicts != -1) { solver->setConfBudget(tData.conflicts); }
 
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
-    lbool solution = slvr->solveLimited(dummy);
-    ret = (int)(solution == l_True ? 10 : solution == l_False ? 20 : 0);
+    lbool solution = solver->solveLimited(dummy);
+    ret = solution == l_True ? 10 : solution == l_False ? 20 : 0;
     master.lock();
     if (tData.result == 20) { ret = 20; }
 
@@ -822,23 +826,21 @@ Master::solveInstance(void* data)
     if (ret != 10 && ret != 20) {
         statistics.changeI(master.unsolvedNodesID, 1);
     } else {
-        if (tData.nodeToSolve != 0) { // prevent using 0 pointers
-            tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
-        }
+        if (tData.nodeToSolve != 0)  // prevent using 0 pointers
+        { tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime; }
     }
 
     // take care about the output
     if (MSverbosity > 1) { fprintf(stderr, "finished working on an instance (node %d, level %d)\n", tData.nodeToSolve->id(), tData.nodeToSolve->getLevel()); }
 
 
-    /** take care about statistics
-     * since solver is dead, there is no need to have a lock for reading statistics!
-     * since we are in the master, there is also no need to lock changing statistics here, however, its there ...
-     */
-    statistics.changeI(master.TotalConflictsID, slvr->getConflicts());
-    statistics.changeI(master.TotalDecisionsID, slvr->getDecisions());
-    statistics.changeI(master.TotalRestartsID, slvr->getStarts());
-    Statistics& localStat = slvr->localStat;
+    // take care about statistics
+    // since solver is dead, there is no need to have a lock for reading statistics!
+    // since we are in the master, there is also no need to lock changing statistics here, however, its there ...
+    statistics.changeI(master.TotalConflictsID, solver->getConflicts());
+    statistics.changeI(master.TotalDecisionsID, solver->getDecisions());
+    statistics.changeI(master.TotalRestartsID, solver->getStarts());
+    Statistics& localStat = solver->localStat;
     for (unsigned si = 0; si < localStat.size(); ++ si) {
         if (localStat.isInt(si)) {
             unsigned thisID = statistics.reregisterI(localStat.getName(si));
@@ -856,14 +858,14 @@ Master::solveInstance(void* data)
         }
         if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::sat); }
         vec< lbool > solverModel;
-        slvr->getModel(solverModel);
-        master.submitModel(solverModel);
+        solver->getModel(solverModel);
+        master.submitModel(solverModel); // just copy model to master
     } else if (ret == 20) {
-        if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
+        if (opt_conflict_killing && solver->curPTLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
             if (tData.nodeToSolve != 0) {
-                int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
+                int i = tData.nodeToSolve->getPTLevel() - solver->curPTLevel;
                 while (i > 0) {
                     TreeNode* node = tData.nodeToSolve->getFather();
                     node->setState(TreeNode::unsat);
@@ -883,18 +885,18 @@ Master::solveInstance(void* data)
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
 
-            toplevelVariables = slvr->getTopLevelUnits();
+            toplevelVariables = solver->getNumberOfTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
             if (tData.nodeToSolve != 0) {
                 for (int i = initialUnits ; i < toplevelVariables; ++i) {
-                    Lit currentLit = slvr->trailGet(i);  //(*trail)[i];
+                    Lit currentLit = solver->trailGet(i);  //(*trail)[i];
                     vector<Lit>* clause = new vector<Lit>(1);
                     (*clause)[0] = currentLit;
 
                     // Davide> I modified this in order to include information about
                     // literal pt_levels
-                    tData.nodeToSolve->addNodeUnaryConstraint(clause, slvr->getLiteralPTLevel(currentLit));
+                    tData.nodeToSolve->addNodeUnaryConstraint(clause, solver->getLiteralPTLevel(currentLit));
                 }
             }
         }
@@ -955,11 +957,11 @@ Master::splitInstance(void* data)
     // create a solver object
     SplitterSolver* S;
     if (split_mode == 1) {
-        S = new VSIDSSplitting(&defaultSolverConfig);
+        S = new VSIDSSplitting(& master.defaultSolverConfig);
         //((VSIDSSplitting *)S)->setTimeOut(split_timeout);
     }
     if (split_mode == 2) {
-        S = new LookaheadSplitting(&defaultSolverConfig);
+        S = new LookaheadSplitting(& master.defaultSolverConfig);
         ((LookaheadSplitting *)S)->setTimeOut(split_timeout);
     }
     tData.solver = S;
@@ -1037,9 +1039,9 @@ Master::splitInstance(void* data)
         //try {
         // ## begin automatically handled code
         // ## selecting split mode
-        if (split_mode == 0) {   //solution = S->simpleSplit(&splits, NULL, split_timeout);
+        if (split_mode == 0) {   //solution = S->simpleSplit(&splits, nullptr, split_timeout);
         } else if (split_mode == 1) {
-            solution = ((VSIDSSplitting *)S)->vsidsScatteringSplit(&splits, NULL, split_timeout);
+            solution = ((VSIDSSplitting *)S)->vsidsScatteringSplit(&splits, nullptr, split_timeout);
         } else if (split_mode == 2) {
             solution = ((LookaheadSplitting *)S)->produceSplitting(&splits, &valid);
         } else if (split_mode == 3) {   //solution = S->score(&splits, &valid, split_timeout);
@@ -1254,7 +1256,7 @@ int
 Master::parseFormula(string filename)
 {
     gzFile in = (filename.size() == 0) ? gzdopen(0, "rb") : gzopen(filename.c_str(), "rb");
-    if (in == NULL) {
+    if (in == nullptr) {
         fprintf(stderr, "ERROR! Could not open file: %s\n", filename.size() == 0 ? "<stdin>" : filename.c_str()), exit(1);
     } else {
         // open file

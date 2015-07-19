@@ -64,12 +64,12 @@ CNFClassifier::CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVa
     computingClausesGraph = true;
     computingClausesGraph = true;
     computingRWH = true;
-    attrFileName = NULL;
+    attrFileName = nullptr;
     computeBinaryImplicationGraph = true;
     computeConstraints = true;
     computeXor = true;
-    outputFileName = NULL;
-    plotsFileName = NULL;
+    outputFileName = nullptr;
+    plotsFileName = nullptr;
     maxClauseSize = -1;
     computingDerivative = false;
     verb = 1;
@@ -144,7 +144,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         vector<double>& ret)
 {
 
-    Graph *variablesGraph = NULL;
+    Graph *variablesGraph = nullptr;
     if (computingVarGraph) { variablesGraph = new Graph(nVars, computingDerivative); }
     uint64_t operations = 0, operationsV = 0;
     double time1 = cpuTime();
@@ -646,7 +646,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 {
     // parameters to set
     const uint32_t maxXorSize = 7;
-    const bool findSubsumed = true;
+    const bool findSubsumed = false;  // too expensive to compute features
 
     // algorithm
     double xorTime = cpuTime() - 0;
@@ -706,6 +706,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 
     uint32_t cL = 2;  // current length (below 5 there cannot be reduced anything)
     uint32_t cP = 0;  // current moveTo position
+    uint32_t participatingXorClauses = 0;
     uint64_t findChecks = 0;
     uint32_t subsFound = 0, xors = 0;
 
@@ -774,6 +775,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
                     const uint32_t index = nrByPol / 2;
                     foundCount = foundByIndex[ index ] == 0 ? foundCount + 1 : foundCount;
                     foundByIndex[ index ] = 1;
+		    participatingXorClauses ++; // clause is covered
                     findChecks ++;
                 }
 
@@ -858,7 +860,10 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
                                 assert(cL >= cclause.size() && "subsume clauses cannot be greater than the current XOR");
                                 for (uint32_t match = 0 ; match < 2 * shift; ++match) {
 
-                                    if (foundByIndex[ match / 2 ] == 1) { continue; }
+                                    if (foundByIndex[ match / 2 ] == 1) { 
+				      participatingXorClauses ++; // this clause is covered with this XOR!
+				      continue; 
+				    }
 
                                     if ((match & myMatch) == myNumber) {
 
@@ -877,6 +882,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
                                         if (foundByIndex[ match / 2 ] == 0) { foundCount++; }   // only if this clause sets the value from 0 to 1!
                                         subsFound = resolveLit == lit_Undef ? subsFound + 1 : subsFound; // stats
                                         foundByIndex[ match / 2 ] = 1;
+					participatingXorClauses ++; // this clause is covered with this XOR!
                                         if (foundCount == shift) { goto XorFoundAll; }
                                     }
                                 }
@@ -929,6 +935,15 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
             featuresNames, ret);
     xorGraph.getWeightStatistics().infoToVector("XOR gate weights",
             featuresNames, ret);
+    
+    const double clauseRatio = clauses.size() == 0 ? 1 : (double)participatingXorClauses / (double)(clauses.size());
+    
+    featuresNames.push_back("XOR used clauses");
+    ret.push_back( participatingXorClauses );
+    
+    featuresNames.push_back("XOR used clauses ratio");
+    ret.push_back( clauseRatio );
+    
     featuresNames.push_back("XOR gate steps");
     ret.push_back(xorSteps);
 
@@ -1186,7 +1201,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     ret.push_back(time1);
     setCpuTime(time1);
 
-    if (attrFileName != NULL) {
+    if (attrFileName != nullptr) {
         std::ofstream fnout;
         fnout.open(attrFileName, ios::out);
         fnout << "@relation cnf_features" << endl;
@@ -1203,7 +1218,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
 static bool isInfinite(const double pV)
 {
-    return isinf(fabs(pV));
+    return std::isinf(fabs(pV));
 }
 
 std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
@@ -1211,7 +1226,7 @@ std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
 
     ostream* output = &cout;
     std::ofstream fout;
-    if (outputFileName != NULL) {
+    if (outputFileName != nullptr) {
         fout.open(outputFileName, fstream::app | fstream::out);
         if (!fout) { cerr << "failed to open data file" << endl; }
         output = &fout;
@@ -1232,7 +1247,7 @@ std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
     }
     *output << endl;
 
-    if (outputFileName != NULL) {
+    if (outputFileName != nullptr) {
         fout.close();
     }
     return features;

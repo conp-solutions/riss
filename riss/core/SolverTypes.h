@@ -39,6 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/mtl/Alg.h"
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Map.h"
+#include "riss/mtl/Sort.h"
 #include "riss/mtl/Alloc.h"
 
 // for parallel stuff
@@ -90,7 +91,7 @@ inline  Lit  mkLit(const Var& var, const bool& sign = false) { Lit p; p.x = var 
 inline  Lit  operator ~(const Lit& p)              { Lit q; q.x = p.x ^ 1; return q; }
 inline  Lit  operator ^(const Lit& p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
 inline  bool sign(const Lit& p)              { return p.x & 1; }
-inline  int  var(const Lit& p)              { return p.x >> 1; }
+inline  const int  var(const Lit& p)         { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
 inline  int  toInt(const Var& v)              { return v; }
@@ -179,7 +180,9 @@ class Clause
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         #ifndef PCASSO
-        unsigned lbd       : 23;
+        unsigned lbd       : 21;
+        unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
+        unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
         unsigned isCore    : 1;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
@@ -188,11 +191,13 @@ class Clause
         #else
         unsigned shared     : 1;
         unsigned shCleanDelay : 1;
-        unsigned size      : 25;
+        unsigned size      : 21;
+        unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
+        unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned pt_level   : 9;     // level of the clause in the decision tree
+        unsigned pt_level   : 11;     // level of the clause in the decision tree
         unsigned isCore    : 1;
         unsigned lbd       : 19;
         #endif
@@ -201,7 +206,30 @@ class Clause
         unsigned extra_info : 64;
         #endif
 
-        ClauseHeader(void) {}
+        ClauseHeader(void) :
+            mark(0)
+            , locked(0)
+            , learnt(0)
+            , has_extra(0)
+            , reloced(0)
+            , lbd(0)
+            , wasPropagated(0)
+            , usedInAnalyze(0)
+            , isCore(0)
+            , canbedel(0)
+            , can_subsume(0)
+            , can_strengthen(0)
+            , size(0)
+            #ifdef PCASSO
+            , pt_level(0)
+            , shared(0)
+            , shCleanDelay(0)
+            #endif
+            #ifdef CLS_EXTRA_INFO
+            , extra_info(0)
+            #endif
+        {}
+
         ClauseHeader(volatile ClauseHeader& rhs)
         {
             mark = rhs.mark;
@@ -210,6 +238,8 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            wasPropagated = rhs.wasPropagated;
+            usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
@@ -233,6 +263,8 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            wasPropagated = rhs.wasPropagated;
+            usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
@@ -259,25 +291,13 @@ class Clause
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt)
     {
-        header.mark      = 0;
-        header.locked    = 0;
+        // header is initialized as above, everything set to 0, hence, set only different values!
         header.learnt    = learnt;
         header.has_extra = use_extra;
-        header.reloced   = 0;
         header.size      = ps.size();
-        #ifdef CLS_EXTRA_INFO
-        header.extra_info = 0
-        #endif
-                            header.lbd = 0;
-        header.isCore = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-        #ifdef PCASSO
-        header.pt_level = 0;
-        header.shared = 0; // Non-shared
-        header.shCleanDelay = 0;
-        #endif
 
         for (int i = 0; i < ps.size(); i++)
             for (int j = i + 1; j < ps.size(); j++) {
@@ -302,24 +322,13 @@ class Clause
     template<class V>
     Clause(const V* ps, int psSize, bool use_extra, bool learnt)
     {
-        header.mark      = 0;
-        header.locked    = 0;
+        // header is initialized as above, everything set to 0, hence, set only different values!
         header.learnt    = learnt;
         header.has_extra = use_extra;
-        header.reloced   = 0;
         header.size      = psSize;
-        #ifdef CLS_EXTRA_INFO
-        header.extra_info = 0
-        #endif
-                            header.lbd = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-        #ifdef PCASSO
-        header.pt_level = 0;
-        header.shared = 0; // Non-shared
-        header.shCleanDelay = 0;
-        #endif
 
         for (int i = 0; i < psSize; i++)
             for (int j = i + 1; j < psSize; j++) {
@@ -401,6 +410,12 @@ class Clause
 
     bool isCoreClause() const { return header.isCore; }
     void setCoreClause(bool c) { header.isCore = c; }
+
+    bool wasPropagated() const { return header.wasPropagated; }
+    void setPropagated() { header.wasPropagated = 1; }
+
+    bool wasUsedInAnalyze() const { return header.usedInAnalyze; }
+    void setUsedInAnalyze() { header.usedInAnalyze = 1; }
 
     void         print(bool nl = false) const
     {
@@ -488,7 +503,13 @@ class Clause
     void unlock()
     {
         header.locked = 0;
-    };
+    }
+
+    /** set lock variable without actually locking  */
+    void setLocked()
+    {
+        header.locked = 1;
+    }
 
     void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
     inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; }  shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
@@ -532,6 +553,7 @@ class Clause
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level)
     {
+        assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
         header.pt_level = _pt_level;
     }
 
@@ -585,7 +607,17 @@ class Clause
     #else
     { return 0; }
     #endif
+
+    template <class LessThan>
+    friend void sort(Clause& c, LessThan lt);
 };
+
+
+template <class LessThan>
+void sort(Clause& c, LessThan lt)
+{
+    sort((Lit*) & (c.data[0]), c.size(), lt);
+}
 
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
@@ -1184,11 +1216,11 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l)
 /** print a clause into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Clause& c)
 {
-    other << "[";
+//     other << "[ ";
     for (int i = 0 ; i < c.size(); ++ i) {
-        other << " " << c[i];
+        other << c[i] << " ";
     }
-    other << "]";
+//     other << "]";
     return other;
 }
 

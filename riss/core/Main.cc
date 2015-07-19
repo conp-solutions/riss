@@ -49,20 +49,20 @@ void printStats(Solver& solver)
     double cpu_time = cpuTime();
 
     double mem_used = memUsedPeak();
-    printf("c restarts              : %"PRIu64" (%"PRIu64" conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts / solver.starts);
-    printf("c blocked restarts      : %"PRIu64" (multiple: %"PRIu64") \n", solver.nbstopsrestarts, solver.nbstopsrestartssame);
-    printf("c last block at restart : %"PRIu64"\n", solver.lastblockatrestart);
-    printf("c nb ReduceDB           : %"PRIu64"\n", solver.nbReduceDB);
-    printf("c nb removed Clauses    : %"PRIu64"\n", solver.nbRemovedClauses);
-    printf("c nb learnts DL2        : %"PRIu64"\n", solver.nbDL2);
-    printf("c nb learnts size 2     : %"PRIu64"\n", solver.nbBin);
-    printf("c nb learnts size 1     : %"PRIu64"\n", solver.nbUn);
+    printf("c restarts              : %" PRIu64 " (%" PRIu64 " conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts / solver.starts);
+    printf("c blocked restarts      : %" PRIu64 " (multiple: %" PRIu64 ") \n", solver.nbstopsrestarts, solver.nbstopsrestartssame);
+    printf("c last block at restart : %" PRIu64 "\n", solver.lastblockatrestart);
+    printf("c nb ReduceDB           : %" PRIu64 "\n", solver.nbReduceDB);
+    printf("c nb removed Clauses    : %" PRIu64 "\n", solver.nbRemovedClauses);
+    printf("c nb learnts DL2        : %" PRIu64 "\n", solver.nbDL2);
+    printf("c nb learnts size 2     : %" PRIu64 "\n", solver.nbBin);
+    printf("c nb learnts size 1     : %" PRIu64 "\n", solver.nbUn);
 
-    printf("c conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
-    printf("c decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions * 100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time);
-    printf("c propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations / cpu_time);
-    printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
-    printf("c nb reduced Clauses    : %"PRIu64"\n", solver.nbReducedClauses);
+    printf("c conflicts             : %-12" PRIu64 "   (%.0f /sec)\n", solver.conflicts   , cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
+    printf("c decisions             : %-12" PRIu64 "   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions * 100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time);
+    printf("c propagations          : %-12" PRIu64 "   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations / cpu_time);
+    printf("c conflict literals     : %-12" PRIu64 "   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
+    printf("c nb reduced Clauses    : %" PRIu64 "\n", solver.nbReducedClauses);
 
     printf("c Memory used           : %.2f MB\n", mem_used);
 
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    StringOption drupFile("PROOF", "proof", "Write a proof trace into the given file", 0);
+    StringOption proofFile("PROOF", "proof", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, DRUP or DRAT)", "DRAT");
 
 
@@ -118,6 +118,11 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+    BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
+    IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
+
+    IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
+    StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
     try {
 
@@ -127,9 +132,28 @@ int main(int argc, char** argv)
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
         CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
-        foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
-        foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
+        foundHelp = coreConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        foundHelp = cp3config.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
+
+        // print pcs information into file
+        if (0 != (const char*)opt_tuneFile) {
+            FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
+            fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
+            ::printOptions(pcsFile, opt_tuneLevel);
+            fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
+            coreConfig.printOptions(pcsFile);
+            fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
+            cp3config.printOptions(pcsFile);
+            fprintf(pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
+            fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
+            ::printOptionsDependencies(pcsFile, opt_tuneLevel);
+            fprintf(pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
+            coreConfig.printOptionsDependencies(pcsFile);
+            fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
+            cp3config.printOptionsDependencies(pcsFile);
+            exit(0);
+        }
 
         if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
@@ -138,6 +162,12 @@ int main(int argc, char** argv)
             configCall(argc, argv, s);
             cerr << "c tool-parameters: " << s.str() << endl;
             exit(0);
+        }
+
+        if (opt_showParam) {  // print remaining parameters
+            cerr << "c call after parsing options: ";
+            for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
+            cerr << endl;
         }
 
         Solver S(&coreConfig);
@@ -162,6 +192,7 @@ int main(int argc, char** argv)
 
         // Set limit on CPU-time:
         if (cpu_lim != INT32_MAX) {
+            receivedInterupt = true; // make sure the next interrupt hits exit
             rlimit rl;
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
@@ -174,6 +205,7 @@ int main(int argc, char** argv)
 
         // Set limit on virtual memory:
         if (mem_lim != INT32_MAX) {
+            receivedInterupt = true; // make sure the next interrupt hits exit
             rlim_t new_mem_lim = (rlim_t)mem_lim * 1024 * 1024;
             rlimit rl;
             getrlimit(RLIMIT_AS, &rl);
@@ -190,7 +222,7 @@ int main(int argc, char** argv)
         }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL) {
+        if (in == nullptr) {
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         }
 
@@ -206,12 +238,12 @@ int main(int argc, char** argv)
 
 
         // open file for proof
-        S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+        S.proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
         double parsed_time = cpuTime();
         if (S.verbosity > 0) {
@@ -230,16 +262,16 @@ int main(int argc, char** argv)
         //signal(SIGXCPU,SIGINT_interrupt);
 
         if (!S.simplify()) {
-            if (res != NULL) {
+            if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
-                res = NULL;
+                res = nullptr;
             }
             // add the empty clause to the proof, close proof file
-            if (S.drupProofFile != NULL) {
+            if (S.proofFile != nullptr) {
                 bool validProof = S.checkProof(); // check the proof that is generated inside the solver
                 if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-                fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
+                fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
             }
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -261,11 +293,11 @@ int main(int argc, char** argv)
         S.budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
-            if (res != NULL) { fclose(res); res == NULL; }
-            if (S.drupProofFile != NULL) {
-                fclose(S.drupProofFile);   // close the current file
-                S.drupProofFile = fopen((const char*) drupFile, "w"); // remove the content of that file
-                fclose(S.drupProofFile);   // close the file again
+            if (res != nullptr) { fclose(res); res = nullptr; }
+            if (S.proofFile != nullptr) {
+                fclose(S.proofFile);   // close the current file
+                S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
+                fclose(S.proofFile);   // close the file again
             }
         }
 
@@ -276,12 +308,14 @@ int main(int argc, char** argv)
 
         // check model of the formula
         if (ret == l_True && opt_checkModel && argc != 1) {  // check the model if the formla was given via a file!
+            gzFile in = gzopen(argv[1], "rb"); // re-read file
             if (check_DIMACS(in, S.model)) {
                 printf("c verified model\n");
             } else {
                 printf("c model invalid -- turn answer into UNKNOWN\n");
                 ret = l_Undef; // turn result into unknown, because the model is not correct
             }
+            gzclose(in);
         }
 
         // print solution to screen
@@ -289,14 +323,14 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.drupProofFile != NULL) {
+        if (ret == l_False && S.proofFile != nullptr) {
             bool validProof = S.checkProof(); // check the proof that is generated inside the solver
             if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-            fprintf(S.drupProofFile, "0\n");
+            fprintf(S.proofFile, "0\n");
         }
 
         // print solution into file
-        if (res != NULL) {
+        if (res != nullptr) {
             if (ret == l_True) {
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
@@ -311,11 +345,11 @@ int main(int argc, char** argv)
                 else { fprintf(res, "s UNSATISFIABLE\n"); }
             } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
             else { fprintf(res, "s UNKNOWN\n"); }
-            fclose(res); res = NULL;
+            fclose(res); res = nullptr;
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == NULL) {
+        if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)

@@ -9,7 +9,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Technique.h"
 #include "coprocessor/CoprocessorTypes.h"
 
-
 namespace Coprocessor
 {
 
@@ -23,7 +22,6 @@ namespace Coprocessor
 class Propagation : public Technique<Propagation>
 {
     // TODO: add queues and other attributes here!
-
     uint32_t lastPropagatedLiteral;  // store, which literal position in the trail has been propagated already to avoid duplicate work
 
     int removedClauses;  // number of clauses that have been removed due to unit propagation
@@ -43,9 +41,12 @@ class Propagation : public Technique<Propagation>
      * perform usual unit propagation, but shrinks clause sizes also physically
      * will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
      *
+     * Note:
+     *   will share the propagated unit clauses with the other threads in the portfolio solver
+     * 
      * @return l_Undef, if no conflict has been found, l_False if there has been a conflict
      */
-    Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef);
+    Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = nullptr, const Riss::Var ignore = var_Undef);
 
     void initClause(const Riss::CRef& cr);
 
@@ -54,6 +55,7 @@ class Propagation : public Technique<Propagation>
     /** give more steps for inprocessing - nothing to be done for UP*/
     void giveMoreSteps() {}
 
+  protected:
 };
 
 } // namespace coprocessor

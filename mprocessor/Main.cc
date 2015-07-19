@@ -141,7 +141,7 @@ int main(int argc, char** argv)
             }
         }
 
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
         if (!post) {
 
             if (argc == 1) {
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
             }
 
             gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-            if (in == NULL) {
+            if (in == nullptr) {
                 printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
             }
 
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
                 }
                 //S.toDimacs((const char*)dimacs);
                 FILE* wcnfFile = fopen((const char*) dimacs, "wb");
-                if (wcnfFile == NULL) {
+                if (wcnfFile == nullptr) {
                     cerr << "c WARNING: could not open file " << (const char*) dimacs << " to write the formula" << endl;
                     exit(3);
                 }
@@ -276,7 +276,7 @@ int main(int argc, char** argv)
             }
 
             if (!S.okay()) {
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
                 else { printf("s UNSATISFIABLE\n"); }
                 if (S.verbosity > 0) {
                     printf("c =========================================================================================================\n");
@@ -291,7 +291,7 @@ int main(int argc, char** argv)
                 return (20);
                 #endif
             } else {
-                if (res != NULL) { fprintf(res, "s UNKNOWN\n"); fclose(res); cerr << "s UNKNOWN" << endl; }
+                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"); fclose(res); cerr << "s UNKNOWN" << endl; }
                 #ifdef NDEBUG
                 exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
                 #else
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
 
             if (solution == 10) {
                 preprocessor.extendModel(S.model);
-                if (res != NULL) {
+                if (res != nullptr) {
                     printf("s SATISFIABLE\n");
                     fprintf(res, "s SATISFIABLE\nv ");
                     for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
@@ -338,7 +338,7 @@ int main(int argc, char** argv)
                 return (10);
                 #endif
             } else if (solution == 20) {
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                 printf("s UNSATISFIABLE\n");
                 cerr.flush(); cout.flush();
                 #ifdef NDEBUG
@@ -347,7 +347,7 @@ int main(int argc, char** argv)
                 return (20);
                 #endif
             } else {
-                if (res != NULL) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
                 printf("s UNKNOWN\n");
             }
 

@@ -17,7 +17,7 @@ namespace Coprocessor
 void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
     FILE* f = fopen(file, "wr");
-    if (f == NULL) {
+    if (f == nullptr) {
         fprintf(stderr, "could not open file %s\n", file), exit(1);
     }
     printFormula(f);

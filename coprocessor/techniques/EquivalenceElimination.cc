@@ -14,7 +14,7 @@ namespace Coprocessor
 
 static const int eeLevel = 1;
 
-EquivalenceElimination::EquivalenceElimination(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
+EquivalenceElimination::EquivalenceElimination(CoprocessorData& _data, CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
     : Technique(_config, _ca, _controller)
     , gateSteps(0)
     , gateTime(0)
@@ -28,6 +28,7 @@ EquivalenceElimination::EquivalenceElimination(CP3Config& _config, ClauseAllocat
     , eqInSCC(0)
     , eqIndex(0)
     , isToAnalyze(0)
+    , data(_data)
     , propagation(_propagation)
     , subsumption(_subsumption)
 {}
@@ -38,7 +39,7 @@ void EquivalenceElimination::giveMoreSteps()
 }
 
 
-bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
+bool EquivalenceElimination::process(CoprocessorData& data)
 {
     if (!performSimplification()) { return false; }   // do not perform simplification because of presiously failed runs?
 
@@ -67,9 +68,9 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
         isToAnalyze[ v ] = 1;
     }
 
-    if (replacedBy.size() < data.nVars()) {   // extend replacedBy structure
-        for (Var v = replacedBy.size(); v < data.nVars(); ++v) {
-            replacedBy.push_back(mkLit(v, false));
+    if (data.replacedBy().size() < data.nVars()) {   // extend replacedBy structure
+        for (Var v = data.replacedBy().size(); v < data.nVars(); ++v) {
+            data.replacedBy().push(mkLit(v, false));
         }
     }
 
@@ -128,7 +129,8 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
                     }
             });
 
-            vector<Lit> oldReplacedBy = replacedBy;
+            vec<Lit> oldReplacedBy;
+            data.replacedBy().copyTo(oldReplacedBy);
             //vector< vector<Lit> >* externBig
 
             {
@@ -145,7 +147,7 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
                 DOUT(if (!data.ok()) if (config.ee_debug_out > 2) cerr << "state of formula is UNSAT!" << endl;);
             }
 
-            replacedBy = oldReplacedBy;
+            oldReplacedBy.moveTo(data.replacedBy());
 
             if (!data.ok()) { return modifiedFormula; }
             // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
@@ -863,7 +865,7 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
             const Var v = var(g.get(j));
             // one bit must not be stamped!
             if ((bitType[ v ] & 4) == 0)
-                if (count != 0) { return false; }  else { count++; }
+                if (count != 0) { return false; } else { count++; }
         }
         //cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
         return true;
@@ -1782,9 +1784,9 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
 {
     // create / resize data structures:
     if (eqLitInStack == 0) { eqLitInStack = (char*) malloc(sizeof(char) * data.nVars() * 2); }
-    else { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
+    else  { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
     if (eqInSCC == 0) { eqInSCC = (char*) malloc(sizeof(char) * data.nVars()); }
-    else { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
+    else  { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
     eqNodeIndex.resize(data.nVars() * 2, -1);
     eqNodeLowLinks.resize(data.nVars() * 2, -1);
 
@@ -1918,8 +1920,8 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 
 Lit EquivalenceElimination::getReplacement(Lit l)
 {
-    while (var(replacedBy[var(l)]) != var(l)) { l = sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; }   // go down through the whole hierarchy!
-    // replacedBy[var(startLit)] = l; // speed up future calculations!
+    while (var(data.replacedBy() [var(l)]) != var(l)) { l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; }    // go down through the whole hierarchy!
+    //  data.replacedBy() [var(startLit)] = l; // speed up future calculations!
     return l;
 }
 
@@ -1930,13 +1932,13 @@ bool EquivalenceElimination::setEquivalent(Lit representative, Lit toReplace)
     if (r == ~s) { return false; }
     DOUT(if (config.ee_debug_out > 2) cerr << "c ee literals: " << representative << " ( -> " << r << ") is representative for " << toReplace << " ( -> " << s << ")" << endl;);
     if (r < s) {
-        replacedBy[ var(s) ] = (sign(s) ? ~r : r);   // propagate forward!
+        data.replacedBy() [ var(s) ] = (sign(s) ? ~r : r);   // propagate forward!
     } else {
-        replacedBy[ var(r) ] = (sign(r) ? ~s : s);   // propagate forward!
+        data.replacedBy() [ var(r) ] = (sign(r) ? ~s : s);   // propagate forward!
     }
     /*
-    replacedBy[ var(toReplace) ] = ( sign(toReplace) ? ~r : r );
-    replacedBy[ var(s) ] = ( sign(s) ? ~r : r ); // propagate forward!
+     data.replacedBy() [ var(toReplace) ] = ( sign(toReplace) ? ~r : r );
+     data.replacedBy() [ var(s) ] = ( sign(s) ? ~r : r ); // propagate forward!
     */
     return true;
 }
@@ -1951,13 +1953,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
         isToAnalyze.resize(data.nVars(), 0);
         data.ma.resize(2 * data.nVars());
 
-        if (replacedBy.size() < data.nVars()) {   // extend replacedBy structure
-            for (Var v = replacedBy.size(); v < data.nVars(); ++v) {
-                replacedBy.push_back(mkLit(v, false));
+        if (data.replacedBy() .size() < data.nVars()) {    // extend  data.replacedBy()  structure
+            for (Var v =  data.replacedBy() .size(); v < data.nVars(); ++v) {
+                data.replacedBy() .push(mkLit(v, false));
             }
         }
 
-        vector<Lit>& ee = data.getEquivalences();
+        vec<Lit>& ee = data.getEquivalences();
 
         DOUT(if (config.ee_debug_out > 2) {
         if (config.ee_debug_out > 2) {
@@ -1988,7 +1990,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
             for (int i = 0 ; i < ee.size(); ++ i) {
                 if (ee[i] == lit_Undef || !data.doNotTouch(var(ee[i]))) { ee[keep++] = ee[i]; }       // keep all literals that are not frozen, and keep the "lit_Undef" separators!
             }
-            ee.resize(keep);
+            ee.shrink(ee.size() - keep);
         }
 
         for (int i = 0 ; i < ee.size(); ++ i) {
@@ -2063,13 +2065,17 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                         proofClause.push_back(~repr); proofClause.push_back(ee[j]);
                         CRef cr = ca.alloc(proofClause, false);
                         data.addToProof(ca[cr]); // tell proof about the new clause!
-                        ca[cr].setExtraInformation(data.defaultExtraInfo());   // setup extra information for this clause!
+                        #ifdef PCASSO
+                        ca[cr].setPTLevel(data.currentDependencyLevel());   // setup extra information for this clause!
+                        #endif
                         data.clss.push_back(cr);
                         proofClause[0] = repr; proofClause[1] = ~ee[j];
                         cr = ca.alloc(proofClause, false);
                         data.addToProof(ca[cr]); // tell proof about the new clause!
                         data.clss.push_back(cr);
-                        ca[cr].setExtraInformation(data.defaultExtraInfo());   // setup extra information for this clause!
+                        #ifdef PCASSO
+                        ca[cr].setPTLevel(data.currentDependencyLevel());   // setup extra information for this clause!
+                        #endif
                     }
                 } else {
                     if (setValue == l_True) {
@@ -2077,7 +2083,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                             if (data.value(ee[j]) == l_True) { continue; }
                             else if (data.value(ee[j]) == l_False) { data.setFailed(); break; }
                             else {
-                                data.enqueue(ee[j], data.defaultExtraInfo());   // enqueue the literal itself!
+                                data.enqueue(ee[j], data.currentDependencyLevel());   // enqueue the literal itself!
                                 data.addCommentToProof("added by EE class");
                                 data.addUnitToProof(ee[j]);
                             }
@@ -2088,7 +2094,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                             if (data.value(ee[j]) == l_False) { continue; }
                             else if (data.value(ee[j]) == l_True) { data.setFailed(); break; }
                             else {
-                                data.enqueue(~ee[j], data.defaultExtraInfo());   // enqueue the complement!
+                                data.enqueue(~ee[j], data.currentDependencyLevel());   // enqueue the complement!
                                 data.addCommentToProof("added by EE class");
                                 data.addUnitToProof(~ee[j]);
                             }
@@ -2160,7 +2166,9 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                                 }
 
                                 c.sort(); // sort the clause!
-                                c.updateExtraInformation(data.defaultExtraInfo());   // since it cannot be traced which clauses participated, we assume the worst case to be on the safe side!
+                                #ifdef PCASSO
+                                c.setPTLevel(data.currentDependencyLevel());   // since it cannot be traced which clauses participated, we assume the worst case to be on the safe side!
+                                #endif
 
                                 int n = 1, removed = 0;
                                 for (int m = 1; m < c.size(); ++ m) {
@@ -2196,7 +2204,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                                     }
                                 } else if (c.size() == 1) {
                                     c.set_delete(true); // remove this clause from the current formula !
-                                    if (data.enqueue(c[0], data.defaultExtraInfo()) == l_False) { return newBinary; }
+                                    if (data.enqueue(c[0], data.currentDependencyLevel()) == l_False) { return newBinary; }
                                 } else if (c.size() == 0) {
                                     data.setFailed();
                                     DOUT(if (config.ee_debug_out > 2) cerr << "c applying EE failed due getting an empty clause" << endl;);
@@ -2456,8 +2464,6 @@ void EquivalenceElimination::destroy()
     vector< int32_t >().swap(eqNodeLowLinks);
     vector< int32_t >().swap(eqNodeIndex);
     vector< Lit >().swap(eqCurrentComponent);
-
-    vector<Lit>().swap(replacedBy);
 
     vector<char>().swap(isToAnalyze);
     vector<Lit>().swap(eqDoAnalyze);

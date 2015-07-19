@@ -145,7 +145,7 @@ lbool VSIDSSplitting::scatterSolve(void* data)
 //    }
 
     //struct timeval tmp_t;
-    //gettimeofday(&tmp_t, NULL);
+    //gettimeofday(&tmp_t, nullptr);
     //double start_t = tmp_t.tv_sec + tmp_t.tv_usec/1000000;
     //double tcput = cpuTime_t();
     // Search:
@@ -172,7 +172,7 @@ lbool VSIDSSplitting::scatterSolve(void* data)
 
     cancelUntil(0);
 
-    //gettimeofday(&tmp_t, NULL);
+    //gettimeofday(&tmp_t, nullptr);
     //double rt = tmp_t.tv_sec + tmp_t.tv_usec/1000000 -  start_t;
     //printf("I was running for wall time %f and per thread cpu time %f\n",
     //  rt, cpuTime_t() - tcput);
@@ -214,9 +214,9 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 else { interrupt(); return l_Undef; }
             }
 
-            learnt_clause.clear(); otfssClauses.clear(); extraInfo = 0;
+            learnt_clause.clear(); otfssClauses.clear(); dependencyLevel = 0;
             unsigned lbd = 0;
-            int ret = analyze(confl, learnt_clause, backtrack_level, lbd, extraInfo); // Davide> scatt !! my invention
+            int ret = analyze(confl, learnt_clause, backtrack_level, lbd, dependencyLevel); // Davide> scatt !! my invention
 
             assert(ret == 0 && "can handle only usually learnt clauses");
             if (ret != 0) { _exit(1); }   // abort, if learning is set up wrong

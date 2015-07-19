@@ -27,7 +27,7 @@ class LookaheadSplitting : public SplitterSolver
     // more global data structures
     Riss::vec<Riss::Lit> learnt_clause;
     Riss::vec<Riss::CRef> otfssClauses;
-    uint64_t extraInfo;
+    unsigned extraInfo;
 
   public:
     LookaheadSplitting(Riss::CoreConfig* config);

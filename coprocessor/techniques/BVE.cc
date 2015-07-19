@@ -21,7 +21,7 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
     , propagation(_propagation)
     , subsumption(_subsumption)
     , stepper(config.opt_bve_limit)
-    , variable_heap(NULL) // FIXME use nullptr instead NULL macro (also for the checks)
+    , variable_heap(nullptr)
     , removedClauses(0)
     , removedLiterals(0)
     , createdClauses(0)
@@ -161,6 +161,11 @@ void BoundedVariableElimination::progressStats(CoprocessorData& data, const bool
     restarts++;
 }
 
+bool BoundedVariableElimination::hasToEliminate()   // TODO if heap is used, this will not work, since the heap depends on the changing data-object
+{
+    return (variable_queue.size() > 0);
+}
+
 lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doStatistics)
 {
     // do not do anything?!
@@ -201,7 +206,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
     // process step, we have to check for duplicates when we insert new variables into the heap / queue
     if (config.opt_bve_heap != 2) {
         // initialize variable heap only once
-        if (variable_heap == 0) {
+        if (variable_heap == nullptr) {
             VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
             variable_heap = new Heap<VarOrderBVEHeapLt>(comp);
         }
@@ -1024,9 +1029,13 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData& data,
 }
 
 
-
-inline void BoundedVariableElimination::removeBlockedClauses(Coprocessor::CoprocessorData& data, const vector< Riss::CRef >& list,
-                                                             const int32_t stats[], const Lit& l, const int limit, const bool doStatistics)
+/**
+ * this function removes Clauses that have no resolvents
+ * i.e. all resolvents are tautologies
+ */
+inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData& data, const vector< Riss::CRef >& list,
+                                                             const int32_t stats[], const Lit& l, const int limit,
+                                                             const bool doStatistics)
 {
     // FIXME limit parameter is not used!
     for (unsigned ci = 0; ci < list.size(); ++ci) {
@@ -1266,6 +1275,5 @@ void BoundedVariableElimination::destroy()
     vector<MarkArray>().swap(gateMarkArrays);
     deque<CRef>().swap(sharedStrengthQueue);
 }
-
 
 } // namespace Coprocessor

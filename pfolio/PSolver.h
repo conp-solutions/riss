@@ -21,10 +21,17 @@ namespace Riss
 class PSolver
 {
 
+    Riss::PfolioConfig* privateConfig; // do be able to construct object without modifying configuration
+    bool deleteConfig;
+    Riss::PfolioConfig& pfolioConfig;  // configuration for this portfolio solver
+
     bool initialized;
     int threads;
 
-    Riss::vec<Riss::Solver*>             solvers;
+    Coprocessor::CP3Config*    globalSimplifierConfig; /// configuration object for global simplifier
+    Coprocessor::Preprocessor* globalSimplifier;       /// global object that initially runs simplification on the formula for all solvers together
+
+    Riss::vec<Riss::Solver*> solvers;
     CoreConfig*              configs;   // the configuration for each solver
     Coprocessor::CP3Config*  ppconfigs; // the configuration for each preprocessor
 
@@ -35,14 +42,16 @@ class PSolver
     ProofMaster* proofMaster;     // in a portfolio setup, use the proof master for generating DRUP proofs
     OnlineProofChecker* opc;      // check the proof on the fly during its creation
 
-    std::string defaultConfig;            // name of the configuration that should be used
+    std::string defaultConfig;                     // name of the configuration that should be used
+    std::string defaultSimplifierConfig;           // name of the configuration that should be used by the global simplification
+    std::vector< std::string > incarnationConfigs; // strings of incarnation configurations
 
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 
   public:
 
-    PSolver(const int threadsToUse, const char* configName = 0) ;
+    PSolver(PfolioConfig* externalConfig = 0, const char* configName = 0, int externalThreads = -1) ;
 
     ~PSolver();
 
@@ -63,6 +72,9 @@ class PSolver
     CoreConfig& getConfig(const int solverID);
 
     Coprocessor::CP3Config& getPPConfig(const int solverID);
+
+    /** set global pp config */
+    void setGlobalSimplifierConfig(const string& _config) { defaultSimplifierConfig = _config; }
 
     //
     // solve the formula in parallel, including communication and all that
@@ -113,6 +125,12 @@ class PSolver
     void setConfBudget(int64_t x); // set number of conflicts for the next search run
 
     void budgetOff(); // reset the search bugdet
+
+    /** parse the combined configurations
+     * Format: [N]configN[N+1]configN+1...
+     * and split them into the data strcuture incarnationConfigs
+     */
+    void parseConfigurations(const std::string& combinedConfigurations);
 
   protected:
 

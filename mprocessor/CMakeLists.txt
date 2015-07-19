@@ -1,23 +1,26 @@
-# Project definitions:
+# Project definitions
 # 
 project(mprocessor)
 
-# Dependencies:
+#
+# Dependencies
 # 
 
-# Executables:
+#
+# Executables
 # 
-add_executable(${PROJECT_NAME} Main.cc)
+add_executable(mprocessor Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} coprocessor-lib-static riss-lib-static)
+  target_link_libraries(mprocessor coprocessor-lib-static riss-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} coprocessor-lib-shared riss-lib-shared)
+  target_link_libraries(mprocessor coprocessor-lib-shared riss-lib-shared)
 endif()
 
-# Installation:
+#
+# Installation
 # 
-install(TARGETS   ${PROJECT_NAME} RUNTIME DESTINATION bin)
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+install(TARGETS   mprocessor RUNTIME DESTINATION bin)
+install(DIRECTORY mprocessor
+        DESTINATION include/mprocessor
         FILES_MATCHING PATTERN "*.h")

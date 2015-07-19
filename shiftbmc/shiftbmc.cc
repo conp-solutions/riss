@@ -18,6 +18,8 @@ IN THE SOFTWARE.
 
 #include "shiftbmc/shiftbmc.h"
 
+using namespace std;
+
 static aiger * model = 0;
 static const char * name = 0;
 
@@ -1444,13 +1446,13 @@ int main(int argc, char ** argv)
         if (innerPPConf != 0) {
             if (string(innerPPConf) == "AUTO") {
                 const int ands = model->num_ands, clss = shiftFormula.clauses; // use number of and gates and clauses to select the technique
-                if (clss <   75000   || ands <   28000) { innerPPConf = "BMC_FULL"; }
-                else if (clss <  100000   || ands <   35000) { innerPPConf = "BMC_BVEPRBAST"; }
-                else if (clss <  180000   || ands <   60000) { innerPPConf = "BMC_FULLNOPRB"; }
-                else if (clss <  275000   || ands <  100000) { innerPPConf = "BMC_BVEUHDAST"; }
-                else if (clss <  390000   || ands <  150000) { innerPPConf = "BMC_BVEBVAAST"; }
-                else if (clss < 2000000   || ands <  850000) { innerPPConf = "BMC_BVECLE"; }
-                else if (clss < 2500000   || ands < 1200000) { innerPPConf = "BMC_BEBE"; }
+                if (clss <   75000   || ands <   28000) { string(innerPPConf) = "BMC_FULL"; }
+                else if (clss <  100000   || ands <   35000) { string(innerPPConf) = "BMC_BVEPRBAST"; }
+                else if (clss <  180000   || ands <   60000) { string(innerPPConf) = "BMC_FULLNOPRB"; }
+                else if (clss <  275000   || ands <  100000) { string(innerPPConf) = "BMC_BVEUHDAST"; }
+                else if (clss <  390000   || ands <  150000) { string(innerPPConf) = "BMC_BVEBVAAST"; }
+                else if (clss < 2000000   || ands <  850000) { string(innerPPConf) = "BMC_BVECLE"; }
+                else if (clss < 2500000   || ands < 1200000) { string(innerPPConf) = "BMC_BEBE"; }
                 else { innerPPConf = 0; } // if the formula is too large, disable innerPPconf
             }
 
@@ -1578,13 +1580,13 @@ int main(int argc, char ** argv)
         // if( simplifiedCNF == 0 ) { // use preprocessing setup for inner frame
         if (outerPPConf == 0 || string(outerPPConf) == "AUTO") {
             const int vars = newMaxVar, clss = shiftFormula.clauses; // use number of and gates and clauses to select the technique
-            if (clss <   75000   || vars <   28000) { outerPPConf = "BMC_FULL"; }
-            else if (clss <  100000   || vars <   35000) { outerPPConf = "BMC_BVEPRBAST"; }
-            else if (clss <  180000   || vars <   70000) { outerPPConf = "BMC_FULLNOPRB"; }
-            else if (clss <  275000   || vars <  125000) { outerPPConf = "BMC_BVEUHDAST"; }
-            else if (clss <  390000   || vars <  160000) { outerPPConf = "BMC_BVEBVAAST"; }
-            else if (clss < 2000000   || vars <  840000) { outerPPConf = "BMC_BVECLE"; }
-            else if (clss < 2500000   || vars < 1100000) { outerPPConf = "BMC_BEBE"; }
+            if (clss <   75000   || vars <   28000) { string(outerPPConf) = "BMC_FULL"; }
+            else if (clss <  100000   || vars <   35000) { string(outerPPConf) = "BMC_BVEPRBAST"; }
+            else if (clss <  180000   || vars <   70000) { string(outerPPConf) = "BMC_FULLNOPRB"; }
+            else if (clss <  275000   || vars <  125000) { string(outerPPConf) = "BMC_BVEUHDAST"; }
+            else if (clss <  390000   || vars <  160000) { string(outerPPConf) = "BMC_BVEBVAAST"; }
+            else if (clss < 2000000   || vars <  840000) { string(outerPPConf) = "BMC_BVECLE"; }
+            else if (clss < 2500000   || vars < 1100000) { string(outerPPConf) = "BMC_BEBE"; }
             else { outerPPConf = 0; } // if the formula is too large, disable innerPPconf
         }
         //} else {

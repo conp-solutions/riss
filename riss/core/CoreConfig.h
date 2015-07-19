@@ -45,6 +45,7 @@ class CoreConfig : public Config
     IntOption opt_removal_debug;
     #endif
     BoolOption opt_refineConflict;
+    BoolOption opt_refineConflictReverse;
 
     DoubleOption opt_K;
     DoubleOption opt_R;
@@ -64,6 +65,8 @@ class CoreConfig : public Config
     BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
     DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
+    BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
+    IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;
     IntOption opt_lb_lbd_minimzing_clause;
 
@@ -88,7 +91,6 @@ class CoreConfig : public Config
     IntOption opt_inc_restart_level;
 
     DoubleOption opt_garbage_frac;
-    DoubleOption opt_reduce_frac;        // When clause database is reduced, this fraction of learnt clauses are removed              (default 0.5)
 
     IntOption opt_allUipHack;
     DoubleOption opt_vsids_start; // interpolate between VSIDS and VMTF, start value
@@ -97,6 +99,12 @@ class CoreConfig : public Config
     IntOption opt_vsids_distance; // interpolate between VSIDS and VMTF, update afte rthis number of conflict
     IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
     IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
+
+    BoolOption opt_receiveData;           // participate in receiving
+    IntOption  sharingType;               // determine when learned clauses are shared
+    BoolOption opt_receiveEquivalences;   // receive equivalenced (is turned automatically on after first succesful inprocessing)
+    BoolOption opt_refineReceivedClauses; // apply viviification to received clauses
+    BoolOption opt_resendRefinedClauses;  // resend refined clauses
 
     BoolOption opt_pq_order;           // If true, use a priority queue to decide the order in which literals are implied
     // and what antecedent is used.  The priority attempts to choose an antecedent
@@ -135,6 +143,13 @@ class CoreConfig : public Config
     IntOption opt_rMax;
     DoubleOption opt_rMaxInc;
 
+    StringOption printOnSolveTo; // print formula of the solver once ::solve_ is called, and exit afterwards
+
+    StringOption search_schedule;
+    IntOption    scheduleConflicts;
+    IntOption    scheduleDefaultConflicts;
+    DoubleOption sscheduleGrowFactor;
+
     #ifndef NDEBUG
     BoolOption localLookaheadDebug;
     #endif
@@ -151,6 +166,13 @@ class CoreConfig : public Config
 
     BoolOption opt_hpushUnit;
     IntOption opt_simplifyInterval;
+
+    BoolOption opt_otfss;
+    BoolOption opt_otfssL;
+    IntOption opt_otfssMaxLBD;
+    #ifndef NDEBUG
+    BoolOption debug_otfss;
+    #endif
 
     IntOption opt_learnDecPrecent; // learn decision clauses instead of others
     IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause
@@ -191,19 +213,14 @@ class CoreConfig : public Config
     BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
     #endif
 
+    BoolOption opt_use_reverse_minimization; // indicate that reverse minimization is used
+    IntOption reverse_minimizing_size;       // size to perform reverse minimization
+    IntOption lbLBDreverseClause;            // lbd to perform reverse minimization
+
     IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
-    BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next
     IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off
     IntOption uhle_minimizing_size;     // maximal clause size so that uhle minimization is applied
     IntOption uhle_minimizing_lbd;      // maximal LBD so that uhle minimization is still applied
-
-    IntOption opt_maxSDcalls; // number of substitution calls
-    IntOption opt_sdLimit; // number of steps for substituteDisjunciton
-
-    IntOption opt_maxCBcalls; // number of cegarBVA iterations
-    IntOption opt_cbLimit; // number of steps for cegarBVA
-    BoolOption opt_cbLeast; // use least frequent lit, or most frequent lit
-    BoolOption opt_cbStrict; // cegar reduction has to be strict
 
     IntOption opt_verboseProof;
     BoolOption opt_rupProofOnly;

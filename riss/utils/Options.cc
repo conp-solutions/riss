@@ -62,16 +62,19 @@ bool Riss::parseOptions(int& argc, char** argv, bool strict)
 
 void Riss::setUsageHelp(const char* str) { Option::getUsageString() = str; }
 void Riss::setHelpPrefixStr(const char* str) { Option::getHelpPrefixString() = str; }
-void Riss::printUsageAndExit(int argc, char** argv, bool verbose)
+void Riss::printUsageAndExit(int argc, char** argv, bool verbose, int activeLevel)
 {
     const char* usage = Option::getUsageString();
 
     sort(Option::getOptionList(), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     for (int i = 0; i < Option::getOptionList().size(); i++) {
+
+        if (activeLevel >= 0 && Option::getOptionList()[i]->getDependencyLevel() > activeLevel) { continue; }  // can jump over full categories
+
         const char* cat  = Option::getOptionList()[i]->category;
         const char* type = Option::getOptionList()[i]->type_name;
 
@@ -87,7 +90,7 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose)
         prev_type = Option::getOptionList()[i]->type_name;
     }
 
-    if (usage != NULL) {
+    if (usage != nullptr) {
         fprintf(stderr, "\n");
         fprintf(stderr, usage, argv[0]);
     }
@@ -101,6 +104,70 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose)
     // exit(0);
 }
 
+void Riss::printOptions(FILE* pcsFile, int printLevel)
+{
+    sort(Option::getOptionList(), Option::OptionLt());
+
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
+
+    // all options in the global list
+    for (int i = 0; i < Option::getOptionList().size(); i++) {
+
+        if (printLevel >= 0 && Option::getOptionList()[i]->getDependencyLevel() > printLevel) { continue; }  // can jump over full categories
+
+        const char* cat  = Option::getOptionList()[i]->category;
+        const char* type = Option::getOptionList()[i]->type_name;
+
+        // print new category
+        if (cat != prev_cat) {
+            fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
+        } else if (type != prev_type) {
+            fprintf(pcsFile, "\n");
+        }
+
+        // print the actual option
+        Option::getOptionList()[i]->printOptions(pcsFile, printLevel);
+
+        // set prev values, so that print is nicer
+        prev_cat  = Option::getOptionList()[i]->category;
+        prev_type = Option::getOptionList()[i]->type_name;
+    }
+}
+
+void Riss::printOptionsDependencies(FILE* pcsFile, int printLevel)
+{
+    sort(Option::getOptionList(), Option::OptionLt());
+
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
+
+    // all options in the global list
+    for (int i = 0; i < Option::getOptionList().size(); i++) {
+
+        if (Option::getOptionList()[i]->dependOnNonDefaultOf == 0 ||    // no dependency
+                (printLevel >= 0 && Option::getOptionList()[i]->getDependencyLevel() > printLevel)) { // or too deep in the dependency level
+            continue;
+        }  // can jump over full categories
+
+        const char* cat  = Option::getOptionList()[i]->category;
+        const char* type = Option::getOptionList()[i]->type_name;
+
+        // print new category
+        if (cat != prev_cat) {
+            fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
+        } else if (type != prev_type) {
+            fprintf(pcsFile, "\n");
+        }
+
+        // print the actual option
+        Option::getOptionList()[i]->printOptionsDependencies(pcsFile, printLevel);
+
+        // set prev values, so that print is nicer
+        prev_cat  = Option::getOptionList()[i]->category;
+        prev_type = Option::getOptionList()[i]->type_name;
+    }
+}
 
 void Riss::configCall(int argc, char** argv, std::stringstream& s)
 {

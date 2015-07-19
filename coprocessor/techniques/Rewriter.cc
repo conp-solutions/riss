@@ -584,9 +584,10 @@ bool Rewriter::rewriteAMO()
                         DOUT(if (config.rew_debug_out > 0) cerr << "c reject [" << i << "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;);
                         data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
                     } else {
-                        DOUT(if (config.rew_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl; });
-            } else {
-                for (int j = 0 ; j < size2; ++ j) {
+                        DOUT(if (config.rew_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;);
+                    }
+                } else {
+                    for (int j = 0 ; j < size2; ++ j) {
                         DOUT(if (config.rew_debug_out > 2) cerr << "c literal " << l << " hits literal " << list2[j] << endl;);
                         inAmo.setCurrentStep(toInt(list2[j]));
                     }
@@ -687,10 +688,11 @@ bool Rewriter::rewriteAMO()
                     if (c.can_be_deleted() || c.size() != 2) { continue; }   // to not care about these clauses!
                     if (inAmo.isCurrentStep(toInt(c[0])) && inAmo.isCurrentStep(toInt(c[1]))) { count ++; c.set_delete(true); data.removedClause(ll[k]); }
                     else {
-                        DOUT(if (config.rew_debug_out > 2) cerr << "c not matching binary clause: " << c << endl; });
+                        DOUT(if (config.rew_debug_out > 2) cerr << "c not matching binary clause: " << c << endl;);
+                    }
+                }
             }
-        }
-        DOUT(if (config.rew_debug_out > 0)  cerr << "c found " << count << " binary clauses, out of " << (size * (size - 1)) / 2 << endl;);
+            DOUT(if (config.rew_debug_out > 0)  cerr << "c found " << count << " binary clauses, out of " << (size * (size - 1)) / 2 << endl;);
             assert(count >= ((size * (size - 1)) / 2) && "not all clauses have been found");
 
 

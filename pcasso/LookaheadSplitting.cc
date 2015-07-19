@@ -986,7 +986,7 @@ void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
             }
         }
     }
-    fprintf(stderr, "Number of preselected variables( objectID: %ld ) \t\t\t = %d / %d\n", (uint64_t)this, bkl.size(), nVars());
+//     fprintf(stderr, "Number of preselected variables( objectID: %ld ) \t\t\t = %d / %d\n", (uint64_t)this, bkl.size(), nVars());
     assert(bkl.size() < nVars() && "cannot select more variables than present in the formula");
     if (bkl.size() > statistics.getI(splitterMaxPreselectedVariablesID)) {
         statistics.changeI(splitterMaxPreselectedVariablesID, bkl.size() - statistics.getI(splitterMaxPreselectedVariablesID));

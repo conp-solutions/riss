@@ -166,9 +166,7 @@ bool BoundedVariableAddition::andBVA()
         while (bvaMatchingClauses.size() < index + 1) { bvaMatchingClauses.push_back(vector<CRef>()); }
         // fill matrix (Mlit in pseudo code) with first column, corresponding to Mcls
         bvaMatchingClauses[0].clear();
-        for (uint32_t i = 0 ; i < data.list(right).size(); ++i)
-
-        {
+        for (uint32_t i = 0 ; i < data.list(right).size(); ++i) {
             bvaMatchingClauses[0].push_back(data.list(right)[i]);
         }
 
@@ -455,12 +453,13 @@ bool BoundedVariableAddition::andBVA()
         // continue with next literal, if there has not been any reduction
         if (bvaMatchingLiterals.size() < 2) {
             if (bvaHeap.size() > 0) {
-                DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl; });
-        continue;
-    }
+                DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl;);
+            }
+            continue;
+        }
 
-    // if inprocessing, check whether there are enough learned clauses among all the clauses
-    if (data.isInprocessing()) {
+        // if inprocessing, check whether there are enough learned clauses among all the clauses
+        if (data.isInprocessing()) {
             int learnRows = 0;
             {
                 assert(bvaMatchingClauses.size() > 0 && "there have to be clauses");

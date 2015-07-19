@@ -38,7 +38,7 @@ static inline int memReadStat(int field)
 
     sprintf(name, "/proc/%d/statm", pid);
     FILE* in = fopen(name, "rb");
-    if (in == NULL) { return 0; }
+    if (in == nullptr) { return 0; }
 
     for (; field >= 0; field--)
         if (fscanf(in, "%d", &value) != 1) {
@@ -56,7 +56,7 @@ static inline int memReadPeak(void)
 
     sprintf(name, "/proc/%d/status", pid);
     FILE* in = fopen(name, "rb");
-    if (in == NULL) { return 0; }
+    if (in == nullptr) { return 0; }
 
     // Find the correct line, beginning with "VmPeak:":
     int peak_kb = 0;
@@ -92,7 +92,7 @@ double Riss::memUsedPeak(void) { return memUsed(); }
 double Riss::memUsed(void)
 {
     malloc_statistics_t t;
-    malloc_zone_statistics(NULL, &t);
+    malloc_zone_statistics(nullptr, &t);
     return (double)t.max_size_in_use / (1024 * 1024);
 }
 

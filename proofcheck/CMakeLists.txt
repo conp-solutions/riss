@@ -1,13 +1,9 @@
-# Project definitions:
+# Project definitions
 # 
 project(proofcheck)
 
-
-# Dependencies:
 # 
-
-
-# Libraries:
+# Libraries
 # 
 set(LIB_SOURCES
     BackwardChecker.cc
@@ -15,35 +11,37 @@ set(LIB_SOURCES
     ProofChecker.cc)
 
 
-add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+add_library(proofcheck-lib-static STATIC ${LIB_SOURCES})
+add_library(proofcheck-lib-shared SHARED ${LIB_SOURCES})
 
-set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}"
-                                                 COMPILE_FLAGS "-DPCASSO")
-set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}" 
-                                                 COMPILE_FLAGS "-DPCASSO"
-                                                 VERSION ${VERSION}
-                                                 SOVERSION ${SOVERSION})
+set_target_properties(proofcheck-lib-static PROPERTIES
+                                            OUTPUT_NAME "proofcheck"
+                                            COMPILE_FLAGS "-DPCASSO")
+set_target_properties(proofcheck-lib-shared PROPERTIES
+                                            OUTPUT_NAME "proofcheck" 
+                                            COMPILE_FLAGS "-DPCASSO"
+                                            VERSION ${VERSION}
+                                            SOVERSION ${SOVERSION})
 
-# Executables:
 # 
-add_executable(${PROJECT_NAME} Main.cc)
+# Executables
+# 
+add_executable(proofcheck Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-lib-static coprocessor-lib-static)
+  target_link_libraries(proofcheck proofcheck-lib-static riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(proofcheck proofcheck-lib-shared riss-lib-shared coprocessor-lib-shared)
 endif()
 
-# Installation:
 # 
-install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}
+# Installation
+# 
+install(TARGETS proofcheck-lib-static proofcheck-lib-shared proofcheck
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+install(DIRECTORY proofcheck
+        DESTINATION include/proofcheck
         FILES_MATCHING PATTERN "*.h")

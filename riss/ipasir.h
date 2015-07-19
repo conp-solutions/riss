@@ -1,50 +1,18 @@
 /* Part of the generic incremental SAT API called 'ipasir'.
- *
- * This LICENSE applies to all software included in the IPASIR distribution,
- * except for those parts in sub-directories or in included software
- * distribution packages, such as tar and zip files, which have their own
- * license restrictions.  Those license restrictions are usually listed in the
- * corresponding LICENSE or COPYING files, either in the sub-directory or in
- * the included software distribution package (the tar or zip file).  Please
- * refer to those licenses for rights to use that software.
- *
- * Copyright (c) 2014, Tomas Balyo, Karlsruhe Institute of Technology.
- * Copyright (c) 2014, Armin Biere, Johannes Kepler University.
- * Copyright (c) 2015, Norbert Manthey, TU Dresden
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to
- * deal in the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
- *
+ * See 'LICENSE' for rights to use this software.
  */
-#ifndef RISS_ipasir_h_INCLUDED
-#define RISS_ipasir_h_INCLUDED
+#ifndef ipasir_h_INCLUDED
+#define ipasir_h_INCLUDED
 
-#include "riss/librissc.h" // include actual C-interface of Riss
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Return the name and the version of the incremental SAT
  * solving library.
  */
-inline
-const char * ipasir_signature()
-{
-    return riss_signature();
-}
+const char * ipasir_signature ();
 
 /**
  * Construct a new solver and return a pointer to it.
@@ -54,11 +22,7 @@ const char * ipasir_signature()
  * Required state: N/A
  * State after: INPUT
  */
-inline
-void * ipasir_init()
-{
-    return riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
-}
+void * ipasir_init ();
 
 /**
  * Release the solver, i.e., all its resoruces and
@@ -68,11 +32,7 @@ void * ipasir_init()
  * Required state: INPUT or SAT or UNSAT
  * State after: undefined
  */
-inline
-void ipasir_release(void * solver)
-{
-    riss_destroy(solver);
-}
+void ipasir_release (void * solver);
 
 /**
  * Add the given literal into the currently added clause
@@ -89,11 +49,7 @@ void ipasir_release(void * solver)
  * negation overflow).  This applies to all the literal
  * arguments in API functions.
  */
-inline
-void ipasir_add(void * solver, int lit_or_zero)
-{
-    riss_add(solver, lit_or_zero);
-}
+void ipasir_add (void * solver, int lit_or_zero);
 
 /**
  * Add an assumption for the next SAT search (the next call
@@ -103,11 +59,7 @@ void ipasir_add(void * solver, int lit_or_zero)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT
  */
-inline
-void ipasir_assume(void * solver, int lit)
-{
-    riss_assume(solver, lit);
-}
+void ipasir_assume (void * solver, int lit);
 
 /**
  * Solve the formula with specified clauses under the specified assumptions.
@@ -119,11 +71,7 @@ void ipasir_assume(void * solver, int lit)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-inline
-int ipasir_solve(void * solver)
-{
-    return riss_sat(solver);
-}
+int ipasir_solve (void * solver);
 
 /**
  * Get the truth value of the given literal in the found satisfying
@@ -135,10 +83,7 @@ int ipasir_solve(void * solver)
  * Required state: SAT
  * State after: SAT
  */
-int ipasir_val(void * solver, int lit)
-{
-    return riss_deref(solver, lit) > 0 ? lit : -lit;
-}
+int ipasir_val (void * solver, int lit);
 
 /**
  * Check if the given assumption literal was used to prove the
@@ -151,11 +96,7 @@ int ipasir_val(void * solver, int lit)
  * Required state: UNSAT
  * State after: UNSAT
  */
-int ipasir_failed(void * solver, int lit)
-{
-#warning Riss will convert the literal into a variable, hence the check works only for variables, not for literals (if the complement of an assumption is tested)
-    return riss_assumption_failed(solver, lit);
-}
+int ipasir_failed (void * solver, int lit);
 
 /**
  * Set a callback function used to indicate a termination requirement to the
@@ -170,9 +111,10 @@ int ipasir_failed(void * solver, int lit)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * state))
-{
-    riss_set_termination_callback(solver, state, terminate);
+void ipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state));
+
+#ifdef __cplusplus
 }
+#endif
 
 #endif

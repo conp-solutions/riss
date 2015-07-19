@@ -22,6 +22,9 @@ debug/
 release/
 build/
 
+# CI wrapper script
+tools/checker/solver-wrapper.sh
+
 # Latex build files
 *.aux
 *.log
@@ -34,6 +37,7 @@ build/
 
 # example formulas and bugs
 *.cnf
+*.cnf.gz
 
 # backup files
 *~

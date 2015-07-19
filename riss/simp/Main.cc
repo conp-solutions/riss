@@ -206,17 +206,17 @@ int main(int argc, char** argv)
         }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL) {
+        if (in == nullptr) {
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         }
 
         // open file for proof
-        S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+        S.proofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : nullptr;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
         double parsed_time = cpuTime();
         if (S.verbosity > 0) {
@@ -244,12 +244,12 @@ int main(int argc, char** argv)
         }
 
         if (!S.okay()) {
-            if (res != NULL) {
+            if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
             }
             // add the empty clause to the proof, close proof file
-            if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); }
+            if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); }
 
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -298,10 +298,10 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"); }
+        if (ret == l_False && S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"); }
 
         // print solution into file
-        if (res != NULL) {
+        if (res != nullptr) {
             if (ret == l_True) {
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
@@ -320,7 +320,7 @@ int main(int argc, char** argv)
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == NULL) {
+        if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)

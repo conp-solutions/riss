@@ -196,9 +196,10 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 0) cerr << "c reject [" << i << "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;);
                     data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
                 } else {
-                    DOUT(if (config.fm_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl; });
-        } else {
-            for (int j = 0 ; j < size2; ++ j) {
+                    DOUT(if (config.fm_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;);
+                }
+            } else {
+                for (int j = 0 ; j < size2; ++ j) {
                     DOUT(if (config.fm_debug_out > 2) cerr << "c literal " << l << " hits literal " << list2[j] << endl;);
                     inAmo.setCurrentStep(toInt(list2[j]));
                     searchSteps++;
@@ -218,8 +219,6 @@ bool FourierMotzkin::process()
                     }
                 }
             }
-
-
         }
 
         // found an AMO!
@@ -710,30 +709,36 @@ bool FourierMotzkin::process()
                             n1++; n2++;
                         } else if (v1[n1] < v2[n2]) {
                             if (v1[n1] != toEliminate) { data.lits.push_back(v1[n1]); }
-                            else {
-                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl; });
-                        n1 ++;
-                    } else {
-                        if (v2[n2] != toEliminate) { data.lits.push_back(v2[n2]); }
-                            else {
-                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl; });
-                        n2 ++;
-                    }
-                }
-                if (!hasDuplicates) { // add the remaining elements of one of the vectors!
-                        for (; n1 < v1.size(); ++ n1) {
-                            if (v1[n1] != toEliminate) { data.lits.push_back(v1[n1]); }
-                            else {
-                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl; });
-                    }
-                    for (; n2 < v2.size(); ++ n2) {
+                            else
+                            { DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl;); }
+                            n1 ++;
+                        } else {
                             if (v2[n2] != toEliminate) { data.lits.push_back(v2[n2]); }
-                            else {
-                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl; });
+                            else
+                            { DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl;); }
+                            n2 ++;
+                        }
                     }
-                }
-                if (p == 0) { thisCard.ll = data.lits; }
-                    else { thisCard.lr = data.lits; }
+                    if (!hasDuplicates) { // add the remaining elements of one of the vectors!
+                        for (; n1 < v1.size(); ++ n1) {
+                            if (v1[n1] != toEliminate) {
+                                data.lits.push_back(v1[n1]);
+                            } else {
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl;);
+                            }
+                        }
+                        for (; n2 < v2.size(); ++ n2) {
+                            if (v2[n2] != toEliminate) {
+                                data.lits.push_back(v2[n2]);
+                            } else {
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl;); }
+                            }
+                    }
+                    if (p == 0) {
+                        thisCard.ll = data.lits;
+                    } else {
+                        thisCard.lr = data.lits;
+                    }
                 }
 
                 if (hasDuplicates) {
@@ -1757,9 +1762,10 @@ bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< 
                             DOUT(if (config.fm_debug_out > 2) cerr << "c keep literal " << c.ll[j] << endl;);
                             c.ll[kc++] = c.ll[j];
                         } else {
-                            DOUT(if (config.fm_debug_out > 2) cerr << "c drop unsatisfied literal " << c.ll[j] << endl; });
-                }
-                c.ll.resize(kc);
+                            DOUT(if (config.fm_debug_out > 2) cerr << "c drop unsatisfied literal " << c.ll[j] << endl;);
+                        }
+                    }
+                    c.ll.resize(kc);
                     DOUT(if (config.fm_debug_out > 2) cerr << "c        to " << c.ll << " <= " << c.k << " + " << c.lr << endl;);
                     if (c.isUnit()) {  // propagate AMOs only!
                         for (int j = 0 ; j < c.ll.size(); ++ j) {   // all literals in ll have to be set to false

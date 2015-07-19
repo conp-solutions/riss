@@ -60,6 +60,7 @@ static void shuffleVector(Lit* adj, const int adjSize)
 
 uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE)
 {
+    assert(literal != lit_Undef && "do not add lit_Undef to queue and stamping");
     int32_t level = 0; // corresponds to position of current literal in stampQueue
 
     // lines 1 to 4 of paper
@@ -67,6 +68,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
     assert(stampInfo[ toInt(literal) ].dsc == 0 && "the literal should not have been visitted before");
     stampInfo[ toInt(literal) ].dsc = stamp;
     stampInfo[ toInt(literal) ].obs = stamp;
+    // stampInfo[ toInt(literal) ].parent = literal;
     // bool flag = true;
     Lit* adj = big.getArray(literal);
     if (!uhdNoShuffle) { shuffleVector(adj, big.getSize(literal)); }
@@ -95,6 +97,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
         for (; stampInfo[ toInt(l) ].index < big.getSize(l);) {   // size might change by removing transitive edges!
 
             const Lit l1 = adj[stampInfo[ toInt(l) ].index];
+            assert(l1 != lit_Undef && "lit_Undef should not appear in the BIG");
             // cerr <<"c [UHD-A] child: " << l1 << " @" <<  stampInfo[ toInt(l) ].index << "/" << big.getSize(l) << endl;
             ++ stampInfo[ toInt(l) ].index;
 
@@ -110,7 +113,9 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
 
             if (stampInfo[ toInt(stampInfo[ toInt(l) ].root) ].dsc <= stampInfo[ toInt(~l1) ].obs) {
                 Lit lfailed = l;
-                while (stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt(~l1) ].obs) { lfailed = stampInfo[ toInt(lfailed) ].parent; }
+                while (stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt(~l1) ].obs
+                        && stampInfo[ toInt(lfailed) ].parent != lit_Undef // stop on the last literal
+                      ) { lfailed = stampInfo[ toInt(lfailed) ].parent; }
                 DOUT(if (config.opt_uhd_Debug > 4) cerr << "c [UHD-A] found failed literal " << lfailed << " enqueue " << ~lfailed << endl;);
                 if (data.value(~lfailed) == l_Undef) {
                     DOUT(if (config.opt_uhd_Debug > 1) cerr << "c derived unit " <<  ~lfailed << " with stamps pos(" << ~lfailed << "):"
@@ -119,7 +124,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
                          << endl;);
                 }
                 if (data.value(~lfailed) != l_True) { data.addCommentToProof("found during stamping in unhiding"); data.addUnitToProof(~lfailed); }     // add the unit twice?
-                if (l_False == data.enqueue(~lfailed, data.defaultExtraInfo())) { return stamp; }
+                if (l_False == data.enqueue(~lfailed, data.currentDependencyLevel())) { return stamp; }
 
                 if (stampInfo[ toInt(~l1) ].dsc != 0 && stampInfo[ toInt(~l1) ].fin == 0) { continue; }
             }
@@ -197,6 +202,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
             if (level > 0) {   // if there are still literals on the queue
                 DOUT(if (config.opt_uhd_Debug > 4) cerr << "c [UHD-A] return to level " << level << " and literal " << stampQueue.back() << endl;);
                 Lit parent = stampQueue.back();
+                assert(parent != lit_Undef && "we should not work on lit_Undef here");
                 assert(parent == stampInfo[ toInt(l) ].parent && "parent of the node needs to be previous element in stamp queue");
 
                 // do not consider do-not-touch variables for being equivalent!
@@ -378,7 +384,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                              << endl;
                     }
                 });
-                DOUT(if (config.opt_uhd_Debug > 0) {  cerr << "c [UHTE] remove " << clause << cerr << endl; });
+                DOUT(if (config.opt_uhd_Debug > 0) {  cerr << "c [UHTE] remove " << clause << endl; });
                 data.removedClause(clRef);
                 if (clause.size() == 2) { big.removeEdge(clause[0], clause[1]); }
                 // if a clause has been removed, call
@@ -479,7 +485,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                 } else {
                     if (clause.size() == 1) {
                         DOUT(if (config.opt_uhd_Debug > 1) cerr << "c derived unit " << clause[0] << endl;);
-                        if (l_False == data.enqueue(clause[0], data.defaultExtraInfo())) {
+                        if (l_False == data.enqueue(clause[0], data.currentDependencyLevel())) {
                             return didSomething;
                         }
                     }
@@ -509,7 +515,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                     data.addCommentToProof("implied by unhiding probing");
                     data.addUnitToProof(clause[1]);
                 }
-                if (l_False == data.enqueue(clause[1], data.defaultExtraInfo())) {
+                if (l_False == data.enqueue(clause[1], data.currentDependencyLevel())) {
                     return didSomething;
                 }
             } else if ((bs < as && ae < be)   // b -> a
@@ -520,7 +526,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                     data.addCommentToProof("implied by unhiding probing");
                     data.addUnitToProof(clause[0]);
                 }
-                if (l_False == data.enqueue(clause[0], data.defaultExtraInfo())) {
+                if (l_False == data.enqueue(clause[0], data.currentDependencyLevel())) {
                     return didSomething;
                 }
             } else if (config.opt_uhd_probe > 1) {   // more expensive method
@@ -541,7 +547,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                                 if (j == 0 || k == 0) { uhdProbeL2Units ++; }  else { uhdProbeL3Units ++; }
                             }
                             if (data.value(bLit) != l_True) { data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(bLit); }
-                            if (l_False == data.enqueue(bLit, data.defaultExtraInfo())) {
+                            if (l_False == data.enqueue(bLit, data.currentDependencyLevel())) {
                                 return didSomething;
                             }
                         } else {
@@ -553,7 +559,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                                     data.addUnitToProof(aLit);
                                 }
                                 if (data.value(aLit) != l_True) {data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(aLit); }
-                                if (l_False == data.enqueue(aLit, data.defaultExtraInfo())) {
+                                if (l_False == data.enqueue(aLit, data.currentDependencyLevel())) {
                                     return didSomething;
                                 }
                             }
@@ -652,7 +658,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                             data.addUnitToProof(minLit);
                         }
                         if (data.value(minLit) != l_True) { data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(minLit); }
-                        if (l_False == data.enqueue(minLit, data.defaultExtraInfo())) {
+                        if (l_False == data.enqueue(minLit, data.currentDependencyLevel())) {
                             return didSomething;
                         }
                         for (int j = 0 ; j < clause.size(); ++ j) {

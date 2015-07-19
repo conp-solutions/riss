@@ -44,7 +44,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , bve(config, solver->ca, controller, propagation, subsumption)
     , bva(config, solver->ca, controller, data, propagation)
     , cce(config, solver->ca, controller, propagation)
-    , ee(config, solver->ca, controller, propagation, subsumption)
+    , ee(data, config, solver->ca, controller, propagation, subsumption)
     , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
     , probing(config, solver->ca, controller, data, propagation, ee, *solver)
     , rate(config, solver->ca, controller, data, *solver, propagation)

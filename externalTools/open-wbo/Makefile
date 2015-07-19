@@ -22,15 +22,14 @@ SOLVERDIR  = riss
 NSPACE     = Riss
 
 # THE REMAINING OF THE MAKEFILE SHOULD BE LEFT UNCHANGED
-EXEC       = open-wbo
+EXEC       = optiriss
 DEPDIR     = mtl utils core 
 
 # For the original Minisat based systems
-DEPDIR     +=  ../../encodings ../../algorithms ../../pblib
+DEPDIR     +=  ../../encodings ../../algorithms
 MROOT      = $(PWD)/solvers/$(SOLVERDIR)
 CFLAGS     = -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION) 
 # -DPBLIB -std=c++11 
-LFLAGS     += -Lpblib -lpblib
 
 # Riss is based on cmake, and located somewhere else, and relies on coprocessor, and requires more libraries
 ifeq ($(SOLVERDIR),riss)
@@ -38,8 +37,14 @@ DEPDIR     = mtl utils core ../../pblib
 DEPDIR     += ../externalTools/open-wbo/encodings ../externalTools/open-wbo/algorithms ../coprocessor
 MROOT      = ../../$(SOLVERDIR)
 CFLAGS     = -I .. -I ../.. -I ../externalTools/open-wbo -I ../coprocessor -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
-# CFLAGS     = -I .. -I ../.. -I ../externalTools/open-wbo -I ../coprocessor -DPBLIB -std=c++11 -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
-LFLAGS     = -lpthread -lz -lrt -Lpblib -lpblib
+LFLAGS     = -lpthread -lz -lrt
+endif
+
+# compile with PBLib and use it
+ifeq ($(PBLIB),PBLIB)
+DEPDIR     += ../../pblib
+CFLAGS     += -DPBLIB -std=c++11
+LFLAGS     += -Lpblib -lpblib
 endif
 
 ifeq ($(VERSION),simp)

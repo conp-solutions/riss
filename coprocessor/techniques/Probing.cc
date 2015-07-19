@@ -449,8 +449,7 @@ bool Probing::prAnalyze(CRef confl)
                 }
                 learntUnits.push(~p);
             } else {
-                static bool didit = false;
-                if (!didit) { cerr << "[TODO] have more advanced learning routine for level 1 ?!?" << endl; didit = true; }
+#warning have more advanced learning routine for level 2, could also lead to unit clause ?!? TODO
                 break;
             }
         }
@@ -750,10 +749,11 @@ void Probing::cleanSolver()
     solver.watches.cleanAll();
 
     // clear all watches!
-    for (int v = 0; v < solver.nVars(); v++)
+    for (int v = 0; v < solver.nVars(); v++) {
         for (int s = 0; s < 2; s++) {
             solver.watches[ mkLit(v, s) ].clear();
         }
+    }
 
     solver.learnts_literals = 0;
     solver.clauses_literals = 0;
@@ -1011,9 +1011,10 @@ void Probing::probing()
                     continue;
                 } // something has been found, so that second polarity has not to be propagated
                 else {
-                    DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; });
-        }
-        solver.varFlags.copyTo(prPositive);
+                    DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl;);
+                }
+            }
+            solver.varFlags.copyTo(prPositive);
 
             DOUT(if (config.pr_debug_out > 0) {
             cerr << "c positive trail: " ;
@@ -1053,10 +1054,11 @@ void Probing::probing()
                     continue;
                 } // something has been found, so that second polarity has not to be propagated
                 else {
-                    DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; });
-        }
-        // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
-        if (!data.ok()) { break; }
+                    DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl;);
+                }
+            }
+            // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
+            if (!data.ok()) { break; }
 
             assert(solver.decisionLevel() == 1 && "");
 
