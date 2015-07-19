@@ -64,7 +64,7 @@ class Technique
     bool modifiedFormula;          // true, if subsumption did something on formula
 
     bool isInitialized;           // true, if the structures have been initialized and the technique can be used
-    uint32_t myDeleteTimer;       // timer to control which deleted variables have been seen already
+    uint32_t myModTimer;       // timer to control which deleted variables have been seen already
 
     Riss::ClauseAllocator& ca;          // clause allocator for direct access to clauses
     Riss::ThreadController& controller; // controller for parallel execution
@@ -81,7 +81,7 @@ class Technique
         : config(_config)
         , modifiedFormula(false)
         , isInitialized(false)
-        , myDeleteTimer(0)
+        , myModTimer(0)
         , ca(_ca)
         , controller(_controller)
         , didPrintCannotDrup(false)
@@ -170,15 +170,15 @@ class Technique
     }
 
     /** give delete timer */
-    inline uint32_t lastDeleteTime()
+    inline uint32_t lastModTime()
     {
-        return myDeleteTimer;
+        return myModTimer;
     }
 
     /** update current delete timer */
-    inline void updateDeleteTime(const uint32_t deleteTime)
+    inline void updateModTime(const uint32_t modTime)
     {
-        myDeleteTimer = deleteTime;
+        myModTimer = modTime;
     }
 
     /** Ask whether a simplification should be performed yet. This checks the penalty and a stepper system. */
