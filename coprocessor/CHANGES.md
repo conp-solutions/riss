@@ -9,3 +9,4 @@
  * Use Stepper for BVE (lucas)
  * Use Stepper for Subsumption (lucas)
  * Increase strengthening limit in "giveMoreSteps()" call of Subsumption (lucas)
+ * Renames `deleteTimer` into `modTimer`
