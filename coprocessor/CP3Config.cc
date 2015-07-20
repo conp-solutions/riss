@@ -618,6 +618,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_xor_encodeSize     (_cat_xor, "xorEncSize",   "size of xors that are encoded back (<=2 ^= none)", 2, IntRange(2, INT32_MAX),                    optionListPtr, &opt_xor),
     opt_xor_checkNewSubsume(_cat_xor, "xorEncSubs",   "perform subsumption checks with newly added XOR clauses", false,                                 optionListPtr, &opt_xor),
     opt_xor_addAsLearnt    (_cat_xor, "xorEncL",      "add clause to encode XOR as learnt clause", false,                                               optionListPtr, &opt_xor),
+    opt_xor_setPolarity    (_cat_xor, "xorSetPol",    "set default polarities based on XOR elimination order and UP(-1=neg,1=pos)", 0, IntRange(-1, 1), optionListPtr, &opt_xor),
+    opt_xor_addOnNewlyAdded(_cat_xor, "xorAddNew",    "add simplified XORs to list of variables that have been added during add", false,                optionListPtr, &opt_xor),
 
     #ifndef NDEBUG
     opt_xor_debug          (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5),                                            optionListPtr, &opt_xor),

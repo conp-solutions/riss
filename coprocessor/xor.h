@@ -40,7 +40,8 @@ class XorReasoning : public Technique
     int foundEmptyLists, xorUnits, allUsed, xorDeducedUnits, eqs;
     int addedTernaryXors, addedQuadraryXors;
     int participatingXorClauses, participatingXorVariables;  // count number of participating clauses/variables
-    float clauseRatio, variableRatio; // count ratio of participating clauses/variables
+    float clauseRatio, variableRatio;       // count ratio of participating clauses/variables
+    int xorProps, clsProps, simDecisions;   // count how many propagations are based on XORs or clauses during simulation
 
     Riss::vec<Riss::Var> xorBackdoor;
     Riss::MarkArray backdoorVariables;
@@ -84,7 +85,7 @@ class XorReasoning : public Technique
          * @param removed list of variables that have been removed from the xor
          * @param v1 temporary std::vector
          */
-        void add(const GaussXor& gx, std::vector<Riss::Var>& removed, std::vector<Riss::Var>& v1)
+        void add(const GaussXor& gx, std::vector<Riss::Var>& removed, std::vector<Riss::Var>& v1, std::vector<Riss::Var>& newlyAdded)
         {
             k = (k != gx.k); // set new k!
             v1 = vars; // be careful here, its a copy operation!
@@ -94,12 +95,13 @@ class XorReasoning : public Technique
             int n1 = 0, n2 = 0;
             while (n1 < v1.size() && n2 < v2.size()) {
                 if (v1[n1] == v2[n2]) {
-                    removed.push_back(v2[n2]); // variables that appear in both XORs will be removed!
-                    n1++; n2++;
+                  removed.push_back(v2[n2]); // variables that appear in both XORs will be removed!
+                  n1++; n2++;
                 } else if (v1[n1] < v2[n2]) {
-                    vars.push_back(v1[n1++]);
+                  vars.push_back(v1[n1++]);
                 } else {
-                    vars.push_back(v2[n2++]);
+		  newlyAdded.push_back( v2[n2] );
+                  vars.push_back(v2[n2++]);
                 }
             }
             for (; n1 < v1.size(); ++n1) { vars.push_back(v1[n1]); }
@@ -148,6 +150,12 @@ class XorReasoning : public Technique
 
     /** checks whether the newly added clauses subsume other clauses from the formula */
     void checkReaddedSubsumption();
+    
+    /** perform unit propagation without changing xors, can be used to implement a search that is aware of the XOR constraints
+     * @param ignoreConflicts continue propagation even if a conflict was encountered
+     * @return true if no conflict was found, false if a conflict was found
+     */
+    bool simulatePropagate(std::vector< Riss::Lit >& unitQueue, Riss::MarkArray& ma, std::vector< std::vector< int > >& occs, std::vector< GaussXor >& xorList, bool ignoreConflicts = true);
 };
 
 }

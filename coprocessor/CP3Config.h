@@ -660,6 +660,8 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_xor_encodeSize;
     Riss::BoolOption opt_xor_checkNewSubsume;
     Riss::BoolOption opt_xor_addAsLearnt;
+    Riss::IntOption  opt_xor_setPolarity;
+    Riss::BoolOption opt_xor_addOnNewlyAdded;
 
     #ifndef NDEBUG
     Riss::IntOption  opt_xor_debug;
