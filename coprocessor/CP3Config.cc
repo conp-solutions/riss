@@ -593,7 +593,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_uhd_UHLE      (_cat_uhd, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3),                                                  optionListPtr, &opt_unhide),
     opt_uhd_UHTE      (_cat_uhd, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true,                                                              optionListPtr, &opt_unhide),
     opt_uhd_NoShuffle (_cat_uhd, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false,                                                          optionListPtr, &opt_unhide),
-    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination (buggy)", false,                                                            optionListPtr, &opt_unhide),
+    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination", false,                                                            optionListPtr, &opt_unhide),
     opt_uhd_TestDbl   (_cat_uhd, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false,                                                                     optionListPtr, &opt_unhide),
     opt_uhd_probe     (_cat_uhd, "cp3_uhdProbe",     "Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)", 0, IntRange(0, 4), optionListPtr, &opt_unhide),
     opt_uhd_fullProbe (_cat_uhd, "cp3_uhdPrSize",    "Enable unhide probing for larger clauses, size <= given parameter", 2, IntRange(2, INT32_MAX),                 optionListPtr, &opt_uhd_probe),

@@ -69,7 +69,7 @@ bool XorReasoning::process()
     // perform gauss elimination
     DOUT(if (config.opt_xor_debug > 2) {
     for (int i = 0 ; i < xorList.size(); ++ i) {
-            cerr << "[" << i << "]: "
+            cerr << "c [" << i << "]: "
                  << " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
         }
     });
@@ -92,6 +92,7 @@ bool XorReasoning::process()
     data.ma.nextStep();
 
     vector<Var> toRemoveVars, tmpVars;
+    xorOrder.clear(); // new removal
     // do elimination (BVE style)
     while (heap.size() > 0 && (data.unlimited() || xorLimit > xorSteps) && !data.isInterupted()) {
         // if propagate, propagate!
@@ -102,8 +103,17 @@ bool XorReasoning::process()
         const Var v = heap[0];
         assert(heap.inHeap(v) && "item from the heap has to be on the heap");
         heap.removeMin();
+	xorOrder.push( v ); // memorize that we used 'v' next
 
-        DOUT(if (config.opt_xor_debug > 4) cerr << "c check XORs for " << v + 1 << endl;);
+        DOUT(if (config.opt_xor_debug > 4) { cerr << "c check XORs for " << v + 1 << endl;
+	      cerr << "c full XOR list:" << endl;
+	      for (int i = 0 ; i < xorList.size(); ++ i) {
+		    cerr << "c [" << i << "]: "
+			<< " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
+	      }
+	      cerr << endl << endl;
+	    }
+	);
 
         // there are no XORs
         if (occs[v].size() == 0) {
@@ -123,8 +133,10 @@ bool XorReasoning::process()
                     unitQueue.push_back(x.getUnitLit());
                 }
             }
-            DOUT(if (config.opt_xor_debug > 4) cerr << "c drop the XOR " << endl;);
-            if (config.opt_xor_dropPure) { dropXor(occs[v][0], x.vars, occs); }
+            if (config.opt_xor_dropPure) {
+	      DOUT(if (config.opt_xor_debug > 4) cerr << "c drop the XOR " << endl;);
+	      dropXor(occs[v][0], x.vars, occs); 
+	    }
             continue;
         }
 
@@ -189,7 +201,7 @@ bool XorReasoning::process()
                 DOUT(if (config.opt_xor_debug > 2) cerr << "c eq lits: " << mkLit(simpX.vars[0], false) << " == " << mkLit(simpX.vars[1], simpX.k) << endl;);
             } else if (simpX.size() <= config.opt_xor_encodeSize) {  // if clauses for this XOR should be kept
                 // for now, encode full XOR
-                addXor(simpX);
+                addXorAsClauses(simpX);
             }
         }
 
@@ -213,6 +225,12 @@ bool XorReasoning::process()
     ee.applyEquivalencesToFormula(data);
 
 finishedGauss:;
+
+    DOUT( if( config.opt_xor_debug > 4 ) {
+      cerr << "c order of eliminations: ";
+      for( int i = 0 ; i < xorOrder.size(); ++ i ) cerr << " " << xorOrder[i]+1;
+      cerr << endl;
+    } );
     reasonTime = cpuTime() - reasonTime;
 
     return false;
@@ -638,7 +656,7 @@ void XorReasoning::checkReaddedSubsumption()
 
 }
 
-void XorReasoning::addXor(XorReasoning::GaussXor& simpX)
+void XorReasoning::addXorAsClauses(XorReasoning::GaussXor& simpX)
 {
     if (simpX.size() == 3) {
         Lit lits[3]; // k == 0: a + b + c == 0 -> clause: a \land b \to \neg c ^=  ( \neg a \lor \neg b \lor \neg c )

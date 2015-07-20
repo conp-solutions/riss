@@ -45,6 +45,8 @@ class XorReasoning : public Technique
     Riss::vec<Riss::Var> xorBackdoor;
     Riss::MarkArray backdoorVariables;
 
+    Riss::vec<Riss::Var> xorOrder; // store the order how of variables in the elimination
+    
     /** compare two literals */
     struct VarLt {
         std::vector< std::vector <int> >& data;
@@ -139,7 +141,7 @@ class XorReasoning : public Technique
     bool findXor(std::vector< Coprocessor::XorReasoning::GaussXor >& xorList);
 
     /** encodes the given xor, and stores the newly added clauses to the clause list, if the according optoin is specified */
-    void addXor(GaussXor& simpX);
+    void addXorAsClauses(GaussXor& simpX);
 
     /** add the given literals as a clause to Coprocessor */
     Riss::CRef addClause(const Riss::Lit* lits, int size, bool learnt = false);
