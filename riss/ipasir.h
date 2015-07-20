@@ -8,7 +8,7 @@
  * Return the name and the version of the incremental SAT
  * solving library.
  */
-const char * ipasir_signature ();
+const char * ipasir_signature();
 
 /**
  * Construct a new solver and return a pointer to it.
@@ -18,7 +18,7 @@ const char * ipasir_signature ();
  * Required state: N/A
  * State after: INPUT
  */
-void * ipasir_init ();
+void * ipasir_init();
 
 /**
  * Release the solver, i.e., all its resoruces and
@@ -28,7 +28,7 @@ void * ipasir_init ();
  * Required state: INPUT or SAT or UNSAT
  * State after: undefined
  */
-void ipasir_release (void * solver);
+void ipasir_release(void * solver);
 
 /**
  * Add the given literal into the currently added clause
@@ -45,7 +45,7 @@ void ipasir_release (void * solver);
  * negation overflow).  This applies to all the literal
  * arguments in API functions.
  */
-void ipasir_add (void * solver, int lit_or_zero);
+void ipasir_add(void * solver, int lit_or_zero);
 
 /**
  * Add an assumption for the next SAT search (the next call
@@ -55,7 +55,7 @@ void ipasir_add (void * solver, int lit_or_zero);
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT
  */
-void ipasir_assume (void * solver, int lit);
+void ipasir_assume(void * solver, int lit);
 
 /**
  * Solve the formula with specified clauses under the specified assumptions.
@@ -67,7 +67,7 @@ void ipasir_assume (void * solver, int lit);
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-int ipasir_solve (void * solver);
+int ipasir_solve(void * solver);
 
 /**
  * Get the truth value of the given literal in the found satisfying
@@ -79,7 +79,7 @@ int ipasir_solve (void * solver);
  * Required state: SAT
  * State after: SAT
  */
-int ipasir_val (void * solver, int lit);
+int ipasir_val(void * solver, int lit);
 
 /**
  * Check if the given assumption literal was used to prove the
@@ -92,7 +92,7 @@ int ipasir_val (void * solver, int lit);
  * Required state: UNSAT
  * State after: UNSAT
  */
-int ipasir_failed (void * solver, int lit);
+int ipasir_failed(void * solver, int lit);
 
 /**
  * Set a callback function used to indicate a termination requirement to the
@@ -107,6 +107,6 @@ int ipasir_failed (void * solver, int lit);
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-void ipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state));
+void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * state));
 
 #endif

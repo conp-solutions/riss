@@ -106,17 +106,18 @@ bool XorReasoning::process()
         const Var v = heap[0];
         assert(heap.inHeap(v) && "item from the heap has to be on the heap");
         heap.removeMin();
-	xorOrder.push( v ); // memorize that we used 'v' next
+        xorOrder.push(v);   // memorize that we used 'v' next
 
-        DOUT(if (config.opt_xor_debug > 4) { cerr << "c check XORs for " << v + 1 << endl;
-	      cerr << "c full XOR list:" << endl;
-	      for (int i = 0 ; i < xorList.size(); ++ i) {
-		    cerr << "c [" << i << "]: "
-			<< " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
-	      }
-	      cerr << endl << endl;
-	    }
-	);
+        DOUT(if (config.opt_xor_debug > 4) {
+        cerr << "c check XORs for " << v + 1 << endl;
+        cerr << "c full XOR list:" << endl;
+        for (int i = 0 ; i < xorList.size(); ++ i) {
+                cerr << "c [" << i << "]: "
+                     << " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
+            }
+            cerr << endl << endl;
+        }
+            );
 
         // there are no XORs
         if (occs[v].size() == 0) {
@@ -137,9 +138,9 @@ bool XorReasoning::process()
                 }
             }
             if (config.opt_xor_dropPure) {
-	      DOUT(if (config.opt_xor_debug > 4) cerr << "c drop the XOR " << endl;);
-	      dropXor(occs[v][0], x.vars, occs); 
-	    }
+                DOUT(if (config.opt_xor_debug > 4) cerr << "c drop the XOR " << endl;);
+                dropXor(occs[v][0], x.vars, occs);
+            }
             continue;
         }
 
@@ -190,14 +191,13 @@ bool XorReasoning::process()
 
             // drop after all operations, so that refrences stay consistent!
             dropXor(occs[v][0], toRemoveVars, occs); // remvoe the simplified xor from all variables that are not part of it any longer!
-	    
-	    cerr << "c newly added variables (add +1!): " << newlyAddedVariables << endl;
-	    if( config.opt_xor_addOnNewlyAdded ) {
-	      for( int j = 0 ; j < newlyAddedVariables.size(); ++ j ) {
-		occs[ newlyAddedVariables[j] ].push_back( occs[v][0] );
-	      }
-	    }
-	    
+
+            if (config.opt_xor_addOnNewlyAdded) {
+                for (int j = 0 ; j < newlyAddedVariables.size(); ++ j) {
+                    occs[ newlyAddedVariables[j] ].push_back(occs[v][0]);
+                }
+            }
+
 
             if (simpX.unit()) {
                 if (!data.ma.isCurrentStep(toInt(simpX.getUnitLit()))) {
@@ -214,9 +214,9 @@ bool XorReasoning::process()
                 // for now, encode full XOR
                 addXorAsClauses(simpX);
             }
-            
 
-            
+
+
         }
 
         if (config.opt_xor_keepUsed) {
@@ -224,17 +224,6 @@ bool XorReasoning::process()
         } else {
             dropXor(selectIndex, selectedX.vars, occs);
         }
-        
-      cerr << "c XORs after elimination: " << endl;
-      for( Var v = 0 ; v < data.nVars() ; ++ v ) {
-	cerr << "c XOR for var v: " << v+1 << endl;
-	vector<int>& indexes = occs[ v ];
-        for (int i = 0 ; i < indexes.size(); ++ i) {
-            GaussXor& x = xorList[indexes[i]];
-	    cerr << "c xor[" << i <<"]i:" << indexes[i] << " x: " ;
-	    for (int j = 0 ; j < x.vars.size(); ++ j) { cerr << x.vars[j] + 1 << " + "; }  cerr << " == " << (x.k ? 1 : 0) << endl;
-	}
-      }
 
     }
 
@@ -249,40 +238,30 @@ bool XorReasoning::process()
 
     ee.applyEquivalencesToFormula(data);
 
-    
+
     if (config.opt_xor_setPolarity != 0) {
-      
-      for( Var v = 0 ; v < data.nVars() ; ++ v ) {
-	cerr << "c XOR for var v: " << v+1 << endl;
-	vector<int>& indexes = occs[ v ];
-        for (int i = 0 ; i < indexes.size(); ++ i) {
-            GaussXor& x = xorList[indexes[i]];
-	    cerr << "c xor[" << i <<"]i:" << indexes[i] << " x: " ;
-	    for (int j = 0 ; j < x.vars.size(); ++ j) { cerr << x.vars[j] + 1 << " + "; }  cerr << " == " << (x.k ? 1 : 0) << endl;
-	}
-      }
-      
-      data.ma.nextStep(); // have new "assignment"
-      unitQueue.clear();  // have new "assignment"
-      for( int i = 0 ; i < xorOrder.size(); ++ i ) {
-	const Var& v = xorOrder[i];
-	if( data.value( mkLit(v) ) != l_Undef ) continue; // this variable is set already
-	Lit l = mkLit( v, config.opt_xor_setPolarity < 0 ); // set literal according to polarity
-	unitQueue.push_back( l );
-	DOUT( if( config.opt_xor_debug > 4 ) cerr << "c propagate: " << l << " as decision" << endl; );
-	data.ma.setCurrentStep( toInt(l) );
-	simulatePropagate(unitQueue, data.ma, occs, xorList);
-	simDecisions ++;
-      }
+
+        data.ma.nextStep(); // have new "assignment"
+        unitQueue.clear();  // have new "assignment"
+        for (int i = 0 ; i < xorOrder.size(); ++ i) {
+            const Var& v = xorOrder[i];
+            if (data.value(mkLit(v)) != l_Undef) { continue; }    // this variable is set already
+            Lit l = mkLit(v, config.opt_xor_setPolarity < 0);   // set literal according to polarity
+            unitQueue.push_back(l);
+            DOUT(if (config.opt_xor_debug > 4) cerr << "c propagate: " << l << " as decision" << endl;);
+            data.ma.setCurrentStep(toInt(l));
+            simulatePropagate(unitQueue, data.ma, occs, xorList);
+            simDecisions ++;
+        }
     }
-    
+
 finishedGauss:;
 
-    DOUT( if( config.opt_xor_debug > 4 ) {
-      cerr << "c order of eliminations: ";
-      for( int i = 0 ; i < xorOrder.size(); ++ i ) cerr << " " << xorOrder[i]+1;
-      cerr << endl;
-    } );
+    DOUT(if (config.opt_xor_debug > 4) {
+    cerr << "c order of eliminations: ";
+    for (int i = 0 ; i < xorOrder.size(); ++ i) { cerr << " " << xorOrder[i] + 1; }
+        cerr << endl;
+    });
     reasonTime = cpuTime() - reasonTime;
 
     return false;
@@ -292,46 +271,39 @@ bool XorReasoning::simulatePropagate(vector< Lit >& unitQueue, MarkArray& ma, ve
 {
     while (unitQueue.size() > 0) {
         const Lit p = unitQueue.back();
-	data.getSolver()->setPolarity(var(p), sign(p) );
+        data.getSolver()->setPolarity(var(p), sign(p));
         unitQueue.pop_back();
 
-	cerr << "c propagate literal " << p << endl;
-	
-	// propagate in all xors that contain var(p)
+        // propagate in all xors that contain var(p)
         vector<int>& indexes = occs[ var(p) ];
         for (int i = 0 ; i < indexes.size(); ++ i) {
             GaussXor& x = xorList[indexes[i]];
-	    
-	    cerr << "c consider xor: " ;
-	    for (int j = 0 ; j < x.vars.size(); ++ j) { cerr << x.vars[j] + 1 << " + "; }  cerr << " == " << (x.k ? 1 : 0) << endl;
+
             bool k = x.k;
-	    Lit undefLit = lit_Undef;
+            Lit undefLit = lit_Undef;
             for (int j = 0 ; j < x.size(); ++ j) {
-                if ( !data.ma.isCurrentStep(toInt(mkLit(x.vars[j], false))) && !data.ma.isCurrentStep(toInt(mkLit(x.vars[j], true)))) {
-		  undefLit = (undefLit == lit_Undef) ? mkLit(x.vars[j]) : lit_Error; // be able to track unit clauses
-		  cerr << "c found undef lit: " << undefLit << endl;
-                } else if (data.ma.isCurrentStep( toInt(mkLit(x.vars[j], false))) ) {
+                if (!data.ma.isCurrentStep(toInt(mkLit(x.vars[j], false))) && !data.ma.isCurrentStep(toInt(mkLit(x.vars[j], true)))) {
+                    undefLit = (undefLit == lit_Undef) ? mkLit(x.vars[j]) : lit_Error; // be able to track unit clauses
+                } else if (data.ma.isCurrentStep(toInt(mkLit(x.vars[j], false)))) {
                     k = ! k; // count variables that have been set to true
-                    cerr << "c found true lit: " << undefLit << endl;
                 } // else if( l ^= l_False) -> remove variable, is done silently
             }
-            
-            cerr << "c final lit: " << undefLit << endl;
-            if ((undefLit == lit_Undef) ) {  // this XOR is falsified
-	      if( k && !ignoreConflicts ) return false; 
-	    } else if (undefLit != lit_Error ) {   // found a unit constraint, add the newly created unit
-	      Lit l = k ? undefLit : ~undefLit ;
-	      if( data.ma.isCurrentStep( toInt( ~l ) ) ) { // this case should not be possible
-		if( !ignoreConflicts ) return false; 
-	      } else if (!data.ma.isCurrentStep(toInt( l ) ) ) {
+
+            if ((undefLit == lit_Undef)) {   // this XOR is falsified
+                if (k && !ignoreConflicts) { return false; }
+            } else if (undefLit != lit_Error) {    // found a unit constraint, add the newly created unit
+                Lit l = k ? undefLit : ~undefLit ;
+                if (data.ma.isCurrentStep(toInt(~l))) {      // this case should not be possible
+                    if (!ignoreConflicts) { return false; }
+                } else if (!data.ma.isCurrentStep(toInt(l))) {
                     data.ma.setCurrentStep(toInt(l));
                     unitQueue.push_back(l);
-		    xorProps ++;
-		    DOUT( if( config.opt_xor_debug > 4 ) cerr << "c propagate: " << l << " on XOR" << endl; );
+                    xorProps ++;
+                    DOUT(if (config.opt_xor_debug > 4) cerr << "c propagate: " << l << " on XOR" << endl;);
                 }
             }
         }
-        
+
         // propagate on clauses here
         vector<CRef>& negative = data.list(~p);
         for (int i = 0 ; i < negative.size(); ++i) {
@@ -340,32 +312,28 @@ bool XorReasoning::simulatePropagate(vector< Lit >& unitQueue, MarkArray& ma, ve
             if (c.can_be_deleted()) { continue; }
             // sorted propagation, no!
 
-	    cerr << "c consider the clause: " << c << endl;
-            
             Lit undefLit = lit_Undef;
             for (int j = 0; j < c.size(); ++ j) {
-	      if( data.ma.isCurrentStep( toInt(c[j]) ) ) { undefLit = lit_Error; break; }
-	      else if ( data.ma.isCurrentStep( toInt(~c[j]) ) ) {
-		continue; // do not look into
-	      } else {
-		if( undefLit == lit_Undef ) undefLit = c[j];
-		else {
-		  undefLit = lit_Error;
-		  break;
-		} 
-	      }
+                if (data.ma.isCurrentStep(toInt(c[j]))) { undefLit = lit_Error; break; }
+                else if (data.ma.isCurrentStep(toInt(~c[j]))) {
+                    continue; // do not look into
+                } else {
+                    if (undefLit == lit_Undef) { undefLit = c[j]; }
+                    else {
+                        undefLit = lit_Error;
+                        break;
+                    }
+                }
             }
-            
-            cerr << "c final literal: " << undefLit << endl;
-            
-	    if( undefLit == lit_Undef ) {  // its a conflict
-	      if( !ignoreConflicts ) return false;
-	    } else if( undefLit != lit_Error ) { // its a unit
-	      data.ma.setCurrentStep(toInt(undefLit));
-              unitQueue.push_back(undefLit);
-	      clsProps++;
-	      DOUT( if( config.opt_xor_debug > 4 ) cerr << "c propagate: " << undefLit << " on CLS" << endl; );
-	    } // silently ignore the case that the clause is neither unit nor conflict
+
+            if (undefLit == lit_Undef) {   // its a conflict
+                if (!ignoreConflicts) { return false; }
+            } else if (undefLit != lit_Error) {  // its a unit
+                data.ma.setCurrentStep(toInt(undefLit));
+                unitQueue.push_back(undefLit);
+                clsProps++;
+                DOUT(if (config.opt_xor_debug > 4) cerr << "c propagate: " << undefLit << " on CLS" << endl;);
+            } // silently ignore the case that the clause is neither unit nor conflict
         }
     }
     return true;
@@ -886,11 +854,11 @@ void XorReasoning::printStatistics(ostream& stream)
            << eqs << " eqs, "
            << endl
            << "c [STAT] XOR(4) " << participatingXorClauses << " participating, "
-           << clauseRatio << " ratio, " 
-	   << simDecisions << " simDecisions, "
-	   << xorProps << " xorProps, "
-	   << clsProps << " clsProps, "
-	   << endl
+           << clauseRatio << " ratio, "
+           << simDecisions << " simDecisions, "
+           << xorProps << " xorProps, "
+           << clsProps << " clsProps, "
+           << endl
            ;
 }
 

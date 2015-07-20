@@ -46,8 +46,8 @@ void Solver::setCommunication(Communicator* comm)
     communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
     communicationClient.useDynamicLimits = communicationClient.useDynamicLimits || communication->useDynamicLimits; // one of the two overwrites the other
     communicationClient.receiveEE = communication->receiveEqiuvalences;
-    
-    assert( communication->nrSendCls == 0 && "cannot send clauses before initialization" );
+
+    assert(communication->nrSendCls == 0 && "cannot send clauses before initialization");
 }
 
 inline
@@ -85,10 +85,10 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
     } else {
         CRef cr = ca.alloc(ps, true);
         if (bump) { ca[cr].activity() += cla_inc; }   // same as in claBumpActivity
-        if (communicationClient.keepLonger ) ca[cr].resetCanBeDel(); // keep this clause for at least one removal round
-	ca[cr].setLBD( communicationClient.lbdFactor > 0 ? 
-	   (double)ca[cr].size() * communicationClient.lbdFactor 
-	   : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD/(double)sumLearnedClauseSize) * (double)ca[cr].size() ); // set LBD for received clause based on heuristics (TODO: also consider level cache)
+        if (communicationClient.keepLonger) { ca[cr].resetCanBeDel(); }  // keep this clause for at least one removal round
+        ca[cr].setLBD(communicationClient.lbdFactor > 0 ?
+                      (double)ca[cr].size() * communicationClient.lbdFactor
+                      : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD / (double)sumLearnedClauseSize) * (double)ca[cr].size()); // set LBD for received clause based on heuristics (TODO: also consider level cache)
         learnts.push(cr);
         attachClause(cr);
     }
@@ -214,7 +214,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
 
     toSendSize = keep; // set to number of elements that can be shared
 
-    if (!multiUnits && !equivalences && !communicationClient.sendAll ) {  // check sharing limits, if its not units, and no equivalences
+    if (!multiUnits && !equivalences && !communicationClient.sendAll) {   // check sharing limits, if its not units, and no equivalences
         // calculated size of the send clause
         int s = 0;
         if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
@@ -424,11 +424,11 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                         ca[communicationClient.receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
                     }
 
-		    if (communicationClient.keepLonger ) ca[communicationClient.receiveClauses[i]].resetCanBeDel(); // keep this clause for at least one removal round
-		    ca[communicationClient.receiveClauses[i]].setLBD( communicationClient.lbdFactor > 0 ? 
-		      (double)ca[communicationClient.receiveClauses[i]].size() * communicationClient.lbdFactor 
-		      : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD/(double)sumLearnedClauseSize) * (double)ca[communicationClient.receiveClauses[i]].size() ); // set LBD for received clause based on heuristics (TODO: also consider level cache)
-                    
+                    if (communicationClient.keepLonger) { ca[communicationClient.receiveClauses[i]].resetCanBeDel(); }  // keep this clause for at least one removal round
+                    ca[communicationClient.receiveClauses[i]].setLBD(communicationClient.lbdFactor > 0 ?
+                            (double)ca[communicationClient.receiveClauses[i]].size() * communicationClient.lbdFactor
+                            : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD / (double)sumLearnedClauseSize) * (double)ca[communicationClient.receiveClauses[i]].size()); // set LBD for received clause based on heuristics (TODO: also consider level cache)
+
                     attachClause(communicationClient.receiveClauses[i]);
                 }
             }

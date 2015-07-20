@@ -46,7 +46,7 @@ const char * ipasir_signature()
 {
 #warning return a dynamic version of the signature here!
     //return riss_signature();
-  return "riss505";
+    return "riss505";
 }
 
 /**

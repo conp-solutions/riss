@@ -122,10 +122,10 @@ class Solver
 
     /** part of the solve method that is executed */
     enum SolveCallType {
-      full = 0,
-      simplificationOnly = 1,
-      afterSimplification = 2,
-      initializeOnly = 3,
+        full = 0,
+        simplificationOnly = 1,
+        afterSimplification = 2,
+        initializeOnly = 3,
     };
     // Constructor/Destructor:
     //
@@ -358,7 +358,7 @@ class Solver
     double              cla_inc;          // Amount to bump next clause with.
   public:
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
-  protected: 
+  protected:
     double              var_inc;          // Amount to bump next variable with.
   public: // TODO FIXME undo after debugging!
     OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
@@ -546,7 +546,7 @@ class Solver
 
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
-    
+
 
 //     vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
@@ -621,17 +621,17 @@ class Solver
 
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
 
-public:
-    /** Main solve method (assumptions given in 'assumptions') 
+  public:
+    /** Main solve method (assumptions given in 'assumptions')
      * @param preprocessCall control how to perform initialization and preprocessing
      *        0 usual behavior
      *        1 perform until preprocessing
      *        2 leave out everything above preprocessing
      * @return status of the formula
      */
-    lbool    solve_(const SolveCallType preprocessCall = SolveCallType::full);                                           
+    lbool    solve_(const SolveCallType preprocessCall = SolveCallType::full);
 
-protected:
+  protected:
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
   public:
@@ -1155,7 +1155,7 @@ protected:
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
-    /** replace the current instance of coprocessor with the new one 
+    /** replace the current instance of coprocessor with the new one
         @return pointer to the old coprocessor
      */
     Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
@@ -1272,7 +1272,7 @@ protected:
         bool sendAll;                              /// ignore sharing limits
         bool receiveAll;                           /// ignore limits for reception
         bool keepLonger;                           /// keep added clauses for at least one removal
-        
+
         double lbdFactor;                          /// how to construct the LBD for a received clause (0 = set LBD of clause to 0, positive: relative to size of clause [0-1], negative: relative to average lbd/size ratio)
 
         CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false),

@@ -245,13 +245,13 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         globalSimplifier = new Coprocessor::Preprocessor(solvers[0] , *globalSimplifierConfig, threads); // use simplifier with the given number of threads
 
 
-	Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
-	
-	ret = solvers[0]->solve_(Solver::SolveCallType::simplificationOnly); // solve until preprocessing
-	
-	solvers[0]->swapPreprocessor(internalPreprocessor); // ignore return value, as we still know this pointer
+        Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
 
-	if (verbosity > 0) { cerr << "c solver0 with " << solvers[0]->nVars() << " variables, and " << solvers[0]->clauses.size() << " clauses" << endl; }
+        ret = solvers[0]->solve_(Solver::SolveCallType::simplificationOnly); // solve until preprocessing
+
+        solvers[0]->swapPreprocessor(internalPreprocessor); // ignore return value, as we still know this pointer
+
+        if (verbosity > 0) { cerr << "c solver0 with " << solvers[0]->nVars() << " variables, and " << solvers[0]->clauses.size() << " clauses" << endl; }
         // solved by simplification?
         if (ret == l_False) { return ret; }
         else if (ret == l_True) {
@@ -259,7 +259,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
             if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
-            if( ret == l_True && verbosity > 0) cerr << "c solved formula with simplification" << endl;
+            if (ret == l_True && verbosity > 0) { cerr << "c solved formula with simplification" << endl; }
             return ret;
         }
     }
@@ -286,15 +286,15 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
 
-	    // pseudo clone solver incarnations
+            // pseudo clone solver incarnations
             solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
             solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
             solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
             solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
-	    solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
-	    solvers[0]->order_heap.copyOrderTo( solvers[i]->order_heap ); // rebuild order heap (use configuration of other heap, but use own acticities)
-	    solvers[0]->varFlags.copyTo( solvers[i]->varFlags );
-	    solvers[0]->vardata.copyTo( solvers[i]->vardata );
+            solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
+            solvers[0]->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
+            solvers[0]->varFlags.copyTo(solvers[i]->varFlags);
+            solvers[0]->vardata.copyTo(solvers[i]->vardata);
 
             // attach all clauses
             for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
@@ -303,7 +303,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
                 solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
             }
-	    solvers[i]->solve_( Solver::SolveCallType::initializeOnly ); // let solve initialize itself
+            solvers[i]->solve_(Solver::SolveCallType::initializeOnly);   // let solve initialize itself
             if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
             solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
@@ -476,13 +476,12 @@ void PSolver::createThreadConfigs()
     if (defaultConfig.size() == 0) {
         for (int t = 0 ; t < threads; ++ t) {
             if (incarnationConfigs[t].size() == 0) {  // assign preset, if no cmdline was specified
-	      configs[t].setPreset(Configs[t]);
-	      ppconfigs[t].setPreset(Configs[t]);
-	    }   
-            else { 
-	      configs[t].setPreset(incarnationConfigs[t]);
-	      ppconfigs[t].setPreset(incarnationConfigs[t]);
-	    }                          // otherwise, use commandline configuration
+                configs[t].setPreset(Configs[t]);
+                ppconfigs[t].setPreset(Configs[t]);
+            } else {
+                configs[t].setPreset(incarnationConfigs[t]);
+                ppconfigs[t].setPreset(incarnationConfigs[t]);
+            }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "BMC") {
         // thread 1 runs with empty (default) configurations
@@ -560,7 +559,7 @@ void PSolver::createThreadConfigs()
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "beta") {
-   if (threads > 0) {
+        if (threads > 0) {
             ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive");
             configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
         }
@@ -597,14 +596,14 @@ void PSolver::createThreadConfigs()
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     }
-    
-    
+
+
     // assign common setup prefix
-    if( (const char*)pfolioConfig.opt_allIncPresets != 0 ) {
-      for (int t = 0 ; t < threads; ++ t) {
-	configs[t].setPreset(string(   pfolioConfig.opt_allIncPresets) );
-	ppconfigs[t].setPreset(string( pfolioConfig.opt_allIncPresets) );
-      }
+    if ((const char*)pfolioConfig.opt_allIncPresets != 0) {
+        for (int t = 0 ; t < threads; ++ t) {
+            configs[t].setPreset(string(pfolioConfig.opt_allIncPresets));
+            ppconfigs[t].setPreset(string(pfolioConfig.opt_allIncPresets));
+        }
     }
 }
 
@@ -832,7 +831,7 @@ void* runWorkerSolver(void* data)
 
         // do work
         lbool result l_Undef;
-        result = info.getSolver()->solveLimited(assumptions,Solver::SolveCallType::afterSimplification);
+        result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification);
 
         info.setReturnValue(result);
         if (verbose) cerr << "c [THREAD] " << info.getID() << " result " <<
