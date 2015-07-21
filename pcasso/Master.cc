@@ -1063,6 +1063,7 @@ Master::splitInstance(void* data)
 
     if (!S->okay()) {
         fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());
+// 	S->printFullSolverState();
 #warning: this is ok! (according to LA-splitting author Ahmed)
         ret = 20;
         // tell statistics
@@ -1214,6 +1215,7 @@ Master::splitInstance(void* data)
     // set the own state to unclean
     if (MSverbosity > 1) {
         fprintf(stderr, "finished splitting with %d\n", ret);
+// 	S->printFullSolverState();
         // wake up the master so that it can check the result
         fprintf(stderr, "thread %d calls notify from splitting\n" , tData.id);
     }
