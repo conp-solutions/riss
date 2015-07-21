@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include "riss/mtl/Sort.h"
 
 using namespace std;
 
@@ -23,8 +24,12 @@ Graph::Graph(int size, bool computingDerivative) :
     // TODO Auto-generated constructor stub
     this->size = size;
     this->mergeAtTheEnd = true;
-    intermediateSort = false;
+    addedDirectedEdge = false;
+    addedUndirectedEdge = false;
+    intermediateSort = true;
+    intermediateSorts = 0;
     for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
+    sortSize.resize(size, 4);      // re-sort after 16 elements
 }
 
 Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
@@ -36,20 +41,25 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     // TODO Auto-generated constructor stub
     this->size = size;
     this->mergeAtTheEnd = mergeAtTheEnd;
-    intermediateSort = false;
+    addedDirectedEdge = false;
+    addedUndirectedEdge = false;
+    intermediateSort = true;
+    intermediateSorts = 0;
+    sortSize.resize(size, 4);      // re-sort after 16 elements
     for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
 }
 
 Graph::~Graph()
 {
     // TODO Auto-generated destructor stub
+//   cerr << "c intermediate sorts: " << intermediateSorts << endl;
 }
 
 void Graph::setIntermediateSort(bool newValue)
 {
     intermediateSort = newValue;
     if (intermediateSort == true) {
-        sortSize.resize(size, 16);      // re-sort after 16 elements
+        sortSize.resize(size, 4);      // re-sort after 16 elements
     }
 }
 
@@ -74,6 +84,8 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB)
 
 void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
 {
+    assert( !addedDirectedEdge && "cannot mix edge types in implementation" );
+    addedUndirectedEdge = true;
     if (nodeA >= node.size()) {
         stringstream sstm;
         sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
@@ -87,7 +99,7 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
         nodeA = t;
     }
     edge p(nodeB, aweight);
-    node[nodeA].push_back(p);
+    node[nodeA].push_back(p); // add only in one list, do newer add directed and undirected edges
     nodeDeg[nodeA]++;
     nodeDeg[nodeB]++;
     if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
@@ -98,6 +110,8 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
 
 void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
 {
+    assert( !addedUndirectedEdge && "cannot mix edge types in implementation" );
+    addedDirectedEdge = true;
     if (nodeA >= node.size()) {
         stringstream sstm;
         sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
@@ -108,10 +122,16 @@ void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     edge p(nodeB, aweight);
     node[nodeA].push_back(p);
     nodeDeg[nodeA]++;
+    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+        sortAdjacencyList(node[nodeA]);
+        sortSize[ nodeA ] *= 2;
+    }
 }
 
 uint64_t Graph::addAndCountUndirectedEdge(int nodeA, int nodeB, double weight)
 {
+    assert( !addedDirectedEdge && "cannot mix edge types in implementation" );
+    addedUndirectedEdge = true;
     uint64_t operations = 0;
     if (nodeA > nodeB) { // always save the reference to the greater node.
         int t = nodeB;
@@ -237,5 +257,7 @@ uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
     operations += aList.size();
     aList.resize(kept);   // save space!
 
+    intermediateSorts ++;
+    
     return operations;
 }

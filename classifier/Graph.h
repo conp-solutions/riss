@@ -29,6 +29,8 @@ class Graph
     SequenceStatistics weightStatistics;
     bool mergeAtTheEnd; // do not detect duplicate entries during the creation of the graph
     bool intermediateSort;  // remove duplicates in adjacency lists already during the algorithm execution
+    int intermediateSorts; // statistics
+    bool addedDirectedEdge, addedUndirectedEdge; // bools to make sure in one graph not two different edge types have been added
 
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
