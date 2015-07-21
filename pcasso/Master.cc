@@ -276,14 +276,15 @@ int Master::run()
             lock();
             if (model != 0) {
                 solution = 10;
-                unlock();
+//                 unlock();
                 fprintf(stderr, "c A model has been submitted!\n");
             }
-            unlock();
-
             // check the tree for UNSAT/SAT
             if (MSverbosity > 1) { fprintf(stderr, "M: CHECK TREE\n"); }
             root.evaluate(*this);
+	    
+	    unlock();
+	    
             if (root.getState() == TreeNode::unsat) {
                 // assign the according solution
                 solution = 20;
@@ -295,6 +296,7 @@ int Master::run()
                 solution = 10;
                 break;
             }
+            
 
             // there is nothing to do for sat or unknown, because sat will be noticed if the model has been given
         }
@@ -993,7 +995,7 @@ Master::splitInstance(void* data)
     // extract parameter data again
     ThreadData& tData = *((ThreadData*)data);
     Master& master = *(tData.master);
-
+    
     if (MSverbosity > 1) { fprintf(stderr, "create a split thread[%d] that splits node %d\n", tData.id, tData.nodeToSolve->id()); }
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
         cpu_set_t mask;

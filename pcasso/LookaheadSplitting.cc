@@ -690,12 +690,14 @@ void LookaheadSplitting::shrinkClauses()
         Var v;
         Lit l;
 
+	if( asynch_interrupt ) return;
+	
         // cleared all watch lists
-        watches.cleanAll();
         for (Var v = 0; v < nVars(); ++v) {
             watches[ mkLit(v, true) ].clear();
             watches[ mkLit(v, false) ].clear();
         }
+        watches.clearDirties();
 
         for (int i = 0, j = 0, k = 0; i < clauses.size(); i++) {
             Clause& c = ca[clauses[i]];
@@ -1947,12 +1949,13 @@ void LookaheadSplitting::removeSatisfied(vec<CRef>& cs)
     for (i = j = 0; i < cs.size(); i++) {
         Clause& c = ca[cs[i]];
 
-
-        if (satisfied(c)) { // A bug if we remove size ==2, We need to correct it, but later.
-            removeClause(cs[i]);
-        } else {
-            cs[j++] = cs[i];
-        }
+	if( c.size() > 1 ) {
+	  if (satisfied(c)) { // A bug if we remove size ==2, We need to correct it, but later.
+	      removeClause(cs[i]);
+	  } else {
+	      cs[j++] = cs[i];
+	  }
+	}
     }
     cs.shrink_(i - j);
 }
