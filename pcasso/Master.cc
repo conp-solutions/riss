@@ -94,8 +94,6 @@ static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads
 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
-CoreConfig Master::defaultSolverConfig;
-
 Master::Master(Parameter p) :
     defaultSolverConfig((const char*)prissConfig == 0 ? "" : prissConfig),
     defaultPfolioConfig((const char*)rissConfig == 0 ? ""  : rissConfig),
