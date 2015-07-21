@@ -763,9 +763,9 @@ Master::solveInstance(void* data)
     // setup the parameters, setup varCnt
     solver->setVerbosity(tData.master->param.verb);
     if (master.varCnt() >= (unsigned int) solver->nVars()) solver->reserveVars( master.varCnt() );
-//     while (master.varCnt() >= (unsigned int) solver->nVars()) {
-//         solver->newVar();
-//     }
+    while (master.varCnt() >= (unsigned int) solver->nVars()) {
+        solver->newVar();
+    }
 
     // setup communication
     

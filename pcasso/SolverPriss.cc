@@ -59,6 +59,7 @@ void SolverPriss::setupForPortfolio(const int nodeLevel)
 }
 
 // forwarded methods to Riss
+#warning TO BE IMPLEMENTED
 inline int      SolverPriss::nVars() const               { return solver.nVars(); }
 inline bool     SolverPriss::okay() const                { return true; } // FIXME: solver.okay(); }
 inline void     SolverPriss::interrupt()                 { solver.interrupt(); }
@@ -75,6 +76,6 @@ inline uint64_t SolverPriss::getStarts()                 { return 0; } // FIXME:
 inline uint64_t SolverPriss::getDecisions()              { return 0; } // FIXME: solver.decisions; }
 inline uint64_t SolverPriss::getConflicts()              { return 0; } // FIXME: solver.conflicts; }
 inline void     SolverPriss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
-inline Lit      SolverPriss::trailGet(const unsigned int index) { Lit l; return l; } // FIXME: solver.trail[index]; }
+inline Lit      SolverPriss::trailGet(const unsigned int index) { Lit l = lit_Undef; return l; } // FIXME: solver.trail[index]; }
 inline unsigned int SolverPriss::getNumberOfTopLevelUnits() const    { return 0; } // FIXME: solver.trail.size(); }
 } // namespace Pcasso
