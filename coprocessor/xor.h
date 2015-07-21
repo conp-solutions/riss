@@ -105,7 +105,10 @@ class XorReasoning : public Technique
                 }
             }
             for (; n1 < v1.size(); ++n1) { vars.push_back(v1[n1]); }
-            for (; n2 < v2.size(); ++n2) { vars.push_back(v2[n2]); }
+            for (; n2 < v2.size(); ++n2) { 
+	      vars.push_back(v2[n2]);
+	      newlyAdded.push_back( v2[n2] );
+	    }
         }
 
     };
