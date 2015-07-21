@@ -216,6 +216,7 @@ int Master::run()
         int idles = 0;  // important, because this indicates that there can be done more in the next round!
         int workers = 0, splitters = 0, uncleans = 0;
 
+	// check state of threads
         for (unsigned int i = 0 ; i < threads; ++i) {
             if (threadData[i].s == splitting) { splitters++; }
             if (threadData[i].s == idle) { idles++; }
@@ -245,8 +246,6 @@ int Master::run()
             }
         }
 
-        //      unlock(); // End of critical
-
         // print some information
         if (MSverbosity > 1) {
             fprintf(stderr, "==== STATE ====\n");
@@ -271,7 +270,7 @@ int Master::run()
         idles = idles + uncleans;
 
         // check the state of the search tree
-        if (true) {
+        {
             // model might be increased right now
 
             lock();
@@ -346,7 +345,7 @@ int Master::run()
                     }
                 };
             }
-            if (fail) { continue; }   // if one of the instance creations failed, start loop again
+            if (fail) { continue; }   // if one of the instance creations failed, start loop again and check states of workers
 
             // if there is nothing to solve, but more nodes to be split, split them!
             if (loadSplit && solveQueue.size() == 0 && splitQueue.size() > 0) {
@@ -414,7 +413,7 @@ int Master::run()
                     }
 
                     fprintf(stderr, "solution unknown!\n");
-                    exit(0);
+                    exit(3); // make sure we find it outside of the solver again
                 }
             }
 
@@ -642,7 +641,7 @@ Master::solveNextQueueEle()
             threadData[i].nodeToSolve = solveQueue.front();
             solveQueue.pop_front();
         }
-    } while (threadData[i].nodeToSolve->getState() == TreeNode::unsat);
+    } while (threadData[i].nodeToSolve->getState() == TreeNode::unsat); // TODO: might also work with checking for "no state". should not be "sat" either
     unlock();
     if (fail) {
         threadData[i].s = idle;
@@ -750,7 +749,8 @@ Master::solveInstance(void* data)
     tData.solver = solver;
 
 //    // Davide> Give the pt_level to the solver
-//    solver->curPTLevel = tData.nodeToSolve->getPTLevel();
+    solver->curPTLevel = tData.nodeToSolve->getPTLevel();
+    solver->unsatPTLevel = tData.nodeToSolve->getPTLevel();
 
     if (Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel) {   // a portfolio node should be solved
         const int nodeLevel = tData.nodeToSolve->getLevel();
@@ -760,6 +760,15 @@ Master::solveInstance(void* data)
         }
     }
 
+    // setup the parameters, setup varCnt
+    solver->setVerbosity(tData.master->param.verb);
+    if (master.varCnt() >= (unsigned int) solver->nVars()) solver->reserveVars( master.varCnt() );
+//     while (master.varCnt() >= (unsigned int) solver->nVars()) {
+//         solver->newVar();
+//     }
+
+    // setup communication
+    
 //    // Davide> Initialize the shared indeces to zero
 //    for (unsigned int i = 0; i <= solver->curPTLevel; i++)   // Davide> I put my level, also
 //    { solver->shared_indeces.push_back(0); }
@@ -772,26 +781,56 @@ Master::solveInstance(void* data)
 
 //    // Davide> Associate the pt_node to the Solver
 //    solver->tnode = tData.nodeToSolve;
+    
+    
+    // setup activity and polarity of the solver (pseudo-clone)
+    // put phase saving information
+    // set up?
+    if( phase_saving_mode != 0 ) {
+    master.lock();
+      if( master.polarity.size() == 0) master.polarity.growTo( master.maxVar, false );
+      else {
+    // copy information to solver, use only variables that are available
+    int min = solver->nVars();
+    min = min <= master.polarity.size() ? min : master.polarity.size();
 
-    // setup the parameters, setup varCnt
-    solver->setVerbosity(tData.master->param.verb);
-    while (master.varCnt() >= (unsigned int) solver->nVars()) {
-        solver->newVar();
+    for( int i = 0 ; i < min; ++ i ) {
+      solver->setPolarity(i, master.polarity[i]);
     }
+      }
+    master.unlock();
+    }
+    if( activity_mode != 0 ) {
+    master.lock();
+      if( master.activity.size() == 0) master.activity.growTo( master.maxVar, false );
+      else {
+      // copy information to solver, use only variables that are available
+      int min = solver->nVars();
+      min = min <= master.activity.size() ? min : master.activity.size();
 
+      for( int i = 0 ; i < min; ++ i ) {
+	    solver->setActivity(i, master.activity[i] );
+      }
+      }
+    master.unlock();
+    }
+    
+    
+
+    
     // feed the instance into the solver
     assert(tData.nodeToSolve != 0);
     vec<Lit> lits;
 
     // add constraints to solver
     vector< pair<vector<Lit>*, unsigned int> > clauses;
-    tData.nodeToSolve->fillConstraintPathWithLevels(&clauses);
+    tData.nodeToSolve->fillConstraintPathWithLevels(&clauses);  // collect all clauses from all nodes to the tree
     for (unsigned int i = 0 ; i < clauses.size(); ++i) {
         lits.clear();
         for (unsigned int j = 0 ; j < clauses[i].first->size(); ++ j) {
             lits.push((*clauses[i].first)[j]);
         }
-        solver->addClause_(lits, clauses[i].second);
+        solver->addClause_(lits, clauses[i].second); // add them to the solver with the right dependency level
     }
 
     // add the formula to the solver
@@ -800,7 +839,7 @@ Master::solveInstance(void* data)
         for (int j = 0 ; j < master.formula()[i].size; ++j) {
             lits.push(master.formula()[i].lits[j]);
         }
-        solver->addClause_(lits, 0);
+        solver->addClause_(lits, 0);// add master formula to the solver with the right dependency level
     }
 
     // copy the procedure as in the original main function
@@ -858,14 +897,14 @@ Master::solveInstance(void* data)
         }
         if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::sat); }
         vec< lbool > solverModel;
-        solver->getModel(solverModel);
+        solver->getModel(solverModel);   // TODO: give a reference to the actual model back, and give this to the master directly
         master.submitModel(solverModel); // just copy model to master
     } else if (ret == 20) {
-        if (opt_conflict_killing && solver->curPTLevel < tData.nodeToSolve->getPTLevel()) {
+        if (opt_conflict_killing && solver->unsatPTLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
             if (tData.nodeToSolve != 0) {
-                int i = tData.nodeToSolve->getPTLevel() - solver->curPTLevel;
+                int i = tData.nodeToSolve->getPTLevel() - solver->unsatPTLevel; // use the level of which the solver just showed that its subtree is unsatisfiable
                 while (i > 0) {
                     TreeNode* node = tData.nodeToSolve->getFather();
                     node->setState(TreeNode::unsat);
@@ -884,22 +923,54 @@ Master::solveInstance(void* data)
 
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
-
             toplevelVariables = solver->getNumberOfTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
             if (tData.nodeToSolve != 0) {
-                for (int i = initialUnits ; i < toplevelVariables; ++i) {
+                for (int i = initialUnits ; i < toplevelVariables; ++i) {  // TODO have an extra data type to describe unit with level in the node
                     Lit currentLit = solver->trailGet(i);  //(*trail)[i];
                     vector<Lit>* clause = new vector<Lit>(1);
                     (*clause)[0] = currentLit;
 
                     // Davide> I modified this in order to include information about
                     // literal pt_levels
-                    tData.nodeToSolve->addNodeUnaryConstraint(clause, solver->getLiteralPTLevel(currentLit));
+		    // TODO use the pt level to add the units to the correct nodes (use write-lock for the tree!)
+                    tData.nodeToSolve->addNodeUnaryConstraint(clause, solver->getLiteralPTLevel(currentLit) ); // add the unit with the level
                 }
             }
         }
+        
+	// write back activity and polarity of the solver (pseudo-clone)
+	// put phase saving information
+	if( phase_saving_mode != 0 ) {
+	master.lock();
+	  if( master.polarity.size() == 0) master.polarity.growTo( master.maxVar, false );
+	  else {
+	// copy information to solver, use only variables that are available
+	int min = solver->nVars();
+	min = min <= master.polarity.size() ? min : master.polarity.size();
+
+	for( int i = 0 ; i < min; ++ i ) {
+	  master.polarity[i] = solver->getPolarity(i );
+	}
+	  }
+	master.unlock();
+	}
+	if( activity_mode != 0 ) {
+	master.lock();
+	  if( master.activity.size() == 0) master.activity.growTo( master.maxVar, false );
+	  else {
+	  // copy information to solver, use only variables that are available
+	  int min = solver->nVars();
+	  min = min <= master.activity.size() ? min : master.activity.size();
+
+	  for( int i = 0 ; i < min; ++ i ) {
+	    master.activity[i] = solver->getActivity(i );
+	  }
+	  }
+	master.unlock();
+	}
+        
     }
 
     tData.result = ret;
@@ -990,37 +1061,6 @@ Master::splitInstance(void* data)
         }
         S->addClause_(lits);
     }
-
-    // put phase saving information
-    // set up?
-    /*if( phase_saving_mode != 0 ) {
-    master.lock();
-      if( master.polarity.size() == 0) master.polarity.resize( master.maxVar, false );
-      else {
-    // copy information to solver, use only variables that are available
-    int min = S->polarity.size();
-    min = min <= master.polarity.size() ? min : master.polarity.size();
-
-    for( int i = 0 ; i < min; ++ i ) {
-      S->polarity[i] = master.polarity[i];
-    }
-      }
-    master.unlock();
-    }
-    if( activity_mode != 0 ) {
-    master.lock();
-      if( master.activity.size() == 0) master.activity.resize( master.maxVar, false );
-      else {
-    // copy information to solver, use only variables that are available
-    int min = S->activity.size();
-    min = min <= master.activity.size() ? min : master.activity.size();
-
-    for( int i = 0 ; i < min; ++ i ) {
-      S->activity[i] = master.activity[i];
-    }
-      }
-    master.unlock();
-    }*/
 
     if (!S->okay()) {
         fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());

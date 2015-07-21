@@ -150,6 +150,8 @@ class Master
     std::deque<TreeNode*> solveQueue;
     std::deque<TreeNode*> splitQueue;
 
+    Riss::vec<double>         activity; // global storage for activities to setup solvers
+    Riss::vec<char>           polarity; // global storage for polarities to setup solvers
 
     // wakes up the master thread such that it can check for the reason
     // NOTE: the reason needs to be stated in the ThreadData block of the calling thread

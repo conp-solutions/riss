@@ -53,11 +53,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
     #define USEABLE_BITS 63
 #endif
 
-//
-// if PCASSO is compiled, use virtual methods
-//
-
-//
 // forward declarations
 //
 namespace Coprocessor
@@ -78,7 +73,7 @@ class BIG;
 #ifdef PCASSO
 namespace Pcasso
 {
-class PcassoClient;
+    class SolverRiss;
 }
 #endif
 
@@ -112,7 +107,7 @@ class Solver
     friend class Riss::IncSolver; // for bmc
 
     #ifdef PCASSO
-    friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
+    friend class Pcasso::SolverRiss; // SolverRiss is allowed to access all the solver data structures
     #endif
 
     CoreConfig* privateConfig; // do be able to construct object without modifying configuration
@@ -1305,13 +1300,6 @@ class Solver
     };
 
 // [END] modifications for parallel assumption based solver
-
-// Modifications for Pcasso
-    #ifdef PCASSO
-    Pcasso::PcassoClient* pcassoClient;
-
-    #endif
-// END modifications for Pcasso
 
 
 };

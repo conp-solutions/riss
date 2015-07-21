@@ -23,7 +23,8 @@ class SolverPriss : public InstanceSolver
 
     Riss::PSolver solver;
 
-    unsigned int        curPTLevel;         // Davide> Contains the pt_level of curNode
+    unsigned int        curPTLevel;         // Davide> Contains the pt_level of current node
+    unsigned int        unsatPTLevel;
     TreeNode*           tnode;
     Statistics          localStat;        // Norbert> Local Statistics
 
@@ -35,6 +36,11 @@ class SolverPriss : public InstanceSolver
     inline void         interrupt();
     inline Riss::lbool  solveLimited(const Riss::vec<Riss::Lit>& assumps);
     inline void         setConfBudget(int64_t x);
+    inline void         setPolarity(Riss::Var var, bool polarity);
+    inline bool         getPolarity(Riss::Var var);
+    inline void         setActivity(Riss::Var var, double activity);
+    inline double       getActivity(Riss::Var var);
+    inline void         reserveVars(Riss::Var var);
 
     // accessing members of Riss
     inline void         setVerbosity(int verbosity);

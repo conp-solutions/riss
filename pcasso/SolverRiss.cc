@@ -8,7 +8,8 @@ namespace Pcasso
 SolverRiss::SolverRiss(CoreConfig *config) :
     solver(config),
     coreConfig(config),
-    curPTLevel(0)
+    curPTLevel(0),
+    unsatPTLevel(9)
 {
 //    cerr << "c using Riss as solver within Pcasso (WIP)" << endl << flush;
 }
@@ -63,6 +64,11 @@ inline bool     SolverRiss::okay() const                { return solver.okay(); 
 inline void     SolverRiss::interrupt()                 { solver.interrupt(); }
 inline lbool    SolverRiss::solveLimited(const Riss::vec<Riss::Lit>& assumps) { return solver.solveLimited(assumps); }
 inline void     SolverRiss::setConfBudget(int64_t x)    { solver.setConfBudget(x); }
+inline void     SolverRiss::setPolarity(Var var, bool polarity)  { solver.setPolarity(var,polarity); }
+inline bool     SolverRiss::getPolarity(Var var)        { return solver.getPolarity(var); }
+inline void     SolverRiss::setActivity(Var var, double activity){ solver.varSetActivity(var, activity); }
+inline double   SolverRiss::getActivity(Var var)        { return solver.varGetActivity(var); }
+inline void     SolverRiss::reserveVars(Riss::Var var)  { solver.reserveVars(var); }
 
 inline void     SolverRiss::setVerbosity(int verbosity) { solver.verbosity = verbosity; }
 inline uint64_t SolverRiss::getStarts()                 { return solver.starts; }
@@ -70,5 +76,5 @@ inline uint64_t SolverRiss::getDecisions()              { return solver.decision
 inline uint64_t SolverRiss::getConflicts()              { return solver.conflicts; }
 inline void     SolverRiss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
 inline Riss::Lit SolverRiss::trailGet(const unsigned int index) { return solver.trail[index]; }
-inline unsigned int SolverRiss::getNumberOfTopLevelUnits() const    { return solver.trail.size(); }
+inline unsigned int SolverRiss::getNumberOfTopLevelUnits() const    { return solver.trail_lim.size() == 0 ? solver.trail.size() : solver.trail_lim[0] ; }
 } // namespace Pcasso

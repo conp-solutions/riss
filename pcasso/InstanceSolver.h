@@ -39,14 +39,20 @@ class InstanceSolver : public SolverInterface
     virtual Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps) = 0;
     virtual void        setVerbosity(int verbosity) = 0;
     virtual void        getModel(Riss::vec<Riss::lbool>& model) = 0;
+    virtual void        setPolarity(Riss::Var var, bool polarity) = 0;
+    virtual bool        getPolarity(Riss::Var var) = 0;
+    virtual void        setActivity(Riss::Var var, double activity) = 0;
+    virtual double      getActivity(Riss::Var var) = 0;
+    virtual void        reserveVars(Riss::Var var) = 0;
     virtual void        interrupt() = 0;
 
     // for partitioning tree
     //
 
-    unsigned        curPTLevel;                    // level of partitioning tree
-    TreeNode*       tnode;
-    Statistics      localStat;                    // Norbert> Local Statistics
+    unsigned int        curPTLevel;                    // level of partitioning tree
+    unsigned int        unsatPTLevel;                  // level where the unsat formular was found
+    TreeNode*           tnode;
+    Statistics          localStat;                    // Norbert> Local Statistics
 
     virtual unsigned int    getNumberOfTopLevelUnits() const = 0;               // return the number of top level units from that are on the trail
     virtual void            setTimeOut(double timeout) = 0;                     // specify a number of seconds that is allowed to be executed
