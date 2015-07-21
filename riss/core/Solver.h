@@ -73,7 +73,7 @@ class BIG;
 #ifdef PCASSO
 namespace Pcasso
 {
-    class SolverRiss;
+class SolverRiss;
 }
 #endif
 

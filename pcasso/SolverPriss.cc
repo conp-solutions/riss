@@ -67,7 +67,7 @@ inline lbool    SolverPriss::solveLimited(const Riss::vec<Riss::Lit>& assumps) {
 inline void     SolverPriss::setConfBudget(int64_t x)    { solver.setConfBudget(x); }
 inline void     SolverPriss::setPolarity(Var var, bool polarity)  { }//solver.setPolarity(var,polarity); }
 inline bool     SolverPriss::getPolarity(Var var)         { return false; } //solver.getPolarity(var); }
-inline void     SolverPriss::setActivity(Var var, double activity){ }//solver.varSetActivity(var, activity); }
+inline void     SolverPriss::setActivity(Var var, double activity) { } //solver.varSetActivity(var, activity); }
 inline double   SolverPriss::getActivity(Var var)         { return 0; } //solver.varGetActivity(var); }
 inline void     SolverPriss::reserveVars(Riss::Var var)  { solver.reserveVars(var); }
 

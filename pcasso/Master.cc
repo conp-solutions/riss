@@ -84,21 +84,21 @@ static Int64Option   MSverbosity("SPLITTER", "verbosity", "verbosity of the mast
 static BoolOption    Portfolio("SPLITTER", "portfolio",  "Portfolio mode.\n", false);
 static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX));     // depends on option above!
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
-static BoolOption    priss("SPLITTER", "use-priss",  "Uses Priss as instance solver\n", false);
 
 static StringOption prissConfig("WORKER - CONFIG", "priss-config", "config string used to initialize priss incarnations", 0);
 static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string used to initialize riss incarnations", 0);
 
-static vector<unsigned short int> hardwareCores; // set of available hardware cores, used to pin the threads to cores
+// Options for Priss
+static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver\n", false);
+static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss threads))\n", 2, IntRange(1, 64));
 
-// instantiate static members of the class
+static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
+CoreConfig Master::defaultSolverConfig;
 
 Master::Master(Parameter p) :
-
     defaultSolverConfig((const char*)prissConfig == 0 ? "" : prissConfig),
     defaultPfolioConfig((const char*)rissConfig == 0 ? ""  : rissConfig),
-
     maxVar(0),
     model(0),
     param(p),
@@ -216,7 +216,7 @@ int Master::run()
         int idles = 0;  // important, because this indicates that there can be done more in the next round!
         int workers = 0, splitters = 0, uncleans = 0;
 
-	// check state of threads
+        // check state of threads
         for (unsigned int i = 0 ; i < threads; ++i) {
             if (threadData[i].s == splitting) { splitters++; }
             if (threadData[i].s == idle) { idles++; }
@@ -246,6 +246,8 @@ int Master::run()
             }
         }
 
+        //      unlock(); // End of critical
+
         // print some information
         if (MSverbosity > 1) {
             fprintf(stderr, "==== STATE ====\n");
@@ -270,7 +272,7 @@ int Master::run()
         idles = idles + uncleans;
 
         // check the state of the search tree
-        {
+        if (true) {
             // model might be increased right now
 
             lock();
@@ -739,11 +741,7 @@ Master::solveInstance(void* data)
     if (!priss) {
         solver = new SolverRiss(& master.defaultSolverConfig);
     } else {
-        // TODO: how many threads for priss? commandline option?
-//         @Franzi: Norbert: yes! and a way to control it per level
-//         either: always a fixed number, or:
-//         X on level 0, and X/2 on all the other levels, calculate from number of threads given to pcasso, and the chosen policy
-        solver = new SolverPriss(& master.defaultPfolioConfig, 2);
+        solver = new SolverPriss(& master.defaultPfolioConfig, priss_threads);
     }
     assert(tData.solver == nullptr);
     tData.solver = solver;
@@ -762,13 +760,12 @@ Master::solveInstance(void* data)
 
     // setup the parameters, setup varCnt
     solver->setVerbosity(tData.master->param.verb);
-    if (master.varCnt() >= (unsigned int) solver->nVars()) solver->reserveVars( master.varCnt() );
+    if (master.varCnt() >= (unsigned int) solver->nVars()) { solver->reserveVars(master.varCnt()); }
     while (master.varCnt() >= (unsigned int) solver->nVars()) {
         solver->newVar();
     }
-
     // setup communication
-    
+
 //    // Davide> Initialize the shared indeces to zero
 //    for (unsigned int i = 0; i <= solver->curPTLevel; i++)   // Davide> I put my level, also
 //    { solver->shared_indeces.push_back(0); }
@@ -781,43 +778,43 @@ Master::solveInstance(void* data)
 
 //    // Davide> Associate the pt_node to the Solver
 //    solver->tnode = tData.nodeToSolve;
-    
-    
+
+
     // setup activity and polarity of the solver (pseudo-clone)
     // put phase saving information
     // set up?
-    if( phase_saving_mode != 0 ) {
-    master.lock();
-      if( master.polarity.size() == 0) master.polarity.growTo( master.maxVar, false );
-      else {
-    // copy information to solver, use only variables that are available
-    int min = solver->nVars();
-    min = min <= master.polarity.size() ? min : master.polarity.size();
+    if (phase_saving_mode != 0) {
+        master.lock();
+        if (master.polarity.size() == 0) { master.polarity.growTo(master.maxVar, false); }
+        else {
+            // copy information to solver, use only variables that are available
+            int min = solver->nVars();
+            min = min <= master.polarity.size() ? min : master.polarity.size();
 
-    for( int i = 0 ; i < min; ++ i ) {
-      solver->setPolarity(i, master.polarity[i]);
+            for (int i = 0 ; i < min; ++ i) {
+                solver->setPolarity(i, master.polarity[i]);
+            }
+        }
+        master.unlock();
     }
-      }
-    master.unlock();
-    }
-    if( activity_mode != 0 ) {
-    master.lock();
-      if( master.activity.size() == 0) master.activity.growTo( master.maxVar, false );
-      else {
-      // copy information to solver, use only variables that are available
-      int min = solver->nVars();
-      min = min <= master.activity.size() ? min : master.activity.size();
+    if (activity_mode != 0) {
+        master.lock();
+        if (master.activity.size() == 0) { master.activity.growTo(master.maxVar, false); }
+        else {
+            // copy information to solver, use only variables that are available
+            int min = solver->nVars();
+            min = min <= master.activity.size() ? min : master.activity.size();
 
-      for( int i = 0 ; i < min; ++ i ) {
-	    solver->setActivity(i, master.activity[i] );
-      }
-      }
-    master.unlock();
+            for (int i = 0 ; i < min; ++ i) {
+                solver->setActivity(i, master.activity[i]);
+            }
+        }
+        master.unlock();
     }
-    
-    
 
-    
+
+
+
     // feed the instance into the solver
     assert(tData.nodeToSolve != 0);
     vec<Lit> lits;
@@ -923,6 +920,7 @@ Master::solveInstance(void* data)
 
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
+
             toplevelVariables = solver->getNumberOfTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
@@ -934,43 +932,43 @@ Master::solveInstance(void* data)
 
                     // Davide> I modified this in order to include information about
                     // literal pt_levels
-		    // TODO use the pt level to add the units to the correct nodes (use write-lock for the tree!)
-                    tData.nodeToSolve->addNodeUnaryConstraint(clause, solver->getLiteralPTLevel(currentLit) ); // add the unit with the level
+                    // TODO use the pt level to add the units to the correct nodes (use write-lock for the tree!)
+                    tData.nodeToSolve->addNodeUnaryConstraint(clause, solver->getLiteralPTLevel(currentLit));  // add the unit with the level
                 }
             }
         }
-        
-	// write back activity and polarity of the solver (pseudo-clone)
-	// put phase saving information
-	if( phase_saving_mode != 0 ) {
-	master.lock();
-	  if( master.polarity.size() == 0) master.polarity.growTo( master.maxVar, false );
-	  else {
-	// copy information to solver, use only variables that are available
-	int min = solver->nVars();
-	min = min <= master.polarity.size() ? min : master.polarity.size();
 
-	for( int i = 0 ; i < min; ++ i ) {
-	  master.polarity[i] = solver->getPolarity(i );
-	}
-	  }
-	master.unlock();
-	}
-	if( activity_mode != 0 ) {
-	master.lock();
-	  if( master.activity.size() == 0) master.activity.growTo( master.maxVar, false );
-	  else {
-	  // copy information to solver, use only variables that are available
-	  int min = solver->nVars();
-	  min = min <= master.activity.size() ? min : master.activity.size();
+        // write back activity and polarity of the solver (pseudo-clone)
+        // put phase saving information
+        if (phase_saving_mode != 0) {
+            master.lock();
+            if (master.polarity.size() == 0) { master.polarity.growTo(master.maxVar, false); }
+            else {
+                // copy information to solver, use only variables that are available
+                int min = solver->nVars();
+                min = min <= master.polarity.size() ? min : master.polarity.size();
 
-	  for( int i = 0 ; i < min; ++ i ) {
-	    master.activity[i] = solver->getActivity(i );
-	  }
-	  }
-	master.unlock();
-	}
-        
+                for (int i = 0 ; i < min; ++ i) {
+                    master.polarity[i] = solver->getPolarity(i);
+                }
+            }
+            master.unlock();
+        }
+        if (activity_mode != 0) {
+            master.lock();
+            if (master.activity.size() == 0) { master.activity.growTo(master.maxVar, false); }
+            else {
+                // copy information to solver, use only variables that are available
+                int min = solver->nVars();
+                min = min <= master.activity.size() ? min : master.activity.size();
+
+                for (int i = 0 ; i < min; ++ i) {
+                    master.activity[i] = solver->getActivity(i);
+                }
+            }
+            master.unlock();
+        }
+
     }
 
     tData.result = ret;
@@ -1041,7 +1039,7 @@ Master::splitInstance(void* data)
 
 
     // feed the instance into the solver
-    if (master.varCnt() >= (unsigned int) S->nVars()) S->reserveVars( master.varCnt() );
+    if (master.varCnt() >= (unsigned int) S->nVars()) { S->reserveVars(master.varCnt()); }
     while (master.varCnt() >= (unsigned int)S->nVars()) { S->newVar(); }
 
     vector< vector<Lit>* > clauses;

@@ -64,9 +64,9 @@ inline bool     SolverRiss::okay() const                { return solver.okay(); 
 inline void     SolverRiss::interrupt()                 { solver.interrupt(); }
 inline lbool    SolverRiss::solveLimited(const Riss::vec<Riss::Lit>& assumps) { return solver.solveLimited(assumps); }
 inline void     SolverRiss::setConfBudget(int64_t x)    { solver.setConfBudget(x); }
-inline void     SolverRiss::setPolarity(Var var, bool polarity)  { solver.setPolarity(var,polarity); }
+inline void     SolverRiss::setPolarity(Var var, bool polarity)  { solver.setPolarity(var, polarity); }
 inline bool     SolverRiss::getPolarity(Var var)        { return solver.getPolarity(var); }
-inline void     SolverRiss::setActivity(Var var, double activity){ solver.varSetActivity(var, activity); }
+inline void     SolverRiss::setActivity(Var var, double activity) { solver.varSetActivity(var, activity); }
 inline double   SolverRiss::getActivity(Var var)        { return solver.varGetActivity(var); }
 inline void     SolverRiss::reserveVars(Riss::Var var)  { solver.reserveVars(var); }
 
