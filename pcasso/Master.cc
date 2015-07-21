@@ -1041,6 +1041,7 @@ Master::splitInstance(void* data)
 
 
     // feed the instance into the solver
+    if (master.varCnt() >= (unsigned int) S->nVars()) S->reserveVars( master.varCnt() );
     while (master.varCnt() >= (unsigned int)S->nVars()) { S->newVar(); }
 
     vector< vector<Lit>* > clauses;
