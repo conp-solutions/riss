@@ -39,12 +39,20 @@ message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "Verbose warnings ${WARNINGS}")
 
+# Find only static libraries - unfortunatly this is not sufficient for a
+# complete static binary
+if(STATIC_BINARIES)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
+endif()
+
 # Output directory definitions
 # 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
+# Specify the paths in which the linker should search for libraries
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 # Tell CMake where to look for additional CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -70,6 +78,9 @@ endif()
 # Dependencies:
 # 
 include_directories(${PROJECT_SOURCE_DIR})
+# Just for convencience that we you can use #include <armadillo> instead
+# of #include "armadillo/armadillo"
+include_directories(${PROJECT_SOURCE_DIR}/armadillo)
 
 # Compile flags:
 # 
@@ -92,6 +103,8 @@ add_subdirectory(riss/)
 add_subdirectory(risslibcheck/)
 add_subdirectory(classifier/)
 add_subdirectory(coprocessor/)
+add_subdirectory(libpca/)
+add_subdirectory(knntool/)
 add_subdirectory(mprocessor/)
 add_subdirectory(pcasso/)
 add_subdirectory(pfolio/)

@@ -4,8 +4,7 @@
 #include <fstream>
 #include <assert.h>
 
-#include "pca.h"
-
+#include "libpca/pca.h"
 #include "methods.h"
 #include "Trainer.h"
 

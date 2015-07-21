@@ -1,17 +1,17 @@
-# Project definitions:
+# Project definitions
 # 
 project(classifier)
 version("1.0.0")
 
-
-# Dependencies:
+# 
+# Dependencies
 # 
 find_package(ZLIB)
 
 include_directories(${ZLIB_INCLUDE_DIR})
 
-
-# Libraries:
+# 
+# Libraries
 # 
 set(LIB_SOURCES
     Classifier.cc
@@ -34,11 +34,10 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
                                                  VERSION ${VERSION}
                                                  SOVERSION ${SOVERSION})
 
-
-# Executables:
+# 
+# Executables
 # 
 add_executable(${PROJECT_NAME} Main.cc)
-
 
 if(STATIC_BINARIES)
   target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-lib-static coprocessor-lib-static)
@@ -46,7 +45,8 @@ else()
   target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-lib-shared coprocessor-lib-shared -lpca -larmadillo)
 endif()
 
-# Installation:
+# 
+# Installation
 # 
 install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}
         RUNTIME DESTINATION bin

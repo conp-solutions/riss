@@ -22,6 +22,9 @@ debug/
 release/
 build/
 
+# External projects
+armadillo/
+
 # Latex build files
 *.aux
 *.log
