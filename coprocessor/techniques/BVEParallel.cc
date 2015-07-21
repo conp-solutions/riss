@@ -1128,9 +1128,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data, const bool d
                 parBveStepSum += parStats[i].parBveChecks;
             }
             // FIXME why add and then remove parallel BVE steps?!
-            stepper.increaseSteps(parBveStepSum / controller.size()); // adds average parallel BVE steps to stepper
+            stepper.increaseSteps(parBveStepSum / controller.size());  // adds average parallel BVE steps to stepper
             bve_worker(data, stepper); // runs a single BVE worker
-            stepper.increaseSteps(parBveStepSum / controller.size()); // removes average parallel BVE steps from stepper
+            stepper.increaseSteps(-parBveStepSum / controller.size()); // removes average parallel BVE steps from stepper
         }
         //propagate units
         if (data.hasToPropagate()) {
