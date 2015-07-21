@@ -839,6 +839,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
             if (config.opt_verbose > 1) { cerr << "c FM changed formula: " << change << endl; }
         }
 
+        // dense "d"
+        else if (execute == 'd' && config.opt_dense && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c dense" << endl; }
+            dense.compress();
+            change = dense.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c Dense changed formula: " << change << endl; }
+        }
+
         // none left so far
         else {
             cerr << "c warning: cannot execute technique related to  " << execute << endl;
