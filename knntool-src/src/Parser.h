@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include "Trainer.h"
+#include "ConfigurationSelector.h"
 
 #include "useful.h"
 // #include "methods.h"

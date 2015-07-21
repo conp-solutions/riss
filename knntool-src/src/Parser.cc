@@ -149,31 +149,39 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
   }
   
   for (int i = 0; i < amountClasses; ++i) T.classCols.push_back(vector<int>());
+ 
+  vector<int> selectedConfiguration(amountFiles);
+  
+  ConfigurationSelector C;
+  C.setSolvedTimeout(timeout);
+//   ConfigurationSelector::SelectionType type = 2;
+  
+  C.select( T.allTimes, selectedConfiguration, (ConfigurationSelector::SelectionType) 2 );
   
   while( getline (featuresFile, line) )
   {
     string instance = Get(line, 0).c_str();   // extract the cnf file name
 
     if (T.instances[col] == instance){      // lines must match!
-      int cnfclass;
+      int cnfclass = selectedConfiguration[col];
       /*	
       if (!validTimes(T.allTimes[col], timeout)){ 
-      col++;
-      continue;
+	col++;
+	continue;
       } //TODO check if it is better kicking all the instances which are solved by all configurations
       */
-      if (decideFastest){
-	
-	if ( T.allTimes[col][standardClass] != -1 ) cnfclass = standardClass;
-	else {
-
-	  cnfclass = getFastestClass(T.allTimes[col]);	
-
-	}
-      } 
-      else {
-	cnfclass = getFastestClass(T.allTimes[col]);	
-      }
+//       if (decideFastest){
+// 	
+// 	if ( T.allTimes[col][standardClass] != -1 ) cnfclass = standardClass;
+// 	else {
+// 
+// 	  cnfclass = getFastestClass(T.allTimes[col]);	
+// 
+// 	}
+//       } 
+//       else {
+// 	cnfclass = getFastestClass(T.allTimes[col]);	
+//       }
       if (cnfclass == -1) { //skip not solved formula's
 	cnfclass = standardClass;
 	notSolved ++;
@@ -185,7 +193,7 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
 	solved++;
 	for ( int j = 0; j < dimension; ++j ){
 	  double temp = atof(Get(line, T.featureIdents[j].first).c_str());
-	  if (std::isinf(temp) || temp > 10e+99) 
+	  if (std::isinf(temp) || temp > 10e+200) 
 	  temp = double(10e+99);    //TODO really naive way, might implement a better one
 	  T.features[j].push_back(temp);
 	}
