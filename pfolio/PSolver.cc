@@ -595,6 +595,43 @@ void PSolver::createThreadConfigs()
             if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
+    }  else if (defaultConfig == "gamma") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -keepWorst=0.01");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll -rnd-freq=0.01");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("Riss427:plain_XOR:plain_PRB:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+            configs[2].setPreset("Riss427:plain_XOR:plain_PRB:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll -rnd-freq=0.05");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits -lbd-core-th=5 -var-decay-b=0.8 -var-decay-e=0.99  -rnd-freq=0.01");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("AUIP:LLA:SUHD:-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec -shareTime=0 -dynLimits");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
     }
 
 
