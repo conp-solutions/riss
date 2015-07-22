@@ -53,6 +53,7 @@ static IntOption    opt_hscore_clause_weight(_cat, "h-cl-wg",        "hScore cla
 static DoubleOption     opt_hscore_clause_upperbound(_cat, "h-upper",             "Upper bound for hscore of a literal", 10900, DoubleRange(0, false, INT32_MAX, true));
 static DoubleOption     opt_hscore_clause_lowerbound(_cat, "h-lower",             "lower bound for hscore of a literal", 0.1, DoubleRange(0, false, INT32_MAX, true));
 static BoolOption    opt_sort_split(_cat, "sort-split",        "Sort the splits according to their trail score", false);
+static BoolOption    opt_split_debug_output(_cat, "laSplitDebug",   "Print Debug output", false);
 
 double LookaheadSplitting::triggerDoubleLookahead = 0;
 double LookaheadSplitting::branchThreshold = 0;
@@ -111,6 +112,8 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
     watcherPosLitSize.growTo(nVars(), 0);
     markArray.resize(2 * nVars());
 
+    lookahead_marker.resize(2 * nVars());
+    
     lock();
     if (branchThreshold == 0) {
         branchThreshold = opt_branch_threshold;
@@ -126,7 +129,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
 
     // Simplify the set of problem clauses:
     if (decisionLevel() == 0 && !simplify()) {
-        //fprintf(stderr, "splitter: Unsat node 1\n");
+        DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 1\n"); );
         return l_False;
     }
 
@@ -134,7 +137,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
     CRef confl = propagate();
     if (confl != CRef_Undef) { // if there is a conflict on the top level, there cannot be a split
         // fprintf( stderr, "splitting the instance failed with a conflict during propagation\n" );
-        // fprintf(stderr, "splitter: Unsat node 2\n");
+        DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 2\n"); );
         return l_False;
     }
 
@@ -170,7 +173,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
             //branchThreshold=opt_branchThreshold;
             if (decisionLevel() == 0 && !simplify()) {
                 if (splitting->size() == 0 && decList->size() == 0) {
-                    //fprintf(stderr, "splitter: Unsat node 3\n");
+                    DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 3\n"); );
                     return l_False;
                 } else {
                     break;
@@ -181,7 +184,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
             CRef confl = propagate();
             if (confl != CRef_Undef) { // if there is a conflict on the top level, there cannot be a split
                 if (splitting->size() == 0 && decList->size() == 0) {
-                    //fprintf(stderr, "splitter: Unsat node 4\n");
+                    DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 4\n"); );
                     return l_False;
                 } else {
                     break;
@@ -238,7 +241,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 // Simplify the set of problem clauses:
                 if (decisionLevel() == 0 && !simplify()) {
                     if (splitting->size() == 0 && decList->size() == 0) {
-                        //fprintf(stderr, "splitter: Unsat node 6\n");
+                        DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 6\n"); );
                         return l_False;
                     }
                     goto jump;
@@ -248,9 +251,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 CRef confl = propagate();
                 if (confl != CRef_Undef) { // failed literal
                     if (decisionLevel() == 0) {
-                        //fprintf( stderr, "splitter: Unsat node\n");
+                        DOUT( if(opt_split_debug_output) fprintf( stderr, "splitter: Unsat node 11\n"); );
                         if (splitting->size() == 0 && decList->size() == 0) {
-                            //fprintf(stderr, "splitter: Unsat node 5\n");
+                            DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 5\n"); );
                             return l_False;
                         } else {
                             goto jump;
@@ -305,9 +308,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 next = pickBranchLiteral(&localValid);
                 if (next == lit_Error) {
                     if (decisionLevel() == 0) {
-                        //fprintf( stderr, "splitter: Unsat node\n");
+                        DOUT( if(opt_split_debug_output) fprintf( stderr, "splitter: Unsat node 12\n"); );
                         if (splitting->size() == 0 && decList->size() == 0) {
-                            //fprintf(stderr, "splitter: Unsat node 7\n");
+                            DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 7\n"); );
                             return l_False;
                         } else {
                             goto jump;
@@ -340,7 +343,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                     }
                 }
 
-                fprintf(stderr, "%d, ", sign(next) ? 0 - var(next) : var(next));
+                DOUT( if(opt_split_debug_output) fprintf(stderr, "%d, ", sign(next) ? 0 - var(next) : var(next)); );
                 //depth++;
                 decisions++;
                 newDecisionLevel();
@@ -396,7 +399,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
             //branchThreshold=opt_branchThreshold;
             if (decisionLevel() == 0 && !simplify()) {
                 if (splitting->size() == 0 && decList->size() == 0) {
-                    //fprintf(stderr, "splitter: Unsat node 3\n");
+                    DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 3\n"); );
                     return l_False;
                 } else {
                     break;
@@ -407,7 +410,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
             CRef confl = propagate();
             if (confl != CRef_Undef) { // if there is a conflict on the top level, there cannot be a split
                 if (splitting->size() == 0 && decList->size() == 0) {
-                    //fprintf(stderr, "splitter: Unsat node 4\n");
+                    DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 4\n"); );
                     return l_False;
                 } else {
                     break;
@@ -431,9 +434,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 CRef confl = propagate();
                 if (confl != CRef_Undef) { // failed literal
                     if (decisionLevel() == 0) {
-                        //fprintf( stderr, "splitter: Unsat node\n");
+                        DOUT( if(opt_split_debug_output) fprintf( stderr, "splitter: Unsat node 13\n"); );
                         if (splitting->size() == 0 && decList->size() == 0) {
-                            //fprintf(stderr, "splitter: Unsat node 5\n");
+                            DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 5\n"); );
                             return l_False;
                         } else {
                             goto jump;
@@ -464,7 +467,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 // Simplify the set of problem clauses:
                 if (decisionLevel() == 0 && !simplify()) {
                     if (splitting->size() == 0 && decList->size() == 0) {
-                        //fprintf(stderr, "splitter: Unsat node 6\n");
+                        DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 6\n"); );
                         return l_False;
                     }
                     goto jump;
@@ -476,12 +479,14 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 next = pickBranchLiteral(&localValid);
                 if (next == lit_Error) {
                     if (decisionLevel() == 0) {
-                        //fprintf( stderr, "splitter: Unsat node\n");
+                        DOUT( if(opt_split_debug_output) fprintf( stderr, "splitter: Unsat node 14\n"); );
+// 			printFullSolverState();
                         if (splitting->size() == 0 && decList->size() == 0) {
-                            //fprintf(stderr, "splitter: Unsat node 7\n");
+                            DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Unsat node 7\n"); );
                             return l_False;
                         } else {
-                            goto jump;
+			  DOUT( if(opt_split_debug_output) fprintf(stderr, "splitter: Jump after Unsat node 14\n"); );
+                          goto jump;
                         }
                     } else {
                         cancelUntil(decisionLevel() - 1);
@@ -549,7 +554,9 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
 
             validAtLevel->push(localValid);
             splitting->push(decList);
+	    DOUT( if(opt_split_debug_output ) cerr << "c add splitting: " << *decList << endl; );
             splittingScore.push(VarScore(splitting->size() - 1, trail.size()));
+	    assert( splitting->size() == splittingScore.size() && "number of splitting data has to stay the same" );
             optNumChild--;
             cancelUntil(0);
             vec<Lit> negCube;
@@ -1074,7 +1081,7 @@ void LookaheadSplitting::constraintResolvent(const vec<Lit>& t)
     }
 }
 
-Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid)
+Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **pickBranchValid)
 {
     //MarkArray markArray;
     //fprintf(stderr,"markArray Size = %d\n",markArray.size());
@@ -1161,7 +1168,12 @@ decLitNotFound:
 
             CRef confl = propagate();
             if (confl != CRef_Undef) {
-                //fprintf(stderr, "splitter: Failed literal at level %d\n", decisionLevel());
+		DOUT( if(opt_split_debug_output) {
+		  fprintf(stderr, "splitter: Failed literal at level %d\n", decisionLevel());
+		  for( int i = 0 ; i < decisionLevel(); ++ i ) {
+		    cerr << "splitter: decision[" << i << "]: " << trail[ trail_lim[i] ] << endl;
+		  } 
+		} );
                 //cancelUntil(decLev);
                 return lit_Error;
             }
@@ -1205,7 +1217,8 @@ decLitNotFound:
                 if (opt_failed_literals > 0) {
                     uncheckedEnqueue(~p);
                     // enqueue(~p);
-                    failedLiterals.push(p);
+		    DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after double-look-ahead: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
+                    if( decisionLevel() == 0 ) failedLiterals.push(p);
                 }
                 progress = true;
 
@@ -1235,8 +1248,9 @@ decLitNotFound:
                         score[i] = 0;
                         if (opt_failed_literals > 0) {
                             uncheckedEnqueue(~p);
+			    DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after double-look-ahead: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
 //                            enqueue(~p);
-                            failedLiterals.push(p);
+                            if( decisionLevel() == 0 ) failedLiterals.push(p);
                         }
                         progress = true;
                         // fprintf(stderr, "splitter: Doublelookahead +++++++++ success\n");
@@ -1263,7 +1277,7 @@ decLitNotFound:
 
             confl = propagate();
             if (confl != CRef_Undef) {
-                //fprintf(stderr, "splitter: Failed literal at level %d\n", decisionLevel());
+                DOUT( if(opt_split_debug_output ) fprintf(stderr, "splitter: Failed literal 2 at level %d\n", decisionLevel()); );
                 cancelUntil(decLev);
                 return lit_Error;
             }
@@ -1276,7 +1290,8 @@ decLitNotFound:
                     cancelUntil(decLev);
                     score[i] = 0;
                     if (opt_failed_literals > 0) {
-                        failedLiterals.push(~p);
+                        if( decisionLevel() == 0 ) failedLiterals.push(~p); // can use failed literals only if they failed on level 1
+			DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after negative look-ahead: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
                         uncheckedEnqueue(p);
                         //enqueue(p);
                     }
@@ -1304,8 +1319,8 @@ decLitNotFound:
                             score[i] = 0;
                             if (opt_failed_literals > 0) {
                                 uncheckedEnqueue(p);
-                                // enqueue(p);
-                                failedLiterals.push(~p);
+                                DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after double-look-ahead2: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
+                                if( decisionLevel() == 0 ) failedLiterals.push(~p); // can use failed literals only if they failed on level 1
                             }
                             progress = true;
                             // fprintf(stderr, "splitter: Doublelookahead --------- success\n");
@@ -1517,55 +1532,56 @@ jump:
         statistics.changeI(splitterPenaltyID,1);*/
     }
     //using to see if a literal has been already put as partition constraint
-    lbd_marker.nextStep();
+    lookahead_marker.nextStep();
     vec<Lit>* clause;
     if (opt_failed_literals == 2) {
         for (int i = 0; i < failedLiterals.size(); i++) {
-            lbd_marker.setCurrentStep(var(failedLiterals[i]));
+            lookahead_marker.setCurrentStep(var(failedLiterals[i]));
             clause = new vec<Lit>();
             clause->push(~failedLiterals[i]);
-            (*valid)->push(clause);
-            //fprintf( stderr, "splitter: failed literals %d ==========\n", sign(failedLiterals[i]) ? var(failedLiterals[i]) +1: 0-var(failedLiterals[i])-1 );
+            (*pickBranchValid)->push(clause);
+             DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: failed literals %d ==========\n", sign(failedLiterals[i]) ? var(failedLiterals[i]) +1: 0-var(failedLiterals[i])-1 ); );
         }
     }
     if (opt_nec_assign == 2) {
         for (int i = 0; i < necAssign.size(); i++) {
-            lbd_marker.setCurrentStep(var(necAssign[i]));
+            lookahead_marker.setCurrentStep(var(necAssign[i]));
             clause = new vec<Lit>();
             clause->push(necAssign[i]);
-            (*valid)->push(clause);
-            //fprintf( stderr, "splitter: Necessary Assignment %d +++++++++++\n", sign(necAssign[i]) ? var(necAssign[i]) +1: 0-var(necAssign[i])-1 );
+            (*pickBranchValid)->push(clause);
+             DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: Necessary Assignment %d +++++++++++\n", sign(necAssign[i]) ? var(necAssign[i]) +1: 0-var(necAssign[i])-1 ); );
         }
     }
     if (opt_clause_learning == 2) {
         for (int i = 0; i < unitLearnts.size(); i++) {
-            lbd_marker.setCurrentStep(var(unitLearnts[i]));
+            lookahead_marker.setCurrentStep(var(unitLearnts[i]));
             clause = new vec<Lit>();
             clause->push(unitLearnts[i]);
-            (*valid)->push(clause);
-            //fprintf( stderr, "splitter: unit clause learnt %d +++++++++++\n", sign(unitLearnts[i]) ? var(unitLearnts[i]) +1: 0-var(unitLearnts[i])-1 );
+            (*pickBranchValid)->push(clause);
+            DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: unit clause learnt %d +++++++++++\n", sign(unitLearnts[i]) ? var(unitLearnts[i]) +1: 0-var(unitLearnts[i])-1 ); );
         }
     }
     if (opt_var_eq == 3) {
         Lit eqLit;
         for (int i = 0; i < varEq.size() - 1; i = i + 2) {
             eqLit = lit_Undef;
-            if (value(varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i]))) {
+            if (value(varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i]))) {
                 eqLit = varEq[i + 1];
-            } else if (value(~varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i]))) {
+            } else if (value(~varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i]))) {
                 eqLit = ~varEq[i + 1];
             }
-            if (value(varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1]))) {
+            if (value(varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i + 1]))) {
                 eqLit = varEq[i];
-            } else if (value(~varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1]))) {
+            } else if (value(~varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i + 1]))) {
                 eqLit = ~varEq[i];
             }
 
-            if (eqLit != lit_Undef &&  ! lbd_marker.isCurrentStep(var(eqLit))) {
-                lbd_marker.setCurrentStep(var(eqLit));
+            if (eqLit != lit_Undef &&  ! lookahead_marker.isCurrentStep(var(eqLit))) {
+                lookahead_marker.setCurrentStep(var(eqLit));
                 clause = new vec<Lit>();
                 clause->push(eqLit);
-                (*valid)->push(clause);
+                (*pickBranchValid)->push(clause);
+		DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: unit clause due to satisfied eq-lit %d +++++++++++\n", sign(eqLit) ? var(eqLit) +1: 0-var(eqLit)-1 ); );
             }
         }
     }
@@ -1574,18 +1590,18 @@ jump:
             if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True) {
                 continue;
             }
-            if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef) {
+            if (lookahead_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef) {
                 j = i + 1;
-            } else if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef) {
+            } else if (lookahead_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef) {
                 j = i;
             } else {
                 continue;
             }
-            if (! lbd_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
-                lbd_marker.setCurrentStep(var(binaryForcedClauses[j]));
+            if (! lookahead_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
+                lookahead_marker.setCurrentStep(var(binaryForcedClauses[j]));
                 clause = new vec<Lit>();
                 clause->push(binaryForcedClauses[j]);
-                (*valid)->push(clause);
+                (*pickBranchValid)->push(clause);
                 temp++;
             }
         }
@@ -1637,7 +1653,7 @@ bool LookaheadSplitting::doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Li
     vec<int> sortedVarDLA;
     vec<int> bestKListDLA;
     for (int i = 0; i < clauses.size(); i++) {
-        Clause& c = ca[clauses[i]];
+        const Clause& c = ca[clauses[i]];
         /*if(c.size()==2 && !satisfied(c)){
             sign(c[0]) ? negLitScore[var(c[0])]++ : posLitScore[var(c[0])]++;
             sign(c[1]) ? negLitScore[var(c[1])]++ : posLitScore[var(c[1])]++;

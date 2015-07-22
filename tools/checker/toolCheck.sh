@@ -2,7 +2,7 @@ rm -f /tmp/verify_$$.cnf
 
 #echo "run $1 with $2" >> tmp.dat
 
-timeout 90 $1 $2 > /tmp/verify_$$.cnf 2> /dev/null;
+timeout 90 $1 $2 > /tmp/verify_$$.cnf 2> /tmp/verify2_$$.cnf;
 status=$?
 
 #echo "finish with state= $status" >> tmp.dat
@@ -10,7 +10,7 @@ status=$?
 if [ "$status" -eq "124" ]
 then
 	# we got a timeout here!
-	rm -f /tmp/verify_$$.cnf
+	rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 	exit 124
 fi
 
@@ -19,7 +19,7 @@ if [ "$status" -eq "10" ]
 then
 	./verify SAT /tmp/verify_$$.cnf $2 # 2>&1 > /dev/null
 	vstat=$?
-	rm -f /tmp/verify_$$.cnf
+	rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 	if [ "$vstat" -eq "1" ]
 	then
 		exit 10
@@ -30,10 +30,10 @@ else
 	# if the instance is unsatisfiable or another error occurred, report it
 #	echo "exit with $status" >> tmp.dat
 
-     rm -f /tmp/verify_$$.cnf
 
      if [ "$status" -ne "20" ]
      then
+	rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 	exit $status
      fi
 
@@ -46,13 +46,18 @@ else
         # we got a timeout here!
 	mkdir -p lglTimeout # collect instances where lingeling performs badly
         mv $2 lglTimeout
+	rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
         exit 124
      fi
 
      if [ $lstat -ne "20" ]
      then
+       echo "solver output:"
+       cat /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
+       rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
        exit 25
      fi
+    rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
     exit 20
 fi
 

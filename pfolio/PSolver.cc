@@ -868,7 +868,8 @@ void* runWorkerSolver(void* data)
 
         // do work
         lbool result l_Undef;
-        result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification);
+	if( !info.getSolver()->okay() ) result = l_False;
+        else result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification);
 
         info.setReturnValue(result);
         if (verbose) cerr << "c [THREAD] " << info.getID() << " result " <<

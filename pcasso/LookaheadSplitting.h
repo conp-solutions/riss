@@ -29,6 +29,8 @@ class LookaheadSplitting : public SplitterSolver
     Riss::vec<Riss::CRef> otfssClauses;
     unsigned extraInfo;
 
+    Riss::MarkArray   lookahead_marker; // mark literals during look-ahead
+    
   public:
     LookaheadSplitting(Riss::CoreConfig* config);
     ~LookaheadSplitting();
