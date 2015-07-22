@@ -1371,7 +1371,6 @@ decLitNotFound:
                         c.clear();
                         c.push(binaryForcedClauses[j]);
                         c.push(binaryForcedClauses[j + 1]);
-			assert( decisionLevel() == 0 && "add clauses only on level 0 without checks" );
                         CRef cr = ca.alloc(c, true);
                         learnts.push(cr);
                         attachClause(cr);

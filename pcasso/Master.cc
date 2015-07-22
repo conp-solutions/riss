@@ -209,7 +209,7 @@ int Master::run()
     // fill the queue
     // check the state of the tree
     // solve the next node in the tree
-    if (MSverbosity > 0) { fprintf(stderr, "M: start main loop\n"); }
+    if (MSverbosity > 0) { fprintf(stderr, "M: start main loop, with %d variables\n", maxVar ); }
     while (!done) {
 
         int idles = 0;  // important, because this indicates that there can be done more in the next round!
@@ -1268,7 +1268,7 @@ Master::submitModel(const vec<lbool>& fullModel)
     // only store one model
     if (model == 0)  {
         // if( MSverbosity > 0 )
-        fprintf(stderr, "c model submitted\n");
+        DOUT( fprintf(stderr, "c model submitted with %d values\n", fullModel.size() ); );
         model = new vec< lbool >;
         fullModel.copyTo(*model);
     }
