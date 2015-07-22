@@ -149,6 +149,7 @@ Master::Master(Parameter p) :
 Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 {
     // free allocated literals
+    fprintf(stderr, "c destruct master\n");
     for (unsigned int i = 0 ; i < originalFormula.size(); ++i) {
         delete [] originalFormula[i].lits;
     }
@@ -244,7 +245,6 @@ int Master::run()
             }
         }
 
-        //      unlock(); // End of critical
 
         // print some information
         if (MSverbosity > 1) {
@@ -276,7 +276,6 @@ int Master::run()
             lock();
             if (model != 0) {
                 solution = 10;
-//                 unlock();
                 fprintf(stderr, "c A model has been submitted!\n");
             }
             // check the tree for UNSAT/SAT
@@ -539,8 +538,8 @@ int Master::run()
         threadData[i].solver->interrupt(); // Yeah, it takes time.
         // threadData[i].solver->kill();
         PcassoDebug::PRINTLN_NOTE("thread KILLED");
-        if (threadData[i].s == idle || threadData[i].handle == 0) { continue; }
-        // pthread_cancel(threadData[i].handle);
+	if (threadData[i].s == idle) { continue; }
+	
         //if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
     }
 
@@ -551,13 +550,16 @@ int Master::run()
         int err = 0;
         if (MSverbosity > 1) { fprintf(stderr, "c try to join thread %d\n", i); }
         //    if( threadData[i].s == idle || threadData[i].handle == 0 ) continue;
-        if (threadData[i].solver != nullptr) {
-            if (threadData[i].handle != 0) {
+        if (threadData[i].handle != 0) {
+		if( threadData[i].handle != 0 ) pthread_cancel(threadData[i].handle ); // cancel the thread
                 err = pthread_join(threadData[i].handle, (void**)&status);
                 if (err == EINVAL) { fprintf(stderr, "c tried to cancel wrong thread\n"); }
-                if (err == ESRCH) { fprintf(stderr, "c specified thread does not exist\n"); }
-                if (MSverbosity > 1) { fprintf(stderr, "c joined thread %d\n", i); }
-            }
+                else if (err == ESRCH) { fprintf(stderr, "c specified thread does not exist\n"); }
+                else if (err == EDEADLK) { fprintf(stderr, "c deadlock due to join\n"); }
+                else if (MSverbosity > 1) { fprintf(stderr, "c joined thread %d succesfully\n", i); }
+        }
+	if (threadData[i].solver != nullptr) {
+            if (MSverbosity > 1) { fprintf(stderr, "c delete solver %d\n", i); }
             delete threadData[i].solver;
         }
     }
@@ -710,8 +712,9 @@ Master::splittFormula(TreeNode* data)
 void*
 Master::solveInstance(void* data)
 {
-    // set thread cancelable
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
+    // set thread cancelable, and will be canceled immediately
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
+//     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr );
     // extract parameter data again
     ThreadData& tData = *((ThreadData*)data);
     Master& master = *(tData.master);
@@ -854,10 +857,21 @@ Master::solveInstance(void* data)
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
     lbool solution = solver->solveLimited(dummy);
-    ret = solution == l_True ? 10 : solution == l_False ? 20 : 0;
+    ret = solution == l_True ? 10 : (solution == l_False ? 20 : 0);
+    
+/*************** LOCKS MASTER HERE ALREADY  *******************************************/    
+    
     master.lock();
-    if (tData.result == 20) { ret = 20; }
+    if (tData.result == 20) { 
+      assert( ret != 10 && "cannot find sat on unsat node" );
+      ret = 20; 
+    }
 
+    if( ret == 20 ) {
+// #warning remove after debug, does not work with priss
+//       ((Solver*)solver)->printFullSolverState();
+    }
+    
     // tell statistics
     if (ret != 10 && ret != 20) {
         statistics.changeI(master.unsolvedNodesID, 1);
@@ -941,7 +955,7 @@ Master::solveInstance(void* data)
         // write back activity and polarity of the solver (pseudo-clone)
         // put phase saving information
         if (phase_saving_mode != 0) {
-            master.lock();
+            /** already locked **/
             if (master.polarity.size() == 0) { master.polarity.growTo(master.maxVar, false); }
             else {
                 // copy information to solver, use only variables that are available
@@ -952,10 +966,11 @@ Master::solveInstance(void* data)
                     master.polarity[i] = solver->getPolarity(i);
                 }
             }
-            master.unlock();
+            
         }
         if (activity_mode != 0) {
-            master.lock();
+            
+	    /** already locked **/
             if (master.activity.size() == 0) { master.activity.growTo(master.maxVar, false); }
             else {
                 // copy information to solver, use only variables that are available
@@ -966,7 +981,7 @@ Master::solveInstance(void* data)
                     master.activity[i] = solver->getActivity(i);
                 }
             }
-            master.unlock();
+            
         }
 
     }
@@ -982,6 +997,7 @@ Master::solveInstance(void* data)
     // wake up the master so that it can check the result
     if (MSverbosity > 0 && tData.nodeToSolve != 0) { fprintf(stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime); }
 
+/*********************** UNLOCK MASTER HERE AGAIN  *****************************/
     master.unlock();
     master.notify();
     return (void*)ret;
@@ -990,8 +1006,10 @@ Master::solveInstance(void* data)
 void*
 Master::splitInstance(void* data)
 {
-    // set thread cancelable
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
+    // set thread cancelable, and will be canceled immediately
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
+//     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr );
+    
     // extract parameter data again
     ThreadData& tData = *((ThreadData*)data);
     Master& master = *(tData.master);
@@ -1051,6 +1069,7 @@ Master::splitInstance(void* data)
         for (unsigned int j = 0 ; j < clauses[i]->size(); ++ j) {
             lits.push((*clauses[i])[j]);
         }
+        if( lits.size() == 0 ) cerr << "c read empty clause during initializing path constraints" << endl;
         S->addClause_(lits);
     }
     for (unsigned int i = 0 ; i < master.formula().size(); ++i) {
@@ -1059,6 +1078,7 @@ Master::splitInstance(void* data)
             lits.push(master.formula()[i].lits[j]);
         }
         S->addClause_(lits);
+	if( lits.size() == 0 ) cerr << "c read empty clause during initializing formula constraints" << endl;
     }
 
     if (!S->okay()) {
@@ -1097,6 +1117,8 @@ Master::splitInstance(void* data)
         exit(127);
         } */
 
+	fprintf(stderr, "master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False );
+	
         // tell statistics
         PcassoDebug::PRINT_NOTE("c add to created nodes: ");
         PcassoDebug::PRINTLN_NOTE((*splits).size());
@@ -1105,6 +1127,7 @@ Master::splitInstance(void* data)
 
         // only if there is a valid vector, use it!
         if (valid != 0) {
+	    fprintf(stderr, "master: received unit %d clauses\n", valid->size() );
             for (int i = 0; i < (*valid).size(); i++) {
                 vec<Lit> *tmp_cls = (*valid)[i];
                 validConstraints.push_back(new vector<Lit>);
@@ -1123,6 +1146,7 @@ Master::splitInstance(void* data)
         }
         //          fprintf( stderr,"\n");
 
+        fprintf(stderr, "master: received %d splits\n", splits->size() );
         for (int i = 0; i < (*splits).size(); i++) {
             if (MSverbosity > 1) { fprintf(stderr, "Split %d\n", i); }
             vec<vec<Lit>*> *tmp_cnf = (*splits)[i];
@@ -1142,6 +1166,8 @@ Master::splitInstance(void* data)
             //          fprintf( stderr,"\n");
             delete tmp_cnf;
         }
+        
+        assert( splits->size() == childConstraints.size() && "all splits have to be copied!" );
         // if sat has been found, return SAT
         if (solution == l_True) {
             // tell statistics
@@ -1158,7 +1184,7 @@ Master::splitInstance(void* data)
         }
     }
     // take care about the output
-    if (MSverbosity > 1) { fprintf(stderr, "finished splitting an instance, resulting in %d childs (node %d)\n", (int)childConstraints.size(), tData.nodeToSolve->id()); }
+    if (MSverbosity > 1) { fprintf(stderr, "finished splitting an instance, resulting in %d childs (node %d), return code: %d\n", (int)childConstraints.size(), tData.nodeToSolve->id(), ret); }
 
     master.lock(); // ********************* START CRITICAL ***********************
     // expand the node
@@ -1210,7 +1236,7 @@ Master::splitInstance(void* data)
     tData.s = unclean;
 
     master.unlock(); // --------------------- END CRITICAL --------------------- //
-    //  delete S;
+    //  solvers are always deleted by the master process
 
     // set the own state to unclean
     if (MSverbosity > 1) {

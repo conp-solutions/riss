@@ -2636,9 +2636,11 @@ lbool Solver::initSolve(int solves)
 void Solver::applyConfiguration()
 {
     lbdQueue.clear();
+    assert( searchconfiguration.sizeLBDQueue > 0 && "thera have to be some elements (at least one)" );
     lbdQueue.initSize(searchconfiguration.sizeLBDQueue);
 
     trailQueue.clear();
+    assert( searchconfiguration.sizeTrailQueue > 0 && "thera have to be some elements (at least one)" );
     trailQueue.initSize(searchconfiguration.sizeTrailQueue);
 
     nbclausesbeforereduce = searchconfiguration.firstReduceDB;

@@ -111,6 +111,8 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
     watcherPosLitSize.growTo(nVars(), 0);
     markArray.resize(2 * nVars());
 
+    lookahead_marker.resize(2 * nVars());
+    
     lock();
     if (branchThreshold == 0) {
         branchThreshold = opt_branch_threshold;
@@ -482,7 +484,8 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                             fprintf(stderr, "splitter: Unsat node 7\n");
                             return l_False;
                         } else {
-                            goto jump;
+			  fprintf(stderr, "splitter: Jump after Unsat node 14\n");
+                          goto jump;
                         }
                     } else {
                         cancelUntil(decisionLevel() - 1);
@@ -552,6 +555,7 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
             splitting->push(decList);
 	    cerr << "c add splitting: " << *decList << endl;
             splittingScore.push(VarScore(splitting->size() - 1, trail.size()));
+	    assert( splitting->size() == splittingScore.size() && "number of splitting data has to stay the same" );
             optNumChild--;
             cancelUntil(0);
             vec<Lit> negCube;
@@ -569,9 +573,11 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
 jump:
     vec<Lit> *clause;
     vec< vec<Lit>* >* childClauses;
+    assert( splitting->size()+(opt_splitting_method == 1) == splittingScore.size() && "cannot remove splittings" );
     if (opt_sort_split) {
         sort(splittingScore);
     }
+    assert( splitting->size()+(opt_splitting_method == 1) == splittingScore.size() && "cannot remove splittings" );
     for (int sortedIndex = 0; sortedIndex < splittingScore.size(); sortedIndex++) {
         int i = splittingScore[sortedIndex].var;
         assert(i <= splitting->size());
@@ -1164,6 +1170,12 @@ decLitNotFound:
             CRef confl = propagate();
             if (confl != CRef_Undef) {
                 fprintf(stderr, "splitter: Failed literal at level %d\n", decisionLevel());
+		
+		
+		for( int i = 0 ; i < decisionLevel(); ++ i ) {
+		  cerr << "splitter: decision[" << i << "]: " << trail[ trail_lim[i] ] << endl;
+		}
+		
                 //cancelUntil(decLev);
                 return lit_Error;
             }
@@ -1519,11 +1531,11 @@ jump:
         statistics.changeI(splitterPenaltyID,1);*/
     }
     //using to see if a literal has been already put as partition constraint
-    lbd_marker.nextStep();
+    lookahead_marker.nextStep();
     vec<Lit>* clause;
     if (opt_failed_literals == 2) {
         for (int i = 0; i < failedLiterals.size(); i++) {
-            lbd_marker.setCurrentStep(var(failedLiterals[i]));
+            lookahead_marker.setCurrentStep(var(failedLiterals[i]));
             clause = new vec<Lit>();
             clause->push(~failedLiterals[i]);
             (*valid)->push(clause);
@@ -1532,7 +1544,7 @@ jump:
     }
     if (opt_nec_assign == 2) {
         for (int i = 0; i < necAssign.size(); i++) {
-            lbd_marker.setCurrentStep(var(necAssign[i]));
+            lookahead_marker.setCurrentStep(var(necAssign[i]));
             clause = new vec<Lit>();
             clause->push(necAssign[i]);
             (*valid)->push(clause);
@@ -1541,7 +1553,7 @@ jump:
     }
     if (opt_clause_learning == 2) {
         for (int i = 0; i < unitLearnts.size(); i++) {
-            lbd_marker.setCurrentStep(var(unitLearnts[i]));
+            lookahead_marker.setCurrentStep(var(unitLearnts[i]));
             clause = new vec<Lit>();
             clause->push(unitLearnts[i]);
             (*valid)->push(clause);
@@ -1552,19 +1564,19 @@ jump:
         Lit eqLit;
         for (int i = 0; i < varEq.size() - 1; i = i + 2) {
             eqLit = lit_Undef;
-            if (value(varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i]))) {
+            if (value(varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i]))) {
                 eqLit = varEq[i + 1];
-            } else if (value(~varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i]))) {
+            } else if (value(~varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i]))) {
                 eqLit = ~varEq[i + 1];
             }
-            if (value(varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1]))) {
+            if (value(varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i + 1]))) {
                 eqLit = varEq[i];
-            } else if (value(~varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1]))) {
+            } else if (value(~varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i + 1]))) {
                 eqLit = ~varEq[i];
             }
 
-            if (eqLit != lit_Undef &&  ! lbd_marker.isCurrentStep(var(eqLit))) {
-                lbd_marker.setCurrentStep(var(eqLit));
+            if (eqLit != lit_Undef &&  ! lookahead_marker.isCurrentStep(var(eqLit))) {
+                lookahead_marker.setCurrentStep(var(eqLit));
                 clause = new vec<Lit>();
                 clause->push(eqLit);
                 (*valid)->push(clause);
@@ -1576,15 +1588,15 @@ jump:
             if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True) {
                 continue;
             }
-            if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef) {
+            if (lookahead_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef) {
                 j = i + 1;
-            } else if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef) {
+            } else if (lookahead_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef) {
                 j = i;
             } else {
                 continue;
             }
-            if (! lbd_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
-                lbd_marker.setCurrentStep(var(binaryForcedClauses[j]));
+            if (! lookahead_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
+                lookahead_marker.setCurrentStep(var(binaryForcedClauses[j]));
                 clause = new vec<Lit>();
                 clause->push(binaryForcedClauses[j]);
                 (*valid)->push(clause);
