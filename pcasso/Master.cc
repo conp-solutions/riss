@@ -728,6 +728,7 @@ Master::solveInstance(void* data)
     PcassoDebug::PRINT_NOTE(" with PT_Level ");
     PcassoDebug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
 
+#warning TODO FIXME take number of cores for PRISS into account!
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
         cpu_set_t mask;
         CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
@@ -856,6 +857,8 @@ Master::solveInstance(void* data)
 
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
+#warning TODO FIXME remove nanosleep after debug!
+    nanosleep(100);
     lbool solution = solver->solveLimited(dummy);
     ret = solution == l_True ? 10 : (solution == l_False ? 20 : 0);
     
