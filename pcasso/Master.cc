@@ -858,7 +858,7 @@ Master::solveInstance(void* data)
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
 #warning TODO FIXME remove nanosleep after debug!
-    nanosleep(100);
+    nanosleep(1000);
     lbool solution = solver->solveLimited(dummy);
     ret = solution == l_True ? 10 : (solution == l_False ? 20 : 0);
     

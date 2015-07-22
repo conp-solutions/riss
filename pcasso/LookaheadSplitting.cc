@@ -1062,6 +1062,16 @@ double LookaheadSplitting::cpuTime_t() const
 
 void LookaheadSplitting::constraintResolvent(const vec<Lit>& t)
 {
+    assert( decisionLevel() == 0 && "can add constraint resolvent only on level 0" );
+  
+    if( value(t[0]) != l_False ) return;
+    if( value(t[0]) == l_True ) {
+      for (int i = 1; i < t.size(); i++) {
+	if( value( t[i] ) == l_Undef ) {
+	  uncheckedEnqueue( t[i] );
+	}
+      }
+    }
     lock();
     int clauseLimit = constraintResolventClSize;
     unlock();
@@ -1073,6 +1083,7 @@ void LookaheadSplitting::constraintResolvent(const vec<Lit>& t)
             clause.clear();
             clause.push(~t[0]);
             clause.push(t[i]);
+
             CRef cr = ca.alloc(clause, true);
             learnts.push(cr);
             attachClause(cr);
@@ -1268,12 +1279,14 @@ decLitNotFound:
                 }
             }
 
+            cancelUntil(decLev);
+            
             if (opt_constraint_resolvent > 0) {
                 if (opt_var_eq < 2 || numIterations < opt_num_iterat - 1) { //skipping constraint resolvents in the first interation......
-                    constraintResolvent(positiveTrail);
+                    if( decLev == 0 ) constraintResolvent(positiveTrail);
                 }
             }
-            cancelUntil(decLev);
+            
 
             confl = propagate();
             if (confl != CRef_Undef) {
@@ -1342,12 +1355,14 @@ decLitNotFound:
                 //      return l_False;
             }
 
+            cancelUntil(decLev);
+            
             if (opt_constraint_resolvent > 0) {
                 if (opt_var_eq < 2 || numIterations < opt_num_iterat - 1) { //skipping constraint resolvents in the first interation......
-                    constraintResolvent(negativeTrail);
+                    if( decLev == 0 ) constraintResolvent(negativeTrail);
                 }
             }
-            cancelUntil(decLev);
+            
 
             if (opt_double_lookahead) {
                 vec<Lit> c;
@@ -1356,6 +1371,7 @@ decLitNotFound:
                         c.clear();
                         c.push(binaryForcedClauses[j]);
                         c.push(binaryForcedClauses[j + 1]);
+			assert( decisionLevel() == 0 && "add clauses only on level 0 without checks" );
                         CRef cr = ca.alloc(c, true);
                         learnts.push(cr);
                         attachClause(cr);
@@ -1382,7 +1398,9 @@ decLitNotFound:
                         necAssign.push(negativeTrail[k]);
                         uncheckedEnqueue(negativeTrail[k]);
                         progress = true;
-                    } else if (negHit && opt_var_eq > 0 && numIterations == opt_num_iterat - 1) { //only performin eq check in first iteration..... as i am not checking if the eq is already found or not
+                    } else if (negHit && opt_var_eq > 0 && numIterations == opt_num_iterat - 1 && decisionLevel() == 0) { //only performin eq check in first iteration..... as i am not checking if the eq is already found or not
+		        
+		        DOUT( if (opt_split_debug_output ) cerr << "c found equivalent variables " << negativeTrail[k] << " <-> " << negativeTrail[0] << " on level " << decisionLevel() << endl; );
                         varEqCheck[var(negativeTrail[k])] = true;
                         numVarEq++;
                         if (opt_var_eq > 1) {
@@ -1399,7 +1417,7 @@ decLitNotFound:
                             cr = ca.alloc(clause1, true);
                             learnts.push(cr);
                             attachClause(cr);
-                            // fprintf(stderr, "splitter: Var Equivalence found\n");
+                            
                         }
                         if (opt_var_eq > 2 && numIterations == opt_num_iterat - 1) {
                             varEq.push(~negativeTrail[0]);
