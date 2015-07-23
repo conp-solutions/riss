@@ -1098,39 +1098,35 @@ lbool Preprocessor::inprocess()
     }
 
     // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-    if (config.opt_inprocess) {
 
-        freezeSearchVariables(); // take care that special variables of the search are not destroyed during simplification
+    freezeSearchVariables(); // take care that special variables of the search are not destroyed during simplification
 
-        /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/
-        solver->cancelUntil(0);
+    /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/
+    solver->cancelUntil(0);
 
-        if (config.opt_verbose > 3) { cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl; }
-        data.inprocessing();
-        const bool wasDoingER = solver->getExtendedResolution();
+    if (config.opt_verbose > 3) { cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl; }
+    data.inprocessing();
+    const bool wasDoingER = solver->getExtendedResolution();
 
 
-        if (config.opt_randInp) { data.randomized(); }
-        if (config.opt_inc_inp) { giveMoreSteps(); }
+    if (config.opt_randInp) { data.randomized(); }
+    if (config.opt_inc_inp) { giveMoreSteps(); }
 
-        lbool ret = l_Undef;
-        if (config.opt_itechs  && string(config.opt_itechs).size() > 0) {
-            ret = performSimplificationScheduled(string(config.opt_itechs));
-        } else {
-            ret = performSimplification();
-        }
-
-        lastInpConflicts = solver->conflicts;
-        if (config.opt_verbose > 4) { cerr << "c finished inprocessing " << endl; }
-
-        meltSearchVariables(); // undo restriction for these variables
-
-        solver->setExtendedResolution(wasDoingER);
-
-        return ret;
+    lbool ret = l_Undef;
+    if (config.opt_itechs  && string(config.opt_itechs).size() > 0) {
+        ret = performSimplificationScheduled(string(config.opt_itechs));
     } else {
-        return l_Undef;
+        ret = performSimplification();
     }
+
+    lastInpConflicts = solver->conflicts;
+    if (config.opt_verbose > 4) { cerr << "c finished inprocessing " << endl; }
+
+    meltSearchVariables(); // undo restriction for these variables
+
+    solver->setExtendedResolution(wasDoingER);
+
+    return ret;
 }
 
 void Preprocessor::giveMoreSteps()
