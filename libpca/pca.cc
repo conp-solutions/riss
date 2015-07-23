@@ -9,6 +9,7 @@
 #include "pcasave.cc"
 
 using namespace std;
+
 namespace stats {
   
 pca::pca()
@@ -520,4 +521,4 @@ void pca::saveCC() {
     
 }
 
-} // stats
+} // namespace stats
