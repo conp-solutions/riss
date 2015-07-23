@@ -1359,23 +1359,7 @@ void Preprocessor::initializePreprocessor()
     */
 
     // initialize techniques
-    propagation.initializeTechnique(data);
-    subsumption.initializeTechnique(data);
-    ee.initializeTechnique(data);
-    if (config.opt_hte) { hte.initializeTechnique(data); }
     if (config.opt_bve) { bve.initializeTechnique(data); }
-    if (config.opt_bva) { bva.initializeTechnique(data); }
-    if (config.opt_probe) { probing.initializeTechnique(data); }
-    if (config.opt_unhide) { unhiding.initializeTechnique(data); }
-    if (config.opt_ternResolve || config.opt_addRedBins) { resolving.initializeTechnique(data); }
-    if (config.opt_xor) { xorReasoning.initializeTechnique(data); }
-    if (config.opt_sls) { sls.initializeTechnique(data); }
-    if (config.opt_twosat) { twoSAT.initializeTechnique(data); }
-    if (config.opt_bce) { bce.initializeTechnique(data); }
-    if (config.opt_la) { la.initializeTechnique(data); }
-    if (config.opt_cce) { cce.initializeTechnique(data); }
-    if (config.opt_rate) { rate.initializeTechnique(data); }
-    if (config.opt_ent) { entailedRedundant.initializeTechnique(data); }
 }
 
 
