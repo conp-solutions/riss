@@ -19,7 +19,10 @@ find_package(Boost COMPONENTS program_options)
 # all required source files
 set(SOURCES Main.cc
             Parser.cc
-            Trainer.cc)
+            Trainer.cc
+            knn.cc
+            methods.cc
+            useful.cc)
 
 # we can only build the KNN tool if we have boost on the system
 if(Boost_FOUND)

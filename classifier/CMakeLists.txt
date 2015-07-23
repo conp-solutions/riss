@@ -22,7 +22,9 @@ set(LIB_SOURCES
     FeaturesWriter.cc
     CNFClassifier.cc
     BipartiteGraph.cc
-    WekaDataset.cc)
+    WekaDataset.cc
+    knn.cc
+    methods.cc)
 
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
