@@ -3,8 +3,8 @@ Copyright (c) 2015, Norbert Manthey
 **************************************************************************************************/
 // idea introduced in: SunOS by Jeff Bonwick
 
-#ifndef _TWINALLOC_H_
-#define _TWINALLOC_H_
+#ifndef RISS_RISS_TWINALLOC_H_
+#define RISS_TWINALLOC_H_
 
 #include <cstdlib>
 #include <cstring>
@@ -79,7 +79,7 @@ class TwinAllocator
             _head[i] = 0;
             _lastPage[i] = (void**)valloc(SLAB_PAGE_SIZE);
 
-            if (_lastPage[i] == NULL) {
+            if (_lastPage[i] == nullptr) {
                 assert(false && "ran out of memory");
                 exit(3);
             }
@@ -139,8 +139,8 @@ inline void* TwinAllocator::initPage(int bin, uint32_t size)
     // std::cerr << "init page for" << size << " bytes" <<std::endl;
     void** ptr  = (void**)valloc(SLAB_PAGE_SIZE);
 
-    if (ptr == NULL) {
-        return NULL;
+    if (ptr == nullptr) {
+        return nullptr;
     }
 
     // std::cerr << "c init another page for size " << size << " and bin " << bin << " at " << std::hex << ptr << std::dec << std::endl;
@@ -187,7 +187,7 @@ inline void* TwinAllocator::get(uint32_t size)
 
                          : (void**)(*(_nextCell[bin]));
     } else {
-        if (NULL == initPage(bin, size)) { return NULL; }   // tell outside that there was no more memory
+        if (nullptr == initPage(bin, size)) { return nullptr; }   // tell outside that there was no more memory
     }
 
     // std::cerr << "get " << size << " bytes at " << std::hex << t << " set new_ele to " << _nextCell[bin] << std::dec << std::endl;
@@ -204,7 +204,7 @@ inline void TwinAllocator::release(void* adress, uint32_t size)
     if (size > SLAB_MALLOC_MAXSIZE) { return free(adress); }
     if (size < sizeof(void*)) { size = sizeof(void*); }
 
-    assert(adress != NULL && adress != 0 && "cannot free memory to 0");
+    assert(adress != nullptr && adress != 0 && "cannot free memory to 0");
 
     int bin = findBin(size);
 
@@ -227,7 +227,7 @@ inline void* TwinAllocator::resize(void* adress, uint32_t new_size, uint32_t siz
     // get new memory
     void* mem = get(new_size);
 
-    if (mem == NULL) { return NULL; }   // if there is no more space, tell the outside
+    if (mem == nullptr) { return nullptr; }   // if there is no more space, tell the outside
 
     if (adress != 0) {   // otherwise nothing to be copied
         uint32_t smaller = (new_size < size) ? new_size : size;

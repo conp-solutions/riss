@@ -17,8 +17,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Options_h
-#define Minisat_Options_h
+#ifndef RISS_Minisat_Options_h
+#define RISS_Minisat_Options_h
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,6 +32,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/ParseUtils.h"
 #include "riss/mtl/Sort.h"
 
+#include <iostream>
+#include <string>
+
 namespace Riss
 {
 
@@ -40,11 +43,16 @@ namespace Riss
 
 
 extern bool parseOptions(int& argc, char** argv, bool strict = false);
-extern void printUsageAndExit(int  argc, char** argv, bool verbose = false);
+extern void printUsageAndExit(int  argc, char** argv, bool verbose = false, int activeLevel = -1);
 extern void setUsageHelp(const char* str);
 extern void setHelpPrefixStr(const char* str);
 
 extern void configCall(int argc, char** argv, std::stringstream& s);
+
+// print global options in PCS file format into the given File
+extern void printOptions(FILE* pcsFile, int printLevel = -1);
+// print option dependencies in PCS file format into the given File
+extern void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
 
 //==================================================================================================
 // Options is an abstract class that gives the interface for all types options:
@@ -58,6 +66,7 @@ class Option
     const char* category;
     const char* type_name;
 
+    Option* dependOnNonDefaultOf;      // option that activates the current option
 
     static vec<Option*>& getOptionList() { static vec<Option*> options; return options; }
     static const char*&  getUsageString() { static const char* usage_str; return usage_str; }
@@ -76,11 +85,14 @@ class Option
            const char* desc_,
            const char* cate_,
            const char* type_,
-           vec<Option*>* externOptionList) :  // push to this list, if present!
+           vec<Option*>* externOptionList,
+           Option* dependOn = 0
+          ) :  // push to this list, if present!
         name(name_)
         , description(desc_)
         , category(cate_)
         , type_name(type_)
+        , dependOnNonDefaultOf(dependOn)
     {
         if (externOptionList == 0) { getOptionList().push(this); }
         else { externOptionList->push(this); }
@@ -95,6 +107,36 @@ class Option
 
     virtual bool hasDefaultValue() = 0;                 // check whether the current value corresponds to the default value of the option
     virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
+
+    virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
+
+    int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
+    {
+        if (dependOnNonDefaultOf == 0) { return 0; }
+        return dependOnNonDefaultOf->getDependencyLevel() + 1;
+    }
+
+    bool isEnabled()
+    {
+        if (dependOnNonDefaultOf == 0) { return true; }
+        else { return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled(); }
+    }
+
+    virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
+
+    void printOptionsDependencies(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if (dependOnNonDefaultOf == 0) { return; } // no dependency
+        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }    // cannot express opposite value of dependency-parent
+
+        char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
+        dependOnNonDefaultOf->getNonDefaultString(defaultAsString, 2047);
+        assert(strlen(defaultAsString) < 2047 && "memory overflow");
+        fprintf(pcsFile, "%s   | %s in {%s} #  only active, if %s has not its default value \n", name, dependOnNonDefaultOf->name, defaultAsString, dependOnNonDefaultOf->name);
+    }
+
+    virtual void getNonDefaultString(char* buffer, int size) = 0;   // convert the default value into a string
 
     friend  bool parseOptions(int& argc, char** argv, bool strict);
     friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
@@ -140,8 +182,9 @@ class DoubleOption : public Option
     double      defaultValue; // the value that is given to this option during construction
 
   public:
-    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<double>", externOptionList), range(r), value(def), defaultValue(def)
+    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0,
+                 Option* dependOn = 0)
+        : Option(n, d, c, "<double>", externOptionList, dependOn), range(r), value(def), defaultValue(def)
     {
         // FIXME: set LC_NUMERIC to "C" to make sure that strtof/strtod parses decimal point correctly.
     }
@@ -167,7 +210,7 @@ class DoubleOption : public Option
         char*  end;
         double tmp = strtod(span, &end);
 
-        if (end == NULL) {
+        if (end == nullptr) {
             return false;
         } else if (tmp >= range.end && (!range.end_inclusive || tmp != range.end)) {
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
@@ -200,6 +243,27 @@ class DoubleOption : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        double badd = 0, esub = 0;
+        if (!range.begin_inclusive) { badd = 0.0001; }
+        if (!range.end_inclusive) { esub = 0.0001; }
+        // always logarithmic
+        fprintf(pcsFile, "%s  {%lf,%lf} [%lf]l   # %s\n", name, range.begin + badd, range.end - esub, defaultValue, description);
+    }
+
+    virtual bool canPrintOppositeOfDefault() { return false; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+        // snprintf(buffer, size, "%lf", defaultValue); // could only print the default value
+        return;
+    }
+
     void giveRndValue(std::string& optionText)
     {
         double rndV = range.begin_inclusive ? range.begin : range.begin + 0.000001;
@@ -224,8 +288,8 @@ class IntOption : public Option
     int32_t  defaultValue;
 
   public:
-    IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<int32>", externOptionList), range(r), value(def), defaultValue(def) {}
+    IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<int32>", externOptionList, dependOn), range(r), value(def), defaultValue(def) {}
 
     operator   int32_t (void) const { return value; }
     operator   int32_t&  (void)       { return value; }
@@ -248,7 +312,7 @@ class IntOption : public Option
         char*   end;
         int32_t tmp = strtol(span, &end, 10);
 
-        if (end == NULL) {
+        if (end == nullptr) {
             return false;
         } else if (tmp > range.end) {
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
@@ -288,6 +352,38 @@ class IntOption : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        if (range.end - range.begin <= 16) {
+            fprintf(pcsFile, "%s  {%d,%d} [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+        } else {
+            fprintf(pcsFile, "%s  {%d,%d} [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+        }
+    }
+
+    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+
+        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+            for (int i = range.begin ; i <= range.end; ++ i) {
+                if (i == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%d", i);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i != range.end && i + 1 != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        }
+    }
 
     void giveRndValue(std::string& optionText)
     {
@@ -312,8 +408,8 @@ class Int64Option : public Option
     int64_t  defaultValue;
 
   public:
-    Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<int64>", externOptionList), range(r), value(def), defaultValue(def) {}
+    Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<int64>", externOptionList, dependOn), range(r), value(def), defaultValue(def) {}
 
     operator     int64_t (void) const { return value; }
     operator     int64_t&  (void)       { return value; }
@@ -336,7 +432,7 @@ class Int64Option : public Option
         char*   end;
         int64_t tmp = strtoll(span, &end, 10);
 
-        if (end == NULL) {
+        if (end == nullptr) {
             return false;
         } else if (tmp > range.end) {
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
@@ -376,6 +472,38 @@ class Int64Option : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        if (range.end - range.begin <= 16) {
+            fprintf(pcsFile, "%s  {%ld,%ld} [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+        } else {
+            fprintf(pcsFile, "%s  {%ld,%ld} [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+        }
+    }
+
+    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+
+        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+            for (int64_t  i = range.begin ; i <= range.end; ++ i) {
+                if (i == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%ld", i);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i != range.end && i + 1 != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        }
+    }
 
     void giveRndValue(std::string& optionText)
     {
@@ -398,8 +526,8 @@ class StringOption : public Option
     const char* value;
     const char* defaultValue;
   public:
-    StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<std::string>", externOptionList), value(def), defaultValue(def) {}
+    StringOption(const char* c, const char* n, const char* d, const char* def = nullptr, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def), defaultValue(def) {}
 
     operator      const char*  (void) const     { return value; }
     operator      const char*& (void)           { return value; }
@@ -435,6 +563,24 @@ class StringOption : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        // print only, if there is a default
+        if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
+    }
+
+    virtual bool canPrintOppositeOfDefault() { return false; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+        if (defaultValue == 0) { buffer[0] = 0; }
+        else {
+            assert(size > strlen(defaultValue));
+            strncpy(buffer, defaultValue, size);
+        }
+    }
 
     void giveRndValue(std::string& optionText)
     {
@@ -453,8 +599,8 @@ class BoolOption : public Option
     bool defaultValue;
 
   public:
-    BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<bool>", externOptionList), value(v), defaultValue(v) {}
+    BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<bool>", externOptionList, dependOn), value(v), defaultValue(v) {}
 
     operator    bool (void) const { return value; }
     operator    bool&    (void)       { return value; }
@@ -502,6 +648,20 @@ class BoolOption : public Option
         #endif
     }
 
+    void printOptions(FILE* pcsFile, int printLevel)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+
+        fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
+    }
+
+    virtual bool canPrintOppositeOfDefault() { return true; }
+
+    virtual void getNonDefaultString(char* buffer, int size)
+    {
+        assert(size > 3 && "cannot print values otherwise");
+        strncpy(buffer, !defaultValue ? "yes" : "no", size);
+    }
 
     void giveRndValue(std::string& optionText)
     {

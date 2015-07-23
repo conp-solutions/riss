@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef UNHIDING_HH
-#define UNHIDING_HH
+#ifndef RISS_UNHIDING_HH
+#define RISS_UNHIDING_HH
 
 #include "riss/core/Solver.h"
 
@@ -108,10 +108,10 @@ class Unhiding : public Technique
      *  @param stamp current stamp index
      *  @param detectedEE mark whether equivalent literals have been found
      */
-    uint32_t stampLiteral(const Riss::Lit literal, uint32_t stamp, bool& detectedEE);
+    uint32_t stampLiteral(const Riss::Lit& literal, uint32_t stamp, bool& detectedEE);
 
     /** linear version of the advanced stamping */
-    uint32_t linStamp(const Riss::Lit literal, uint32_t stamp, bool& detectedEE);
+    uint32_t linStamp(const Riss::Lit& literal, uint32_t stamp, bool& detectedEE);
 
     /** simplify the formula based on the literal stamps */
     bool unhideSimplify(bool borderIteration, bool& foundEE);

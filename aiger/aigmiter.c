@@ -146,36 +146,43 @@ int main(int argc, char ** argv)
     if (!iname2) { die("second input file missing"); }
     msg(1, "reading '%s", iname1);
     model1 = aiger_init();
-    if ((err = aiger_open_and_read_from_file(model1, iname1)))
-    { die("parse error in '%s': %s", iname1, err); }
+    if ((err = aiger_open_and_read_from_file(model1, iname1))) {
+        die("parse error in '%s': %s", iname1, err);
+    }
     msg(2, "1st MILOA %d %d %d %d %d",
         model1->maxvar,
         model1->num_inputs,
         model1->num_latches,
         model1->num_outputs,
         model1->num_ands);
-    if (model1->num_outputs < 1)
-    { die("first model in '%s' without outputs", iname1); }
+    if (model1->num_outputs < 1) {
+        die("first model in '%s' without outputs", iname1);
+    }
     model2 = aiger_init();
     msg(1, "reading '%s", iname2);
-    if ((err = aiger_open_and_read_from_file(model2, iname2)))
-    { die("parse error in '%s': %s", iname2, err); }
+    if ((err = aiger_open_and_read_from_file(model2, iname2))) {
+        die("parse error in '%s': %s", iname2, err);
+    }
     msg(2, "2nd MILOA %d %d %d %d %d",
         model2->maxvar,
         model2->num_inputs,
         model2->num_latches,
         model2->num_outputs,
         model2->num_ands);
-    if (model1->num_inputs != model2->num_inputs)
-    { die("number of inputs in '%s' and '%s' do not match", iname1, iname2); }
-    if (model1->num_outputs != model2->num_outputs)
-    { die("number of outputs in '%s' and '%s' do not match", iname1, iname2); }
-    if (combinational && model1->num_latches != model2->num_latches)
-    { die("number of latches in '%s' and '%s' do not match", iname1, iname2); }
+    if (model1->num_inputs != model2->num_inputs) {
+        die("number of inputs in '%s' and '%s' do not match", iname1, iname2);
+    }
+    if (model1->num_outputs != model2->num_outputs) {
+        die("number of outputs in '%s' and '%s' do not match", iname1, iname2);
+    }
+    if (combinational && model1->num_latches != model2->num_latches) {
+        die("number of latches in '%s' and '%s' do not match", iname1, iname2);
+    }
     if (combinational)
         for (i = 0; i < model1->num_latches; i++)
-            if (model1->latches[i].reset != model2->latches[i].reset)
-            { die("reset of latch %u does not match", i); }
+            if (model1->latches[i].reset != model2->latches[i].reset) {
+                die("reset of latch %u does not match", i);
+            }
     aiger_reencode(model1), aiger_reencode(model2);
     msg(2, "both models reencoded");
     latches = 1 + model1->num_inputs;
@@ -248,8 +255,9 @@ int main(int argc, char ** argv)
             aiger_add_reset(miter, lit, reset);
         }
     }
-    for (i = 0; i < model1->num_outputs; i++)
-    { out = and (out, xnor(output(1, i), output(2, i))); }
+    for (i = 0; i < model1->num_outputs; i++) {
+        out = and (out, xnor(output(1, i), output(2, i)));
+    }
     aiger_reset(model1), aiger_reset(model2);
     aiger_add_output(miter, not(out), "miter");
     aiger_add_comment(miter, "aigmiter");
@@ -268,8 +276,9 @@ int main(int argc, char ** argv)
     if ((oname && !aiger_open_and_write_to_file(miter, oname)) ||
             (!oname && !aiger_write_to_file(miter,
                                             isatty(1) ? aiger_ascii_mode : aiger_binary_mode,
-                                            stdout)))
-    { die("failed to write miter '%s'", oname ? oname : "<stdout>"); }
+                                            stdout))) {
+        die("failed to write miter '%s'", oname ? oname : "<stdout>");
+    }
     aiger_reset(miter);
     return 0;
 }

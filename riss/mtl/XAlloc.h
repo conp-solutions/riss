@@ -18,12 +18,17 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef Minisat_XAlloc_h
-#define Minisat_XAlloc_h
+#ifndef RISS_Minisat_XAlloc_h
+#define RISS_Minisat_XAlloc_h
 
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#if __cplusplus <= 199711L
+    // be backward compatible, and define pointer to 0 as follows
+    #define nullptr 0
+#endif
 
 namespace Riss
 {
@@ -35,7 +40,7 @@ class OutOfMemoryException {};
 static inline void* xrealloc(void *ptr, size_t size)
 {
     void* mem = realloc(ptr, size);
-    if (mem == NULL && errno == ENOMEM) {
+    if (mem == nullptr && errno == ENOMEM) {
         throw OutOfMemoryException();
     } else {
         return mem;

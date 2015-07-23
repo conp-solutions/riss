@@ -18,8 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Dimacs_h
-#define Minisat_Dimacs_h
+#ifndef RISS_Minisat_Dimacs_h
+#define RISS_Minisat_Dimacs_h
 
 #include <cstdio>
 
@@ -174,6 +174,7 @@ bool check_DIMACS(gzFile input_stream, vec<lbool>& model)
     vec<Lit> lits;
     int cnt = 0;
     bool failed = false;
+//     cerr << "c start parsing and verifying file" << endl;
     for (;;) {
         skipWhitespace(in);
         if (*in == EOF) { break; }
@@ -187,6 +188,7 @@ bool check_DIMACS(gzFile input_stream, vec<lbool>& model)
             bool satisfied = false;
             for (;;) {
                 parsed_lit = parseInt(in);
+//      cerr << "c parsed number: " << parsed_lit << endl;
                 if (parsed_lit == 0) { break; }
                 variable = abs(parsed_lit) - 1;
                 const Lit l = (parsed_lit > 0) ? mkLit(variable) : ~mkLit(variable);

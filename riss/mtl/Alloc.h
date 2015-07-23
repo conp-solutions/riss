@@ -18,8 +18,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef Minisat_Alloc_h
-#define Minisat_Alloc_h
+#ifndef RISS_Minisat_Alloc_h
+#define RISS_Minisat_Alloc_h
 
 #include "riss/mtl/XAlloc.h"
 #include "riss/mtl/Vec.h"
@@ -47,10 +47,10 @@ class RegionAllocator
     enum { Ref_Undef = UINT32_MAX };
     enum { Unit_Size = sizeof(uint32_t) };
 
-    explicit RegionAllocator(uint32_t start_cap = 1024 * 1024) : memory(NULL), sz(0), cap(0), wasted_(0) { capacity(start_cap); }
+    explicit RegionAllocator(uint32_t start_cap = 1024 * 1024) : memory(nullptr), sz(0), cap(0), wasted_(0) { capacity(start_cap); }
     ~RegionAllocator()
     {
-        if (memory != NULL) {
+        if (memory != nullptr) {
             ::free(memory);
         }
     }
@@ -89,13 +89,13 @@ class RegionAllocator
 
     void     moveTo(RegionAllocator& to)
     {
-        if (to.memory != NULL) { ::free(to.memory); }
+        if (to.memory != nullptr) { ::free(to.memory); }
         to.memory = memory;
         to.sz = sz;
         to.cap = cap;
         to.wasted_ = wasted_;
 
-        memory = NULL;
+        memory = nullptr;
         sz = cap = wasted_ = 0;
     }
 
@@ -113,7 +113,7 @@ class RegionAllocator
     {
         sz = 0; wasted_ = 0;
         if (clean) {   // free used resources
-            if (memory != NULL) { ::free(memory); memory = NULL; }
+            if (memory != nullptr) { ::free(memory); memory = nullptr; }
             cap = 0;
         }
     }

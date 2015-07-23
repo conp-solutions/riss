@@ -55,8 +55,7 @@ class BoundedVariableAddition : public Technique
 
 
     // work data
-    //
-    /** compare two literals */
+    /// compare two literals
     struct LitOrderBVAHeapLt {
         CoprocessorData& data;
         bool operator()(int& x, int& y) const
@@ -112,7 +111,7 @@ class BoundedVariableAddition : public Technique
     * @param right literal that represents the right side
     * @return false, if shrinking a clause to unit led to a failed enqueue (UNSAT)
     */
-    bool bvaHandleComplement(const Riss::Lit right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap);
+    bool bvaHandleComplement(const Riss::Lit& right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap);
 
     /** introduce a fresh variable, update the size of all required structures*/
     Riss::Var nextVariable(char type, Riss::Heap<LitOrderHeapLt>& bvaHeap);
@@ -165,18 +164,18 @@ class BoundedVariableAddition : public Technique
     };
 
     /** remove duplicate clauses from the clause list of the given literal*/
-    void removeDuplicateClauses(const Riss::Lit literal);
+    void removeDuplicateClauses(const Riss::Lit&   literal);
 
   public:
     // parameters
-    bool bvaComplement;        /** treat found complements special?                                */
-    uint32_t bvaPush;          /** which literals to push to queue again (0=none,1=original,2=all) */
-    bool bvaRewEE;             /** run rewEE after BVA found new gates?                            */
-    int64_t bvaALimit;         /** number of checks until and-bva is aborted                       */
-    int64_t bvaXLimit;         /** number of checks until xor-bva is aborted                       */
-    int64_t bvaILimit;         /** number of checks until ite-bva is aborted                       */
-    bool bvaRemoveDubplicates; /** remove duplicate clauses from occurrence lists                  */
-    bool bvaSubstituteOr;      /** when c = (a AND b) is found, also replace (-a OR -b) by -c      */
+    bool bvaComplement;       /// treat found complements special?
+    uint32_t bvaPush;     /// which literals to push to queue again (0=none,1=original,2=all)
+    bool bvaRewEE;        /// run rewEE after BVA found new gates?
+    int64_t bvaALimit;        /// number of checks until and-bva is aborted
+    int64_t bvaXLimit;        /// number of checks until xor-bva is aborted
+    int64_t bvaILimit;        /// number of checks until ite-bva is aborted
+    bool bvaRemoveDubplicates;    /// remove duplicate clauses from occurrence lists
+    bool bvaSubstituteOr; /// when c = (a AND b) is found, also replace (-a OR -b) by -c
 };
 
 }; // end namespace coprocessor

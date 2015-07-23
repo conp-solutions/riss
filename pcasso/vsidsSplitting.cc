@@ -19,7 +19,7 @@ static IntOption     opt_scatter_conBw(_cat, "sc-betweenConflicts", "The number 
 static IntOption     opt_restart_first(_cat, "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc(_cat, "rinc",                "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 
-VSIDSSplitting::VSIDSSplitting(CoreConfig& config):
+VSIDSSplitting::VSIDSSplitting(CoreConfig* config):
     SplitterSolver(config)
     , coreConfig(config)
     , restart_first(opt_restart_first)
@@ -145,7 +145,7 @@ lbool VSIDSSplitting::scatterSolve(void* data)
 //    }
 
     //struct timeval tmp_t;
-    //gettimeofday(&tmp_t, NULL);
+    //gettimeofday(&tmp_t, nullptr);
     //double start_t = tmp_t.tv_sec + tmp_t.tv_usec/1000000;
     //double tcput = cpuTime_t();
     // Search:
@@ -166,12 +166,13 @@ lbool VSIDSSplitting::scatterSolve(void* data)
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) { model[i] = value(i); }
-    } else if (status == l_False && conflict.size() == 0)
-    { ok = false; }
+    } else if (status == l_False && conflict.size() == 0) {
+        ok = false;
+    }
 
     cancelUntil(0);
 
-    //gettimeofday(&tmp_t, NULL);
+    //gettimeofday(&tmp_t, nullptr);
     //double rt = tmp_t.tv_sec + tmp_t.tv_usec/1000000 -  start_t;
     //printf("I was running for wall time %f and per thread cpu time %f\n",
     //  rt, cpuTime_t() - tcput);
@@ -213,9 +214,9 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 else { interrupt(); return l_Undef; }
             }
 
-            learnt_clause.clear(); otfssClauses.clear(); extraInfo = 0;
+            learnt_clause.clear(); otfssClauses.clear(); dependencyLevel = 0;
             unsigned lbd = 0;
-            int ret = analyze(confl, learnt_clause, backtrack_level, lbd, extraInfo); // Davide> scatt !! my invention
+            int ret = analyze(confl, learnt_clause, backtrack_level, lbd, dependencyLevel); // Davide> scatt !! my invention
 
             assert(ret == 0 && "can handle only usually learnt clauses");
             if (ret != 0) { _exit(1); }   // abort, if learning is set up wrong
@@ -263,8 +264,9 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                     cancelUntil(assumptions.size());
                     d.startscatter = false;
                     d.isscattering = true;
-                    if (d.time_cond)
-                    { d.prevscatter = cpuTime_t(); }
+                    if (d.time_cond) {
+                        d.prevscatter = cpuTime_t();
+                    }
                 }
             }
 
@@ -321,10 +323,10 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                     float r = 1 / (float)(d.scatterfactor - d.scatters.size());
                     for (int i = 0;; i++) {
                         // 2 << i == 2^(i+1)
-                        if ((2 << (i - 1) <= d.scatterfactor - d.scatters.size()) &&
+                        if ((1 << i <= d.scatterfactor - d.scatters.size()) &&
                                 (2 << i >= d.scatterfactor - d.scatters.size())) {
                             // r-1/(2^i) < 0 and we want absolute
-                            dl = -(r - 1 / (float)(2 << (i - 1))) > r - 1 / (float)(2 << i) ? i + 1 : i;
+                            dl = -(r - 1 / (float)(1 << i)) > r - 1 / (float)(2 << i) ? i + 1 : i;
                             break;
                         }
                     }
@@ -390,12 +392,13 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 bool excludeAssumptions = false;
                 {
                     vec<Lit>* cl = new vec<Lit>;
-                    for (int i = 0; i < declits->size(); i++)
-                    { cl->push(~(*(declits))[i]); }
+                    for (int i = 0; i < declits->size(); i++) {
+                        cl->push(~(*(declits))[i]);
+                    }
                     addClause_(*cl);
                     delete cl;
                     reduceDB();
-                    if (ok)  { excludeAssumptions = true; }
+                    if (ok) { excludeAssumptions = true; }
                 }
 
                 // Include the negation to the instance
@@ -406,10 +409,11 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 }
                 d.startscatter = true;
                 d.isscattering = true;
-                if (d.cnfl_cond)
-                { d.sc_bw_cnfl = conflicts + d.cnfl_bw; }
-                else
-                { d.prevscatter = cpuTime_t(); }
+                if (d.cnfl_cond) {
+                    d.sc_bw_cnfl = conflicts + d.cnfl_bw;
+                } else {
+                    d.prevscatter = cpuTime_t();
+                }
             } else {
 
                 if (next == lit_Undef) {

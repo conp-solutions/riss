@@ -65,12 +65,12 @@ CNFClassifier::CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVa
     computingClausesGraph = true;
     computingClausesGraph = true;
     computingRWH = true;
-    attrFileName = NULL;
+    attrFileName = nullptr;
     computeBinaryImplicationGraph = true;
     computeConstraints = true;
     computeXor = true;
-    outputFileName = NULL;
-    plotsFileName = NULL;
+    outputFileName = nullptr;
+    plotsFileName = nullptr;
     maxClauseSize = -1;
     computingDerivative = false;
     verb = 1;
@@ -114,8 +114,9 @@ std::vector<std::string> CNFClassifier::featureNames()
 bool contains(const Clause& c, Lit l)
 {
     for (int i = 0; i < c.size(); i++) {
-        if (l == c[i])
-        { return true; }
+        if (l == c[i]) {
+            return true;
+        }
     }
     return false;
 }
@@ -168,7 +169,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         vector<double>& ret)
 {
 
-    Graph *variablesGraph = NULL;
+    Graph *variablesGraph = nullptr;
     if (computingVarGraph) { variablesGraph = new Graph(nVars, computingDerivative); }
     uint64_t operations = 0, operationsV = 0;
     double time1 = cpuTime();
@@ -188,11 +189,10 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
             const bool isNegative = sign(l); // check the polarity of the literal
             if (isNegative) {
                 clausesVariablesN.addEdge(v, i);
-
             } else {
                 clausesVariablesP.addEdge(v, i);
-
             }
+
 
             // Adding edges for the variable graph
             if (computingVarGraph) {
@@ -220,8 +220,9 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         nsize = sizeN + sizeP;
         cdeg.addValue(nsize);
         const double max0 = max(sizeN, sizeP);
-        if (nsize > 0)
-        { cmax.addValue(max0 / nsize); }
+        if (nsize > 0) {
+            cmax.addValue(max0 / nsize);
+        }
         if (nsize - max0 <= 1) {
             horn++;
         }
@@ -252,8 +253,9 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
     operations += nVars;
     operations += vdeg.compute(quantilesCount);
     operations += vmax.compute(quantilesCount);
-    if (computingVarGraph)
-    { operationsV += variablesGraph->computeStatistics(quantilesCount); }
+    if (computingVarGraph) {
+        operationsV += variablesGraph->computeStatistics(quantilesCount);
+    }
     // Statistics for the weights
 
     for (int i = 1 ; i < clsSizes.size(); ++ i) {
@@ -270,35 +272,41 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
 
 
     cdeg.infoToVector("clause-variable degree", featuresNames, ret);
-    if (dumpingPlots)
-    { cdeg.toStream(plotsFileName, ".cv-deg"); }
+    if (dumpingPlots) {
+        cdeg.toStream(plotsFileName, ".cv-deg");
+    }
 
     // variable-clause degree sequence statistics
 
     vdeg.infoToVector("variable-clause degree", featuresNames, ret);
-    if (dumpingPlots)
-    { vdeg.toStream(plotsFileName, ".vc-deg"); }
+    if (dumpingPlots) {
+        vdeg.toStream(plotsFileName, ".vc-deg");
+    }
 
     // clause-variable positive degree sequence statistics
 
     cmax.infoToVector("clause-variable polarity", featuresNames, ret);
-    if (dumpingPlots)
-    { cmax.toStream(plotsFileName, ".cv-pdeg"); }
+    if (dumpingPlots) {
+        cmax.toStream(plotsFileName, ".cv-pdeg");
+    }
 
     // variable-clause positive degree sequence statistics
 
     vmax.infoToVector("variable-clause polarity", featuresNames, ret);
-    if (dumpingPlots)
-    { vmax.toStream(plotsFileName, ".cv-pdeg"); }
+    if (dumpingPlots) {
+        vmax.toStream(plotsFileName, ".cv-pdeg");
+    }
 
     if (computingVarGraph) {
         variablesGraph->getDegreeStatistics().infoToVector("variables graph degree", featuresNames, ret);
-        if (dumpingPlots)
-        { variablesGraph->getDegreeStatistics().toStream(plotsFileName, ".var-deg"); }
+        if (dumpingPlots) {
+            variablesGraph->getDegreeStatistics().toStream(plotsFileName, ".var-deg");
+        }
 
         variablesGraph->getWeightStatistics().infoToVector("variables graph weights", featuresNames, ret);
-        if (dumpingPlots)
-        { variablesGraph->getWeightStatistics().toStream(plotsFileName, ".var-wgt"); }
+        if (dumpingPlots) {
+            variablesGraph->getWeightStatistics().toStream(plotsFileName, ".var-wgt");
+        }
     }
     time1 = (cpuTime() - time1);
     timeIndexes.push_back(ret.size());
@@ -352,8 +360,9 @@ uint64_t CNFClassifier::buildResolutionAndClausesGrapths(const BipartiteGraph& c
                         }
                         assert(rs != 0 && "the formula is unsatisfiable");
 
-                        if (rs > 0)
-                        { resolutionGraph.addUndirectedEdge(clausej, clausek, pow(2, -rs)); }
+                        if (rs > 0) {
+                            resolutionGraph.addUndirectedEdge(clausej, clausek, pow(2, -rs));
+                        }
 
                     }
 
@@ -478,8 +487,9 @@ void CNFClassifier::fband(vector<double>& ret)
             vector<Lit> foundAndOutputs; // store the output literals for a given AND-gate that has been found with a clause
             for (int i = 0; i < clauses.size(); ++i) {
                 const Clause& c = ca[clauses[i]]; // check this clause
-                if (c.size() <= 2)
-                { continue; } // for constraints, only larger clauses are interesting
+                if (c.size() <= 2) {
+                    continue;    // for constraints, only larger clauses are interesting
+                }
 
                 constraintSteps ++;
                 // if( c.size() > 3 ) continue; // we might have another parameter enabling this check - since scanning larger clauses consumes more time
@@ -498,8 +508,9 @@ void CNFClassifier::fband(vector<double>& ret)
                     // check whether all other complements in the clause are implied
                     bool allImplied = true;
                     for (int k = 0; k < c.size(); ++k) {
-                        if (k == j)
-                        { continue; } // do not check the current output literal!
+                        if (k == j) {
+                            continue;    // do not check the current output literal!
+                        }
                         constraintSteps ++;
                         if (!ma.isCurrentStep(toInt(~c[k]))) {
                             allImplied = false;
@@ -510,18 +521,21 @@ void CNFClassifier::fband(vector<double>& ret)
                         // not a full AND gate, nor part of an EXO
                         hasAllANDS = false;
                         // check for blocked AND!
-                        if (litToClsMap[toInt(output)].size() + 1 > c.size())
-                        { continue; } // cannot be a blocked AND gate
+                        if (litToClsMap[toInt(output)].size() + 1 > c.size()) {
+                            continue;    // cannot be a blocked AND gate
+                        }
 
                         if (big.getSize(output)
-                                != litToClsMap[toInt(output)].size())
-                        { continue; } // assume all the clauses with -output are binary, if fail, we do not consider that clause
+                                != litToClsMap[toInt(output)].size()) {
+                            continue;    // assume all the clauses with -output are binary, if fail, we do not consider that clause
+                        }
 
                         // here, the candidate has the form (x, l1, ... ln), and all clauses with -x are binary, e.g. (-x,-l_i). Check whether all l_i occur in the candidate!
                         ma.nextStep();
                         for (int k = 0; k < c.size(); ++k)
-                            if (k != j)
-                            { ma.setCurrentStep(toInt(~c[k])); } // mark all literals!
+                            if (k != j) {
+                                ma.setCurrentStep(toInt(~c[k]));    // mark all literals!
+                            }
                         bool missMatch = false; // check whether some l_i is not marked
                         for (int k = 0; k < big.getSize(output); ++k) {
                             if (!ma.isCurrentStep(
@@ -536,8 +550,9 @@ void CNFClassifier::fband(vector<double>& ret)
                             double w = pow(2, -c.size() + 1);
                             for (int k = 0; k < c.size(); ++k) {
                                 // TODO: add this information to the BLOCKED-AND graph!
-                                if (c[k] == output)
-                                { continue; }
+                                if (c[k] == output) {
+                                    continue;
+                                }
 
                                 // on a literal based graph, add the edge ( ~c[k] -> foundOutputs[j] to the BLOCKED-AND-gate graph, a weight could be related to the clause size (c.size()-1), that represents the number of inputs to the gate
                                 blockedAndGraph.addDirectedEdge(toInt((~c[k]).x),
@@ -575,8 +590,9 @@ void CNFClassifier::fband(vector<double>& ret)
                         double w = pow(2, -c.size() + 1);
                         for (int k = 0; k < c.size(); ++k) {
                             // TODO: add this information to the FULL-AND graph!
-                            if (c[k] == foundAndOutputs[j])
-                            { continue; }
+                            if (c[k] == foundAndOutputs[j]) {
+                                continue;
+                            }
 
                             // on a literal based graph, add the edge ( ~c[k] -> foundOutputs[j] to the FULL-AND-gate graph, a weight could be related to the clause size (c.size()-1), that represents the number of inputs to the gate
                             fullAndGraph.addDirectedEdge(toInt((~c[k]).x),
@@ -655,7 +671,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 {
     // parameters to set
     const uint32_t maxXorSize = 7;
-    const bool findSubsumed = true;
+    const bool findSubsumed = false;  // too expensive to compute features
 
     // algorithm
     double xorTime = cpuTime() - 0;
@@ -686,17 +702,20 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 
             // merge two sorted fields into one
             while (i < hi && j < stopb) {
-                if ((ca[a[i]]) < (ca[a[j]]))
-                { b[currentb++] = a[i++]; }
-                else
-                { b[currentb++] = a[j++]; }
+                if ((ca[a[i]]) < (ca[a[j]])) {
+                    b[currentb++] = a[i++];
+                } else {
+                    b[currentb++] = a[j++];
+                }
             }
             // copy rest of the elements
-            for (; i < hi;)
-            { b[currentb++] = a[i++]; }
+            for (; i < hi;) {
+                b[currentb++] = a[i++];
+            }
 
-            for (; j < stopb;)
-            { b[currentb++] = a[j++]; }
+            for (; j < stopb;) {
+                b[currentb++] = a[j++];
+            }
 
         } while (m > 0);
 
@@ -704,7 +723,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
         CRef* tmp = a; a = b; b = tmp;
     }
     // write data back into vector
-    for (int32_t i = 0 ; i < n; i++) {clauses[i] = a[i];}
+    for (int32_t i = 0 ; i < n; i++) { clauses[i] = a[i]; }
 
     delete [] tmpA;
     delete [] tmpB;
@@ -712,6 +731,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 
     uint32_t cL = 2;  // current length (below 5 there cannot be reduced anything)
     uint32_t cP = 0;  // current moveTo position
+    uint32_t participatingXorClauses = 0;
     uint64_t findChecks = 0;
     uint32_t subsFound = 0, xors = 0;
 
@@ -780,6 +800,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
                     const uint32_t index = nrByPol / 2;
                     foundCount = foundByIndex[ index ] == 0 ? foundCount + 1 : foundCount;
                     foundByIndex[ index ] = 1;
+		    participatingXorClauses ++; // clause is covered
                     findChecks ++;
                 }
 
@@ -864,7 +885,10 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
                                 assert(cL >= cclause.size() && "subsume clauses cannot be greater than the current XOR");
                                 for (uint32_t match = 0 ; match < 2 * shift; ++match) {
 
-                                    if (foundByIndex[ match / 2 ] == 1) { continue; }
+                                    if (foundByIndex[ match / 2 ] == 1) { 
+				      participatingXorClauses ++; // this clause is covered with this XOR!
+				      continue; 
+				    }
 
                                     if ((match & myMatch) == myNumber) {
 
@@ -883,6 +907,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
                                         if (foundByIndex[ match / 2 ] == 0) { foundCount++; }   // only if this clause sets the value from 0 to 1!
                                         subsFound = resolveLit == lit_Undef ? subsFound + 1 : subsFound; // stats
                                         foundByIndex[ match / 2 ] = 1;
+					participatingXorClauses ++; // this clause is covered with this XOR!
                                         if (foundCount == shift) { goto XorFoundAll; }
                                     }
                                 }
@@ -906,8 +931,9 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
     }
 
     xorTime = cpuTime() - xorTime;
-    if (verb > 0)
-    { cerr << "c found " << xorList.size() << " xors (" << subsFound << " sub) in " << findChecks << " steps and " << xorTime << " s" << endl; }
+    if (verb > 0) {
+        cerr << "c found " << xorList.size() << " xors (" << subsFound << " sub) in " << findChecks << " steps and " << xorTime << " s" << endl;
+    }
     uint64_t xorSteps = 0; // TODO norbert here you should initiallize the variable with the number
     // of steps that took you to build the xorList
 
@@ -934,6 +960,15 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
             featuresNames, ret);
     xorGraph.getWeightStatistics().infoToVector("XOR gate weights",
             featuresNames, ret);
+    
+    const double clauseRatio = clauses.size() == 0 ? 1 : (double)participatingXorClauses / (double)(clauses.size());
+    
+    featuresNames.push_back("XOR used clauses");
+    ret.push_back( participatingXorClauses );
+    
+    featuresNames.push_back("XOR used clauses ratio");
+    ret.push_back( clauseRatio );
+    
     featuresNames.push_back("XOR gate steps");
     ret.push_back(xorSteps);
 
@@ -957,8 +992,9 @@ void CNFClassifier::recursiveWeightHeuristic_code(const int maxClauseSize, vecto
     lastData.assign(2 * nVars, 1);
 
     uint64_t globalSteps = 0;
-    if (verb > 0)
-    { cerr << "c calculate RWH with cls max size " << maxClauseSize << " and gamma " << gamma << endl; }
+    if (verb > 0) {
+        cerr << "c calculate RWH with cls max size " << maxClauseSize << " and gamma " << gamma << endl;
+    }
 
     for (int iter = 1; iter <= 3; iter ++) {
         double iterationTime = cpuTime();
@@ -1028,8 +1064,9 @@ void CNFClassifier::recursiveWeightHeuristic_code(const int maxClauseSize, vecto
     }
 
     time = cpuTime() - time;
-    if (verb > 0)
-    { cerr << "c computing all RWH features took " << time << " cpu seconds and " << globalSteps << " global steps"  << endl; }
+    if (verb > 0) {
+        cerr << "c computing all RWH features took " << time << " cpu seconds and " << globalSteps << " global steps"  << endl;
+    }
 }
 
 void CNFClassifier::symmetrycode(vector<double>& ret)
@@ -1061,11 +1098,13 @@ void CNFClassifier::symmetrycode(vector<double>& ret)
                 double clsHash = 0; // calculate hash
                 // TODO as soon as the first clsHash becomes INF, the loop should be stopped, because very soon all clause hashes will become INF! thus, limit the number of timesteps, or at least normalize them once in a while!
                 const Clause& c = ca[clauses[i]];
-                for (int j = 0; j < c.size(); ++j)
-                { clsHash += (*oldData)[var(c[j])]; } // cumulate current hashes of variables
+                for (int j = 0; j < c.size(); ++j) {
+                    clsHash += (*oldData)[var(c[j])];    // cumulate current hashes of variables
+                }
                 clsHash = clsHash / pow(2, c.size()); // 'normalize' hash for the current clause
-                for (int j = 0; j < c.size(); ++j)
-                { (*thisData)[var(c[j])] += clsHash; } // update this timestamp with the current cls hash!
+                for (int j = 0; j < c.size(); ++j) {
+                    (*thisData)[var(c[j])] += clsHash;    // update this timestamp with the current cls hash!
+                }
                 iterationSteps += c.size();
             }
             // here, the pointer thisData stores that hashes of the current step for each variable
@@ -1109,14 +1148,15 @@ void CNFClassifier::symmetrycode(vector<double>& ret)
             }
             globalSymmSteps += iterationSteps;
             if (dumpingPlots) {
-                if (timeStep == 0)
-                { thisTimeStat.toStream(plotsFileName, ".symm-time0"); }
-                else if (timeStep == 1)
-                { thisTimeStat.toStream(plotsFileName, ".symm-time1"); }
-                else if (timeStep == 2)
-                { thisTimeStat.toStream(plotsFileName, ".symm-time2"); }
-                else
-                { assert(false && "forgot to implement!"); }
+                if (timeStep == 0) {
+                    thisTimeStat.toStream(plotsFileName, ".symm-time0");
+                } else if (timeStep == 1) {
+                    thisTimeStat.toStream(plotsFileName, ".symm-time1");
+                } else if (timeStep == 2) {
+                    thisTimeStat.toStream(plotsFileName, ".symm-time2");
+                } else {
+                    assert(false && "forgot to implement!");
+                }
             }
 
             // debug output: show has for each variable:
@@ -1170,8 +1210,9 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     // TODO: I try to add this code next
 
     const int maxClauseSize = this->maxClauseSize; // TODO norbert: enrique, please return the maximum clause size from one of the above methods here to pass it to the next method!
-    if (computingRWH)
-    { recursiveWeightHeuristic_code(5, ret); }   // cut off max size
+    if (computingRWH) {
+        recursiveWeightHeuristic_code(5, ret);    // cut off max size
+    }
 
     // norbert ... end constraint calculation
 
@@ -1185,7 +1226,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     ret.push_back(time1);
     setCpuTime(time1);
 
-    if (attrFileName != NULL) {
+    if (attrFileName != nullptr) {
         std::ofstream fnout;
         fnout.open(attrFileName, ios::out);
         fnout << "@relation cnf_features" << endl;
@@ -1210,7 +1251,7 @@ std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
 
     ostream* output = &cout;
     std::ofstream fout;
-    if (outputFileName != NULL) {
+    if (outputFileName != nullptr) {
         fout.open(outputFileName, fstream::app | fstream::out);
         if (!fout) { cerr << "failed to open data file" << endl; }
         output = &fout;
@@ -1231,7 +1272,7 @@ std::vector<double> CNFClassifier::outputFeatures(const char* formulaName)
     }
     *output << endl;
 
-    if (outputFileName != NULL) {
+    if (outputFileName != nullptr) {
         fout.close();
     }
     return features;

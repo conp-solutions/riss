@@ -2,8 +2,8 @@
 Copyright (c) 2014, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef OnlineProofChecker_h
-#define OnlineProofChecker_h
+#ifndef RISS_OnlineProofChecker_h
+#define RISS_OnlineProofChecker_h
 
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Heap.h"
@@ -546,8 +546,8 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly)
                         cancelUntil();
                         for (int k = 0 ; k < lits.size() ; ++ k) {
                             if (value(lits[k]) == l_Undef) {
-                                uncheckedEnqueue(~lits[k]);
-                            } else if (value(~lits[k]) == l_False) { resovleConflict = true; break; }   // the clause itself is tautological ...
+                                uncheckedEnqueue(~lits[k]);    // the clause itself is tautological ...
+                            } else if (value(~lits[k]) == l_False) { resovleConflict = true; break; }
                         }
                         if (!propagate()) {
                             conflict = false; // not DRAT, the current resolvent does not lead to a conflict!

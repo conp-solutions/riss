@@ -620,12 +620,14 @@ st_find_or_add(st_table * table, void *key, void *slot)
         newt->next = table->bins[hash_val];
         table->bins[hash_val] = newt;
         table->num_entries++;
-        if (slot != NIL(void))
-        { *(char ***) slot = &newt->record; }
+        if (slot != NIL(void)) {
+            *(char ***) slot = &newt->record;
+        }
         return 0;
     } else {
-        if (slot != NIL(void))
-        { *(char ***) slot = &ptr->record; }
+        if (slot != NIL(void)) {
+            *(char ***) slot = &ptr->record;
+        }
         return 1;
     }
 
@@ -758,8 +760,9 @@ st_delete(st_table * table, void *keyp, void *value)
     }
 
     *last = ptr->next;
-    if (value != NIL(void))
-    { *(char **) value = ptr->record; }
+    if (value != NIL(void)) {
+        *(char **) value = ptr->record;
+    }
     *(char **) keyp = ptr->key;
     FREE(ptr);
     table->num_entries--;
@@ -800,8 +803,9 @@ st_delete_int(st_table * table, void *keyp, int *value)
     }
 
     *last = ptr->next;
-    if (value != NIL(int))
-    { *value = (int)(long) ptr->record; }
+    if (value != NIL(int)) {
+        *value = (int)(long) ptr->record;
+    }
     *(char **) keyp = ptr->key;
     FREE(ptr);
     table->num_entries--;
@@ -1275,16 +1279,19 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
 
     /* Allocate network object and initialize symbol table. */
     net = ALLOC(BnetNetwork, 1);
-    if (net == NULL)
-    { goto failure; }
+    if (net == NULL) {
+        goto failure;
+    }
     memset((char *) net, 0, sizeof(BnetNetwork));
     net->hash = st_init_table(strcmp, st_strhash);
-    if (net->hash == NULL)
-    { goto failure; }
+    if (net->hash == NULL) {
+        goto failure;
+    }
 
     savestring = readString(fp);
-    if (savestring == NULL)
-    { goto failure; }
+    if (savestring == NULL) {
+        goto failure;
+    }
     net->nlatches = 0;
     while (strcmp(savestring, ".model") == 0 ||
             strcmp(savestring, ".inputs") == 0 ||
@@ -1299,18 +1306,21 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
             FREE(savestring);
             /* Read network name. */
             savestring = readString(fp);
-            if (savestring == NULL)
-            { goto failure; }
+            if (savestring == NULL) {
+                goto failure;
+            }
             net->name = savestring;
         } else if (strcmp(savestring, ".inputs") == 0) {
             /* Read .inputs directive. */
             FREE(savestring);
             /* Read input names. */
             list = readList(fp, &n);
-            if (list == NULL)
-            { goto failure; }
-            if (pr > 2)
-            { printList(list, n); }
+            if (list == NULL) {
+                goto failure;
+            }
+            if (pr > 2) {
+                printList(list, n);
+            }
             #if 0
             /* Expect at least one input. */
             if (n < 1) {
@@ -1319,27 +1329,32 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
             }
             #endif
             if (exdc) {
-                for (i = 0; i < n; i++)
-                { FREE(list[i]); }
+                for (i = 0; i < n; i++) {
+                    FREE(list[i]);
+                }
                 FREE(list);
                 savestring = readString(fp);
-                if (savestring == NULL)
-                { goto failure; }
+                if (savestring == NULL) {
+                    goto failure;
+                }
                 continue;
             }
             if (net->ninputs) {
                 net->inputs = REALLOC(char *, net->inputs,
                                       (net->ninputs + n) * sizeof(char *));
-                for (i = 0; i < n; i++)
-                { net->inputs[net->ninputs + i] = list[i]; }
-            } else
-            { net->inputs = list; }
+                for (i = 0; i < n; i++) {
+                    net->inputs[net->ninputs + i] = list[i];
+                }
+            } else {
+                net->inputs = list;
+            }
             /* Create a node for each primary input. */
             for (i = 0; i < n; i++) {
                 newnode = ALLOC(BnetNode, 1);
                 memset((char *) newnode, 0, sizeof(BnetNode));
-                if (newnode == NULL)
-                { goto failure; }
+                if (newnode == NULL) {
+                    goto failure;
+                }
                 newnode->name = list[i];
                 newnode->inputs = NULL;
                 newnode->type = BNET_INPUT_NODE;
@@ -1368,28 +1383,33 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
             FREE(savestring);
             /* Read output names. */
             list = readList(fp, &n);
-            if (list == NULL)
-            { goto failure; }
-            if (pr > 2)
-            { printList(list, n); }
+            if (list == NULL) {
+                goto failure;
+            }
+            if (pr > 2) {
+                printList(list, n);
+            }
             if (n < 1) {
                 (void) fprintf(stdout, "Empty .outputs list.\n");
                 goto failure;
             }
             if (exdc) {
-                for (i = 0; i < n; i++)
-                { FREE(list[i]); }
+                for (i = 0; i < n; i++) {
+                    FREE(list[i]);
+                }
                 FREE(list);
                 savestring = readString(fp);
-                if (savestring == NULL)
-                { goto failure; }
+                if (savestring == NULL) {
+                    goto failure;
+                }
                 continue;
             }
             if (net->noutputs) {
                 net->outputs = REALLOC(char *, net->outputs,
                                        (net->noutputs + n) * sizeof(char *));
-                for (i = 0; i < n; i++)
-                { net->outputs[net->noutputs + i] = list[i]; }
+                for (i = 0; i < n; i++) {
+                    net->outputs[net->noutputs + i] = list[i];
+                }
             } else {
                 net->outputs = list;
             }
@@ -1402,15 +1422,18 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
         } else if (strcmp(savestring, ".latch") == 0) {
             FREE(savestring);
             newnode = ALLOC(BnetNode, 1);
-            if (newnode == NULL)
-            { goto failure; }
+            if (newnode == NULL) {
+                goto failure;
+            }
             memset((char *) newnode, 0, sizeof(BnetNode));
             newnode->type = BNET_PRESENT_STATE_NODE;
             list = readList(fp, &n);
-            if (list == NULL)
-            { goto failure; }
-            if (pr > 2)
-            { printList(list, n); }
+            if (list == NULL) {
+                goto failure;
+            }
+            if (pr > 2) {
+                printList(list, n);
+            }
             /* Expect three names. */
             if (n != 3) {
                 (void) fprintf(stdout,
@@ -1454,19 +1477,23 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
             latches[net->nlatches] = list;
             net->nlatches++;
             savestring = readString(fp);
-            if (savestring == NULL)
-            { goto failure; }
+            if (savestring == NULL) {
+                goto failure;
+            }
         } else if (strcmp(savestring, ".names") == 0) {
             FREE(savestring);
             newnode = ALLOC(BnetNode, 1);
             memset((char *) newnode, 0, sizeof(BnetNode));
-            if (newnode == NULL)
-            { goto failure; }
+            if (newnode == NULL) {
+                goto failure;
+            }
             list = readList(fp, &n);
-            if (list == NULL)
-            { goto failure; }
-            if (pr > 2)
-            { printList(list, n); }
+            if (list == NULL) {
+                goto failure;
+            }
+            if (pr > 2) {
+                printList(list, n);
+            }
             /* Expect at least one name (the node output). */
             if (n < 1) {
                 (void) fprintf(stdout, "Missing output name.\n");
@@ -1513,14 +1540,16 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
                 }
             }
             savestring = readString(fp);
-            if (savestring == NULL)
-            { goto failure; }
+            if (savestring == NULL) {
+                goto failure;
+            }
             lastline = NULL;
             while (savestring[0] != '.') {
                 /* Reading a table line. */
                 newline = ALLOC(BnetTabline, 1);
-                if (newline == NULL)
-                { goto failure; }
+                if (newline == NULL) {
+                    goto failure;
+                }
                 newline->next = NULL;
                 if (lastline == NULL) {
                     newnode->f = newline;
@@ -1533,17 +1562,20 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
                     newline->values = savestring;
                     /* Read output 1 or 0. */
                     savestring = readString(fp);
-                    if (savestring == NULL)
-                    { goto failure; }
+                    if (savestring == NULL) {
+                        goto failure;
+                    }
                 } else {
                     newline->values = NULL;
                 }
-                if (savestring[0] == '0')
-                { newnode->polarity = 1; }
+                if (savestring[0] == '0') {
+                    newnode->polarity = 1;
+                }
                 FREE(savestring);
                 savestring = readString(fp);
-                if (savestring == NULL)
-                { goto failure; }
+                if (savestring == NULL) {
+                    goto failure;
+                }
             }
         } else if (strcmp(savestring, ".exdc") == 0) {
             FREE(savestring);
@@ -1552,10 +1584,12 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
             FREE(savestring);
             break;
         }
-        if ((!savestring) || savestring[0] != '.')
-        { savestring = readString(fp); }
-        if (savestring == NULL)
-        { goto failure; }
+        if ((!savestring) || savestring[0] != '.') {
+            savestring = readString(fp);
+        }
+        if (savestring == NULL) {
+            goto failure;
+        }
     }
 
     /* Put nodes in symbol table. */
@@ -1568,8 +1602,9 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
             printf("Error: Multiple drivers for node %s\n", newnode->name);
             goto failure;
         } else {
-            if (pr > 2)
-            { printf("Inserted %s\n", newnode->name); }
+            if (pr > 2) {
+                printf("Inserted %s\n", newnode->name);
+            }
         }
         newnode = newnode->next;
     }
@@ -1583,11 +1618,13 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
                                 net->nlatches) * sizeof(char *));
         for (i = 0; i < net->nlatches; i++) {
             for (j = 0; j < net->noutputs; j++) {
-                if (strcmp(latches[i][0], net->outputs[j]) == 0)
-                { break; }
+                if (strcmp(latches[i][0], net->outputs[j]) == 0) {
+                    break;
+                }
             }
-            if (j < net->noutputs)
-            { continue; }
+            if (j < net->noutputs) {
+                continue;
+            }
             savestring = ALLOC(char, strlen(latches[i][0]) + 1);
             strcpy(savestring, latches[i][0]);
             net->outputs[net->noutputs + count] = savestring;
@@ -1628,8 +1665,9 @@ Bnet_ReadNetwork(FILE * fp /* pointer to the blif file */ ,
         newnode = newnode->next;
     }
 
-    if (!bnetSetLevel(net))
-    { goto failure; }
+    if (!bnetSetLevel(net)) {
+        goto failure;
+    }
 
     return (net);
 
@@ -1661,8 +1699,9 @@ Bnet_PrintNetwork(BnetNetwork * net /* boolean network */)
     BnetTabline *tl;
     int i;
 
-    if (net == NULL)
-    { return; }
+    if (net == NULL) {
+        return;
+    }
 
     (void) fprintf(stdout, ".model %s\n", net->name);
     (void) fprintf(stdout, ".inputs");
@@ -1727,13 +1766,15 @@ Bnet_FreeNetwork(BnetNetwork * net)
         FREE(net->latches[i][2]);
         FREE(net->latches[i]);
     }
-    if (net->nlatches)
-    { FREE(net->latches); }
+    if (net->nlatches) {
+        FREE(net->latches);
+    }
     node = net->nodes;
     while (node != NULL) {
         nextnode = node->next;
-        if (node->type != BNET_PRESENT_STATE_NODE)
-        { FREE(node->name); }
+        if (node->type != BNET_PRESENT_STATE_NODE) {
+            FREE(node->name);
+        }
         for (i = 0; i < node->ninp; i++) {
             FREE(node->inputs[i]);
         }
@@ -1752,8 +1793,9 @@ Bnet_FreeNetwork(BnetNetwork * net)
         node = nextnode;
     }
     st_free_table(net->hash);
-    if (net->slope != NULL)
-    { FREE(net->slope); }
+    if (net->slope != NULL) {
+        FREE(net->slope);
+    }
     FREE(net);
 
 }               /* end of Bnet_FreeNetwork */
@@ -1780,17 +1822,20 @@ readString(FILE *
     int length;
 
     while (!CurPos) {
-        if (!fgets(BuffLine, MAXLENGTH, fp))
-        { return (NULL); }
+        if (!fgets(BuffLine, MAXLENGTH, fp)) {
+            return (NULL);
+        }
         BuffLine[strlen(BuffLine) - 1] = '\0';
         CurPos = strtok(BuffLine, " \t");
-        if (CurPos && CurPos[0] == '#')
-        { CurPos = (char *) NULL; }
+        if (CurPos && CurPos[0] == '#') {
+            CurPos = (char *) NULL;
+        }
     }
     length = strlen(CurPos);
     savestring = ALLOC(char, length + 1);
-    if (savestring == NULL)
-    { return (NULL); }
+    if (savestring == NULL) {
+        return (NULL);
+    }
     strcpy(savestring, CurPos);
     CurPos = strtok(NULL, " \t");
     return (savestring);
@@ -1833,24 +1878,27 @@ readList(FILE * fp /* pointer to the file from which the list is read */ ,
         if (strcmp(CurPos, "\\") == 0) {
             CurPos = (char *) NULL;
             while (!CurPos) {
-                if (!fgets(BuffLine, MAXLENGTH, fp))
-                { return (NULL); }
+                if (!fgets(BuffLine, MAXLENGTH, fp)) {
+                    return (NULL);
+                }
                 BuffLine[strlen(BuffLine) - 1] = '\0';
                 CurPos = strtok(BuffLine, " \t");
             }
         }
         length = strlen(CurPos);
         savestring = ALLOC(char, length + 1);
-        if (savestring == NULL)
-        { return (NULL); }
+        if (savestring == NULL) {
+            return (NULL);
+        }
         strcpy(savestring, CurPos);
         stack[count] = savestring;
         count++;
         CurPos = strtok(NULL, " \t");
     }
     list = ALLOC(char *, count);
-    for (i = 0; i < count; i++)
-    { list[i] = stack[i]; }
+    for (i = 0; i < count; i++) {
+        list[i] = stack[i];
+    }
     *n = count;
     return (list);
 
@@ -1905,8 +1953,9 @@ bnetSetLevel(BnetNetwork * net)
      ** all nodes will be reached ven if there are dangling outputs. */
     node = net->nodes;
     while (node != NULL) {
-        if (!bnetLevelDFS(net, node))
-        { return (0); }
+        if (!bnetLevelDFS(net, node)) {
+            return (0);
+        }
         node = node->next;
     }
 
@@ -1957,8 +2006,9 @@ bnetLevelDFS(BnetNetwork * net, BnetNode * node)
         if (!bnetLevelDFS(net, auxnd)) {
             return (0);
         }
-        if (auxnd->level >= node->level)
-        { node->level = 1 + auxnd->level; }
+        if (auxnd->level >= node->level) {
+            node->level = 1 + auxnd->level;
+        }
     }
     return (1);
 
@@ -2120,8 +2170,9 @@ msg(int level, const char *msg, ...)
 {
     va_list ap;
 
-    if (level > verbose)
-    { return; }
+    if (level > verbose) {
+        return;
+    }
 
     fprintf(stderr, "=[bliftoaig] ");
     va_start(ap, msg);
@@ -2164,18 +2215,21 @@ aig_idx(AIG * aig)
 
     assert(aig);
 
-    if (aig == AIG_TRUE)
-    { return 1; }
+    if (aig == AIG_TRUE) {
+        return 1;
+    }
 
-    if (aig == AIG_FALSE)
-    { return 0; }
+    if (aig == AIG_FALSE) {
+        return 0;
+    }
 
     strip_aig(sign, aig);
     res = aig->idx;
     assert(res > 1);
     assert(!(res & 1));
-    if (sign < 0)
-    { res++; }
+    if (sign < 0) {
+        res++;
+    }
 
     return res;
 }
@@ -2233,8 +2287,9 @@ release_aigs(void)
 {
     unsigned i;
 
-    for (i = 0; i < size_aigs; i++)
-    { release_aig_chain(aigs[i]); }
+    for (i = 0; i < size_aigs; i++) {
+        release_aig_chain(aigs[i]);
+    }
 
     free(aigs);
     free(cached);
@@ -2388,25 +2443,28 @@ print_aig(AIG * aig)
 {
     int sign;
 
-    if (aig == AIG_TRUE)
-    { fputc('1', stdout); }
-    else if (aig == AIG_FALSE)
-    { fputc('0', stdout); }
-    else {
+    if (aig == AIG_TRUE) {
+        fputc('1', stdout);
+    } else if (aig == AIG_FALSE) {
+        fputc('0', stdout);
+    } else {
         strip_aig(sign, aig);
 
-        if (sign < 0)
-        { fputc('!', stdout); }
+        if (sign < 0) {
+            fputc('!', stdout);
+        }
 
-        if (sign < 0)
-        { fputc('(', stdout); }
+        if (sign < 0) {
+            fputc('(', stdout);
+        }
 
         print_aig(aig->c0);
         fputc('&', stdout);
         print_aig(aig->c1);
 
-        if (sign < 0)
-        { fputc(')', stdout); }
+        if (sign < 0) {
+            fputc(')', stdout);
+        }
     }
 }
 
@@ -2437,17 +2495,21 @@ simplify_aig_one_level(AIG * a, AIG * b)
 {
     assert(optimize >= 1);
 
-    if (a == AIG_FALSE || b == AIG_FALSE)
-    { return AIG_FALSE; }
+    if (a == AIG_FALSE || b == AIG_FALSE) {
+        return AIG_FALSE;
+    }
 
-    if (b == AIG_TRUE || a == b)
-    { return a; }
+    if (b == AIG_TRUE || a == b) {
+        return a;
+    }
 
-    if (a == AIG_TRUE)
-    { return b; }
+    if (a == AIG_TRUE) {
+        return b;
+    }
 
-    if (a == not_aig(b))
-    { return AIG_FALSE; }
+    if (a == not_aig(b)) {
+        return AIG_FALSE;
+    }
 
     return 0;
 }
@@ -2483,28 +2545,34 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * (a0 & a1) & signed_b
          */
-        if (a0 == not_aig(signed_b))
-        { return AIG_FALSE; }
-        if (a1 == not_aig(signed_b))
-        { return AIG_FALSE; }
+        if (a0 == not_aig(signed_b)) {
+            return AIG_FALSE;
+        }
+        if (a1 == not_aig(signed_b)) {
+            return AIG_FALSE;
+        }
 
         /* Assymetric Idempotence.
          *
          * (a0 & a1) & signed_b
          */
-        if (a0 == signed_b)
-        { return signed_a; }
-        if (a1 == signed_b)
-        { return signed_a; }
+        if (a0 == signed_b) {
+            return signed_a;
+        }
+        if (a1 == signed_b) {
+            return signed_a;
+        }
     } else {
         /* Assymetric Subsumption.
          *
          * (!a0 | !a1) & signed_b
          */
-        if (a0 == not_aig(signed_b))
-        { return signed_b; }
-        if (a1 == not_aig(signed_b))
-        { return signed_b; }
+        if (a0 == not_aig(signed_b)) {
+            return signed_b;
+        }
+        if (a1 == not_aig(signed_b)) {
+            return signed_b;
+        }
     }
 
     if (t > 0) {
@@ -2512,28 +2580,34 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * signed_a & (b0 & b1)
          */
-        if (b0 == not_aig(signed_a))
-        { return AIG_FALSE; }
-        if (b1 == not_aig(signed_a))
-        { return AIG_FALSE; }
+        if (b0 == not_aig(signed_a)) {
+            return AIG_FALSE;
+        }
+        if (b1 == not_aig(signed_a)) {
+            return AIG_FALSE;
+        }
 
         /* Assymetric Idempotence.
          *
          * signed_a & (b0 & b1)
          */
-        if (b0 == signed_a)
-        { return signed_b; }
-        if (b1 == signed_a)
-        { return signed_b; }
+        if (b0 == signed_a) {
+            return signed_b;
+        }
+        if (b1 == signed_a) {
+            return signed_b;
+        }
     } else {
         /* Assymetric Subsumption.
          *
          * signed_a & (!b0 | !b1)
          */
-        if (b0 == not_aig(signed_a))
-        { return signed_a; }
-        if (b1 == not_aig(signed_a))
-        { return signed_a; }
+        if (b0 == not_aig(signed_a)) {
+            return signed_a;
+        }
+        if (b1 == not_aig(signed_a)) {
+            return signed_a;
+        }
     }
 
     if (s > 0 && t > 0) {
@@ -2541,40 +2615,52 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * (a0 & a1) & (b0 & b1)
          */
-        if (a0 == not_aig(b0))
-        { return AIG_FALSE; }
-        if (a0 == not_aig(b1))
-        { return AIG_FALSE; }
-        if (a1 == not_aig(b0))
-        { return AIG_FALSE; }
-        if (a1 == not_aig(b1))
-        { return AIG_FALSE; }
+        if (a0 == not_aig(b0)) {
+            return AIG_FALSE;
+        }
+        if (a0 == not_aig(b1)) {
+            return AIG_FALSE;
+        }
+        if (a1 == not_aig(b0)) {
+            return AIG_FALSE;
+        }
+        if (a1 == not_aig(b1)) {
+            return AIG_FALSE;
+        }
     } else if (s < 0 && t > 0) {
         /* Symmetric Subsumption.
          *
          * (!a0 | !a1) & (b0 & b1)
          */
-        if (a0 == not_aig(b0))
-        { return b; }
-        if (a1 == not_aig(b0))
-        { return b; }
-        if (a0 == not_aig(b1))
-        { return b; }
-        if (a1 == not_aig(b1))
-        { return b; }
+        if (a0 == not_aig(b0)) {
+            return b;
+        }
+        if (a1 == not_aig(b0)) {
+            return b;
+        }
+        if (a0 == not_aig(b1)) {
+            return b;
+        }
+        if (a1 == not_aig(b1)) {
+            return b;
+        }
     } else if (s > 0 && t < 0) {
         /* Symmetric Subsumption.
          *
          * a0 & a1 & (!b0 | !b1)
          */
-        if (b0 == not_aig(a0))
-        { return a; }
-        if (b1 == not_aig(a0))
-        { return a; }
-        if (b0 == not_aig(a1))
-        { return a; }
-        if (b1 == not_aig(a1))
-        { return a; }
+        if (b0 == not_aig(a0)) {
+            return a;
+        }
+        if (b1 == not_aig(a0)) {
+            return a;
+        }
+        if (b0 == not_aig(a1)) {
+            return a;
+        }
+        if (b1 == not_aig(a1)) {
+            return a;
+        }
     } else {
         assert(s < 0 && t < 0);
 
@@ -2582,14 +2668,18 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * (!a0 | !a1) & (!b0 | !b1)
          */
-        if (a0 == b0 && a1 == not_aig(b1))
-        { return not_aig(a0); }
-        if (a0 == b1 && a1 == not_aig(b0))
-        { return not_aig(a0); }
-        if (a1 == b0 && a0 == not_aig(b1))
-        { return not_aig(a1); }
-        if (a1 == b1 && a0 == not_aig(b0))
-        { return not_aig(a1); }
+        if (a0 == b0 && a1 == not_aig(b1)) {
+            return not_aig(a0);
+        }
+        if (a0 == b1 && a1 == not_aig(b0)) {
+            return not_aig(a0);
+        }
+        if (a1 == b0 && a0 == not_aig(b1)) {
+            return not_aig(a1);
+        }
+        if (a1 == b1 && a0 == not_aig(b0)) {
+            return not_aig(a1);
+        }
     }
 
     return 0;
@@ -2608,17 +2698,20 @@ new_aig(int idx, AIG * a, AIG * b)
 {
     AIG **p, *res;
 
-    if (count_aigs >= size_aigs)
-    { enlarge_aigs(); }
+    if (count_aigs >= size_aigs) {
+        enlarge_aigs();
+    }
 
     if (!idx) {
     TRY_TO_SIMPLIFY_AGAIN:
         assert(optimize >= 1);
-        if ((res = simplify_aig_one_level(a, b)))
-        { return res; }
+        if ((res = simplify_aig_one_level(a, b))) {
+            return res;
+        }
 
-        if (optimize >= 2 && (res = simplify_aig_two_level(a, b)))
-        { return res; }
+        if (optimize >= 2 && (res = simplify_aig_two_level(a, b))) {
+            return res;
+        }
 
         if (optimize >= 3) {
             AIG *not_a = not_aig(a);
@@ -2720,8 +2813,9 @@ new_aig(int idx, AIG * a, AIG * b)
             }
         }
 
-        if (stripped_aig(a)->id > stripped_aig(b)->id)
-        { swap_aig(a, b); }
+        if (stripped_aig(a)->id > stripped_aig(b)->id) {
+            swap_aig(a, b);
+        }
     }
 
     p = find_aig(idx, a, b);
@@ -2869,8 +2963,9 @@ tseitin_network(BnetNetwork * net)
                            i, (node->name ? node->name : "[not available]"));
         }
         result = tseitin_aig(node->aig);
-        if (result == 0)
-        { return (0); }
+        if (result == 0) {
+            return (0);
+        }
         if (verbose > 2) {
             (void) fprintf(stderr, "=[bliftoaig] ... done (%s)\n", node->name);
         }
@@ -2887,8 +2982,9 @@ tseitin_network(BnetNetwork * net)
                            i, (node->name ? node->name : "[not available]"));
         }
         result = tseitin_aig(node->aig);
-        if (result == 0)
-        { return (0); }
+        if (result == 0) {
+            return (0);
+        }
         if (verbose > 2) {
             (void) fprintf(stderr, "=[bliftoaig] ... done (%s)\n", node->name);
         }
@@ -2926,8 +3022,9 @@ tseitin_aig(AIG * aig)
 {
     int sign;
 
-    if (aig == AIG_TRUE || aig == AIG_FALSE)
-    { return 1; }
+    if (aig == AIG_TRUE || aig == AIG_FALSE) {
+        return 1;
+    }
 
     strip_aig(sign, aig);
 
@@ -2936,8 +3033,9 @@ tseitin_aig(AIG * aig)
         return 1;
     }
 
-    if (aig->idx)
-    { return 1; }
+    if (aig->idx) {
+        return 1;
+    }
 
     tseitin_aig(aig->c0);
     tseitin_aig(aig->c1);
@@ -3000,12 +3098,13 @@ dump_network(BnetNetwork * net)
         aiger_add_latch(aiger_mgr, aig_idx((AIG *)(node->aig)),
                         aig_idx((AIG *)(node2->aig)),
                         strip_symbols ? 0 : node->name);
-        if (net->latches[i][2][0] == '0')
-        { reset = 0; }
-        else if (net->latches[i][2][0] == '1')
-        { reset = 1; }
-        else
-        { reset = aig_idx((AIG *)(node->aig)); }
+        if (net->latches[i][2][0] == '0') {
+            reset = 0;
+        } else if (net->latches[i][2][0] == '1') {
+            reset = 1;
+        } else {
+            reset = aig_idx((AIG *)(node->aig));
+        }
         aiger_add_reset(aiger_mgr, aig_idx((AIG *)(node->aig)),
                         reset);
     }
@@ -3037,12 +3136,14 @@ dump_network(BnetNetwork * net)
     }
 
     if (output_name) {
-        if (!aiger_open_and_write_to_file(aiger_mgr, output_name))
-        { die("Failed to write to %s", output_name); }
+        if (!aiger_open_and_write_to_file(aiger_mgr, output_name)) {
+            die("Failed to write to %s", output_name);
+        }
     } else {
         aiger_mode mode = ascii ? aiger_ascii_mode : aiger_binary_mode;
-        if (!aiger_write_to_file(aiger_mgr, mode, stdout))
-        { die("Failed to write to <stdout>"); }
+        if (!aiger_write_to_file(aiger_mgr, mode, stdout)) {
+            die("Failed to write to <stdout>");
+        }
     }
 
     aiger_reset(aiger_mgr);
@@ -3103,8 +3204,9 @@ Bnet_BuildAIGs(BnetNetwork * net)
             return (0);
         }
         result = Bnet_BuildNodeAIG(node, net->hash);
-        if (result == 0)
-        { return (0); }
+        if (result == 0) {
+            return (0);
+        }
     }
 
     /* Make sure all latches have a AIG */
@@ -3113,8 +3215,9 @@ Bnet_BuildAIGs(BnetNetwork * net)
             return (0);
         }
         result = Bnet_BuildNodeAIG(node, net->hash);
-        if (result == 0)
-        { return (0); }
+        if (result == 0) {
+            return (0);
+        }
     }
 
     /* Build AIGs for the next-state-functions of the circuit */
@@ -3128,8 +3231,9 @@ Bnet_BuildAIGs(BnetNetwork * net)
                            i, (node->name ? node->name : "[not available]"));
         }
         result = Bnet_BuildNodeAIG(node, net->hash);
-        if (result == 0)
-        { return (0); }
+        if (result == 0) {
+            return (0);
+        }
         if (verbose > 0) {
             (void) fprintf(stderr, "=[bliftoaig] ... done (%s)\n", node->name);
         }
@@ -3146,8 +3250,9 @@ Bnet_BuildAIGs(BnetNetwork * net)
                            i, (node->name ? node->name : "[not available]"));
         }
         result = Bnet_BuildNodeAIG(node, net->hash);
-        if (result == 0)
-        { return (0); }
+        if (result == 0) {
+            return (0);
+        }
         if (verbose > 0) {
             (void) fprintf(stderr, "=[bliftoaig] ... done (%s)\n", node->name);
         }
@@ -3210,15 +3315,17 @@ Bnet_BuildNodeAIG(BnetNode * nd, st_table * hash)
         if (nd->active == CUDD_TRUE) {
             /* a variable is already associated: use it */
             func = (AIG *)(nd->aig);
-            if (func == NULL)
-            { goto failure; }
+            if (func == NULL) {
+                goto failure;
+            }
         } else {
             /* no variable associated: get a new one */
             nd->var = tseitin_idx_running;
             tseitin_idx_running += 2;
             func = new_aig(nd->var, (AIG *)(NULL), (AIG *)(NULL));
-            if (func == NULL)
-            { goto failure; }
+            if (func == NULL) {
+                goto failure;
+            }
             nd->active = CUDD_TRUE;
             func->name = malloc(strlen(nd->name) + 1);
             strcpy(func->name, nd->name);
@@ -3269,8 +3376,9 @@ Bnet_BuildNodeAIG(BnetNode * nd, st_table * hash)
             prod = AIG_TRUE;
             /* Scan the table line. */
             for (i = 0; i < nd->ninp; i++) {
-                if (line->values[i] == '-')
-                { continue; }
+                if (line->values[i] == '-') {
+                    continue;
+                }
                 if (!st_lookup(hash, nd->inputs[i], &auxnd)) {
                     goto failure;
                 }
@@ -3286,13 +3394,15 @@ Bnet_BuildNodeAIG(BnetNode * nd, st_table * hash)
                     var = not_aig((AIG *)(auxnd->aig));
                 }
                 tmp = and_aig(prod, var);
-                if (tmp == NULL)
-                { goto failure; }
+                if (tmp == NULL) {
+                    goto failure;
+                }
                 prod = tmp;
             }
             tmp = or_aig(func, prod);
-            if (tmp == NULL)
-            { goto failure; }
+            if (tmp == NULL) {
+                goto failure;
+            }
             func = tmp;
             line = line->next;
         }
@@ -3332,12 +3442,14 @@ Bnet_BuildExorAIG(BnetNode * nd, st_table * hash)
     AIG *func, *var, *tmp;
     BnetNode *auxnd;
 
-    if (nd->ninp < 2 || nd->ninp > 3)
-    { return (0); }
+    if (nd->ninp < 2 || nd->ninp > 3) {
+        return (0);
+    }
 
     nlines = 1 << (nd->ninp - 1);
-    for (i = 0; i < 8; i++)
-    { check[i] = 0; }
+    for (i = 0; i < 8; i++) {
+        check[i] = 0;
+    }
     line = nd->f;
     while (line != NULL) {
         int num = 0;
@@ -3352,14 +3464,17 @@ Bnet_BuildExorAIG(BnetNode * nd, st_table * hash)
                 num++;
             }
         }
-        if ((count & 1) == 0)
-        { return (0); }
-        if (check[num])
-        { return (0); }
+        if ((count & 1) == 0) {
+            return (0);
+        }
+        if (check[num]) {
+            return (0);
+        }
         line = line->next;
     }
-    if (nlines != 0)
-    { return (0); }
+    if (nlines != 0) {
+        return (0);
+    }
 
     if (verbose > 3) {
         (void) fprintf(stderr, "=[bliftoaig] (module %10s) is XOR\n",
@@ -3382,8 +3497,9 @@ Bnet_BuildExorAIG(BnetNode * nd, st_table * hash)
         }
         var = (AIG *)(auxnd->aig);
         tmp = xor_aig(func, var);
-        if (tmp == NULL)
-        { goto failure; }
+        if (tmp == NULL) {
+            goto failure;
+        }
         func = tmp;
         nd->aig = func;
     }
@@ -3422,23 +3538,27 @@ Bnet_BuildMuxAIG(BnetNode * nd, st_table * hash)
 
     phase[0] = phase[1] = mux[0] = mux[1] = 0;
 
-    if (nd->ninp != 3)
-    { return (0); }
+    if (nd->ninp != 3) {
+        return (0);
+    }
 
     for (line = nd->f; line != NULL; line = line->next) {
         int dc = 0;
-        if (nlines > 1)
-        { return (0); }
+        if (nlines > 1) {
+            return (0);
+        }
         values[nlines] = line->values;
         for (j = 0; j < 3; j++) {
             if (values[nlines][j] == '-') {
-                if (dc)
-                { return (0); }
+                if (dc) {
+                    return (0);
+                }
                 dc = 1;
             }
         }
-        if (!dc)
-        { return (0); }
+        if (!dc) {
+            return (0);
+        }
         nlines++;
     }
 
@@ -3450,11 +3570,13 @@ Bnet_BuildMuxAIG(BnetNode * nd, st_table * hash)
      ** exactly one column without dashes: the control column.
      */
     for (j = 0; j < 3; j++) {
-        if (values[0][j] == '-' && values[1][j] == '-')
-        { return (0); }
+        if (values[0][j] == '-' && values[1][j] == '-') {
+            return (0);
+        }
         if (values[0][j] != '-' && values[1][j] != '-') {
-            if (values[0][j] == values[1][j])
-            { return (0); }
+            if (values[0][j] == values[1][j]) {
+                return (0);
+            }
             controlC = j;
             controlR = values[0][j] == '0';
         }
@@ -3472,8 +3594,9 @@ Bnet_BuildMuxAIG(BnetNode * nd, st_table * hash)
      ** its two elements are different.
      */
     for (j = 0; j < 3; j++) {
-        if (j == controlC)
-        { continue; }
+        if (j == controlC) {
+            continue;
+        }
         if (values[controlR][j] == '1') {
             mux[0] = j;
             phase[0] = 0;
@@ -3520,8 +3643,9 @@ Bnet_BuildMuxAIG(BnetNode * nd, st_table * hash)
     h = auxnd->aig;
     h = not_cond_aig(h, phase[1]);
     func = ite_aig(f, g, h);
-    if (func == NULL)
-    { goto failure; }
+    if (func == NULL) {
+        goto failure;
+    }
     nd->aig = func;
 
     return (1);
@@ -3551,36 +3675,39 @@ main(int argc, char **argv)
         if (!strcmp(argv[i], "-h")) {
             fputs(USAGE, stdout);
             exit(0);
-        } else if (!strcmp(argv[i], "-v"))
-        { verbose++; }
-        else if (!strcmp(argv[i], "-s"))
-        { strip_symbols = 1; }
-        else if (!strcmp(argv[i], "-a"))
-        { ascii = 1; }
-        else if (argv[i][0] == '-' && argv[i][1] == 'O') {
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose++;
+        } else if (!strcmp(argv[i], "-s")) {
+            strip_symbols = 1;
+        } else if (!strcmp(argv[i], "-a")) {
+            ascii = 1;
+        } else if (argv[i][0] == '-' && argv[i][1] == 'O') {
             optimize = atoi(argv[i] + 2);
             if (optimize != 1 && optimize != 2 && optimize != 3
-                    && optimize != 4)
-            { die("Can only use 1, 2, 3 or 4 as argument to '-O'"); }
-        } else if (argv[i][0] == '-')
-        { die("Unknown command line option '%s' (try '-h')", argv[i]); }
-        else if (output_name)
-        { die("Too many files"); }
-        else if (input)
-        { output_name = argv[i]; }
-        else if (!(input = open_file(argv[i], "r")))
-        { die("Can not read '%s'", argv[i]); }
-        else {
+                    && optimize != 4) {
+                die("Can only use 1, 2, 3 or 4 as argument to '-O'");
+            }
+        } else if (argv[i][0] == '-') {
+            die("Unknown command line option '%s' (try '-h')", argv[i]);
+        } else if (output_name) {
+            die("Too many files");
+        } else if (input) {
+            output_name = argv[i];
+        } else if (!(input = open_file(argv[i], "r"))) {
+            die("Can not read '%s'", argv[i]);
+        } else {
             blif_file = argv[i];
             close_input = 1;
         }
     }
 
-    if (ascii && output_name)
-    { die("Illegal: '-a' in combination with 'dst'"); }
+    if (ascii && output_name) {
+        die("Illegal: '-a' in combination with 'dst'");
+    }
 
-    if (!ascii && !output_name && isatty(1))
-    { ascii = 1; }
+    if (!ascii && !output_name && isatty(1)) {
+        ascii = 1;
+    }
 
     if (!input) {
         input = stdin;

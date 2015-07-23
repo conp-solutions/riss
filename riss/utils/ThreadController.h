@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef THREADCONTROLLER_HH
-#define THREADCONTROLLER_HH
+#ifndef RISS_THREADCONTROLLER_HH
+#define RISS_THREADCONTROLLER_HH
 
 // #include "coprocessor/CoprocessorTypes.h"
 

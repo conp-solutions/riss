@@ -5,8 +5,8 @@
  *      Author: gardero
  */
 
-#ifndef WEKADATASET_H_
-#define WEKADATASET_H_
+#ifndef RISS_WEKADATASET_H_
+#define RISS_WEKADATASET_H_
 
 #include <stdlib.h>
 #include <fstream>

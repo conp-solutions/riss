@@ -1,7 +1,8 @@
 #!/bin/bash
-# pcasso.sh, Norbert Manthey, 2014
+# pcasso.sh, Norbert Manthey, 2015
 #
-# solve CNF formula $1 by simplifying first with coprocessor, then run a SAT solver, and finally, reconstruct the model
+# solve CNF formula $1 by simplifying first with coprocessor, 
+# then run a SAT solver, and finally, reconstruct the model
 # $2 points to the temporary directory (no trailing /)
 #
 
@@ -12,28 +13,37 @@ satsolver=./pcasso						# name of the binary (if not in this directory, give ful
 # usage
 #
 if [ "x$1" = "x" ]; then
-  echo "USAGE: cp.sh <input CNF> [arguments for cp3]"
+  echo "USAGE: pcasso.sh <input CNF> <directory for temporary files> [arguments for solver]"
   exit 1
 fi
 
 #
 # variables for the script
 #
-
 file=$1											# first argument is CNF instance to be solved
-shift												# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
+shift											# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
 tmpDir=$1										# directory to write the temporary files to
-shift												# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
+shift   										# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
+
+# solver params:
+# note: last element here should be '$*' to collect all parameters from the command line
+solverparams="-model -work-conflicts=-1 -work-timeout=-1 -split-mode=2 -split-timeout=1024 -presel-fac=0.1 -presel-min=64 -presel-max=1024 -fail-lit=2 -nec-assign=2 -num-iterat=3 -double-la -double-decay=0.95 -con-resolv=1 -bin-const -la-heur=4 -presel-heur=2 -clause-learn=2 -dir-prior=3 -child-count=7 -shrk-clause -var-eq=3 -split-method=1 -split-depth=0 -dseq -h-acc=3 -h-maxcl=7 -h-cl-wg=5 -h-upper=10900 -h-lower=0.1 -stop-children -adp-presel -adp-preselL=50 -adp-preselS=7 -sort-split -tabu -pure-lit=2  -c-killing -load-split -threads=16 -verb=0 $*"
+
 
 # default parameters for preprocessor
-cpParams="-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense"
+cpParams="-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early"
 
 # some temporary files 
-undo=$tmpDir/undo_$$						# path to temporary file that stores cp3 undo information
-tmpCNF=$tmpDir/tmpCNF_$$				# path to temporary file that stores cp3 simplified formula
-model=$tmpDir/model_$$					# path to temporary file that model of the preprocessor (stdout)
-realModel=$tmpDir/realmodel_$$	# path to temporary file that model of the SAT solver (stdout)
+undo=$tmpDir/undo_`hostname`_$$						# path to temporary file that stores cp3 undo information
+tmpCNF=$tmpDir/tmpCNF_`hostname`_$$				# path to temporary file that stores cp3 simplified formula
+model=$tmpDir/model_`hostname`_$$					# path to temporary file that model of the preprocessor (stdout)
+realModel=$tmpDir/realmodel_`hostname`_$$	# path to temporary file that model of the SAT solver (stdout)
 echo "c undo: $undo tmpCNF: $tmpCNF model: $model realModel: $realModel"  1>&2
+
+#
+# in case of abort, delete temporary files
+#
+trap 'rm -f $undo $undo.map $tmpCNF $model $realModel' EXIT
 
 ppStart=0
 ppEnd=0
@@ -46,7 +56,7 @@ solveEnd=0
 #
 ppStart=`date +%s`
 #echo "call: ./coprocessor $file $realModel -enabled_cp3 -undo=$undo -dimacs=$tmpCNF $cpParams $@"
-./coprocessor $file $realModel -enabled_cp3 -undo=$undo -dimacs=$tmpCNF $cpParams $@  1>&2
+./coprocessor $file $realModel -enabled_cp3 -undo=$undo -dimacs=$tmpCNF $cpParams 1>&2
 exitCode=$?
 ppEnd=`date +%s`
 echo "c preprocessed $(( $ppEnd - $ppStart)) seconds with exit code $exitCode" 1>&2
@@ -71,7 +81,7 @@ else
 		# and output to stdout of the sat solver is redirected to stderr
 		#
 		solveStart=`date +%s`
-		$satsolver $tmpCNF $model -model -work-conflicts=-1 -work-timeout=-1 -split-mode=2 -split-timeout=1024 -presel-fac=0.1 -presel-min=64 -presel-max=1024 -fail-lit=2 -nec-assign=2 -num-iterat=3 -double-la -double-decay=0.95 -con-resolv=1 -bin-const -la-heur=4 -presel-heur=2 -clause-learn=2 -dir-prior=3 -child-count=7 -shrk-clause -var-eq=3 -split-method=1 -split-depth=0 -dseq -h-acc=3 -h-maxcl=7 -h-cl-wg=5 -h-upper=10900 -h-lower=0.1 -addcl-falserem=1 -shpool-size=15000 -shclause-size=2 -lbd-lt=2 -dyn-lbdsh -dyn-lbdshfac=0.5 -every-shpool -sh-delay=16 -receiver-filter=0 -stop-children -adp-presel -adp-preselL=50 -adp-preselS=7 -upd-actpol=2 -sort-split -tabu -pure-lit=2 -no-split-diver -spdiver-lim=4096 -satunsat-restart -learnt-worsening -learnt-unaryres -clean-delay=2 -sim-port -c-killing -load-split -threads=12  1>&2
+		$satsolver $tmpCNF $model $solverparams 1>&2
 		exitCode=$?
 		solveEnd=`date +%s`
 		echo "c solved $(( $solveEnd - $solveStart )) seconds, exit code: $exitCode" 1>&2
@@ -102,7 +112,7 @@ else
 		# and output to stdout of the sat solver is redirected to stderr
 		#
 		solveStart=`date +%s`
-		$satsolver $file $realModel -model -work-conflicts=-1 -work-timeout=-1 -split-mode=2 -split-timeout=1024 -presel-fac=0.1 -presel-min=64 -presel-max=1024 -fail-lit=2 -nec-assign=2 -num-iterat=3 -double-la -double-decay=0.95 -con-resolv=1 -bin-const -la-heur=4 -presel-heur=2 -clause-learn=2 -dir-prior=3 -child-count=7 -shrk-clause -var-eq=3 -split-method=1 -split-depth=0 -dseq -h-acc=3 -h-maxcl=7 -h-cl-wg=5 -h-upper=10900 -h-lower=0.1 -addcl-falserem=1 -shpool-size=15000 -shclause-size=2 -lbd-lt=2 -dyn-lbdsh -dyn-lbdshfac=0.5 -every-shpool -sh-delay=16 -receiver-filter=0 -stop-children -adp-presel -adp-preselL=50 -adp-preselS=7 -upd-actpol=2 -sort-split -tabu -pure-lit=2 -no-split-diver -spdiver-lim=4096 -satunsat-restart -learnt-worsening -learnt-unaryres -clean-delay=2 -sim-port -c-killing -load-split -threads=12 1>&2
+		$satsolver $file $realModel $solverparams 1>&2
 		exitCode=$?
 		solveEnd=`date +%s`
 		echo "c solved $(( $solveEnd - $solveStart )) seconds" 1>&2
@@ -123,7 +133,7 @@ cat $realModel;
 #
 # remove tmp files
 #
-# rm -f $undo $undo.map $tmpCNF $model $realModel;
+rm -f $undo $undo.map $tmpCNF $model $realModel;
 
 #
 # return with correct exit code

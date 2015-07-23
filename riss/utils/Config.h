@@ -9,8 +9,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Config_h
-#define Config_h
+#ifndef RISS_Config_h
+#define RISS_Config_h
 
 #include "riss/utils/Options.h"
 
@@ -35,16 +35,16 @@ class Config
   public:
 
     Config(vec<Option*>* ptr, const std::string& presetOptions = "");
-
+    
     /** parse all options from the command line
       * @return true, if "help" has been found in the parameters
       */
-    bool parseOptions(int& argc, char** argv, bool strict = false);
+    bool parseOptions(int& argc, char** argv, bool strict = false, int activeLevel = -1);
 
     /** parse options that are present in one std::string
      * @return true, if "help" has been found in the parameters
      */
-    bool parseOptions(const std::string& options, bool strict = false);
+    bool parseOptions(const std::string& options, bool strict = false, int activeLevel = -1);
 
     /** set all the options of the specified preset option sets (multiple separated with : possible) */
     void setPreset(const std::string& optionSet);
@@ -55,7 +55,7 @@ class Config
     bool addPreset(const std::string& optionSet);
 
     /** show print for the options of this object */
-    void printUsageAndExit(int  argc, char** argv, bool verbose = false);
+    void printUsageAndExit(int  argc, char** argv, bool verbose = false, int activeLevel = -1);
 
     /** checks all specified constraints */
     bool checkConfiguration();
@@ -65,6 +65,12 @@ class Config
 
     /** fill the std::string stream with the command that is necessary to obtain the current configuration */
     void configCall(std::stringstream& s);
+
+    /** print specification of the options that belong to this configuration */
+    void printOptions(FILE* pcsFile, int printLevel = -1);
+
+    /** print dependencies of the options that belong to this configuration */
+    void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
 };
 
 inline
@@ -115,9 +121,31 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -cp3_stats -solververb=2", false);
     } else if (optionSet == "DEBUG") {
         parseOptions(" -cp3_stats -solververb=2 -cp3_bve_verbose=2 -cp3-debug -cp3-check=2 -cp3_verbose=3", false);
+    } else if (optionSet == "NOCP") {
+        parseOptions(" -no-enabled_cp3", false);
     }
 
+    /*
+     *  Options for CVC4 (intermediate version Riss 5.0.1)
+     */
+    else if (optionSet == "CVC4") {
+        parseOptions("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -rer-g -rer-ga=3", false);
+    } else if (optionSet == "CVC4inc") {
+        parseOptions("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -cp3_iters=2 -rlevel=2 -rer-g -rer-ga=3", false);
+    }
 
+    /*
+     *  Options for Open-WBO
+     */
+    else if (optionSet == "MAXSAT") {
+        parseOptions("-incsverb=1", false);
+    } else if (optionSet == "INCSOLVE") {
+        parseOptions("-rmf -sInterval=16 -lbdIgnLA -var-decay-b=0.85 -var-decay-e=0.85 -irlevel=1024 -rlevel=2 -incResCnt=3", false);
+    } else if (optionSet == "PPMAXSAT2015") {
+        parseOptions("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bce-bcm -cp3_iters=2 -rlevel=2", false);
+    } else if (optionSet == "CORESIZE2") {
+        parseOptions("-size_core=2", false);
+    }
     /*
      *  Options for Riss 427
      */
@@ -313,6 +341,8 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -enabled_cp3 -cp3_stats -all_strength_res=3 -subsimp", false);
     } else if (optionSet == "plain_BVE") {
         parseOptions(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1", false);
+    } else if (optionSet == "BVEEARLY") {
+        parseOptions(" -bve_early", false);
     } else if (optionSet == "plain_ABVA") {
         parseOptions(" -enabled_cp3 -cp3_stats -bva", false);
     } else if (optionSet == "plain_XBVA") {
@@ -325,6 +355,8 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -enabled_cp3 -cp3_stats -bce ", false);
     } else if (optionSet == "plain_CLE") {
         parseOptions(" -enabled_cp3 -cp3_stats -bce -bce-cle -no-bce-bce", false);
+    } else if (optionSet == "plain_BCM") {
+        parseOptions(" -enabled_cp3 -cp3_stats -bce -bce-bcm -no-bce-bce", false);
     } else if (optionSet == "plain_HTE") {
         parseOptions(" -enabled_cp3 -cp3_stats -hte", false);
     } else if (optionSet == "plain_CCE") {
@@ -346,7 +378,7 @@ bool Config::addPreset(const std::string& optionSet)
     } else if (optionSet == "plain_FM") {
         parseOptions(" -enabled_cp3 -cp3_stats -fm -no-cp3_fm_vMulAMO", false);
     } else if (optionSet == "plain_XOR") {
-        parseOptions(" -enabled_cp3 -cp3_stats -xor", false);
+        parseOptions(" -enabled_cp3 -cp3_stats -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed", false);
     } else if (optionSet == "plain_2SAT") {
         parseOptions(" -enabled_cp3 -cp3_stats -2sat", false);
     } else if (optionSet == "plain_SLS") {
@@ -375,7 +407,7 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -dontTrust", false);
     } else if (optionSet == "plain_DECLEARN") {
         parseOptions(" -learnDecP=100 -learnDecMS=6", false);
-    } else if (optionSet == "plain_PLAINBIASSERTING") {
+    } else if (optionSet == "plain_BIASSERTING") {
         parseOptions(" -biAsserting -biAsFreq=4", false);
     } else if (optionSet == "plain_LBD") {
         parseOptions(" -lbdIgnL0 -lbdupd=0", false);
@@ -387,6 +419,8 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -ecl -ecl-min-size=12 -ecl-maxLBD=6", false);
     } else if (optionSet == "plain_FASTRESTART") {
         parseOptions(" -rlevel=1 ", false);
+    } else if (optionSet == "plain_SEMIFASTRESTART") {
+        parseOptions(" -rlevel=2 ", false);
     } else if (optionSet == "plain_AGILREJECT") {
         parseOptions(" -agil-r -agil-limit=0.35", false);
     } else if (optionSet == "plain_LIGHT") {
@@ -495,6 +529,7 @@ bool Config::addPreset(const std::string& optionSet)
     else {
         printf("%s\n", "c FAILED LOADING PRESET CONFIG");
         ret = false; // indicate that no configuration has been found here!
+        if (optionSet != "") { parseOptions(optionSet); }     // parse the string that has been parsed as commandline
     }
     parsePreset = false;
     return ret; // return whether a preset configuration has been found
@@ -502,10 +537,10 @@ bool Config::addPreset(const std::string& optionSet)
 
 
 inline
-bool Config::parseOptions(const std::string& options, bool strict)
+bool Config::parseOptions(const std::string& options, bool strict, int activeLevel)
 {
     if (options.size() == 0) { return false; }
-    // split std::string into sub std::strings, separated by ':'
+    // split std::string into sub std::strings, separated by ' '
     std::vector<std::string> optionList;
     int lastStart = 0;
     int findP = 0;
@@ -528,15 +563,15 @@ bool Config::parseOptions(const std::string& options, bool strict)
     int argc = optionList.size() + 1;
 
     // call conventional method
-    bool ret = parseOptions(argc, argv, strict);
+    bool ret = parseOptions(argc, argv, strict, activeLevel);
     return ret;
 }
 
 
 inline
-bool Config::parseOptions(int& argc, char** argv, bool strict)
+bool Config::parseOptions(int& argc, char** argv, bool strict, int activeLevel)
 {
-    if (optionListPtr == 0) { return false; }   // the options will not be parsed
+    if (optionListPtr == 0) { return false; }  // the options will not be parsed
 
 //     if( !parsePreset ) {
 //       if( defaultPreset.size() != 0 ) { // parse default preset instead of actual options!
@@ -553,10 +588,10 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
         const char* str = argv[i];
         if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")) {
             if (*str == '\0') {
-                this->printUsageAndExit(argc, argv);
+                this->printUsageAndExit(argc, argv, false, activeLevel);
                 ret = true;
             } else if (match(str, "-verb")) {
-                this->printUsageAndExit(argc, argv, true);
+                this->printUsageAndExit(argc, argv, true, activeLevel);
                 ret = true;
             }
             argv[j++] = argv[i]; // keep -help in parameters!
@@ -583,20 +618,23 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
 }
 
 inline
-void Config::printUsageAndExit(int  argc, char** argv, bool verbose)
+void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeLevel)
 {
     const char* usage = Option::getUsageString();
-    if (usage != NULL) {
+    if (usage != nullptr) {
         fprintf(stderr, "\n");
         fprintf(stderr, usage, argv[0]);
     }
 
     sort((*optionListPtr), Option::OptionLt());
 
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
 
     for (int i = 0; i < (*optionListPtr).size(); i++) {
+
+        if (activeLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > activeLevel) { continue; }  // can jump over full categories
+
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 
@@ -617,6 +655,73 @@ inline
 bool Config::checkConfiguration()
 {
     return true;
+}
+
+inline
+void Config::printOptions(FILE* pcsFile, int printLevel)
+{
+    sort((*optionListPtr), Option::OptionLt());
+
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
+
+    // all options in the global list
+    for (int i = 0; i < (*optionListPtr).size(); i++) {
+
+        if (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel) { continue; }  // can jump over full categories
+
+        const char* cat  = (*optionListPtr)[i]->category;
+        const char* type = (*optionListPtr)[i]->type_name;
+
+        // print new category
+        if (cat != prev_cat) {
+            fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
+        } else if (type != prev_type) {
+            fprintf(pcsFile, "\n");
+        }
+
+        // print the actual option
+        (*optionListPtr)[i]->printOptions(pcsFile, printLevel);
+
+        // set prev values, so that print is nicer
+        prev_cat  = (*optionListPtr)[i]->category;
+        prev_type = (*optionListPtr)[i]->type_name;
+    }
+}
+
+inline
+void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
+{
+    sort((*optionListPtr), Option::OptionLt());
+
+    const char* prev_cat  = nullptr;
+    const char* prev_type = nullptr;
+
+    // all options in the global list
+    for (int i = 0; i < (*optionListPtr).size(); i++) {
+
+        if ((*optionListPtr)[i]->dependOnNonDefaultOf == 0 ||    // no dependency
+                (printLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > printLevel)) { // or too deep in the dependency level
+            continue;
+        }  // can jump over full categories
+
+        const char* cat  = (*optionListPtr)[i]->category;
+        const char* type = (*optionListPtr)[i]->type_name;
+
+        // print new category
+        if (cat != prev_cat) {
+            fprintf(pcsFile, "\n#\n#%s OPTIONS:\n#\n", cat);
+        } else if (type != prev_type) {
+            fprintf(pcsFile, "\n");
+        }
+
+        // print the actual option
+        (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel);
+
+        // set prev values, so that print is nicer
+        prev_cat  = (*optionListPtr)[i]->category;
+        prev_type = (*optionListPtr)[i]->type_name;
+    }
 }
 
 inline

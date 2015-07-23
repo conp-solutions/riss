@@ -5,8 +5,8 @@
  * Created on December 23, 2012, 6:07 PM
  */
 
-#ifndef LOOKAHEADSPLITTING_H
-#define LOOKAHEADSPLITTING_H
+#ifndef PCASSO_LOOKAHEADSPLITTING_H
+#define PCASSO_LOOKAHEADSPLITTING_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
@@ -22,15 +22,15 @@ namespace Pcasso
 class LookaheadSplitting : public SplitterSolver
 {
 
-    Riss::CoreConfig& coreConfig;
+    Riss::CoreConfig* coreConfig;
 
     // more global data structures
     Riss::vec<Riss::Lit> learnt_clause;
     Riss::vec<Riss::CRef> otfssClauses;
-    uint64_t extraInfo;
+    unsigned extraInfo;
 
   public:
-    LookaheadSplitting(Riss::CoreConfig& config);
+    LookaheadSplitting(Riss::CoreConfig* config);
     ~LookaheadSplitting();
     void dummy()
     {
@@ -127,6 +127,8 @@ class LookaheadSplitting : public SplitterSolver
     void constraintResolvent(const Riss::vec<Riss::Lit>& t);
     void learntsLimitPush();
     void learntsLimitPop();
+
+    virtual inline void interrupt() { Riss::Solver::interrupt(); }
 };
 
 } // namespace Pcasso

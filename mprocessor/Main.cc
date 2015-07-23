@@ -90,11 +90,11 @@ int main(int argc, char** argv)
         bool foundHelp = coreConfig.parseOptions(argc, argv);
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
         ::parseOptions(argc, argv);   // parse all global options
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
         coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
         cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
         double      initial_time = cpuTime();
@@ -122,8 +122,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -134,20 +135,23 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
         if (!post) {
 
-            if (argc == 1)
-            { printf("c Reading from standard input... Use '--help' for help.\n"); }
+            if (argc == 1) {
+                printf("c Reading from standard input... Use '--help' for help.\n");
+            }
 
             gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-            if (in == NULL)
-            { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+            if (in == nullptr) {
+                printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+            }
 
             if (S.verbosity > 0) {
                 printf("c =========================[ Mprocessor %s  %13s ]=============================================\n", solverVersion, gitSHA1);
@@ -172,8 +176,9 @@ int main(int argc, char** argv)
             }
 
             double parsed_time = cpuTime();
-            if (S.verbosity > 0)
-            { printf("c |  Parse time:           %12.2f s                                                                 |\n", parsed_time - initial_time); }
+            if (S.verbosity > 0) {
+                printf("c |  Parse time:           %12.2f s                                                                 |\n", parsed_time - initial_time);
+            }
 
             // Change to signal-handlers that will only notify the solver and allow it to terminate
             // voluntarily:
@@ -197,11 +202,12 @@ int main(int argc, char** argv)
 
             // TODO: do not reduce the variables withing the formula!
             if (dimacs) {
-                if (S.verbosity > 0)
-                { printf("c ==============================[ Writing DIMACS ]=========================================================\n"); }
+                if (S.verbosity > 0) {
+                    printf("c ==============================[ Writing DIMACS ]=========================================================\n");
+                }
                 //S.toDimacs((const char*)dimacs);
                 FILE* wcnfFile = fopen((const char*) dimacs, "wb");
-                if (wcnfFile == NULL) {
+                if (wcnfFile == nullptr) {
                     cerr << "c WARNING: could not open file " << (const char*) dimacs << " to write the formula" << endl;
                     exit(3);
                 }
@@ -209,7 +215,7 @@ int main(int argc, char** argv)
                 const int vars = S.nVars(); // might be smaller already due to dense
                 int cls = S.trail.size() + S.clauses.size();
                 Weight top = 0;
-                for (Var v = 0 ; v < fullVariables; ++ v) {   // for each weighted literal, have an extra clause! use variables before preprocessing (densing)
+                for (Var v = 0 ; v < fullVariables; ++ v) {  // for each weighted literal, have an extra clause! use variables before preprocessing (densing)
                     cls = (literalWeights[toInt(mkLit(v))] != 0 ? cls + 1 : cls);
                     cls = (literalWeights[toInt(~mkLit(v))] != 0 ? cls + 1 : cls);
                     top += literalWeights[toInt(mkLit(v))] + literalWeights[toInt(~mkLit(v))];
@@ -233,15 +239,16 @@ int main(int argc, char** argv)
                     const Clause& c = S.ca[S.clauses[i]];
                     if (c.mark()) { continue; }
                     stringstream s;
-                    for (int i = 0; i < c.size(); ++i)
-                    { s << c[i] << " "; }
+                    for (int i = 0; i < c.size(); ++i) {
+                        s << c[i] << " ";
+                    }
                     s << "0" << endl;
                     fprintf(wcnfFile, "%ld %s", top , s.str().c_str());
                 }
 
                 // if the option dense is used, these literals need to be adopted!
                 // write all the soft clauses (write after hard clauses, because there might be units that can have positive effects on the next tool in the chain!)
-                for (Var v = 0 ; v < fullVariables; ++ v) {   // for each weighted literal, have an extra clause!
+                for (Var v = 0 ; v < fullVariables; ++ v) {  // for each weighted literal, have an extra clause!
                     Lit l = mkLit(v);
                     Lit nl = preprocessor.giveNewLit(l);
                     cerr << "c lit " << l << " is compress lit " << nl << endl;
@@ -250,11 +257,11 @@ int main(int argc, char** argv)
                         cerr << "c WARNING: soft literal " << l << " has been removed from the formula" << endl;
                         continue;
                     }
-                    if (literalWeights[toInt(mkLit(v))] != 0) {   // setting literal l to true ha a cost, hence have unit!
-                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(mkLit(v))], var(l) + 1);  // use the weight of the not rewritten literal!
+                    if (literalWeights[toInt(mkLit(v))] != 0) {  // setting literal l to true ha a cost, hence have unit!
+                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(mkLit(v))], var(l) + 1); // use the weight of the not rewritten literal!
                     }
-                    if (literalWeights[toInt(~mkLit(v))] != 0) {   // setting literal ~l to true ha a cost, hence have unit!
-                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(~mkLit(v))], -var(l) - 1);  // use the weight of the not rewritten literal!
+                    if (literalWeights[toInt(~mkLit(v))] != 0) {  // setting literal ~l to true ha a cost, hence have unit!
+                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(~mkLit(v))], -var(l) - 1); // use the weight of the not rewritten literal!
                     }
                 }
                 // close the file
@@ -262,13 +269,14 @@ int main(int argc, char** argv)
             }
 
             if ((const char*)undoFile != 0) {
-                if (S.verbosity > 0)
-                { printf("c =============================[ Writing Undo Info ]=======================================================\n"); }
+                if (S.verbosity > 0) {
+                    printf("c =============================[ Writing Undo Info ]=======================================================\n");
+                }
                 preprocessor.writeUndoInfo(string(undoFile), originalVariables);
             }
 
             if (!S.okay()) {
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
                 else { printf("s UNSATISFIABLE\n"); }
                 if (S.verbosity > 0) {
                     printf("c =========================================================================================================\n");
@@ -283,7 +291,7 @@ int main(int argc, char** argv)
                 return (20);
                 #endif
             } else {
-                if (res != NULL) { fprintf(res, "s UNKNOWN\n"); fclose(res); cerr << "s UNKNOWN" << endl; }
+                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"); fclose(res); cerr << "s UNKNOWN" << endl; }
                 #ifdef NDEBUG
                 exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
                 #else
@@ -307,18 +315,20 @@ int main(int argc, char** argv)
 
             if (solution == 10) {
                 preprocessor.extendModel(S.model);
-                if (res != NULL) {
+                if (res != nullptr) {
                     printf("s SATISFIABLE\n");
                     fprintf(res, "s SATISFIABLE\nv ");
                     for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
-                        if (S.model[i] != l_Undef)
-                        { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                        if (S.model[i] != l_Undef) {
+                            fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                        }
                     fprintf(res, " 0\n");
                 } else {
                     printf("s SATISFIABLE\nv ");
                     for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
-                        if (S.model[i] != l_Undef)
-                        { printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                        if (S.model[i] != l_Undef) {
+                            printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                        }
                     printf(" 0\n");
                 }
                 cerr.flush(); cout.flush();
@@ -328,7 +338,7 @@ int main(int argc, char** argv)
                 return (10);
                 #endif
             } else if (solution == 20) {
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                 printf("s UNSATISFIABLE\n");
                 cerr.flush(); cout.flush();
                 #ifdef NDEBUG
@@ -337,7 +347,7 @@ int main(int argc, char** argv)
                 return (20);
                 #endif
             } else {
-                if (res != NULL) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
                 printf("s UNKNOWN\n");
             }
 

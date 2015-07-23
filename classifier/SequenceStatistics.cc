@@ -36,7 +36,7 @@ void SequenceStatistics::initAll()
     valuesRate = 0;
     zerocount = 0;
     computingDerivative = false;
-    derivative = NULL;
+    derivative = nullptr;
     countingZeros = true;
 }
 
@@ -66,8 +66,9 @@ SequenceStatistics::SequenceStatistics(bool computingDerivative, bool countingZe
 SequenceStatistics::~SequenceStatistics()
 {
     vector<double>().swap(values);
-    if (computingDerivative)
-    { delete derivative; }
+    if (computingDerivative) {
+        delete derivative;
+    }
 }
 
 void SequenceStatistics::addValue(double value)
@@ -79,10 +80,12 @@ void SequenceStatistics::addValue(double value)
         if (std::isnan(sum) || std::isnan(sumXsq)) {
             printf("wrong!!!\n");
         }
-        if (value > max)
-        { max = value; }
-        if (value < min)
-        { min = value; }
+        if (value > max) {
+            max = value;
+        }
+        if (value < min) {
+            min = value;
+        }
 
         double delta = value - mean;
         mean = mean + delta / count;
@@ -173,16 +176,18 @@ void SequenceStatistics::tostdio() const
         printf("Q%d: %.1f, ", (i + 1), quantiles[i]);
     }
     printf("\n");
-    if (computingDerivative)
-    { derivative->tostdio(); }
+    if (computingDerivative) {
+        derivative->tostdio();
+    }
 }
 
 //} /* namespace features */
 
 void SequenceStatistics::valuesToVector(vector<double>& v) const
 {
-    if (countingZeros)
-    { v.push_back(zerocount); }
+    if (countingZeros) {
+        v.push_back(zerocount);
+    }
     v.push_back(min);
     v.push_back(max);
     v.push_back(mode);
@@ -194,14 +199,16 @@ void SequenceStatistics::valuesToVector(vector<double>& v) const
     for (i = 0; i < quantiles.size(); ++i) {
         v.push_back(quantiles[i]);
     }
-    if (computingDerivative)
-    { derivative->valuesToVector(v); }
+    if (computingDerivative) {
+        derivative->valuesToVector(v);
+    }
 }
 
 void SequenceStatistics::namesToVector(string prefix, vector<string>& v) const
 {
-    if (countingZeros)
-    { v.push_back(prefix + " zcount"); }
+    if (countingZeros) {
+        v.push_back(prefix + " zcount");
+    }
     v.push_back(prefix + " min");
     v.push_back(prefix + " max");
     v.push_back(prefix + " mode");
@@ -215,8 +222,9 @@ void SequenceStatistics::namesToVector(string prefix, vector<string>& v) const
         sstm << prefix << " Q" << (i + 1);
         v.push_back(sstm.str());
     }
-    if (computingDerivative)
-    { derivative->namesToVector(prefix + " derivative", v); }
+    if (computingDerivative) {
+        derivative->namesToVector(prefix + " derivative", v);
+    }
 }
 
 void SequenceStatistics::infoToVector(string prefix, vector<string>& names,
@@ -237,8 +245,9 @@ static inline ostream& operator<<(ostream& other,
 {
     const vector<double> v = seq.getValues();
     other << "# N V" << endl;
-    for (int i = 0; i < v.size(); ++i)
-    { other << "  " << i + 1 << " " << v[i] << endl; }
+    for (int i = 0; i < v.size(); ++i) {
+        other << "  " << i + 1 << " " << v[i] << endl;
+    }
     return other;
 }
 
@@ -278,8 +287,9 @@ int SequenceStatistics::countValue(int value)
         if (value == values[i]) {
             mcount++;
         } else {
-            if (value > 0)
-            { break; }
+            if (value > 0) {
+                break;
+            }
         }
     }
     return mcount;

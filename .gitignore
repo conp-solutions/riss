@@ -22,8 +22,8 @@ debug/
 release/
 build/
 
-# External projects
-armadillo/
+# CI wrapper script
+tools/checker/solver-wrapper.sh
 
 # Latex build files
 *.aux
@@ -37,3 +37,7 @@ armadillo/
 
 # example formulas and bugs
 *.cnf
+*.cnf.gz
+
+# backup files
+*~

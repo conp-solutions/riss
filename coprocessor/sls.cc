@@ -14,7 +14,6 @@ Sls::Sls(CP3Config& _config, CoprocessorData& _data, ClauseAllocator& _ca, Threa
     :
     Technique(_config, _ca, _controller)
     , data(_data)
-    , ca(_ca)
     , solveTime(0)
     , flips(0)
     , unsats(0)
@@ -53,7 +52,7 @@ Lit Sls::heuristic()
     for (int i = 1; i < cl.size(); ++ i) {
         int thisBreak =   varData[ var(cl[i]) ].breakCount;
 
-        if (thisBreak > smallestBreak)  { continue; }
+        if (thisBreak > smallestBreak) { continue; }
 
         if (thisBreak == smallestBreak) {
             data.lits.push_back(cl[i]);

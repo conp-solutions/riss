@@ -60,8 +60,9 @@ static int libpdex_search_for(FILE *file, int symbol)
             do {
                 l = fgetc(file);
 
-                if (l == '\n')
-                { break; }
+                if (l == '\n') {
+                    break;
+                }
             } while (l != EOF);
 
             break;
@@ -103,10 +104,11 @@ static int libpdex_get_sat_state(FILE *file)
         buf_len = strlen(buffer);
 
         while (buf_len --) {
-            if ((buffer[buf_len] == ' ') || (buffer[buf_len] == '\n'))
-            { buffer[buf_len] = 0; }
-            else
-            { break; }
+            if ((buffer[buf_len] == ' ') || (buffer[buf_len] == '\n')) {
+                buffer[buf_len] = 0;
+            } else {
+                break;
+            }
         }
 
         // Compare
@@ -151,8 +153,9 @@ static int libpdex_satisfies_problem(polarity_t *model, size_t model_ctr, litera
             variable_t var = literal_to_variable(lit);
 
             // Model too small
-            if (var >= model_ctr)
-            { return 0; }
+            if (var >= model_ctr) {
+                return 0;
+            }
 
             // Clause is satisfied
             if (model[var] == literal_get_polarity(lit)) {
@@ -194,28 +197,32 @@ literal_t libpdex_read_literal(FILE *stream)
     while (1) {
         int c = fgetc(stream);
 
-        if (feof(stream))
-        { return lit; }
+        if (feof(stream)) {
+            return lit;
+        }
 
         /* Comment: just go to the next line and return the literal */
         if ((c == 'c') || (c == 'C')) {
             while (1) {
                 c = fgetc(stream);
 
-                if ((c == '\n') || feof(stream))
-                { return lit; }
+                if ((c == '\n') || feof(stream)) {
+                    return lit;
+                }
             }
         }
 
         /* Ignore any invalid charracter before a literal begins */
-        if (((c < '0') || (c > '9')) && (c != '-') && (nothing_read))
-        { continue; }
-        else
-        { nothing_read = false; }
+        if (((c < '0') || (c > '9')) && (c != '-') && (nothing_read)) {
+            continue;
+        } else {
+            nothing_read = false;
+        }
 
         /* End of literal */
-        if ((c == ' ') || (c == '\n') || (c == EOF))
-        { break; }
+        if ((c == ' ') || (c == '\n') || (c == EOF)) {
+            break;
+        }
 
         /* Negation */
         if (c == '-') {
@@ -277,8 +284,9 @@ literal_t** libpdex_read_problem(FILE *file, size_t *clause_ctr)
 
             if ((feof(file) && (lits_count == 0))
                     || ((lit == 0) && (lits_count == 0))
-               )
-            { break; }
+               ) {
+                break;
+            }
 
             lits_count ++;
             lits = (literal_t*)realloc(lits, lits_count * sizeof(literal_t));
@@ -318,15 +326,17 @@ static int libpdex_satisfies_problem_file(FILE *problem, FILE *model)
     size_t      clause_ctr = 0;
 
     /* Find the model data */
-    if (!libpdex_search_for(model, 'v'))
-    { return -1; }
+    if (!libpdex_search_for(model, 'v')) {
+        return -1;
+    }
 
     /* Get the model */
     while (!feof(model)) {
         literal_t   literal;
 
-        if (fscanf(model, "%i", &literal) != 1)
-        { break; }
+        if (fscanf(model, "%i", &literal) != 1) {
+            break;
+        }
 
         model_ctr ++;
         parsed_model = (literal_t*)realloc(parsed_model, model_ctr * sizeof(literal_t));
@@ -384,8 +394,9 @@ int libpdex_verify_model(FILE *problem_file, FILE *solver_stdout, bool model_is_
     }
 
     /* Model and solver telling different things */
-    if (solver_is_sat != model_is_sat) {
+    if (solver_is_sat != model_is_sat)
 
+    {
         return 0;
     }
 
@@ -456,8 +467,9 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
-    } else
-    { problem = NULL; }
+    } else {
+        problem = NULL;
+    }
 
     // Verify model
     switch (libpdex_verify_model(problem, solver_out, model_is_sat)) {

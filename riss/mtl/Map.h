@@ -17,8 +17,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Map_h
-#define Minisat_Map_h
+#ifndef RISS_Minisat_Map_h
+#define RISS_Minisat_Map_h
 
 #include "riss/mtl/IntTypes.h"
 #include "riss/mtl/Vec.h"
@@ -105,8 +105,8 @@ class Map
 
   public:
 
-    Map() : table(NULL), cap(0), size(0) {}
-    Map(const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
+    Map() : table(nullptr), cap(0), size(0) {}
+    Map(const H& h, const E& e) : hash(h), equals(e), table(nullptr), cap(0), size(0) {}
     ~Map() { delete [] table; }
 
     int32_t index(const int& k) const { return k % cap; }
@@ -115,13 +115,13 @@ class Map
     const D& operator [](const K& k) const
     {
         assert(size != 0);
-        const D*         res = NULL;
+        const D*         res = nullptr;
         const vec<Pair>& ps  = table[index(k)];
         for (int i = 0; i < ps.size(); i++)
             if (equals(ps[i].key, k)) {
                 res = &ps[i].data;
             }
-        assert(res != NULL);
+        assert(res != nullptr);
         return *res;
     }
 
@@ -129,18 +129,18 @@ class Map
     D& operator [](const K& k)
     {
         assert(size != 0);
-        D*         res = NULL;
+        D*         res = nullptr;
         vec<Pair>& ps  = table[index(k)];
         for (int i = 0; i < ps.size(); i++)
             if (equals(ps[i].key, k)) {
                 res = &ps[i].data;
             }
-        assert(res != NULL);
+        assert(res != nullptr);
         return *res;
     }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert(const K& k, const D& d) { if (checkCap(size + 1)) { rehash(); } _insert(k, d); size++; }
+    void insert(const K& k, const D& d) { if (checkCap(size + 1)) { rehash(); }  _insert(k, d); size++; }
     bool peek(const K& k, D& d) const
     {
         if (size == 0) { return false; }
@@ -167,7 +167,7 @@ class Map
     // PRECONDITION: the key must exist in the map.
     void remove(const K& k)
     {
-        assert(table != NULL);
+        assert(table != nullptr);
         vec<Pair>& ps = table[index(k)];
         int j = 0;
         for (; j < ps.size() && !equals(ps[j].key, k); j++) {};
@@ -181,7 +181,7 @@ class Map
     {
         cap = size = 0;
         delete [] table;
-        table = NULL;
+        table = nullptr;
     }
 
     int  elems() const { return size; }
@@ -196,15 +196,15 @@ class Map
         other.cap   = cap;
         other.size  = size;
 
-        table = NULL;
+        table = nullptr;
         size = cap = 0;
     }
 
     // NOTE: given a bit more time, I could make a more C++-style iterator out of this:
-    const vec<Pair>& bucket(int i) const { assert(table != NULL && 0 <= i && i < cap && "stay in bounds"); return table[i]; }
+    const vec<Pair>& bucket(int i) const { assert(table != nullptr && 0 <= i && i < cap && "stay in bounds"); return table[i]; }
 
     /** allow access from the outside to operate differently on the hash list */
-    vec<Pair>& getBucket(uint32_t hash) { assert(hash >= 0 && table != NULL && 0 <= (hash % (uint32_t)cap) && (hash % (uint32_t)cap) < cap && "stay in bounds");  return table[ hash % (uint32_t)cap ]; }
+    vec<Pair>& getBucket(uint32_t hash) { assert(hash >= 0 && table != nullptr && 0 <= (hash % (uint32_t)cap) && (hash % (uint32_t)cap) < cap && "stay in bounds");  return table[ hash % (uint32_t)cap ]; }
 
     /** tell hash table how many elements have been removed externally */
     void removedElementsExternally(int elements) { size -= elements; }

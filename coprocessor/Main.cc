@@ -95,9 +95,9 @@ int main(int argc, char** argv)
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
         foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
         double      initial_time = cpuTime();
@@ -125,8 +125,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -137,20 +138,23 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
         if (!post) {
 
-            if (argc == 1)
-            { printf("c Reading from standard input... Use '--help' for help.\n"); }
+            if (argc == 1) {
+                printf("c Reading from standard input... Use '--help' for help.\n");
+            }
 
             gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-            if (in == NULL)
-            { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+            if (in == nullptr) {
+                printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+            }
 
             if (S.verbosity > 0) {
                 printf("c =========================[ Coprocessor %s  %13s ]============================================\n", coprocessorVersion, gitSHA1);
@@ -162,8 +166,8 @@ int main(int argc, char** argv)
             }
 
             // open file for proof
-            S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+            S.proofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : nullptr;
+            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
             parse_DIMACS(in, S);
             gzclose(in);
@@ -174,8 +178,9 @@ int main(int argc, char** argv)
             }
 
             double parsed_time = cpuTime();
-            if (S.verbosity > 0)
-            { printf("c |  Parse time:           %12.2f s                                                                 |\n", parsed_time - initial_time); }
+            if (S.verbosity > 0) {
+                printf("c |  Parse time:           %12.2f s                                                                 |\n", parsed_time - initial_time);
+            }
 
             // Change to signal-handlers that will only notify the solver and allow it to terminate
             // voluntarily:
@@ -195,21 +200,23 @@ int main(int argc, char** argv)
 
             // TODO: do not reduce the variables withing the formula!
             if (dimacs) {
-                if (S.verbosity > 0)
-                { printf("c ==============================[ Writing DIMACS ]=========================================================\n"); }
+                if (S.verbosity > 0) {
+                    printf("c ==============================[ Writing DIMACS ]=========================================================\n");
+                }
                 //S.toDimacs((const char*)dimacs);
                 preprocessor.outputFormula((const char*) dimacs);
             }
 
             if ((const char*)undoFile != 0) {
-                if (S.verbosity > 0)
-                { printf("c =============================[ Writing Undo Info ]=======================================================\n"); }
+                if (S.verbosity > 0) {
+                    printf("c =============================[ Writing Undo Info ]=======================================================\n");
+                }
                 preprocessor.writeUndoInfo(string(undoFile));
             }
 
             if (!S.okay()) {
-                if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); } // tell proof about result!
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
+                if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
                 else { printf("s UNSATISFIABLE\n"); }
                 if (S.verbosity > 0) {
                     printf("c =========================================================================================================\n");
@@ -235,20 +242,22 @@ int main(int argc, char** argv)
                     ret = S.solveLimited(dummy);
                 }
                 if (ret == l_True) {
-                    if (S.drupProofFile != 0) { fclose(S.drupProofFile); }   // close proof file!
+                    if (S.proofFile != 0) { fclose(S.proofFile); }  // close proof file!
                     preprocessor.extendModel(S.model);
-                    if (res != NULL) {
+                    if (res != nullptr) {
                         cerr << "s SATISFIABLE" << endl;
                         fprintf(res, "s SATISFIABLE\nv ");
                         for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
-                            if (S.model[i] != l_Undef)
-                            { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                            if (S.model[i] != l_Undef) {
+                                fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                            }
                         fprintf(res, " 0\n");
                     } else {
                         printf("s SATISFIABLE\nv ");
                         for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
-                            if (S.model[i] != l_Undef)
-                            { printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                            if (S.model[i] != l_Undef) {
+                                printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                            }
                         printf(" 0\n");
                     }
                     cerr.flush(); cout.flush();
@@ -258,8 +267,8 @@ int main(int argc, char** argv)
                     return (10);
                     #endif
                 } else if (ret == l_False) {
-                    if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); } // tell proof about result!
-                    if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                    if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
+                    if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                     printf("s UNSATISFIABLE\n");
                     cerr.flush(); cout.flush();
                     #ifdef NDEBUG
@@ -288,18 +297,20 @@ int main(int argc, char** argv)
                 preprocessor.extendModel(S.model);
                 int varLimit = preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables();
                 assert(varLimit <= S.model.size() && "cannot print variables that are not present in the model");
-                if (res != NULL) {
+                if (res != nullptr) {
                     printf("s SATISFIABLE\n");
                     fprintf(res, "s SATISFIABLE\nv ");
                     for (int i = 0; i < varLimit; i++)
-                        if (S.model[i] != l_Undef)
-                        { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                        if (S.model[i] != l_Undef) {
+                            fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                        }
                     fprintf(res, " 0\n");
                 } else {
                     printf("s SATISFIABLE\nv ");
                     for (int i = 0; i < varLimit; i++)
-                        if (S.model[i] != l_Undef)
-                        { printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                        if (S.model[i] != l_Undef) {
+                            printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                        }
                     printf(" 0\n");
                 }
                 cerr.flush(); cout.flush();
@@ -309,7 +320,7 @@ int main(int argc, char** argv)
                 return (10);
                 #endif
             } else if (solution == 20) {
-                if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                 printf("s UNSATISFIABLE\n");
                 cerr.flush(); cout.flush();
                 #ifdef NDEBUG
@@ -318,7 +329,7 @@ int main(int argc, char** argv)
                 return (20);
                 #endif
             } else {
-                if (res != NULL) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
                 printf("s UNKNOWN\n");
             }
 

@@ -20,8 +20,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef BoundedQueue_h
-#define BoundedQueue_h
+#ifndef RISS_BoundedQueue_h
+#define RISS_BoundedQueue_h
 
 #include "riss/mtl/Vec.h"
 
@@ -62,7 +62,7 @@ class bqueue
     }
 
     T peek() { assert(queuesize > 0); return elems[last]; }
-    void pop() {sumofqueue -= elems[last]; queuesize--; if ((++last) == maxsize) { last = 0; }}
+    void pop() {sumofqueue -= elems[last]; queuesize--; if ((++last) == maxsize) { last = 0; } }
 
     unsigned long long getsum() const {return sumofqueue;}
     unsigned int getavg() const {return queuesize != 0 ? (unsigned int)(sumofqueue / ((unsigned long long)queuesize)) : 0 ;}

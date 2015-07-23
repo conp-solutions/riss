@@ -18,10 +18,11 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Heap_h
-#define Minisat_Heap_h
+#ifndef RISS_Minisat_Heap_h
+#define RISS_Minisat_Heap_h
 
 #include "riss/mtl/Vec.h"
+#include <iostream>
 
 namespace Riss
 {
@@ -82,6 +83,25 @@ class Heap
     bool inHeap(int n)     const { return n < indices.size() && indices[n] >= 0; }
     int  operator[](int index) const { assert(index < heap.size()); return heap[index]; }
 
+    /** copies the state of this heap to the other heap */
+    void copyTo(Heap& copy) const { 
+      copy.lt = lt;
+      heap.copyTo( copy.heap );
+      indices.copyTo( copy.indices );
+    }
+    
+    /** copies the state of this heap to the other heap, does not update the compare object */
+    void copyOrderTo(Heap& copy) const { 
+      heap.copyTo( copy.heap );
+      indices.copyTo( copy.indices );
+    }
+    
+    /** copy data, but use other compare object (might contain pointer to data) */
+    void reinitializeFrom(Heap& copy, Comp c) const { 
+      lt = c;
+      copy.heap.copyTo( heap );
+      copy.indices.copyTo( indices );
+    }
 
     void decrease(int n) { assert(inHeap(n)); percolateUp(indices[n]); }
     void increase(int n) { assert(inHeap(n)); percolateDown(indices[n]); }
@@ -161,6 +181,15 @@ class Heap
     }
 };
 
+/** print elements of a heap */
+template <class Comp>
+inline std::ostream& operator<<(std::ostream& other, const Heap<Comp>& container)
+{
+    for (int i = 0 ; i < container.size(); ++ i) {
+        other << " " << container[i];
+    }
+    return other;
+}
 
 //=================================================================================================
 }

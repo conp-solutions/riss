@@ -138,7 +138,7 @@ void HiddenTautologyElimination::elimination_worker(CoprocessorData& data, uint3
     for (uint32_t index = start; index < end && !data.isInterupted() ; ++index) {
         if (steps == 0 && !data.unlimited()) { break; }   // stop if number of iterations has been reached
         const Var v = activeVariables[index];
-        if (config.opt_hteTalk)  { fprintf(stderr, "c HTE on variable %d\n", v + 1); }
+        if (config.opt_hteTalk) { fprintf(stderr, "c HTE on variable %d\n", v + 1); }
 
         DOUT(if (config.hte_debug_out > 1) {
         fprintf(stderr, "[HTE] ITERATION implications:\n");
@@ -181,7 +181,7 @@ void HiddenTautologyElimination::elimination_worker(CoprocessorData& data, uint3
                 if (doLock) { data.lock(); }
                 data.addCommentToProof("found during HTE variable array filling");
                 data.addUnitToProof(unit);
-                lbool result = data.enqueue(unit, data.defaultExtraInfo());
+                lbool result = data.enqueue(unit, data.currentDependencyLevel());
                 if (doLock) { data.unlock(); }
                 if (result == l_False) { return; }
                 continue; // no need to check a variable that is unit!
@@ -191,7 +191,7 @@ void HiddenTautologyElimination::elimination_worker(CoprocessorData& data, uint3
     }
 }
 
-void HiddenTautologyElimination::initClause(const CRef cr)
+void HiddenTautologyElimination::initClause(const Riss::CRef& cr)
 {
     return;
     /*
@@ -284,7 +284,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                             break;
                         }
                     }
-                    if (!doLock)    { steps = (steps > 0) ? steps - 1 : 0; }  // limit
+                    if (!doLock) { steps = (steps > 0) ? steps - 1 : 0; }  // limit
                     // if clause has been removed from its lists, update!
                     if (remClause) {
                         // TODO: statistics removed clause
@@ -444,7 +444,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
     return lit_Undef;
 }
 
-bool HiddenTautologyElimination::hlaMarkClause(const Riss::CRef cr, BIG& big, MarkArray& markArray, Lit* litQueue)
+bool HiddenTautologyElimination::hlaMarkClause(const Riss::CRef& cr, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue)
 {
     const Clause& clause = ca[cr];
     if (clause.size() < 3) { return false; }   // do not work on binary and smaller clauses!
@@ -473,8 +473,9 @@ bool HiddenTautologyElimination::hlaMarkClause(const Riss::CRef cr, BIG& big, Ma
 
             if (! markArray.isCurrentStep(toInt(jLit))) {
                 if (markArray.isCurrentStep(toInt(~jLit))) {
-                    if (clause.size() == 2)
-                    { big.removeEdge(clause[0], clause[1]); }
+                    if (clause.size() == 2) {
+                        big.removeEdge(clause[0], clause[1]);
+                    }
                     return true;
                 }
                 markArray.setCurrentStep(toInt(jLit));
@@ -514,8 +515,9 @@ bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, Mar
 
             if (! markArray.isCurrentStep(toInt(jLit))) {
                 if (markArray.isCurrentStep(toInt(~jLit))) {
-                    if (clause.size() == 2)
-                    { big.removeEdge(clause[0], clause[1]); }
+                    if (clause.size() == 2) {
+                        big.removeEdge(clause[0], clause[1]);
+                    }
                     return true;
                 }
                 markArray.setCurrentStep(toInt(jLit));
@@ -529,7 +531,7 @@ bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, Mar
 }
 
 
-bool HiddenTautologyElimination::alaMarkClause(const CRef cr, CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray)
+bool HiddenTautologyElimination::alaMarkClause(const Riss::CRef& cr, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray)
 {
     vec<Lit> lits;
     const Clause& c = ca[cr];

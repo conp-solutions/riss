@@ -37,6 +37,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     Solver* solver = data.getSolver();
     // propagate all literals that are on the trail but have not been propagated
     DOUT(if (config.up_debug_out > 0) cerr << "c call propagate. already propagated: " << lastPropagatedLiteral << ", total to proapgate: " << solver->trail.size() << endl;) ;
+    uint32_t lastSharedUnit = lastPropagatedLiteral;
     for (; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++) {
         const Lit l = solver->trail[lastPropagatedLiteral];
         DOUT(if (config.up_debug_out > 0) cerr << "c UP propagating " << l << endl;);
@@ -46,9 +47,9 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         for (int i = 0 ; i < positive.size(); ++i) {
 
             Clause& satisfied = ca[positive[i]];
-            if (ca[ positive[i] ].can_be_deleted()) // only track yet-non-deleted clauses
-            { continue; } // could remove from list, but list is cleared any ways!
-            else if (ca[ positive[i] ].size() > 1) {   // do not remove the unit clause!
+            if (ca[ positive[i] ].can_be_deleted()) { // only track yet-non-deleted clauses
+                continue;    // could remove from list, but list is cleared any ways!
+            } else if (ca[ positive[i] ].size() > 1) { // do not remove the unit clause!
                 data.addCommentToProof("removed by positive UP", true);
                 data.addToProof(ca[ positive[i] ], true);   // remove this clause, if this has not been done before
             }
@@ -68,7 +69,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         for (int i = 0 ; i < negative.size(); ++i) {
             Clause& c = ca[ negative[i] ];
             //what if c can be deleted? -> continue
-            if (c.can_be_deleted())  { continue; }
+            if (c.can_be_deleted()) { continue; }
             // sorted propagation, no!
 
             for (int j = 0; j < c.size(); ++ j) {
@@ -96,7 +97,9 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
             if (c.size() > 1) {
                 assert(!c.can_be_deleted() && "clause should not be deleted already");
             }
-            c.updateExtraInformation(data.variableExtraInfo(var(nl)));
+            #ifdef PCASSO
+            c.setPTLevel(data.dependencyLevel(var(nl)));
+            #endif
 
             // unit propagation
             if (c.size() == 0) {
@@ -118,6 +121,12 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         removedLiterals += count;
     }
 
+    // tell the solvers in the portfolio setup that we found unit clauses
+    if (lastSharedUnit < solver->trail.size()) {
+        data.sendUnits(solver->trail, lastSharedUnit, solver->trail.size() - lastSharedUnit);
+    }
+
+    // do not propagate these literals inside the solver again
     solver->qhead = lastPropagatedLiteral;
 
     if (!modifiedFormula) { unsuccessfulSimplification(); }   // this call did not change anything
@@ -125,7 +134,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     return data.ok() ? l_Undef : l_False;
 }
 
-void Propagation::initClause(const CRef cr) {}
+void Propagation::initClause(const Riss::CRef& cr) {}
 
 void Propagation::printStatistics(ostream& stream)
 {

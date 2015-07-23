@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef SHUFFLER_HH
-#define SHUFFLER_HH
+#ifndef RISS_SHUFFLER_HH
+#define RISS_SHUFFLER_HH
 
 #include <stdint.h>
 #include <vector>

@@ -17,8 +17,9 @@ static int upLevel = 1;
 
 static inline void printLitErr(const Lit l)
 {
-    if (toInt(l) % 2)
-    { cerr << "-"; }
+    if (toInt(l) % 2) {
+        cerr << "-";
+    }
     cerr << (toInt(l) / 2) + 1 << " ";
 }
 
@@ -35,8 +36,9 @@ static void printLitVec(const vec<Lit>& litvec)
 static void printClauses(ClauseAllocator& ca, vector<CRef>& list, bool skipDeleted)
 {
     for (unsigned i = 0; i < list.size(); ++i) {
-        if (list[i] == CRef_Undef || skipDeleted && ca[list[i]].can_be_deleted())
-        { continue; }
+        if (list[i] == CRef_Undef || skipDeleted && ca[list[i]].can_be_deleted()) {
+            continue;
+        }
         cerr << ca[list[i]] << (ca[list[i]].can_be_deleted() ? " delete" : " valid") << endl;
     }
 
@@ -144,16 +146,19 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
         heap_lock.unlock();
 
         // if Heap or Queue was empty, break
-        if (v == var_Undef)
-        { break; }
+        if (v == var_Undef) {
+            break;
+        }
 
     calculate_neighbors:
         // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
-        if (data.value(mkLit(v, true)) != l_Undef || data.value(mkLit(v, false)) != l_Undef)
-        { continue; }
+        if (data.value(mkLit(v, true)) != l_Undef || data.value(mkLit(v, false)) != l_Undef) {
+            continue;
+        }
         // if no occurrences of v, continue
-        if (data[v] <= 0)
-        { continue; }
+        if (data[v] <= 0) {
+            continue;
+        }
         if (data.doNotTouch(v)) { continue; } // do not use this variable!
 
         // Heuristic Cutoff
@@ -199,8 +204,9 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
         // expecting valid occurrence-lists, i.e. v really occurs in lists
         for (int r = 0; r < pos.size() && locked_neigbors <= config.postpone_locked_neighbors; ++r) {
             const CRef cr = pos[r];
-            if (CRef_Undef == cr)
-            { continue; }
+            if (CRef_Undef == cr) {
+                continue;
+            }
             Clause& c = ca[cr];
             c.spinlock();
             if (c.can_be_deleted()) {
@@ -223,8 +229,9 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
         }
         for (int r = 0; r < neg.size() && locked_neigbors <= config.postpone_locked_neighbors; ++r) {
             const CRef cr = neg[r];
-            if (CRef_Undef == cr)
-            { continue; }
+            if (CRef_Undef == cr) {
+                continue;
+            }
             Clause& c = ca[cr];
             c.spinlock();
             if (c.can_be_deleted()) {
@@ -310,15 +317,17 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
             }
 
             // if UNSAT -> return
-            if (!data.ok())
-            { break; }
+            if (!data.ok()) {
+                break;
+            }
 
             // Cleanup
             neighbors.clear();
 
             if (data.value(mkLit(v, true)) != l_Undef
-                    || data.value(mkLit(v, false)) != l_Undef)
-            { continue; }
+                    || data.value(mkLit(v, false)) != l_Undef) {
+                continue;
+            }
             goto calculate_neighbors;
         }
 
@@ -375,8 +384,9 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
             }
 
             // if UNSAT -> return
-            if (!data.ok())
-            { break; }
+            if (!data.ok()) {
+                break;
+            }
 
             // Cleanup
             neighbors.clear();
@@ -397,28 +407,34 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
 
         for (int i = 0; i < pos.size(); ++i) {
             const CRef cr = pos[i];
-            if (CRef_Undef == cr)
-            { continue; }
+            if (CRef_Undef == cr) {
+                continue;
+            }
             Clause& c = ca[cr];
-            if (c.can_be_deleted())
-            { continue; }
-            if (c.learnt())
-            { lit_learnts_old += c.size(); }
-            else
-            { lit_clauses_old += c.size(); }
+            if (c.can_be_deleted()) {
+                continue;
+            }
+            if (c.learnt()) {
+                lit_learnts_old += c.size();
+            } else {
+                lit_clauses_old += c.size();
+            }
             ++pos_count;
         }
         for (int i = 0; i < neg.size(); ++i) {
             const CRef cr = neg[i];
-            if (CRef_Undef == cr)
-            { continue; }
+            if (CRef_Undef == cr) {
+                continue;
+            }
             Clause& c = ca[cr];
-            if (c.can_be_deleted())
-            { continue; }
-            if (c.learnt())
-            { lit_learnts_old += c.size(); }
-            else
-            { lit_clauses_old += c.size(); }
+            if (c.can_be_deleted()) {
+                continue;
+            }
+            if (c.learnt()) {
+                lit_learnts_old += c.size();
+            } else {
+                lit_clauses_old += c.size();
+            }
             ++neg_count;
         }
         if (config.opt_bve_verbose > 2) { cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl; }
@@ -573,8 +589,9 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
 
         }
 
-        if (config.opt_bve_verbose > 1)
-        { cerr << "c =============================================================================" << endl; }
+        if (config.opt_bve_verbose > 1) {
+            cerr << "c =============================================================================" << endl;
+        }
 
         // free all locks on Vars in descending order
         for (int i = neighbors.size() - 1; i >= 0; --i) {
@@ -596,30 +613,29 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
  *
  *      TODO don't use the data_lock, since we already have the global writeLock
  */
-inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
-        const vector<CRef>& list, const Lit l, const int limit,
-        SpinLock& data_lock, SpinLock& heap_lock,
-        ParBVEStats& stats, int& garbageCounter,
-        const bool doStatistics)
+inline void BoundedVariableElimination::removeClausesThreadSafe(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, Coprocessor::BoundedVariableElimination::ParBVEStats& stats, int& garbageCounter, const bool doStatistics)
 {
     const Var ignore = var(l);
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
         const CRef cr = list[cr_i];
-        if (CRef_Undef == cr)
-        { continue; }
+        if (CRef_Undef == cr) {
+            continue;
+        }
         Clause& c = ca[cr];
         if (!c.can_be_deleted()) {
             c.set_delete(true);
             didChange();
             if (config.opt_minimal_updates) {
-                for (int i = 0; i < c.size(); ++i)
-                { data.deletedVar(var(c[i])); }
+                for (int i = 0; i < c.size(); ++i) {
+                    data.deletedVar(var(c[i]));
+                }
                 garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
             } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
-            else
-            { data.removedClause(cr, NULL, false, ignore, &data_lock, NULL); }
+            else {
+                data.removedClause(cr, nullptr, false, ignore, &data_lock, nullptr);
+            }
 
             if (!c.learnt() /*&& cr < limit*/) {
                 data_lock.lock();
@@ -679,8 +695,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
 
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p) {
         const CRef crPos = positive[cr_p];
-        if (CRef_Undef == crPos)
-        { continue; }
+        if (CRef_Undef == crPos) {
+            continue;
+        }
         Clause& p = ca[crPos];
         if (p.can_be_deleted()) {
             if (config.opt_bve_verbose > 2) { cerr << "c    skipped p " << p << endl; }
@@ -689,11 +706,13 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n) {
             // do not check resolvents, which would touch two clauses out of the variable definition
             if (cr_p >= p_limit && cr_n >= n_limit) { continue; }
-            if (hasDefinition && cr_p < p_limit && cr_n < n_limit)
-            { continue; } // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+            if (hasDefinition && cr_p < p_limit && cr_n < n_limit) {
+                continue;    // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+            }
             const CRef crNeg = negative[cr_n];
-            if (CRef_Undef == crNeg)
-            { continue; }
+            if (CRef_Undef == crNeg) {
+                continue;
+            }
             bveChecks++;
             Clause& n = ca[crNeg];
             if (n.can_be_deleted()) {
@@ -716,11 +735,13 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     resolve(p, n, v, resolvent);
                     printLitVec(resolvent);
                 }
-                if (p.learnt() || !n.learnt()) // don't increment blocking-stats for p,
-                { ++pos_stats[cr_p]; }         // if p is original and n learnt
+                if (p.learnt() || !n.learnt()) { // don't increment blocking-stats for p,
+                    ++pos_stats[cr_p];    // if p is original and n learnt
+                }
                 // goal: detect that p is blocked by all orig. n-clauses
-                if (n.learnt() || !p.learnt()) // vice versa
-                { ++neg_stats[cr_n]; }
+                if (n.learnt() || !p.learnt()) { // vice versa
+                    ++neg_stats[cr_n];
+                }
                 if (p.learnt() || n.learnt()) {
                     if ((config.opt_resolve_learnts > 1
                             || config.opt_resolve_learnts > 0 && !(p.learnt() && n.learnt())
@@ -767,20 +788,24 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     return l_False;
                 } else if (status == l_Undef); // variable already assigned
                 else if (status == l_True) {
-                    if (doStatistics)
-                    { ++stats.unitsEnqueued; }
-                } else
-                { assert(0); }  //something went wrong
+                    if (doStatistics) {
+                        ++stats.unitsEnqueued;
+                    }
+                } else {
+                    assert(0);    //something went wrong
+                }
             }
 
             if (config.opt_bve_verbose > 2) { cerr << "c ------------------------------------------" << endl; }
         }
     }
     if (config.opt_bve_verbose > 2) {
-        for (int i = 0; i < positive.size(); ++i)
-        { cerr << "c pos stat(" << i << "): " << (unsigned) pos_stats[i] << endl; };
-        for (int i = 0; i < negative.size(); ++i)
-        { cerr << "c neg stat(" << i << "): " << (unsigned) neg_stats[i] << endl; };
+        for (int i = 0; i < positive.size(); ++i) {
+            cerr << "c pos stat(" << i << "): " << (unsigned) pos_stats[i] << endl;
+        } ;
+        for (int i = 0; i < negative.size(); ++i) {
+            cerr << "c neg stat(" << i << "): " << (unsigned) neg_stats[i] << endl;
+        } ;
 
         cerr << "c finished anticipate_bve normally" << endl;
     }
@@ -813,30 +838,37 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, He
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size());
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p) {
         const CRef crPos = positive[cr_p];
-        if (CRef_Undef == crPos)
-        { continue; }
+        if (CRef_Undef == crPos) {
+            continue;
+        }
         Clause& p = ca[crPos];
-        if (p.can_be_deleted())
-        { continue; }
+        if (p.can_be_deleted()) {
+            continue;
+        }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n) {
             // no need to resolve two clauses that are both not within the variable definition
             if (cr_p >= p_limit && cr_n >= n_limit) { continue; }
-            if (hasDefinition && cr_p < p_limit && cr_n < n_limit)
-            { continue; } // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+            if (hasDefinition && cr_p < p_limit && cr_n < n_limit) {
+                continue;    // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+            }
             const CRef crNeg = negative[cr_n];
-            if (CRef_Undef == crNeg)
-            { continue; }
+            if (CRef_Undef == crNeg) {
+                continue;
+            }
 
             bveChecks++;
             Clause& n = ca[crNeg];
-            if (n.can_be_deleted())
-            { continue; }
+            if (n.can_be_deleted()) {
+                continue;
+            }
 
             // Dont compute resolvents for learnt clauses
-            if (config.opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
-            { continue; }
-            if (config.opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
-            { continue; }
+            if (config.opt_resolve_learnts == 0 && (p.learnt() || n.learnt())) {
+                continue;
+            }
+            if (config.opt_resolve_learnts == 1 && (p.learnt() && n.learnt())) {
+                continue;
+            }
 
             ps.clear();
             if (!resolve(p, n, v, ps)) {
@@ -846,8 +878,9 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, He
                     lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
                     data_lock.unlock();
                 } else if (ps.size() > 1) {
-                    if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(), n.size()) + config.opt_learnt_growth)
-                    { continue; }
+                    if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(), n.size()) + config.opt_learnt_growth) {
+                        continue;
+                    }
                     resolvents++;
                     if (false) {
                         cerr << "c on variable " << v + 1 << " with pos size: " << positive.size() << " negs: " <<
@@ -860,19 +893,22 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, He
                     if (config.opt_minimal_updates) {
                         // just add to occs
                         data_lock.lock();
-                        for (int l = 0; l < resolvent.size(); ++l)
-                        { data.list(resolvent[l]).push_back(cr); }
+                        for (int l = 0; l < resolvent.size(); ++l) {
+                            data.list(resolvent[l]).push_back(cr);
+                        }
                         data_lock.unlock();
-                    } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                    { data.addClause(cr, &heap, config.heap_updates == 2, v, &data_lock, &heap_lock); }
-                    else
-                    { data.addClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
+                    } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
+                        data.addClause(cr, &heap, config.heap_updates == 2, v, &data_lock, &heap_lock);
+                    } else {
+                        data.addClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
+                    }
 
                     data_lock.lock();
-                    if (resolvent.learnt())
-                    { data.getLEarnts().push(cr); }
-                    else
-                    { data.getClauses().push(cr); }
+                    if (resolvent.learnt()) {
+                        data.getLEarnts().push(cr);
+                    } else {
+                        data.getClauses().push(cr);
+                    }
                     data_lock.unlock();
                     // add clause to local subsimp queues
                     strengthQueue.push_back(cr);
@@ -902,7 +938,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, He
 inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData& data,
         Heap<VarOrderBVEHeapLt>& heap,
         const vector<CRef>& list, const int32_t _stats[],
-        const Lit l, const int limit,
+        const Lit& l, const int limit,
         SpinLock& data_lock, SpinLock& heap_lock,
         ParBVEStats& stats, int& garbageCounter,
         const bool doStatistics)
@@ -910,23 +946,27 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
     const Var ignore = var(l);
     for (unsigned ci = 0; ci < list.size(); ++ci) {
         const CRef cr = list[ci];
-        if (CRef_Undef == cr)
-        { continue; }
+        if (CRef_Undef == cr) {
+            continue;
+        }
         Clause& c = ca[cr];
-        if (c.can_be_deleted())
-        { continue; }
+        if (c.can_be_deleted()) {
+            continue;
+        }
         if (_stats[ci] == 0) {
             didChange();
             c.set_delete(true);
             if (config.opt_minimal_updates) {
-                for (int i = 0; i < c.size(); ++i)
-                { data.deletedVar(var(c[i])); }
+                for (int i = 0; i < c.size(); ++i) {
+                    data.deletedVar(var(c[i]));
+                }
                 garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
             } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
-            else
-            { data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
+            else {
+                data.removedClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
+            }
             if (!c.learnt() /* && cr < limit*/) {
                 data_lock.lock();
                 data.addToExtension(cr, l);
@@ -965,10 +1005,11 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     printExtraInfowarning(cerr, "parallel BVE");
 
     if (data.hasToPropagate()) {
-        if (propagation.process(data, true) == l_False)
-        { return; }
-        else
-        { modifiedFormula = modifiedFormula || propagation.appliedSomething(); }
+        if (propagation.process(data, true) == l_False) {
+            return;
+        } else {
+            modifiedFormula = modifiedFormula || propagation.appliedSomething();
+        }
     }
     const bool doStatistics = true;
     if (doStatistics) { processTime = wallClockTime() - processTime; }
@@ -992,8 +1033,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     // use also for neighbors
     if (true || config.opt_bve_findGate) {
         gateMarkArrays.resize(controller.size());
-        for (int i = 0; i < controller.size(); ++i)
-        { gateMarkArrays[i].resize(config.opt_bve_findGate ? data.nVars() * 2 : data.nVars()); }
+        for (int i = 0; i < controller.size(); ++i) {
+            gateMarkArrays[i].resize(config.opt_bve_findGate ? data.nVars() * 2 : data.nVars());
+        }
     }
 
     for (int i = 0; i < controller.size(); ++i) {
@@ -1036,8 +1078,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
                 workData[i].garbageCounter = 0;
                 jobs[i].argument = &(workData[i]);
             }
-            if (config.opt_bve_verbose > 0)
-            { cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl; }
+            if (config.opt_bve_verbose > 0) {
+                cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl;
+            }
             pthread_rwlock_t mutex = allocatorRWLock.getValue(); // FIXME reicht hier auch eine reference?
             #ifndef __APPLE__ // Does not work on OS-X
             assert(mutex.__data.__nr_readers == 0);
@@ -1064,8 +1107,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
             if (config.opt_bve_findGate) { data.ma.resize(data.nVars() * 2); }
             if (config.opt_bve_verbose > 0) { cerr << "c sequentiel bve on " << QSize << " variables" << endl; }
             int parBveStepSum = 0;
-            for (int i = 0; i < controller.size(); ++i)
-            { parBveStepSum += parStats[i].parBveChecks; }
+            for (int i = 0; i < controller.size(); ++i) {
+                parBveStepSum += parStats[i].parBveChecks;
+            }
             seqBveSteps += parBveStepSum / controller.size();
             bve_worker(data, newheap, seqBveSteps);
             seqBveSteps -= parBveStepSum / controller.size();
@@ -1090,21 +1134,24 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 
         if (doStatistics) { subsimpTime = wallClockTime() - subsimpTime; }
         subsumption.process();
-        if (subsumption.appliedSomething())
-        { didChange(); }
+        if (subsumption.appliedSomething()) {
+            didChange();
+        }
         if (doStatistics) { subsimpTime = wallClockTime() - subsimpTime; }
         modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
-        if (config.opt_bve_heap != 2)
-        { newheap.clear(); }
-        else
-        { variable_queue.clear(); }
+        if (config.opt_bve_heap != 2) {
+            newheap.clear();
+        } else {
+            variable_queue.clear();
+        }
 
         for (int i = 0; i < touched_variables.size(); ++i) {
-            if (config.opt_bve_heap != 2)
-            { newheap.insert(touched_variables[i]); }
-            else
-            { variable_queue.push_back(touched_variables[i]); }
+            if (config.opt_bve_heap != 2) {
+                newheap.insert(touched_variables[i]);
+            } else {
+                variable_queue.push_back(touched_variables[i]);
+            }
         }
         touched_variables.clear();
     }
@@ -1260,8 +1307,9 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         Lit min = lit_Undef, nmin = lit_Undef;
         Lit minT = strengthener[0];
         for (int j = 1; j < strengthener.size(); ++j) {
-            if (data[var(minT)] > data[var(strengthener[j])])
-            { minT = strengthener[j]; }
+            if (data[var(minT)] > data[var(strengthener[j])]) {
+                minT = strengthener[j];
+            }
         }
         min = minT;
         nmin = ~minT;
@@ -1332,28 +1380,32 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
     for (unsigned int j = 0; j < list.size(); ++j) {
     lock_to_strengthen_nn_pos:
         const CRef crO = list[j];
-        if (CRef_Undef == crO)
-        { continue; }
+        if (CRef_Undef == crO) {
+            continue;
+        }
 
         Clause& other = ca[crO];
 
         // a clause can not strengthen itself, and a clause can not strengther smaller clauses
-        if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
-        { continue; }
+        if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size()) {
+            continue;
+        }
         Lit other_fst_lit = other[0];
         Var other_fst = var(other[0]);
 
 
         // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
         // if other_fst < fst, then other has to be longer
-        if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size())
-        { continue; }
+        if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size()) {
+            continue;
+        }
 
         // lock the other clause (we already tested it for beeing different from cr)
         // if false is returned: the first variable changed, and no lock was performed
         bool locked = other.spinlock(other_fst_lit);
-        if (false == locked)
-        { goto lock_to_strengthen_nn_pos; }
+        if (false == locked) {
+            goto lock_to_strengthen_nn_pos;
+        }
 
         // check if other has been deleted, while waiting for lock
         if (other.can_be_deleted() || other.size() <= strengthener.size()) {
@@ -1385,12 +1437,14 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                     negated_lit_pos = so;
                     ++si;
                     ++so;
-                } else
-                { break; }  // found more than 1 negated lit, can't strengthen
-            } else if (strengthener[si] < other[so])
-            { break; }    // the other clause did not contain this variable => can't strengthen
-            else
-            { ++so; }
+                } else {
+                    break;    // found more than 1 negated lit, can't strengthen
+                }
+            } else if (strengthener[si] < other[so]) {
+                break;    // the other clause did not contain this variable => can't strengthen
+            } else {
+                ++so;
+            }
         }
 
         // subsumption
@@ -1406,8 +1460,9 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                     stats.subsumedLearntLiterals += other.size();
                 }
             }
-            if (strengthener.learnt() && !other.learnt())
-            { strengthener.set_learnt(false); }
+            if (strengthener.learnt() && !other.learnt()) {
+                strengthener.set_learnt(false);
+            }
         }
         // if subsumption successful, strengthen
         else if (negated_lit_pos >= 0 && si == strengthener.size()) {
@@ -1422,14 +1477,16 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                 lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
-                    for (int i = 0; i < other.size(); ++i)
-                    { data.deletedVar(var(other[i])); }
+                    for (int i = 0; i < other.size(); ++i) {
+                        data.deletedVar(var(other[i]));
+                    }
                     garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
                 } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
-                else
-                { data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL); }
+                else {
+                    data.removedClause(crO, nullptr, false, var_Undef, &data_lock, nullptr);
+                }
                 if (l_False == state) {
                     other.unlock();
                     return l_False;
@@ -1445,8 +1502,9 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
             } else {
                 didChange();
                 Lit neg = other[negated_lit_pos];
-                if (config.opt_bve_verbose > 2 || global_debug_out)
-                { cerr << "c remove " << neg << " from clause " << other << endl; }
+                if (config.opt_bve_verbose > 2 || global_debug_out) {
+                    cerr << "c remove " << neg << " from clause " << other << endl;
+                }
 
                 //remove from occ-list (by overwriting cr with CRef_Undef
                 data.removeClauseFromThreadSafe(crO, neg);
@@ -1455,10 +1513,11 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                 if (config.opt_minimal_updates) {
                     data.deletedVar(var(neg));
                     ++garbageCounter; // do not update data structure
-                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                { data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); }
-                else
-                { data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL); }
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
+                    data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
+                } else {
+                    data.removedLiteral(neg, 1, nullptr, false, var_Undef, &data_lock, nullptr);
+                }
                 /*              if ( ! other.can_subsume())
                               {
                                   other.set_subsume(true);
@@ -1469,9 +1528,9 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                 if (!other.can_strengthen()) {
                     other.set_strengthen(true);
                     other.set_subsume(true);
-                    if (!strength_resolvents)
-                    { localQueue.push_back(crO); }
-                    else {
+                    if (!strength_resolvents) {
+                        localQueue.push_back(crO);
+                    } else {
                         strength_lock.lock();
                         sharedStrengthQueue.push_back(crO);
                         strength_lock.unlock();
@@ -1523,26 +1582,30 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
     for (unsigned int j = 0; j < list.size(); ++j) {
     lock_to_strengthen_nn_neg:
         const CRef crO = list[j];
-        if (CRef_Undef == crO)
-        { continue; }
+        if (CRef_Undef == crO) {
+            continue;
+        }
         Clause& other = ca[crO];
 
         // a clause can not strengthen itself, and a clause can not strengther smaller clauses
-        if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
-        { continue; }
+        if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size()) {
+            continue;
+        }
         Lit other_fst_lit = other[0];
         Var other_fst = var(other[0]);
 
         // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
         // if other_fst < fst, then other has to be longer
-        if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size())
-        { continue; }
+        if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size()) {
+            continue;
+        }
 
         // lock the other clause (we already tested it for beeing different from cr)
         // if false is returned: the first literal changed, and no lock was performed
         bool locked = other.spinlock(other_fst_lit);
-        if (false == locked)
-        { goto lock_to_strengthen_nn_neg; }
+        if (false == locked) {
+            goto lock_to_strengthen_nn_neg;
+        }
 
         // check if other has been deleted, while waiting for lock
         if (other.can_be_deleted() || other.size() < strengthener.size()) {
@@ -1572,10 +1635,11 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 negated_lit_pos = so;
                 ++si;
                 ++so;
-            } else if (strengthener[si] < other[so])
-            { break; }    // the other clause did not contain this variable => can't strengthen
-            else
-            { ++so; }
+            } else if (strengthener[si] < other[so]) {
+                break;    // the other clause did not contain this variable => can't strengthen
+            } else {
+                ++so;
+            }
         }
         // subsumption TODO -> maybe just in pos strength check!
         // but it doesn't harm at this point (just takes longer?)
@@ -1592,8 +1656,9 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                     stats.subsumedLearntLiterals += other.size();
                 }
             }
-            if (strengthener.learnt() && !other.learnt())
-            { strengthener.set_learnt(false); }
+            if (strengthener.learnt() && !other.learnt()) {
+                strengthener.set_learnt(false);
+            }
         }
 
         // if subsumption successful, strengthen
@@ -1610,14 +1675,16 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
-                    for (int i = 0; i < other.size(); ++i)
-                    { data.deletedVar(var(other[i])); }
+                    for (int i = 0; i < other.size(); ++i) {
+                        data.deletedVar(var(other[i]));
+                    }
                     garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
                 } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
-                else
-                { data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL); }
+                else {
+                    data.removedClause(crO, nullptr, false, var_Undef, &data_lock, nullptr);
+                }
                 if (l_False == state) {
                     other.unlock();
                     return l_False;
@@ -1632,8 +1699,9 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 // empty -> fail
             } else {
                 Lit neg = other[negated_lit_pos];
-                if (config.opt_bve_verbose > 2 || global_debug_out)
-                { cerr << "c remove " << neg << " from clause " << other << endl; }
+                if (config.opt_bve_verbose > 2 || global_debug_out) {
+                    cerr << "c remove " << neg << " from clause " << other << endl;
+                }
 
                 //remove from occ-list (by overwriting cr with CRef_Undef
                 data.removeClauseFromThreadSafe(crO, neg);
@@ -1644,10 +1712,11 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 if (config.opt_minimal_updates) {
                     data.deletedVar(var(neg));
                     ++garbageCounter; // do not update data structure
-                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                { data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); }
-                else
-                { data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL); }
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
+                    data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
+                } else {
+                    data.removedLiteral(neg, 1, nullptr, false, var_Undef, &data_lock, nullptr);
+                }
                 /*              if ( ! other.can_subsume())
                               {
                                   other.set_subsume(true);
@@ -1656,9 +1725,9 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 // keep track of this clause for further strengthening!
                 if (!other.can_strengthen()) {
                     other.set_strengthen(true);
-                    if (!strength_resolvents)
-                    { localQueue.push_back(crO); }
-                    else {
+                    if (!strength_resolvents) {
+                        localQueue.push_back(crO);
+                    } else {
                         strength_lock.lock();
                         sharedStrengthQueue.push_back(crO);
                         strength_lock.unlock();
@@ -1716,12 +1785,14 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
         vector<CRef>& positive = data.list(l);
         for (int i = 0; i < positive.size(); ++i) {
             const CRef cr = positive[i];
-            if (CRef_Undef == cr)
-            { continue; }
+            if (CRef_Undef == cr) {
+                continue;
+            }
 //      cerr << "cr: " << cr << " Undef " << CRef_Undef << endl;
             Clause& satisfied = ca[cr];
-            if (satisfied.can_be_deleted()) // only track yet-non-deleted clauses
-            { continue; }
+            if (satisfied.can_be_deleted()) { // only track yet-non-deleted clauses
+                continue;
+            }
 
             // lock satisfied
             satisfied.spinlock();
@@ -1746,14 +1817,16 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
             positive[i] = CRef_Undef;
 
             if (config.opt_minimal_updates) {
-                for (int i = 0; i < satisfied.size(); ++i)
-                { data.deletedVar(var(satisfied[i])); }
+                for (int i = 0; i < satisfied.size(); ++i) {
+                    data.deletedVar(var(satisfied[i]));
+                }
                 garbageCounter += ca.clauseWord32Size(satisfied.size(), satisfied.has_extra());
             } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
-            else
-            { data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
+            else {
+                data.removedClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
+            }
 
         }
 
@@ -1764,12 +1837,14 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
 
         for (int i = 0; i < negative.size(); ++i) {
             const CRef cr = negative[i];
-            if (CRef_Undef == cr)
-            { continue; }
+            if (CRef_Undef == cr) {
+                continue;
+            }
 
             Clause& c = ca[cr];
-            if (c.can_be_deleted())
-            { continue; }
+            if (c.can_be_deleted()) {
+                continue;
+            }
 
             c.spinlock();
 
@@ -1777,8 +1852,9 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
             if (!c.can_be_deleted()) {
                 for (int j = 0; j < c.size(); ++j)
                     if (c[j] == nl) {
-                        if (config.opt_bve_verbose > 2 || global_debug_out)
-                        { cerr << "c UP remove " << nl << " from " << c << endl; }
+                        if (config.opt_bve_verbose > 2 || global_debug_out) {
+                            cerr << "c UP remove " << nl << " from " << c << endl;
+                        }
                         c.removePositionSorted(j);
                         break;
                     }
@@ -1815,14 +1891,16 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
                 c.set_delete(true);
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
-                    for (int i = 0; i < c.size(); ++i)
-                    { data.deletedVar(var(c[i])); }
+                    for (int i = 0; i < c.size(); ++i) {
+                        data.deletedVar(var(c[i]));
+                    }
                     garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
                 } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
-                else
-                { data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
+                else {
+                    data.removedClause(cr, nullptr, false, var_Undef, &data_lock, nullptr);
+                }
                 if (doStatistics) {
                     if (c.learnt()) { ++countL; }
                     else { ++countO; }
@@ -1853,10 +1931,11 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
         if (config.opt_minimal_updates) {
             data.deletedVar(var(nl));
             garbageCounter += countL + countO; // do not update data structure
-        } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-        { data.removedLiteral(nl, countL + countO, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); }
-        else
-        { data.removedLiteral(nl, countL + countO, NULL, false, var_Undef, &data_lock, NULL); }
+        } else if (config.heap_updates > 0 && config.opt_bve_heap != 2) {
+            data.removedLiteral(nl, countL + countO, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
+        } else {
+            data.removedLiteral(nl, countL + countO, nullptr, false, var_Undef, &data_lock, nullptr);
+        }
 
         if (doStatistics) {
             stats.removedLiterals += countO;

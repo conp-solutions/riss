@@ -5,8 +5,8 @@
  * Created on June 17, 2012, 12:08 PM
  */
 
-#ifndef SHARED_POOL_H
-#define SHARED_POOL_H
+#ifndef PCASSO_SHARED_POOL_H
+#define PCASSO_SHARED_POOL_H
 
 #include <vector>
 

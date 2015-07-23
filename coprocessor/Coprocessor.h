@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef COPROCESSOR_HH
-#define COPRECESSOR_HH
+#ifndef RISS_COPROCESSOR_HH
+#define RISS_COPRECESSOR_HH
 
 
 #include "riss/core/Solver.h"
@@ -93,6 +93,7 @@ class Preprocessor
     Riss::lbool preprocessScheduled();
     Riss::lbool performSimplificationScheduled(std::string techniques);
 
+    /** take a given model and modify it such that its a model for the actual input formula again */
     void extendModel(Riss::vec<Riss::lbool>& model);
 
     /* TODO:
@@ -201,7 +202,7 @@ class Preprocessor
 
     // small helpers
     void sortClauses();                // sort the literals within all clauses
-    void delete_clause(const Riss::CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
+    void delete_clause(const Riss::CRef& cr);  // delete a clause from the solver (clause should not be attached within the solver)
 
     bool checkLists(const std::string& headline); // check each clause list for duplicate occurrences
     void fullCheck(const std::string& headline);  // check solver state before control is passed to solver

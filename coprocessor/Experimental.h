@@ -2,8 +2,8 @@
 Copyright (c) 2015, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef EXPERIMENTAL_HH
-#define EXPERIMENTAL_HH
+#ifndef RISS_EXPERIMENTAL_HH
+#define RISS_EXPERIMENTAL_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

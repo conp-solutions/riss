@@ -1,5 +1,5 @@
-#ifndef RWLOCK_H
-#define RWLOCK_H
+#ifndef PCASSO_RWLOCK_H
+#define PCASSO_RWLOCK_H
 
 #include <cstdio>
 #include <pthread.h>
@@ -22,7 +22,7 @@ class RWLock
     RWLock()
     {
         // create semaphore with no space in it
-        pthread_rwlock_init(&_lock, NULL);
+        pthread_rwlock_init(&_lock, nullptr);
     }
 
     /** release all used resources (nothing to do -> semaphore becomes invalid)

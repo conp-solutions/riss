@@ -85,11 +85,11 @@ int main(int argc, char** argv)
         bool foundHelp = coreConfig.parseOptions(argc, argv);
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
         ::parseOptions(argc, argv);   // parse all global options
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
         coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
         cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
 //  S.setPreprocessor(&cp3config); // tell solver about preprocessor
         double      initial_time = cpuTime();
 
@@ -116,8 +116,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -128,17 +129,20 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
-        if (argc == 1)
-        { printf("c Reading from standard input... Use '--help' for help.\n"); }
+        if (argc == 1) {
+            printf("c Reading from standard input... Use '--help' for help.\n");
+        }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL)
-        { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+        if (in == nullptr) {
+            printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+        }
 
         if (S.verbosity > 0) {
             printf("c ========================[ Qprocessor %s %13s ]====================\n", solverVersion, gitSHA1);
@@ -162,8 +166,9 @@ int main(int argc, char** argv)
         }
 
         double parsed_time = cpuTime();
-        if (S.verbosity > 0)
-        { printf("c |  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time); }
+        if (S.verbosity > 0) {
+            printf("c |  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+        }
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
@@ -185,8 +190,9 @@ int main(int argc, char** argv)
         // do coprocessing here!
 
         if (dimacs) {
-            if (S.verbosity > 0)
-            { printf("c ==============================[ Writing QDIMACS ]===============================\n"); }
+            if (S.verbosity > 0) {
+                printf("c ==============================[ Writing QDIMACS ]===============================\n");
+            }
 
             if (beforeVariables < S.nVars()) { printf("c add %d extra variables to the prefix\n", S.nVars() - beforeVariables); }
 
@@ -197,7 +203,7 @@ int main(int argc, char** argv)
             fprintf(res, "p cnf %u %i\n", vars, cls);
             // print all the quantifiers again!
             bool lastQisE = quantifiers.size() == 0 ? false : quantifiers[ quantifiers.size() - 1 ].kind == 'e';
-            for (int i = 0; i < quantifiers.size(); ++ i) {   // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
+            for (int i = 0; i < quantifiers.size(); ++ i) {  // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
                 fprintf(res, "%c ", quantifiers[i].kind);
                 for (int j = 0 ; j < quantifiers[i].lits.size(); ++ j) {
                     const int l = toInt(quantifiers[i].lits[j]);
@@ -214,7 +220,7 @@ int main(int argc, char** argv)
                 }
                 fprintf(res, "0\n");
             }
-            if (! lastQisE && beforeVariables < S.nVars()) {   // additional variables have been added, add them to the prefix as existential
+            if (! lastQisE && beforeVariables < S.nVars()) {  // additional variables have been added, add them to the prefix as existential
                 fprintf(res, "e ");
                 for (Var v = beforeVariables; v < S.nVars(); ++v) { fprintf(res, "%i ", v + 1); }
                 fprintf(res, "0\n");

@@ -18,8 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Queue_h
-#define Minisat_Queue_h
+#ifndef RISS_Minisat_Queue_h
+#define RISS_Minisat_Queue_h
 
 #include "riss/mtl/Vec.h"
 
@@ -47,7 +47,7 @@ class Queue
     T&       operator [](int index)        { assert(index >= 0); assert(index < size()); return buf[(first + index) % buf.size()]; }
 
     T    peek() const { assert(first != end); return buf[first]; }
-    void pop() { assert(first != end); first++; if (first == buf.size()) { first = 0; } }
+    void pop() { assert(first != end); first++; if (first == buf.size()) { first = 0; }  }
     void insert(T elem)     // INVARIANT: buf[end] is always unused
     {
         buf[end++] = elem;

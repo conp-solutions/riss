@@ -32,15 +32,17 @@ bool WekaDataset::getDataRow(vector<string>& row)
         getline(fin, line);
 	haveLine = line != "EOF";
         return true;
-    } else
-    { return false; }
+    } else {
+        return false;
+    }
 }
 
 string toLower(const string& str)
 {
     string res = str;
-    for (int x = 0; x < str.length(); x++)
-    { res[x] = tolower(str[x]); }
+    for (int x = 0; x < str.length(); x++) {
+        res[x] = tolower(str[x]);
+    }
     return res;
 }
 
@@ -51,8 +53,9 @@ WekaDataset::WekaDataset(const char* filename): haveLine(false)
     fin.open(filename, istream::in);
     do {
         getline(fin, line);
-        if (toLower(line).find("@attribute") != string::npos)
-        { attributesNumber++; }
+        if (toLower(line).find("@attribute") != string::npos) {
+            attributesNumber++;
+        }
         data = (line[0] != '@' && line[0] != '%' && line.size() > 0);
     } while (!data);
     haveLine = true;

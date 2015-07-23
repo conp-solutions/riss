@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef XOR_HH
-#define XOR_HH
+#ifndef RISS_XOR_HH
+#define RISS_XOR_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"
@@ -39,6 +39,11 @@ class XorReasoning : public Technique
     int xorLimit, xorSteps;
     int foundEmptyLists, xorUnits, allUsed, xorDeducedUnits, eqs;
     int addedTernaryXors, addedQuadraryXors;
+    int participatingXorClauses, participatingXorVariables;  // count number of participating clauses/variables
+    float clauseRatio, variableRatio; // count ratio of participating clauses/variables
+
+    Riss::vec<Riss::Var> xorBackdoor;
+    Riss::MarkArray backdoorVariables;
 
     /** compare two literals */
     struct VarLt {

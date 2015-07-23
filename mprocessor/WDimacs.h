@@ -13,8 +13,8 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FO
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *************************************************************************************************/
-#ifndef WDimacs_h
-#define WDimacs_h
+#ifndef RISS_WDimacs_h
+#define RISS_WDimacs_h
 
 #include <stdio.h>
 #include <fstream>
@@ -75,11 +75,11 @@ static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeig
         else if (*in == 'p') {
             foundPline = true;
             ++in;
-            if (!eagerMatch(in, " ")) { printf("PARSE ERROR! Expected space. Unexpected char: %c\n", *in), exit(3);}
+            if (!eagerMatch(in, " ")) { printf("PARSE ERROR! Expected space. Unexpected char: %c\n", *in), exit(3); }
 
             if (*in != 'w') {
                 // ++in;
-                if (!eagerMatch(in, "cnf")) { printf("PARSE ERROR! Expected cnf. Unexpected char: %c\n", *in), exit(3);}
+                if (!eagerMatch(in, "cnf")) { printf("PARSE ERROR! Expected cnf. Unexpected char: %c\n", *in), exit(3); }
                 vars    = parseInt(in);
                 clauses = parseInt(in);
                 original_vars = vars;

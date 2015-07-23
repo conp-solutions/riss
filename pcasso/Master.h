@@ -17,15 +17,15 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  **************************************************************************************************/
 
-#ifndef MASTER_H
-#define MASTER_H
+#ifndef RISS_PCASSO_MASTER_H
+#define RISS_PCASSO_MASTER_H
 
 #define COMPILE_SPLITTER
 
 // splitter
 #include "riss/utils/LockCollection.h"
 #include "pcasso/PartitionTree.h"
-#include "pcasso/SplitterSolver.h"
+#include "SolverInterface.h"
 
 // Minisat
 #include "riss/mtl/Vec.h"
@@ -34,6 +34,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/ParseUtils.h"
 #include "riss/utils/Statistics-mt.h"
 #include "riss/utils/System.h"
+
+// configurations
+#include "riss/core/CoreConfig.h"  // configuration object for riss
+#include "pfolio/PfolioConfig.h"   // configuration object for priss
 
 // libs
 #include <pthread.h>
@@ -62,7 +66,8 @@ class Master
     // void killUnsatChildren(int tDataIndex);
 
     /** configuration with which each solver is initialized */
-    static Riss::CoreConfig defaultSolverConfig;
+    Riss::CoreConfig defaultSolverConfig;
+    Riss::PfolioConfig defaultPfolioConfig;
 
     struct Parameter {
         int    verb;
@@ -105,8 +110,8 @@ class Master
         pthread_t handle;       // handle to the thread
         Master* master;     // handle to the master class, for backward communication (e.g. wakeup)
         Master::state s;        // state of the thread
-        SplitterSolver* solver;         // The most recent solver
-        ThreadData() : id(-1), result(0), timeout(-1), conflicts(-1), handle((pthread_t)0), s(idle), solver(NULL) {}
+        SolverInterface* solver;         // The most recent solver
+        ThreadData() : nodeToSolve(0), id(-1), result(0), timeout(-1), conflicts(-1), handle((pthread_t)0), s(idle), master(0), solver(nullptr) {}
     };
 
     // to maintain the original formula

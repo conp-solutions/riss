@@ -4,8 +4,8 @@
  *  Created on: Oct 22, 2013
  *      Author: gardero
  */
-#ifndef BIPARTITEGRAPH_H_
-#define BIPARTITEGRAPH_H_
+#ifndef RISS_BIPARTITEGRAPH_H_
+#define RISS_BIPARTITEGRAPH_H_
 
 #include <vector>
 #include "classifier/SequenceStatistics.h"

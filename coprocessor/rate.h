@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef RATE_HH
-#define RATE_HH
+#ifndef RISS_RATE_HH
+#define RISS_RATE_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"
@@ -71,7 +71,7 @@ class RATElimination : public Technique
      * @param resolvent initially contains the literals of the other clause (except literal l), afterwards, stores the resolvent, if the resolvent is not a  tautology
      * @return true, if the resolvent is a tautology
      */
-    bool resolveUnsortedStamped(const Riss::Lit l, const Riss::Clause& d, Riss::MarkArray& ma, std::vector<Riss::Lit>& resolvent);
+    bool resolveUnsortedStamped(const Riss::Lit& l, const Riss::Clause& d, Riss::MarkArray& ma, std::vector<Riss::Lit>& resolvent);
 
     /** run RAT elmination
      @return true, if modifications have been applied
@@ -83,11 +83,11 @@ class RATElimination : public Technique
     */
     bool minimizeRAT();
 
-    bool shortATM(const Riss::CRef clause, const Riss::Lit left, int& trailPosition, std::vector<Riss::Lit>& atlits);
+    bool shortATM(const Riss::CRef& clause, const Riss::Lit& left, int& trailPosition, std::vector<Riss::Lit>& atlits);
 
     bool propagateUnit(const Riss::Lit& unit, int& trailPosition);
 
-    void checkedAttach(const Riss::CRef clause, const int& detachTrailSize);
+    void checkedAttach(const Riss::CRef& clause, const int& detachTrailSize);
 
     bool minimizeAT();
 

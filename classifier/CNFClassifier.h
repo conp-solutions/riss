@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef CNFCLASSIFIER_H
-#define CNFCLASSIFIER_H
+#ifndef RISS_CNFCLASSIFIER_H
+#define RISS_CNFCLASSIFIER_H
 
 #include "riss/core/Solver.h"
 #include "classifier/Graph.h"
@@ -112,14 +112,14 @@ class CNFClassifier
         this->dumpingPlots = dumpingPlots;
     }
 
-    const std::string& getPlotsFileName() const
+    const char* getPlotsFileName() const
     {
         return plotsFileName;
     }
 
     void setPlotsFileName(const char* plotsFileName)
     {
-        dumpingPlots = (plotsFileName != NULL);
+        dumpingPlots = (plotsFileName != nullptr);
         this->plotsFileName = plotsFileName;
     }
 

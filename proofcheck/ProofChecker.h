@@ -2,8 +2,8 @@
 Copyright (c) 2015, All rights reserved, Norbert Manthey
 ***************************************************************************************************/
 
-#ifndef PROOFCHECKER_H
-#define PROOFCHECKER_H
+#ifndef RISS_PROOFCHECKER_H
+#define RISS_PROOFCHECKER_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"

@@ -42,8 +42,9 @@ Classifier::~Classifier()
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data)
 {
-    for (int i = 0 ; i < data.size(); ++ i)
-    { other << " " << data[i]; }
+    for (int i = 0 ; i < data.size(); ++ i) {
+        other << " " << data[i];
+    }
     return other;
 }
 
@@ -55,8 +56,9 @@ double getProb(string line)
     int index = 0;
     do {
         split >> word;
-        if (index == 2 && word.compare("2:bad") == 0)
-        { positive = false; }
+        if (index == 2 && word.compare("2:bad") == 0) {
+            positive = false;
+        }
         index++;
     } while (split);
     double p = atof(word.c_str());
@@ -85,8 +87,9 @@ string runandoutput(string cmd)
     if (stream) {
         cerr << "c while reading from command call, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
         while (!feof(stream))
-            if (fgets(buffer, max_buffer, stream) != NULL)
-            { data.append(buffer); }
+            if (fgets(buffer, max_buffer, stream) != nullptr) {
+                data.append(buffer);
+            }
         pclose(stream);
     }
     cerr << "c after command call, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
@@ -108,13 +111,15 @@ vector<int>& Classifier::classifyJava(const char* wekaFile)
     scmd << "\"" << (nonZero ? "true" : "false") << "\" ";
     scmd << " | grep \"@classIndex\"";
 
-    if (verbose > 0)
-    { cerr << "c call to weka: " << scmd.str().c_str() << endl; }
+    if (verbose > 0) {
+        cerr << "c call to weka: " << scmd.str().c_str() << endl;
+    }
 
     string s = runandoutput(scmd.str().c_str());
 
-    if (verbose > 0)
-    { cerr << "c output: " << s.c_str() << endl; }
+    if (verbose > 0) {
+        cerr << "c output: " << s.c_str() << endl;
+    }
 
     istringstream fin(s);
     //fin.open(name.str().c_str(),istream::in);
@@ -152,8 +157,9 @@ vector<int>& Classifier::classify(const char* wekaFile)
         if (useTempFiles) {
             name << "/tmp/blackbox_" << (int) getpid() << ".results";
             scmd << " -p 0 | grep \":\" > " << name.str();
-        } else
-        { scmd << " -p 0 | grep \":\""; }
+        } else {
+            scmd << " -p 0 | grep \":\"";
+        }
 
         if (verbose > 0) { cerr << "c call to weka: " << scmd.str().c_str() << endl; }
         if (useTempFiles) {
@@ -181,8 +187,9 @@ vector<int>& Classifier::classify(const char* wekaFile)
             s = buffer.str();
             t.close();
             remove(name.str().c_str());
-        } else
-        { s = runandoutput(scmd.str().c_str()); }
+        } else {
+            s = runandoutput(scmd.str().c_str());
+        }
         istringstream fin(s);
         //fin.open(name.str().c_str(),istream::in);
         string line;
@@ -314,8 +321,9 @@ int Classifier::trainBest(const char* wekaFile, int config)
             double accuracy = trainModel(wekaFile, config,
                                          tempclassifier.c_str(), localmode, ltrees,
                                          lfeatures);
-            if (verbose > 0)
-            { cout << "Accuracy " << accuracy << "%" << endl; }
+            if (verbose > 0) {
+                cout << "Accuracy " << accuracy << "%" << endl;
+            }
             if (accuracy > maccuracy) {
                 stringstream scmd2;
                 scmd2 << "cat " << tempclassifier;
@@ -338,20 +346,23 @@ int Classifier::trainBest(const char* wekaFile, int config)
 //          }
             for (int iteration = 0; iteration < iterations && maccuracy < 100; ++iteration) {
                 bmove = -1;
-                if (verbose > 0)
-                { cout << "Iteration " << iteration << endl; }
+                if (verbose > 0) {
+                    cout << "Iteration " << iteration << endl;
+                }
                 for (int move = 0; move < n && maccuracy < 100; ++move) {
                     if (ltrees + dtrees[move] > 0
                             && lfeatures + dfeatures[move] >= 0) {
-                        if (verbose > 0)
-                        { cout << "Move " << move << endl; }
+                        if (verbose > 0) {
+                            cout << "Move " << move << endl;
+                        }
                         for (int it = 0; it < times; ++it) {
                             double accuracy = trainModel(wekaFile, config,
                                                          tempclassifier.c_str(), localmode,
                                                          ltrees + dtrees[move],
                                                          lfeatures + dfeatures[move]);
-                            if (verbose > 0)
-                            { cout << "Accuracy " << accuracy << "%" << endl; }
+                            if (verbose > 0) {
+                                cout << "Accuracy " << accuracy << "%" << endl;
+                            }
                             if (accuracy > maccuracy) {
                                 stringstream scmd2;
                                 scmd2 << "cat " << tempclassifier;
@@ -366,8 +377,9 @@ int Classifier::trainBest(const char* wekaFile, int config)
                 }
                 if (bmove == -1 || maccuracy == 100) {
                     // local best
-                    if (verbose > 0)
-                    { cout << "Local best" << endl; }
+                    if (verbose > 0) {
+                        cout << "Local best" << endl;
+                    }
                     break;
                 } else {
                     ltrees = ltrees + dtrees[bmove];
@@ -378,8 +390,9 @@ int Classifier::trainBest(const char* wekaFile, int config)
         }
     }
     remove(tempclassifier.c_str());
-    if (verbose > 0)
-    { cout << "Best for " << configurations.getNames()[config] << " "  << maccuracy << "%" << endl; }
+    if (verbose > 0) {
+        cout << "Best for " << configurations.getNames()[config] << " "  << maccuracy << "%" << endl;
+    }
     return 0;
 }
 
@@ -387,8 +400,9 @@ int Classifier::train(const char* wekaFile)
 {
     configurations.loadConfigurationInfo();
     for (int config = 0; config < configurations.getSize(); config++) {
-        if (verbose > 0)
-        { cout << "Computing " << config << "/" << configurations.getSize() << endl; }
+        if (verbose > 0) {
+            cout << "Computing " << config << "/" << configurations.getSize() << endl;
+        }
         trainBest(wekaFile, config);
     }
     return test(wekaFile);
@@ -404,8 +418,9 @@ void Classifier::writeTestDetails(const char* wekaFile)
     ofstream out;
     string file = wekaFile;
     file = file + ".results.test";
-    if (verbose > 0)
-    { cout << "Writing results to " << file.c_str() << endl; }
+    if (verbose > 0) {
+        cout << "Writing results to " << file.c_str() << endl;
+    }
     out.open(file.c_str(), ostream::out);
     out.setf(ios::fixed);
     out.precision(4);
@@ -436,13 +451,15 @@ void Classifier::writeTestDetails(const char* wekaFile)
         average += (correct[i] ? 1 : 0);
         out << correct[i] << delim;
         double t = atof(row[sindex + classification[i] * 2].c_str());
-        if (t >= 0)
-        { t = t + atof(row[sindex - 1].c_str()) + classifyTime; }
+        if (t >= 0) {
+            t = t + atof(row[sindex - 1].c_str()) + classifyTime;
+        }
         out << t;
         out << endl;
         row.clear();
-        if (t > -1 && t < timeout)
-        { intime++; }
+        if (t > -1 && t < timeout) {
+            intime++;
+        }
         n++;
     }
     average = average / n;

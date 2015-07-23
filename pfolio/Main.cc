@@ -107,24 +107,31 @@ int main(int argc, char** argv)
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    IntOption    threads("MAIN", "threads", "Number of threads to be used by the parallel solver.\n", 2, IntRange(1, 64));
-
     StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
-
 
     BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
     BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
-    StringOption opt_config("MAIN", "config", "the configuration to be used for the portfolio solver", "DRUP");
+    StringOption opt_config("MAIN", "pconfig", "the configuration to be used for the portfolio solver", 0);
+    BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
+    IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
 
     try {
 
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        PfolioConfig pfolioConfig(string(opt_config == 0 ? "" : opt_config));
+        foundHelp = pfolioConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        if (foundHelp) { exit(0); }  // stop after printing the help information
 
-        PSolver S(threads, opt_config); // set up a portfolio solver for DRUP proofs
+        if (opt_showParam) {  // print remaining parameters
+            cerr << "c call after parsing options: ";
+            for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
+            cerr << endl;
+        }
+
+        PSolver S(&pfolioConfig);   // set up a portfolio solver for DRUP proofs
 
         double initial_time = cpuTime();
 
@@ -149,8 +156,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -161,17 +169,20 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 
-        if (argc == 1)
-        { printf("c Reading from standard input... Use '--help' for help.\n"); }
+        if (argc == 1) {
+            printf("c Reading from standard input... Use '--help' for help.\n");
+        }
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL)
-        { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+        if (in == nullptr) {
+            printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+        }
 
         if (S.verbosity > 0) {
             printf("c =========================[ pfolio %s %13s ]===================================================\n", solverVersion, gitSHA1);
@@ -186,11 +197,11 @@ int main(int argc, char** argv)
 
         // open file for proof
         S.setDrupFile((drupFile) ? fopen((const char*) drupFile , "wb") : 0);
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.getDrupFile() != NULL) { fprintf(S.getDrupFile(), "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.getDrupFile() != nullptr) { fprintf(S.getDrupFile(), "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
         double parsed_time = cpuTime();
         if (S.verbosity > 0) {
@@ -209,12 +220,12 @@ int main(int argc, char** argv)
         //signal(SIGXCPU,SIGINT_interrupt);
 
         if (!S.simplify()) {
-            if (res != NULL) {
+            if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
             }
             // add the empty clause to the proof, close proof file
-            if (S.getDrupFile() != NULL) { fprintf(S.getDrupFile(), "0\n"), fclose(S.getDrupFile()); }
+            if (S.getDrupFile() != nullptr) { fprintf(S.getDrupFile(), "0\n"), fclose(S.getDrupFile()); }
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
                 printf("c Solved by unit propagation\n");
@@ -249,16 +260,18 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.getDrupFile() != NULL) { fprintf(S.getDrupFile(), "0\n"); }
+        if (ret == l_False && S.getDrupFile() != nullptr) { fprintf(S.getDrupFile(), "0\n"); }
 
         // print solution into file
-        if (res != NULL) {
+        if (res != nullptr) {
             if (ret == l_True) {
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
                 for (int i = 0; i < S.model.size(); i++)
                     //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
-                { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                {
+                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                }
                 fprintf(res, " 0\n");
             } else if (ret == l_False) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
@@ -269,11 +282,13 @@ int main(int argc, char** argv)
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == NULL) {
+        if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
-            { printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+            {
+                printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+            }
             printf(" 0\n");
         }
 

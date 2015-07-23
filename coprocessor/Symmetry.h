@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef SYMMETRY_HH
-#define SYMMETRY_HH
+#ifndef RISS_SYMMETRY_HH
+#define RISS_SYMMETRY_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/CoprocessorTypes.h"

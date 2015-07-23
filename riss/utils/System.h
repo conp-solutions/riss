@@ -18,8 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_System_h
-#define Minisat_System_h
+#ifndef RISS_Minisat_System_h
+#define RISS_Minisat_System_h
 
 #if defined(__linux__)
     #include <fpu_control.h>
@@ -98,7 +98,7 @@ static inline void nanosleep(int nanoseconds)
     struct timespec req;
     req.tv_nsec = nanoseconds;
     req.tv_sec = 0;
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &req, NULL);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &req, nullptr);
 }
 
 /** simple class that combines cpu and wall clock time */
@@ -124,7 +124,7 @@ class MethodClock
     bool stopped;
   public:
     MethodClock(Clock& c) : clock(c), stopped(false) { clock.start(); };
-    ~MethodClock() { if (!stopped) { clock.stop(); } }
+    ~MethodClock() { if (!stopped) { clock.stop(); }  }
     void stop() { clock.stop(); stopped = true;}
     void cont() { if (stopped) {clock.start(); stopped = false;} }
 };

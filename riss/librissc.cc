@@ -2,10 +2,15 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
+#include <string>
+#include <algorithm> // std::remove
 #include "coprocessor/Coprocessor.h"
 #include "riss/utils/version.h"
 
+using namespace std;
 using namespace Riss;
+
+#include "riss/librissc.h"
 
 /** struct that stores the necessary data for a preprocessor */
 struct libriss {
@@ -16,7 +21,7 @@ struct libriss {
     Riss::vec<Riss::Lit> assumptions;   // current set of assumptions that are used for the next SAT call
     Riss::vec<char> conflictMap;        // map that stores for the last conflict whether a variable is present in the conflict (result of analyzeFinal)
     Riss::lbool lastResult;
-    libriss() : lastResult(l_Undef) {}  // default constructor to ensure everything is set to 0
+    libriss() : solver(0), cp3config(0), solverconfig(0), lastResult(l_Undef) {}  // default constructor to ensure everything is set to 0
 };
 
 
@@ -54,13 +59,21 @@ void riss_reset_conflict_map(libriss* solver)
 
 extern "C" {
 
-
-    /** return the name of the solver and its version
+    /** return the name of the solver and its version. The signature must be a
+     *  valid C-identifier.
      *  @return string that contains the verison of the solver
      */
     extern const char* riss_signature()
     {
-        return signature;
+        // create a signature that can be used as C-identifier
+        // remove all periods (".") in the version string and use "riss_" as prefix
+        string signature = solverVersion;
+
+        // @see http://stackoverflow.com/a/5891643/2467158
+        signature.erase(remove(signature.begin(), signature.end(), '.'), signature.end());
+
+        // solver name as prefix
+        return ("riss_" + signature).c_str();
     }
 
     /** initialize a solver instance, and return a pointer to the maintain structure
@@ -72,7 +85,7 @@ extern "C" {
         libriss* riss = new libriss;
         riss->solverconfig = new Riss::CoreConfig(presetConfig == 0 ? "" : presetConfig);
         riss->cp3config = new Coprocessor::CP3Config(presetConfig == 0 ? "" : presetConfig);
-        riss->solver = new Riss::Solver(*(riss->solverconfig));
+        riss->solver = new Riss::Solver(riss->solverconfig) ;
         riss->solver->setPreprocessor(riss->cp3config);
         return riss;
     }
@@ -180,7 +193,7 @@ extern "C" {
      * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
      */
     int
-    riss_sat(void* riss, const int& nOfConflicts)
+    riss_sat(void* riss, const int64_t& nOfConflicts)
     {
         libriss* solver = (libriss*) riss;
         if (nOfConflicts == -1) { solver->solver->budgetOff(); }

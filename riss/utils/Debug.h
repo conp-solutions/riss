@@ -5,8 +5,8 @@
  *      Author: tirrolo
  */
 
-#ifndef PCASSODEBUG_H_
-#define PCASSODEBUG_H_
+#ifndef PCASSO_DEBUG_H_
+#define PCASSO_DEBUG_H_
 
 #include <iostream>
 #include "riss/mtl/Vec.h"
@@ -15,14 +15,14 @@
 // using namespace std;
 // using namespace Riss;
 
-// support debug output only if it is compiled in
+/// support debug output only if it is compiled in
 #ifndef NDEBUG
-    #define DOUT(x) {x}
+    #define DOUT(x) x
 #else
     #define DOUT(x)
 #endif
 
-namespace Debug
+namespace PcassoDebug
 {
 
 static const int pcasso_debug_verbosity = 0;

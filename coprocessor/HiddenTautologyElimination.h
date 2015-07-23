@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef HIDDENTAUTOLOGYELIMINATION_HH
-#define HIDDENTAUTOLOGYELIMINATION_HH
+#ifndef RISS_HIDDENTAUTOLOGYELIMINATION_HH
+#define RISS_HIDDENTAUTOLOGYELIMINATION_HH
 
 #include "riss/core/Solver.h"
 
@@ -45,7 +45,7 @@ class HiddenTautologyElimination : public Technique
     /** run subsumption and strengthening until completion */
     void process(Coprocessor::CoprocessorData& data);
 
-    void initClause(const Riss::CRef cr); // inherited from Technique
+    void initClause(const Riss::CRef& cr);  // inherited from Technique
 
     void printStatistics(std::ostream& stream);
 
@@ -55,7 +55,7 @@ class HiddenTautologyElimination : public Technique
     /** mark all literals that would appear in HLA(C)
      * @return true, if clause can be removed by HTE
      */
-    bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue);
+    bool hlaMarkClause(const Riss::CRef& cr, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue);
 
     /** same as above, but can add literals to the std::vector, so that the std::vector represents the real HLA(C) clause */
     bool hlaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue, bool addLits = false);
@@ -63,7 +63,7 @@ class HiddenTautologyElimination : public Technique
     /** mark all literals that would appear in ALA(C)
      * @return true, if clause can be removed by ATE
      */
-    bool alaMarkClause(const Riss::CRef cr, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray);
+    bool alaMarkClause(const Riss::CRef& cr, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray);
 
     /** same as above, but can add literals to the std::vector, so that the std::vector represents the real ALA(C) clause */
     bool alaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray, bool addLits = false);

@@ -27,7 +27,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include "riss/core/Dimacs.h"
 #include "riss/core/Solver.h"
 #include "riss/utils/version.h" // include the file that defines the solver version
-
+#
 #include "coprocessor/Coprocessor.h"
 
 using namespace Riss;
@@ -62,8 +62,6 @@ DoubleOption    gainth("CLASSIFY", "gainth", "The Information Gain TH of the att
 DoubleOption    timeout("CLASSIFY", "timeout", "The the timeout for SAT solving.\n", 900, DoubleRange(0.0, false, DOUBLE_MAX, false));
 DoubleOption    classifytime("CLASSIFY", "classifytime", "The estimated time to classify an instance by the complete model.\n", 5, DoubleRange(0.0, true, DOUBLE_MAX, false));
 
-StringOption featuresoutput("CLASSIFY", "out", " Output file to write features into");
-
 StringOption plotFile("CLASSIFY", "plotfile", "If given, the values used to compute distributions are written to this file.");
 StringOption attrFile("CLASSIFY", "dataset", "the (input/output) file with computed values in weka format", "weka.arff");
 BoolOption attr("CLASSIFY", "attr", "if off the feature is appended to dataset.", false);
@@ -94,8 +92,9 @@ void setTimeLimit(int timeout)
         getrlimit(RLIMIT_CPU, &rl);
         if (rl.rlim_max == RLIM_INFINITY || (rlim_t)timeout < rl.rlim_max) {
             rl.rlim_cur = timeout;
-            if (setrlimit(RLIMIT_CPU, &rl) == -1)
-            { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+            if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                printf("c WARNING! Could not set resource limit: CPU-time.\n");
+            }
         }
     }
 }
@@ -109,8 +108,9 @@ void setMEMLimit(int memout)
         getrlimit(RLIMIT_AS, &rl);
         if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
             rl.rlim_cur = new_mem_lim;
-            if (setrlimit(RLIMIT_AS, &rl) == -1)
-            { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+            if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+            }
         }
     }
 }
@@ -120,11 +120,10 @@ Configurations* configuration;
 istringstream* split;
 bool runtimesInfo;
 CNFClassifier* cnfclassifier;
-ostream* out = NULL;
-ofstream* fileout = NULL;
+ostream* out = nullptr;
+ofstream* fileout = nullptr;
 const char* cnffile;
 double time1 = 0;
-ofstream featuresout;
 
 
 string splitString(const std::string& s, unsigned int n, char delim = ' ')
@@ -150,8 +149,9 @@ void dumpData()
     }
     ostream& fout = *output;
 
-    if (fileoutput)
-    { (*fileout).open(attrFile, fstream::out | fstream::app); }
+    if (fileoutput) {
+        (*fileout).open(attrFile, fstream::out | fstream::app);
+    }
     fout.setf(ios::fixed);
     fout.precision(4);
     if (attr && fileoutput) {
@@ -182,16 +182,6 @@ void dumpData()
     fout.flush();
 }
 
-inline char* replaceStr(string str, char old, char newch)
-{
-    char* res = new char[str.size() + 1];
-    for (int i = 0; i < str.size(); ++i) {
-        res[i] = (str[i] == old) ? newch : str[i];
-    }
-    res[str.size()] = '\0';
-    return res;
-}
-
 void printFeatures(int argc, char** argv)
 {
     string line = "";
@@ -201,16 +191,17 @@ void printFeatures(int argc, char** argv)
     cnffile = argv[1];
 
     CoreConfig coreConfig;
-    Solver S(coreConfig);
+    Solver S(&coreConfig);
 
     double initial_time = cpuTime();
     S.verbosity = 0;
 
-    if (verb > 0)
-    { printf("c trying %s\n", cnffile); }
+    if (verb > 0) {
+        printf("c trying %s\n", cnffile);
+    }
 
     gzFile in = gzopen(cnffile, "rb");
-    if (in == NULL) {
+    if (in == nullptr) {
         printf("c ERROR! Could not open file: %s\n",
                argc == 1 ? "<stdin>" : cnffile);
     }
@@ -263,135 +254,32 @@ void printFeatures(int argc, char** argv)
     cnfclassifier->setQuantilesCount(qcount);
     cnfclassifier->setPlotsFileName(plotFile);
     cnfclassifier->setComputingVarGraph(varf);
-    if (attr)
-    { cnfclassifier->setAttrFileName(attrFile); }
-    else
-    { cnfclassifier->setAttrFileName(NULL); }
-    cnfclassifier->setComputingDerivative(derivative);
-
-    // in output features the actual calculation is done
-    cnfclassifier->extractFeatures(features); // also print the formula name!!
-    /*  Creates or writes into the output file
-     *
-     */
-
-    vector<string> names = cnfclassifier->getFeaturesNames();
-
-    if (featuresoutput) {
-        featuresout.open(featuresoutput, ios_base::in);
-
-        if (!featuresout.is_open()) {
-            cout << "Create and write features in file  " << featuresoutput << "...";
-            featuresout.clear();
-            featuresout.open(featuresoutput, ios_base::in | ios_base::out | ios_base::app);
-            featuresout.precision(4);
-
-            featuresout << "instance ";
-
-            for (int k = 0; k < features.size(); ++k) {
-                featuresout << replaceStr(names[k], ' ', '_') << " ";
-            }
-            featuresout << endl;
-
-            featuresout << cnffile << " " ;
-            for (int k = 0; k < features.size(); ++k) {
-                featuresout << features[k] << " ";
-            }
-            featuresout << endl;
-        } else {
-            cout << "Write Features into file " << featuresoutput << "...";
-            featuresout.close();
-            featuresout.open(featuresoutput,   ios_base::in | ios_base::out | ios_base::app);
-            featuresout.precision(4);
-
-            featuresout << cnffile << " " ;
-
-            for (int k = 0; k < features.size(); ++k) {
-                featuresout << features[k] << " ";
-            }
-            featuresout << endl;
-
-        }
-        featuresout.flush();
-        featuresout.close();
-        cout << " written." <<  endl;
-    }
-
-    if (argc > 1) {
-        for (int k = 0; k < features.size(); ++k) {
-            cout << features[k] << " ";
-        }
-        cout << endl;
+    if (attr) {
+        cnfclassifier->setAttrFileName(attrFile);
     } else {
-        cout << "instance ";
-        for (int k = 0; k < names.size(); ++k) {
-            cout << replaceStr(names[k], ' ', '_') << " ";
-        }
-        cout << endl;
+        cnfclassifier->setAttrFileName(nullptr);
     }
-
-    /*
-
-        if (verb > 1) {
-            cout.setf(ios::fixed);
-            cout.precision(4);
-            vector<string> names = cnfclassifier->getFeaturesNames();
-            for (int k = 0; k < features.size(); ++k) {
-                cout << "c " << names[k] << "  :  " << features[k] << endl;
-            }
-        }
-        time1 = cpuTime() - time1;
-        dumpData();
-       }
-    */
-    if (fileoutput)
-    { (*fileout).close(); }
-}
-
-std::string getConfig(gzFile& in)
-{
-    CoreConfig coreConfig;
-    Solver S(coreConfig);
-
-    double initial_time = cpuTime();
-    S.verbosity = 0;
-
-    parse_DIMACS(in, S);
-    gzclose(in);
-
-    // here convert the found unit clauses of the solver back as real clauses!
-    if (S.trail.size() > 0) {
-        S.buildReduct();
-        vec<Lit> ps; ps.push(lit_Undef);
-        for (int j = 0; j < S.trail.size(); ++j) {
-            const Lit l = S.trail[j];
-            ps[0] = l;
-            CRef cr = S.ca.alloc(ps, false);
-            S.clauses.push(cr);
-        }
-    }
-
-#warning TODO: pass options via parameters of the function
-    cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
-    cnfclassifier->setVerb(verb);
-    cnfclassifier->setComputingClausesGraph(clausesf);
-    cnfclassifier->setComputingResolutionGraph(resolutionf);
-    cnfclassifier->setComputingRwh(rwh);
-    cnfclassifier->setComputeBinaryImplicationGraph(opt_big);
-    cnfclassifier->setComputeConstraints(opt_constraints);
-    cnfclassifier->setComputeXor(opt_xor);
-    cnfclassifier->setQuantilesCount(qcount);
-    cnfclassifier->setPlotsFileName(plotFile);
-    cnfclassifier->setComputingVarGraph(varf);
-    cnfclassifier->setAttrFileName(NULL);
     cnfclassifier->setComputingDerivative(derivative);
 
     // in output features the actual calculation is done
     cnfclassifier->extractFeatures(features); // also print the formula name!!
 
-#warning add feature code
-
+    if (verb > 1) {
+        cout.setf(ios::fixed);
+        cout.precision(4);
+        vector<string> names = cnfclassifier->getFeaturesNames();
+        for (int k = 0; k < features.size(); ++k) {
+            cout << "c " << names[k] << "  :  " << features[k] << endl;
+        }
+    }
+    time1 = cpuTime() - time1;
+    dumpData();
+//  }
+    if (fileoutput) {
+        (*fileout).close();
+    }
 }
+
 
 // Note that '_exit()' rather than 'exit()' has to be used. The reason is that 'exit()' calls
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
@@ -440,8 +328,9 @@ int main(int argc, char** argv)
         // Set limit on virtual memory:
         setMEMLimit(mem_lim);
 
-        if (argc == 1)
-        { printf("c Reading from standard input... Use '--help' for help.\n"); }
+        if (argc == 1) {
+            printf("c Reading from standard input... Use '--help' for help.\n");
+        }
 
 
         if (verb > 0) {
@@ -477,7 +366,7 @@ int main(int argc, char** argv)
                 if (attr && fileoutput) {
                     configuration->printRunningInfo();
                 }
-            } else { printFeatures(argc, argv); }
+            }
             time1 = cpuTime();
             if (!(runtimesInfo) && classify) {
                 Classifier classifier(*configuration, prefixClassifier);

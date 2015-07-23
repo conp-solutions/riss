@@ -28,8 +28,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef Minisat_SolverTypes_h
-#define Minisat_SolverTypes_h
+#ifndef RISS_Minisat_SolverTypes_h
+#define RISS_Minisat_SolverTypes_h
 
 #include <cstdio>
 #include <cstring>
@@ -39,6 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/mtl/Alg.h"
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Map.h"
+#include "riss/mtl/Sort.h"
 #include "riss/mtl/Alloc.h"
 
 // for parallel stuff
@@ -47,10 +48,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <vector>
 
-// TODO remove after debug
+/// TODO remove after debug
 #include <iostream>
-
 using namespace std;
+
 
 namespace Riss
 {
@@ -65,7 +66,7 @@ namespace Riss
 typedef int32_t Var; // be explicit here about the number of bits!
 #define var_Undef (-1)
 
-/** distinguish between DRUP and DRAT proofs */
+/// distinguish between DRUP and DRAT proofs
 enum ProofStyle {
     unknownProof = 0,
     drupProof = 1,
@@ -86,16 +87,16 @@ struct Lit {
 };
 
 
-inline  Lit  mkLit(Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
-inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
-inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
-inline  bool sign(Lit p)              { return p.x & 1; }
-inline  int  var(Lit p)              { return p.x >> 1; }
+inline  Lit  mkLit(const Var& var, const bool& sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
+inline  Lit  operator ~(const Lit& p)              { Lit q; q.x = p.x ^ 1; return q; }
+inline  Lit  operator ^(const Lit& p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
+inline  bool sign(const Lit& p)              { return p.x & 1; }
+inline  const int  var(const Lit& p)         { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
-inline  int  toInt(Var v)              { return v; }
-inline  int  toInt(Lit p)              { return p.x; }
-inline  Lit  toLit(int i)              { Lit p; p.x = i; return p; }
+inline  int  toInt(const Var& v)              { return v; }
+inline  int  toInt(const Lit& p)              { return p.x; }
+inline  Lit  toLit(const int& i)              { Lit p; p.x = i; return p; }
 
 //const Lit lit_Undef = mkLit(var_Undef, false);  // }- Useful special constants.
 //const Lit lit_Error = mkLit(var_Undef, true );  // }
@@ -179,7 +180,10 @@ class Clause
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         #ifndef PCASSO
-        unsigned lbd       : 24;
+        unsigned lbd       : 21;
+        unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
+        unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
+        unsigned isCore    : 1;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
@@ -187,19 +191,45 @@ class Clause
         #else
         unsigned shared     : 1;
         unsigned shCleanDelay : 1;
-        unsigned size      : 25;
+        unsigned size      : 21;
+        unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
+        unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned pt_level   : 9;     // level of the clause in the decision tree
-        unsigned lbd       : 20;
+        unsigned pt_level   : 11;     // level of the clause in the decision tree
+        unsigned isCore    : 1;
+        unsigned lbd       : 19;
         #endif
 
         #ifdef CLS_EXTRA_INFO
         unsigned extra_info : 64;
         #endif
 
-        ClauseHeader(void) {}
+        ClauseHeader(void) :
+            mark(0)
+            , locked(0)
+            , learnt(0)
+            , has_extra(0)
+            , reloced(0)
+            , lbd(0)
+            , wasPropagated(0)
+            , usedInAnalyze(0)
+            , isCore(0)
+            , canbedel(0)
+            , can_subsume(0)
+            , can_strengthen(0)
+            , size(0)
+            #ifdef PCASSO
+            , pt_level(0)
+            , shared(0)
+            , shCleanDelay(0)
+            #endif
+            #ifdef CLS_EXTRA_INFO
+            , extra_info(0)
+            #endif
+        {}
+
         ClauseHeader(volatile ClauseHeader& rhs)
         {
             mark = rhs.mark;
@@ -208,6 +238,9 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            wasPropagated = rhs.wasPropagated;
+            usedInAnalyze = rhs.usedInAnalyze;
+            isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
@@ -230,6 +263,9 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            wasPropagated = rhs.wasPropagated;
+            usedInAnalyze = rhs.usedInAnalyze;
+            isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
@@ -255,24 +291,13 @@ class Clause
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt)
     {
-        header.mark      = 0;
-        header.locked    = 0;
+        // header is initialized as above, everything set to 0, hence, set only different values!
         header.learnt    = learnt;
         header.has_extra = use_extra;
-        header.reloced   = 0;
         header.size      = ps.size();
-        #ifdef CLS_EXTRA_INFO
-        header.extra_info = 0
-        #endif
-                            header.lbd = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-        #ifdef PCASSO
-        header.pt_level = 0;
-        header.shared = 0; // Non-shared
-        header.shCleanDelay = 0;
-        #endif
 
         for (int i = 0; i < ps.size(); i++)
             for (int j = i + 1; j < ps.size(); j++) {
@@ -297,24 +322,13 @@ class Clause
     template<class V>
     Clause(const V* ps, int psSize, bool use_extra, bool learnt)
     {
-        header.mark      = 0;
-        header.locked    = 0;
+        // header is initialized as above, everything set to 0, hence, set only different values!
         header.learnt    = learnt;
         header.has_extra = use_extra;
-        header.reloced   = 0;
         header.size      = psSize;
-        #ifdef CLS_EXTRA_INFO
-        header.extra_info = 0
-        #endif
-                            header.lbd = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-        #ifdef PCASSO
-        header.pt_level = 0;
-        header.shared = 0; // Non-shared
-        header.shCleanDelay = 0;
-        #endif
 
         for (int i = 0; i < psSize; i++)
             for (int j = i + 1; j < psSize; j++) {
@@ -360,9 +374,10 @@ class Clause
     }
 
     int          size()      const   { return header.size; }
-    void         shrink(int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; } header.size -= i; }
+    void         shrink(int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; }  header.size -= i; }
     void         pop()              { shrink(1); }
     bool         learnt()      const   { return header.learnt; }
+    void         learnt(bool learnt)   { header.learnt = learnt; }
     bool         has_extra()      const   { return header.has_extra; }
     uint32_t     mark()      const   { return header.mark; }
     void         mark(uint32_t m)    { header.mark = m; }
@@ -390,8 +405,17 @@ class Clause
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd() const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
+    void resetCanBeDel() {header.canbedel = false;}
     bool canBeDel() {return header.canbedel;}
 
+    bool isCoreClause() const { return header.isCore; }
+    void setCoreClause(bool c) { header.isCore = c; }
+
+    bool wasPropagated() const { return header.wasPropagated; }
+    void setPropagated() { header.wasPropagated = 1; }
+
+    bool wasUsedInAnalyze() const { return header.usedInAnalyze; }
+    void setUsedInAnalyze() { header.usedInAnalyze = 1; }
 
     void         print(bool nl = false) const
     {
@@ -405,10 +429,10 @@ class Clause
     Lit          subsumes(const Clause& other) const;
     bool         ordered_subsumes(const Clause& other) const;
     bool         ordered_equals(const Clause& other) const;
-    void         remove_lit(const Lit p);        /** keeps the order of the remaining literals */
-    void         strengthen(Lit p);
+    void         remove_lit(const Lit& p);         /** keeps the order of the remaining literals */
+    void         strengthen(const Riss::Lit& p);
 
-    void    set_delete(bool b)         { if (b) { header.mark = 1; } else { header.mark = 0; }}
+    void    set_delete(bool b)          { if (b) { header.mark = 1; }  else { header.mark = 0; } }
     void    set_learnt(bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
 
@@ -443,7 +467,7 @@ class Clause
      *         false gave up locking, because first literal of clause has changed
      *               (only if first lit was specified)
      */
-    bool    spinlock(const Lit first = lit_Undef)
+    bool    spinlock(const Lit& first = lit_Undef)
     {
         ClauseHeader compare = header;
         compare.locked = 0;
@@ -479,16 +503,22 @@ class Clause
     void unlock()
     {
         header.locked = 0;
-    };
+    }
 
-    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
-    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
+    /** set lock variable without actually locking  */
+    void setLocked()
+    {
+        header.locked = 1;
+    }
+
+    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
+    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; }  shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
     // thread safe version, that changes the first literal last
     inline void removePositionSortedThreadSafe(int i)
     {
         if (i == 0) {
             Lit second = data[1].lit;
-            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1);
+            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j + 1]; }  shrink(1);
             if (has_extra() && !header.learnt) { calcAbstraction(second); }
             data[0].lit = second;
         } else { removePositionSorted(i); }
@@ -507,11 +537,11 @@ class Clause
         if (!other.can_be_deleted() && can_be_deleted()) { return false; }
         if (clauseSize > other.size()) { return false; }
         if (clauseSize < other.size()) { return true; }
-        for (uint32_t i = 0 ; i < clauseSize; i++) {   // first criterion: vars
+        for (uint32_t i = 0 ; i < clauseSize; i++) { // first criterion: vars
             if (var(other[i]) < var(data[i].lit)) { return false; }
             if (var(data[i].lit) < var(other[i])) { return true; }
         }
-        for (uint32_t i = 0 ; i < clauseSize; i++) {   // second criterion: polarity
+        for (uint32_t i = 0 ; i < clauseSize; i++) {// second criterion: polarity
             if (other[i] < data[i].lit) { return false; }
             if (data[i].lit < other[i]) { return true; }
         }
@@ -523,6 +553,7 @@ class Clause
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level)
     {
+        assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
         header.pt_level = _pt_level;
     }
 
@@ -534,7 +565,7 @@ class Clause
     //setting the shared to true... means the clause is shared or coming from a shared pool
     void setShared() {        header.shared = 1;    }
     void initShCleanDelay(unsigned i) {        i > 1 ? header.shCleanDelay = 1 : header.shCleanDelay = i;    }
-    void decShCleanDelay() {        if (header.shCleanDelay > 0) { header.shCleanDelay--; }    }
+    void decShCleanDelay() {        if (header.shCleanDelay > 0) { header.shCleanDelay--; }     }
     unsigned getShCleanDelay() {       return header.shCleanDelay;    }
     #endif
 
@@ -576,7 +607,17 @@ class Clause
     #else
     { return 0; }
     #endif
+
+    template <class LessThan>
+    friend void sort(Clause& c, LessThan lt);
 };
+
+
+template <class LessThan>
+void sort(Clause& c, LessThan lt)
+{
+    sort((Lit*) & (c.data[0]), c.size(), lt);
+}
 
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
@@ -827,7 +868,7 @@ class OccLists
     void  init(const Idx& idx) { occs.growTo(toInt(idx) + 1); dirty.growTo(toInt(idx) + 1, 0); }
     // Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
     Vec&  operator[](const Idx& idx) { return occs[toInt(idx)]; }
-    Vec&  lookup(const Idx& idx) { if (dirty[toInt(idx)]) { clean(idx); } return occs[toInt(idx)]; }
+    Vec&  lookup(const Idx& idx) { if (dirty[toInt(idx)]) { clean(idx); }  return occs[toInt(idx)]; }
 
     void  cleanAll();
     void  clean(const Idx& idx);
@@ -898,7 +939,7 @@ class CMap
 
     // Insert/Remove/Test mapping:
     void     insert(CRef cr, const T& t) { map.insert(cr, t); }
-    void     growTo(CRef cr, const T& t) { map.insert(cr, t); }       // NOTE: for compatibility
+    void     growTo(CRef cr, const T& t) { map.insert(cr, t); }      // NOTE: for compatibility
     void     remove(CRef cr)            { map.remove(cr); }
     bool     has(CRef cr, T& t)      { return map.peek(cr, t); }
 
@@ -1005,7 +1046,7 @@ inline bool Clause::ordered_equals(const Clause& other) const
     return true;
 }
 
-inline void Clause::remove_lit(const Lit p)
+inline void Clause::remove_lit(const Lit& p)
 {
     for (int i = 0; i < size(); ++i) {
         if (data[i].lit == p) {
@@ -1022,10 +1063,9 @@ inline void Clause::remove_lit(const Lit p)
     }
 }
 
-inline void Clause::strengthen(Lit p)
+inline void Clause::strengthen(const Lit& p)
 {
-    remove(*this, p);
-    calcAbstraction();
+    remove_lit(p);
 }
 //=================================================================================================
 
@@ -1176,11 +1216,11 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l)
 /** print a clause into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Clause& c)
 {
-    other << "[";
+//     other << "[ ";
     for (int i = 0 ; i < c.size(); ++ i) {
-        other << " " << c[i];
+        other << c[i] << " ";
     }
-    other << "]";
+//     other << "]";
     return other;
 }
 
@@ -1206,5 +1246,6 @@ inline std::ostream& operator<<(std::ostream& other, const vec<T>& data)
 }
 
 } // end namespace
+
 
 #endif

@@ -1,8 +1,13 @@
 #
 # create the public source code tar ball
 #
-# (to be executed frmo the scripts directory)
+# usage: ./publish.sh versionnumber
 #
+# (to be executed from the scripts directory)
+#
+
+version=$1
+shift;
 
 # go to main directory of Riss
 cd ..
@@ -15,22 +20,22 @@ lastpath=`basename $originpath`
 cd /tmp/
 mkdir $$
 cd $$
-echo "clone git repository and use public branch..."
-git clone $originpath
-cd $lastpath
-git checkout public
 
-echo "update public branch..."
-git pull origin riss
-rm -rf .git* 
-cd ..
-mv $lastpath Riss
+mkdir riss$version
+cp -r $originpath/{cmake,coprocessor,pfolio,doc,pcasso,proofcheck,riss,risslibcheck,license.txt,CMakeLists.txt,README.md,mprocessor,qprocessor} riss$version
 
 echo "create tar ball..."
-tar czf $originpath/Riss.tar.gz Riss 
-cd ..
+tar czf $originpath/riss$version.tar.gz riss$version
+
+echo "run integrity tests"
+cd riss$version
+cp -r $originpath/scripts .
+./scripts/ci.sh
 
 echo "clean up..."
+cd ../..
 rm -rf $$
+
+# return to calling path
 cd $originpath/scripts
 

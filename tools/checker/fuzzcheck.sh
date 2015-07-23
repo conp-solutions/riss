@@ -32,7 +32,7 @@ do
   rm -f $cnf; 
   ./cnfuzz $CNFUZZOPTIONS > $cnf
   # control whether algorithm should sleep
-  sleep 0.02
+#  sleep 0.02
   seed=`grep 'c seed' $cnf|head -1|awk '{print $NF}'`
   head="`awk '/p cnf /{print $3, $4}' $cnf`"
   printf "%d %16d          %6d    %6d               \r" "$i" "$seed" $head

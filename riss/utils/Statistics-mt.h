@@ -2,8 +2,8 @@
  *  multi-thread safe statistics
  */
 
-#ifndef STATISTICS_H
-#define STATISTICS_H
+#ifndef RISS_STATISTICS_H
+#define RISS_STATISTICS_H
 
 #include "riss/utils/LockCollection.h"
 

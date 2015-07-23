@@ -196,43 +196,47 @@ bool Resolving::resolve(const Clause& c, const Clause& d, const int v, vec<Lit>&
 {
     unsigned i = 0, j = 0;
     while (i < c.size() && j < d.size()) {
-        if (c[i] == mkLit(v, false))      { ++i; }
-        else if (d[j] == mkLit(v, true))  { ++j; }
+        if (c[i] == mkLit(v, false)) { ++i; }
+        else if (d[j] == mkLit(v, true)) { ++j; }
         else if (c[i] < d[j]) {
-            if (checkPush(resolvent, c[i]))
-            { return true; }
-            else { ++i; }
+            if (checkPush(resolvent, c[i])) {
+                return true;
+            } else { ++i; }
         } else {
-            if (checkPush(resolvent, d[j]))
-            { return true; }
-            else
-            { ++j; }
+            if (checkPush(resolvent, d[j])) {
+                return true;
+            } else {
+                ++j;
+            }
         }
     }
     while (i < c.size()) {
-        if (c[i] == mkLit(v, false))    { ++i; }
-        else if (checkPush(resolvent, c[i]))
-        { return true; }
-        else
-        { ++i; }
+        if (c[i] == mkLit(v, false)) { ++i; }
+        else if (checkPush(resolvent, c[i])) {
+            return true;
+        } else {
+            ++i;
+        }
     }
     while (j < d.size()) {
-        if (d[j] == mkLit(v, true))     { ++j; }
-        else if (checkPush(resolvent, d[j]))
-        { return true; }
-        else                           { ++j; }
+        if (d[j] == mkLit(v, true)) { ++j; }
+        else if (checkPush(resolvent, d[j])) {
+            return true;
+        } else { ++j; }
 
     }
     return false;
 }
 
-bool Resolving::checkPush(vec<Lit>& ps, const Lit l)
+bool Resolving::checkPush(vec< Lit >& ps, const Lit& l)
 {
     if (ps.size() > 0) {
-        if (ps.last() == l)
-        { return false; }
-        if (ps.last() == ~l)
-        { return true; }
+        if (ps.last() == l) {
+            return false;
+        }
+        if (ps.last() == ~l) {
+            return true;
+        }
     }
     ps.push(l);
     return false;
@@ -247,15 +251,17 @@ bool Resolving::ordered_subsumes(const vec<Lit>& c, const Clause& other) const
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool Resolving::ordered_subsumes(const Clause& c, const vec<Lit>& other) const
@@ -267,15 +273,17 @@ bool Resolving::ordered_subsumes(const Clause& c, const vec<Lit>& other) const
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool Resolving::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)

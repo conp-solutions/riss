@@ -5,8 +5,8 @@
  *      Author: gardero
  */
 
-#ifndef CLASSIFIER_H_
-#define CLASSIFIER_H_
+#ifndef RISS_CLASSIFIER_H_
+#define RISS_CLASSIFIER_H_
 #include <vector>
 #include <string>
 #include "classifier/Configurations.h"
