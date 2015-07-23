@@ -38,6 +38,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso/vsidsSplitting.h"
 #include "pcasso/version.h"
 
+//explicit access to preprocessor object
+#include "coprocessor/Coprocessor.h"
+
 using namespace Riss;
 using namespace std;
 
@@ -114,7 +117,9 @@ Master::Master(Parameter p) :
     res(0),
     plainpart(opt_scheme_pp)
 {
-
+    cerr << "c sizes: Solver: " << sizeof(Riss::Solver) << " Coprocessor: " << sizeof(Coprocessor::Preprocessor) << " PSolver: " << sizeof(Riss::PSolver) << endl;
+  
+  
     // decrease available elements in semaphore down to 0 -> next call will be blocking
     sleepLock.wait();
 

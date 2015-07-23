@@ -45,6 +45,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , verbosity(0)
     , verbEveryConflicts(0)
 {
+    cerr << "c sizes: Solver: " << sizeof(Solver) << " Coprocessor: " << sizeof(Preprocessor) << endl;
+  
     if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
 
     // setup the default configuration for all the solvers!

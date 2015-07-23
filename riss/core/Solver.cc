@@ -225,6 +225,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , sharingTimePoint(config.sharingType)
 {
 
+    cerr << "c sizes: Solver: " << sizeof(Solver) << " Coprocessor: " << sizeof(Preprocessor) << endl;
+  
     // Parameters (user settable):
     //
     searchconfiguration.K = config.opt_K;

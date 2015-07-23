@@ -12,11 +12,21 @@ set(LIB_SOURCES
 
 add_library(pfolio-lib-static STATIC ${LIB_SOURCES})
 add_library(pfolio-lib-shared SHARED ${LIB_SOURCES})
+# This extra libraries are build for pcasso, because pcasso needs some
+# extensions to the riss source code
+add_library(pfolio-pcasso-lib-static STATIC ${LIB_SOURCES})
+add_library(pfolio-pcasso-lib-shared SHARED ${LIB_SOURCES})
 
 set_target_properties(pfolio-lib-static PROPERTIES
                                         OUTPUT_NAME "pfolio")
 set_target_properties(pfolio-lib-shared PROPERTIES
                                         OUTPUT_NAME "pfolio" 
+                                        VERSION ${VERSION}
+                                        SOVERSION ${SOVERSION})
+set_target_properties(pfolio-pcasso-lib-static PROPERTIES
+                                        OUTPUT_NAME "pfolio-pcasso")
+set_target_properties(pfolio-pcasso-lib-shared PROPERTIES
+                                        OUTPUT_NAME "pfolio-pcasso" 
                                         VERSION ${VERSION}
                                         SOVERSION ${SOVERSION})
 
