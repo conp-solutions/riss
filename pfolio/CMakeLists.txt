@@ -24,11 +24,13 @@ set_target_properties(pfolio-lib-shared PROPERTIES
                                         VERSION ${VERSION}
                                         SOVERSION ${SOVERSION})
 set_target_properties(pfolio-pcasso-lib-static PROPERTIES
-                                        OUTPUT_NAME "pfolio-pcasso")
+                                        OUTPUT_NAME "pfolio-pcasso"
+                                        COMPILE_FLAGS "-DPCASSO")
 set_target_properties(pfolio-pcasso-lib-shared PROPERTIES
                                         OUTPUT_NAME "pfolio-pcasso" 
                                         VERSION ${VERSION}
-                                        SOVERSION ${SOVERSION})
+                                        SOVERSION ${SOVERSION}
+                                        COMPILE_FLAGS "-DPCASSO")
 
 #
 # Executables
