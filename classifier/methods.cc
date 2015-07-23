@@ -131,7 +131,10 @@ int getNearestPoint( vector<pair<int, double> >& distances, const int& amountCla
   
   if ( distances[0].second < distances[1].second ) return distances[0].first;
   double ref = distances[0].second;
-  int nearestNeighbours[amountClasses]{0};
+  assert(amountClasses > 0 && "Array must have at least 1 field");
+  int nearestNeighbours[amountClasses];
+  nearestNeighbours[0] = 0;
+
   for ( int i = 0; i < distances.size(); ++i ){
     if ( distances[i].second == ref ){
       nearestNeighbours[distances[i].first]++;

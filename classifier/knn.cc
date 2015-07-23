@@ -7,6 +7,8 @@
 #include "knn.h"
 #include "methods.h"
 
+using namespace std;
+
 string computeKNN ( int k, vector<double>& features){
   
   int zero = 0; //TODO change type
@@ -205,7 +207,10 @@ string computeIgrKNN ( int k, int zero, string dataset ){
   sort(distances.begin(), distances.end(), sort_pred());
   for ( int i = 0; i < 30; ++i ) cerr << distances[i].second << " class: " << distances[i].first << endl;
   
-  classEstimation nearestClassNeigbours[amountClasses]{{0,0}}; // start counting by zero
+  assert(amountClasses > 0 && "array must have at least 1 fields");
+  classEstimation nearestClassNeigbours[amountClasses];
+  // start counting by zero
+  nearestClassNeigbours[0] = pair<int,int>(0,0);
   
   int result = 100; // TODO some configuration 
   

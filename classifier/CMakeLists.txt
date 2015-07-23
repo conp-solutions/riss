@@ -17,7 +17,6 @@ set(LIB_SOURCES
     Classifier.cc
     SequenceStatistics.cc
     Graph.cc
-    Main.cc
     Configurations.cc
     FeaturesWriter.cc
     CNFClassifier.cc
@@ -26,35 +25,35 @@ set(LIB_SOURCES
     knn.cc
     methods.cc)
 
-add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
-add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+add_library(classifier-lib-static STATIC ${LIB_SOURCES})
+add_library(classifier-lib-shared SHARED ${LIB_SOURCES})
 
-set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}")
-set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
-                                                 OUTPUT_NAME "${PROJECT_NAME}" 
-                                                 VERSION ${VERSION}
-                                                 SOVERSION ${SOVERSION})
+set_target_properties(classifier-lib-static PROPERTIES
+                                            OUTPUT_NAME "classifier")
+set_target_properties(classifier-lib-shared PROPERTIES
+                                            OUTPUT_NAME "classifier" 
+                                            VERSION ${VERSION}
+                                            SOVERSION ${SOVERSION})
 
 # 
 # Executables
 # 
-add_executable(${PROJECT_NAME} Main.cc)
+add_executable(classifier Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-lib-static coprocessor-lib-static)
+  target_link_libraries(classifier classifier-lib-static riss-lib-static coprocessor-lib-static libpca-static)
 else()
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-lib-shared coprocessor-lib-shared -lpca -larmadillo)
+  target_link_libraries(classifier classifier-lib-shared riss-lib-shared coprocessor-lib-shared libpca-shared)
 endif()
 
 # 
 # Installation
 # 
-install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}
+install(TARGETS classifier-lib-static classifier-lib-shared classifier
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY ${PROJECT_NAME}
-        DESTINATION include/${PROJECT_NAME}
+install(DIRECTORY classifier
+        DESTINATION include/classifier
         FILES_MATCHING PATTERN "*.h")
