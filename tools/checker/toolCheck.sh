@@ -19,11 +19,14 @@ if [ "$status" -eq "10" ]
 then
 	./verify SAT /tmp/verify_$$.cnf $2 # 2>&1 > /dev/null
 	vstat=$?
-	rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
+
 	if [ "$vstat" -eq "1" ]
 	then
+		rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 		exit 10
 	else
+		cat /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
+		rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 		exit 15
 	fi
 else

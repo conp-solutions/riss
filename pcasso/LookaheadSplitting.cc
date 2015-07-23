@@ -1104,30 +1104,34 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **pickBranchValid)
     unlock();
     int temp = 0;
     int initTrailSize = trail.size(); //checking the trail size before performing looking ahead
-    vec<Lit> failedLiterals;//failed literals found by lookahead
-    vec<Lit> necAssign;//necessary assignments literals
-    vec<Lit> unitLearnts;
-    vec<Lit> varEq;
-    vec<bool> varEqCheck;        varEqCheck.growTo(nVars(), false);
-    vec<Lit> positiveTrail;
-    vec<Lit> negativeTrail;
-    vec<double> negScore;
-    vec<double> posScore;
-    vec<double> score;
+    
+    pickBranchLit_failedLiterals.clear();//failed literals found by lookahead
+    pickBranchLit_necAssign.clear();//necessary assignments literals
+    pickBranchLit_unitLearnts.clear();
+    pickBranchLit_varEq.clear();
+    pickBranchLit_varEqCheck.clear();
+    pickBranchLit_varEqCheck.growTo(nVars(), false);
+    pickBranchLit_positiveTrail.clear();
+    pickBranchLit_negativeTrail.clear();
+    pickBranchLit_negScore.clear();
+    pickBranchLit_posScore.clear();
+    pickBranchLit_score.clear();
+    pickBranchLit_binaryForcedClauses.clear();//all the binary clauses locally learnt by double lookahead; saved in pair: first literal is negated first decision and second is forced literal
+    
     int numVarEq = 0;
     int numLearnts = learnts.size();
     double bestVarScore;//best variable score for splitting
     int bestVarIndex;//best variable index in the bestKList
-    vec<Lit> binaryForcedClauses;//all the binary clauses locally learnt by double lookahead; saved in pair: first literal is negated first decision and second is forced literal
+
     bool progress;
     int numIterations;//number of iterations for finding for necessary assignments in lookahead
     int decLev = decisionLevel();
 
 decLitNotFound:
     preselectVar(sortedVar, bestKList);
-    score.clear();
-    score.growTo(bestKList.size(), 0);
-    assert(score.size() == bestKList.size() && "has been initialized to the same size");
+    pickBranchLit_score.clear();
+    pickBranchLit_score.growTo(bestKList.size(), 0);
+    assert(pickBranchLit_score.size() == bestKList.size() && "has been initialized to the same size");
     numIterations = opt_num_iterat;
     progress = true;
     bestVarIndex = var_Undef;
@@ -1147,14 +1151,14 @@ decLitNotFound:
         case 4:
         case 6:
         case 7:
-            negScore.clear();
-            posScore.clear();
-            negScore.growTo(nVars(), 0.0f);
-            posScore.growTo(nVars(), 0.0f);
+            pickBranchLit_negScore.clear();
+            pickBranchLit_posScore.clear();
+            pickBranchLit_negScore.growTo(nVars(), 0.0f);
+            pickBranchLit_posScore.growTo(nVars(), 0.0f);
             break;
         case 5:
-            negHScore.copyTo(negScore);
-            posHScore.copyTo(posScore);
+            negHScore.copyTo(pickBranchLit_negScore);
+            posHScore.copyTo(pickBranchLit_posScore);
             break;
         }
 
@@ -1171,10 +1175,10 @@ decLitNotFound:
             double binClauseNegativeLookahead = 0;//num of binary clauses created during lookahead
             double sizeWatcherPositiveLookahead = 0; //size of watcher list during lookahead
             double sizeWatcherNegativeLookahead = 0;//size of watcher list during lookahead
-            int binaryForcedClausesIndex = binaryForcedClauses.size();
+            int binaryForcedClausesIndex = pickBranchLit_binaryForcedClauses.size();
             Lit p = lit_Undef;
-            positiveTrail.clear(true);
-            negativeTrail.clear(true);
+            pickBranchLit_positiveTrail.clear(true);
+            pickBranchLit_negativeTrail.clear(true);
             cancelUntil(decLev);
 
             CRef confl = propagate();
@@ -1203,7 +1207,7 @@ decLitNotFound:
             if (value(p) != l_Undef) {
                 continue;
             }
-            if (varEqCheck[bestKList[i]]) {
+            if (pickBranchLit_varEqCheck[bestKList[i]]) {
                 //fprintf(stderr, "splitter: Var EQ Check\n");
                 continue;
             }
@@ -1220,16 +1224,16 @@ decLitNotFound:
 
             //fprintf( stderr, "splitter: lookahead %d\n", sign(p) ? var(p) +1: 0-var(p)-1 );
             // Increase decision level and enqueue 'p'
-            positiveLookahead = lookahead(p, positiveTrail, unitLearnts);
+            positiveLookahead = lookahead(p, pickBranchLit_positiveTrail, pickBranchLit_unitLearnts);
 
             if (positiveLookahead) {
                 cancelUntil(decLev);
-                score[i] = 0;
+                pickBranchLit_score[i] = 0;
                 if (opt_failed_literals > 0) {
                     uncheckedEnqueue(~p);
                     // enqueue(~p);
 		    DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after double-look-ahead: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
-                    if( decisionLevel() == 0 ) failedLiterals.push(p);
+                    if( decisionLevel() == 0 ) pickBranchLit_failedLiterals.push(p);
                 }
                 progress = true;
 
@@ -1254,19 +1258,21 @@ decLitNotFound:
                     //printf("splitter: Doublelookahead +++++++++\n");
                     bool solutionFound = false;
                     //doubleLookahead(bool& sol, int& bestVarIndex, int& bestVarScore, vec<Lit>& binClauses, vec<int> bestKList, Lit lastDecision, double to)
-                    if (doubleLookahead(solutionFound, binaryForcedClauses, unitLearnts, p)) {
+                    if (doubleLookahead(solutionFound, pickBranchLit_binaryForcedClauses, pickBranchLit_unitLearnts, p)) {
+		        if( decLev != 0 ) { pickBranchLit_binaryForcedClauses.clear(); pickBranchLit_unitLearnts.clear(); } // cannot be added globally, if we work on wrong decision level
                         cancelUntil(decLev);
-                        score[i] = 0;
+                        pickBranchLit_score[i] = 0;
                         if (opt_failed_literals > 0) {
                             uncheckedEnqueue(~p);
 			    DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after double-look-ahead: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
 //                            enqueue(~p);
-                            if( decisionLevel() == 0 ) failedLiterals.push(p);
+                            if( decisionLevel() == 0 ) pickBranchLit_failedLiterals.push(p);
                         }
                         progress = true;
                         // fprintf(stderr, "splitter: Doublelookahead +++++++++ success\n");
                         continue;
                     } else {
+		        if( decLev != 0 ) { pickBranchLit_binaryForcedClauses.clear(); pickBranchLit_unitLearnts.clear(); } // cannot be added globally, if we work on wrong decision level
                         if (solutionFound) {
                             return lit_Undef;
                         }
@@ -1283,7 +1289,7 @@ decLitNotFound:
             
             if (opt_constraint_resolvent > 0) {
                 if (opt_var_eq < 2 || numIterations < opt_num_iterat - 1) { //skipping constraint resolvents in the first interation......
-                    if( decLev == 0 ) constraintResolvent(positiveTrail);
+                    if( decLev == 0 ) constraintResolvent(pickBranchLit_positiveTrail);
                 }
             }
             
@@ -1297,13 +1303,13 @@ decLitNotFound:
 
             // perform lookahead on negative branch
             if (value(~p) == l_Undef) { //checking if the literal has already been assigned
-                negativeLookahead = lookahead(~p, negativeTrail, unitLearnts);
+                negativeLookahead = lookahead(~p, pickBranchLit_negativeTrail, pickBranchLit_unitLearnts);
 
                 if (negativeLookahead) {
                     cancelUntil(decLev);
-                    score[i] = 0;
+                    pickBranchLit_score[i] = 0;
                     if (opt_failed_literals > 0) {
-                        if( decisionLevel() == 0 ) failedLiterals.push(~p); // can use failed literals only if they failed on level 1
+                        if( decisionLevel() == 0 ) pickBranchLit_failedLiterals.push(~p); // can use failed literals only if they failed on level 1
 			DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after negative look-ahead: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
                         uncheckedEnqueue(p);
                         //enqueue(p);
@@ -1327,18 +1333,20 @@ decLitNotFound:
                         // printf("splitter: Doublelookahead ---------\n");
                         bool solutionFound = false;
                         //doubleLookahead(bool& sol, int& bestVarIndex, int& bestVarScore, vec<Lit>& binClauses, vec<int> bestKList, Lit lastDecision, double to)
-                        if (doubleLookahead(solutionFound, binaryForcedClauses, unitLearnts, ~p)) {
+                        if (doubleLookahead(solutionFound, pickBranchLit_binaryForcedClauses, pickBranchLit_unitLearnts, ~p)) {
+			    if( decLev != 0 ) { pickBranchLit_binaryForcedClauses.clear(); pickBranchLit_unitLearnts.clear(); } // cannot be added globally, if we work on wrong decision level
                             cancelUntil(decLev);
-                            score[i] = 0;
+                            pickBranchLit_score[i] = 0;
                             if (opt_failed_literals > 0) {
                                 uncheckedEnqueue(p);
                                 DOUT( if(opt_split_debug_output ) cerr << "splitter: found failed literal after double-look-ahead2: " << p << " (hence, enqueue " << ~p << ") at level " << decisionLevel() << endl; );
-                                if( decisionLevel() == 0 ) failedLiterals.push(~p); // can use failed literals only if they failed on level 1
+                                if( decisionLevel() == 0 ) pickBranchLit_failedLiterals.push(~p); // can use failed literals only if they failed on level 1
                             }
                             progress = true;
                             // fprintf(stderr, "splitter: Doublelookahead --------- success\n");
                             continue;
                         } else {
+			    if( decLev != 0 ) { pickBranchLit_binaryForcedClauses.clear(); pickBranchLit_unitLearnts.clear(); } // cannot be added globally, if we work on wrong decision level
                             if (solutionFound) {
                                 return lit_Undef;
                             }
@@ -1359,18 +1367,18 @@ decLitNotFound:
             
             if (opt_constraint_resolvent > 0) {
                 if (opt_var_eq < 2 || numIterations < opt_num_iterat - 1) { //skipping constraint resolvents in the first interation......
-                    if( decLev == 0 ) constraintResolvent(negativeTrail);
+                    if( decLev == 0 ) constraintResolvent(pickBranchLit_negativeTrail);
                 }
             }
             
 
             if (opt_double_lookahead) {
                 vec<Lit> c;
-                for (int j = binaryForcedClausesIndex; j < binaryForcedClauses.size() - 1; j = j + 2) {
-                    if (value(binaryForcedClauses[j]) == l_Undef && value(binaryForcedClauses[j + 1]) == l_Undef) {
+                for (int j = binaryForcedClausesIndex; j < pickBranchLit_binaryForcedClauses.size() - 1; j = j + 2) {
+                    if (value(pickBranchLit_binaryForcedClauses[j]) == l_Undef && value(pickBranchLit_binaryForcedClauses[j + 1]) == l_Undef) {
                         c.clear();
-                        c.push(binaryForcedClauses[j]);
-                        c.push(binaryForcedClauses[j + 1]);
+                        c.push(pickBranchLit_binaryForcedClauses[j]);
+                        c.push(pickBranchLit_binaryForcedClauses[j + 1]);
                         CRef cr = ca.alloc(c, true);
                         learnts.push(cr);
                         attachClause(cr);
@@ -1379,114 +1387,114 @@ decLitNotFound:
                 }
             }
 
-            if (opt_nec_assign > 0 || opt_var_eq > 0) {
+            if (decisionLevel() == 0  && (opt_nec_assign > 0 || opt_var_eq > 0) ) { // work only on 
 
                 markArray.nextStep();
-                for (int j = 1; j < positiveTrail.size(); j++) {
-                    markArray.setCurrentStep(toInt(positiveTrail[j]));
+                for (int j = 1; j < pickBranchLit_positiveTrail.size(); j++) {
+                    markArray.setCurrentStep(toInt(pickBranchLit_positiveTrail[j]));
                 }
                 vec<Lit> clause1;
 //                for(int j=1; j<positiveTrail.size(); j++){
-                for (int k = 1; k < negativeTrail.size(); k++) {
-                    if (value(negativeTrail[k]) != l_Undef) {
+                for (int k = 1; k < pickBranchLit_negativeTrail.size(); k++) {
+                    if (value(pickBranchLit_negativeTrail[k]) != l_Undef) {
                         continue;
                     }
-                    const bool posHit = markArray.isCurrentStep(toInt(negativeTrail[k]));
-                    const bool negHit = markArray.isCurrentStep(toInt(~(negativeTrail[k])));
+                    const bool posHit = markArray.isCurrentStep(toInt(pickBranchLit_negativeTrail[k]));
+                    const bool negHit = markArray.isCurrentStep(toInt(~(pickBranchLit_negativeTrail[k])));
                     if (posHit && opt_nec_assign > 0) {
-                        necAssign.push(negativeTrail[k]);
-                        uncheckedEnqueue(negativeTrail[k]);
+		        pickBranchLit_necAssign.push(pickBranchLit_negativeTrail[k]); // use the information only globally if we are working on decision level 0 right now
+                        uncheckedEnqueue(pickBranchLit_negativeTrail[k]);
                         progress = true;
                     } else if (negHit && opt_var_eq > 0 && numIterations == opt_num_iterat - 1 && decisionLevel() == 0) { //only performin eq check in first iteration..... as i am not checking if the eq is already found or not
 		        
-		        DOUT( if (opt_split_debug_output ) cerr << "c found equivalent variables " << negativeTrail[k] << " <-> " << negativeTrail[0] << " on level " << decisionLevel() << endl; );
-                        varEqCheck[var(negativeTrail[k])] = true;
+		        DOUT( if (opt_split_debug_output ) cerr << "c found equivalent variables " << pickBranchLit_negativeTrail[k] << " <-> " << pickBranchLit_negativeTrail[0] << " on level " << decisionLevel() << endl; );
+                        pickBranchLit_varEqCheck[var(pickBranchLit_negativeTrail[k])] = true;
                         numVarEq++;
                         if (opt_var_eq > 1) {
                             clause1.clear();
-                            clause1.push(negativeTrail[0]);
-                            clause1.push(~negativeTrail[k]);
+                            clause1.push(pickBranchLit_negativeTrail[0]);
+                            clause1.push(~pickBranchLit_negativeTrail[k]);
                             CRef cr = ca.alloc(clause1, true);
                             learnts.push(cr);
                             attachClause(cr);
 
                             clause1.clear();
-                            clause1.push(negativeTrail[k]);
-                            clause1.push(~negativeTrail[0]);
+                            clause1.push(pickBranchLit_negativeTrail[k]);
+                            clause1.push(~pickBranchLit_negativeTrail[0]);
                             cr = ca.alloc(clause1, true);
                             learnts.push(cr);
                             attachClause(cr);
                             
                         }
                         if (opt_var_eq > 2 && numIterations == opt_num_iterat - 1) {
-                            varEq.push(~negativeTrail[0]);
-                            varEq.push(~negativeTrail[k]);
+                            pickBranchLit_varEq.push(~pickBranchLit_negativeTrail[0]);
+                            pickBranchLit_varEq.push(~pickBranchLit_negativeTrail[k]);
                         }
                     }
                 }
                 //              }
             }
 
-            assert(score.size() == bestKList.size() && "has been initialized to the same size");
+            assert(pickBranchLit_score.size() == bestKList.size() && "has been initialized to the same size");
             if (!positiveLookahead && !negativeLookahead) {
                 switch (heuristic) {
                 case 0:
-                    negScore[bestKList[i]] = sizeNegativeLookahead;
-                    posScore[bestKList[i]] = sizePositiveLookahead;
-                    score[i] = 1024 * sizePositiveLookahead * sizeNegativeLookahead + sizePositiveLookahead + sizeNegativeLookahead;
+                    pickBranchLit_negScore[bestKList[i]] = sizeNegativeLookahead;
+                    pickBranchLit_posScore[bestKList[i]] = sizePositiveLookahead;
+                    pickBranchLit_score[i] = 1024 * sizePositiveLookahead * sizeNegativeLookahead + sizePositiveLookahead + sizeNegativeLookahead;
                     break;
                 case 1:
-                    negScore[bestKList[i]] = binClauseNegativeLookahead;
-                    posScore[bestKList[i]] = binClausePositiveLookahead;
-                    score[i] = 1024 * binClausePositiveLookahead * binClauseNegativeLookahead + binClausePositiveLookahead + binClauseNegativeLookahead;
+                    pickBranchLit_negScore[bestKList[i]] = binClauseNegativeLookahead;
+                    pickBranchLit_posScore[bestKList[i]] = binClausePositiveLookahead;
+                    pickBranchLit_score[i] = 1024 * binClausePositiveLookahead * binClauseNegativeLookahead + binClausePositiveLookahead + binClauseNegativeLookahead;
                     break;
                 case 2:
-                    negScore[bestKList[i]] = sizeWatcherNegativeLookahead + 1;
-                    posScore[bestKList[i]] = sizeWatcherPositiveLookahead + 1;
-                    score[i] = 1024 * sizeWatcherPositiveLookahead * sizeWatcherNegativeLookahead + sizeWatcherPositiveLookahead + sizeWatcherNegativeLookahead;
+                    pickBranchLit_negScore[bestKList[i]] = sizeWatcherNegativeLookahead + 1;
+                    pickBranchLit_posScore[bestKList[i]] = sizeWatcherPositiveLookahead + 1;
+                    pickBranchLit_score[i] = 1024 * sizeWatcherPositiveLookahead * sizeWatcherNegativeLookahead + sizeWatcherPositiveLookahead + sizeWatcherNegativeLookahead;
                     break;
                 case 3:
-                    for (int j = 0; j < negativeTrail.size(); j++) {
-                        negScore[i] += sign(negativeTrail[j]) ? negHScore[var(negativeTrail[j])] : posHScore[var(negativeTrail[j])];
+                    for (int j = 0; j < pickBranchLit_negativeTrail.size(); j++) {
+                        pickBranchLit_negScore[i] += sign(pickBranchLit_negativeTrail[j]) ? negHScore[var(pickBranchLit_negativeTrail[j])] : posHScore[var(pickBranchLit_negativeTrail[j])];
                     }
-                    for (int j = 0; j < positiveTrail.size(); j++) {
-                        posScore[i] += sign(positiveTrail[j]) ? negHScore[var(positiveTrail[j])] : posHScore[var(positiveTrail[j])];
+                    for (int j = 0; j < pickBranchLit_positiveTrail.size(); j++) {
+                        pickBranchLit_posScore[i] += sign(pickBranchLit_positiveTrail[j]) ? negHScore[var(pickBranchLit_positiveTrail[j])] : posHScore[var(pickBranchLit_positiveTrail[j])];
                     }
-                    score[i] = log(negScore[i] + 1) + log(posScore[i] + 1);
+                    pickBranchLit_score[i] = log(pickBranchLit_negScore[i] + 1) + log(pickBranchLit_posScore[i] + 1);
                     break;
                 case 4:
-                    negScore[bestKList[i]] = 0.3 * (sizeNegativeLookahead) + 0.7 * (binClauseNegativeLookahead);
-                    posScore[bestKList[i]] = 0.3 * (sizePositiveLookahead) + 0.7 * (binClausePositiveLookahead);
-                    score[i] = 1024 * posScore[bestKList[i]] * negScore[bestKList[i]] + posScore[bestKList[i]] + negScore[bestKList[i]];
+                    pickBranchLit_negScore[bestKList[i]] = 0.3 * (sizeNegativeLookahead) + 0.7 * (binClauseNegativeLookahead);
+                    pickBranchLit_posScore[bestKList[i]] = 0.3 * (sizePositiveLookahead) + 0.7 * (binClausePositiveLookahead);
+                    pickBranchLit_score[i] = 1024 * pickBranchLit_posScore[bestKList[i]] * pickBranchLit_negScore[bestKList[i]] + pickBranchLit_posScore[bestKList[i]] + pickBranchLit_negScore[bestKList[i]];
                     break;
                 case 5:
-                    score[i] = negScore[bestKList[i]] * posScore[bestKList[i]];
+                    pickBranchLit_score[i] = pickBranchLit_negScore[bestKList[i]] * pickBranchLit_posScore[bestKList[i]];
                     goto jump;
                     break;
                 case 6:
-                    negScore[bestKList[i]] = 0.7 * (sizeNegativeLookahead) + 0.3 * (binClauseNegativeLookahead);
-                    posScore[bestKList[i]] = 0.7 * (sizePositiveLookahead) + 0.3 * (binClausePositiveLookahead);
-                    score[i] = 1024 * posScore[bestKList[i]] * negScore[bestKList[i]] + posScore[bestKList[i]] + negScore[bestKList[i]];
+                    pickBranchLit_negScore[bestKList[i]] = 0.7 * (sizeNegativeLookahead) + 0.3 * (binClauseNegativeLookahead);
+                    pickBranchLit_posScore[bestKList[i]] = 0.7 * (sizePositiveLookahead) + 0.3 * (binClausePositiveLookahead);
+                    pickBranchLit_score[i] = 1024 * pickBranchLit_posScore[bestKList[i]] * pickBranchLit_negScore[bestKList[i]] + pickBranchLit_posScore[bestKList[i]] + pickBranchLit_negScore[bestKList[i]];
                     break;
                 case 7:
-                    negScore[bestKList[i]] = pow((int)opt_hscore_clause_weight, opt_hscore_maxclause - 1) * (sizeNegativeLookahead) + (negScore[bestKList[i]]);
-                    posScore[bestKList[i]] = pow((int)opt_hscore_clause_weight, opt_hscore_maxclause - 1) * (sizePositiveLookahead) + (posScore[bestKList[i]]);
-                    score[i] = 1024 * posScore[bestKList[i]] * negScore[bestKList[i]] + posScore[bestKList[i]] + negScore[bestKList[i]];
+                    pickBranchLit_negScore[bestKList[i]] = pow((int)opt_hscore_clause_weight, opt_hscore_maxclause - 1) * (sizeNegativeLookahead) + (pickBranchLit_negScore[bestKList[i]]);
+                    pickBranchLit_posScore[bestKList[i]] = pow((int)opt_hscore_clause_weight, opt_hscore_maxclause - 1) * (sizePositiveLookahead) + (pickBranchLit_posScore[bestKList[i]]);
+                    pickBranchLit_score[i] = 1024 * pickBranchLit_posScore[bestKList[i]] * pickBranchLit_negScore[bestKList[i]] + pickBranchLit_posScore[bestKList[i]] + pickBranchLit_negScore[bestKList[i]];
                     break;
                 }
             }
         }
-        assert(score.size() == bestKList.size() && "has been initialized to the same size");
+        assert(pickBranchLit_score.size() == bestKList.size() && "has been initialized to the same size");
     }
 
-    assert(score.size() == bestKList.size() && "has been initialized to the same size");
+    assert(pickBranchLit_score.size() == bestKList.size() && "has been initialized to the same size");
 
 jump:
     cancelUntil(decLev);
 
-    for (int i = 0; i < score.size(); i++) {
-        if (score[i] > 0 && score[i] > bestVarScore && value(bestKList[i]) == l_Undef) {
-            bestVarScore = score[i];
+    for (int i = 0; i < pickBranchLit_score.size(); i++) {
+        if (pickBranchLit_score[i] > 0 && pickBranchLit_score[i] > bestVarScore && value(bestKList[i]) == l_Undef) {
+            bestVarScore = pickBranchLit_score[i];
             bestVarIndex = i;
         }
     }
@@ -1495,7 +1503,7 @@ jump:
         vec<VarScore> varScore;
         for (int j = 0; j < bestKList.size(); j++) {
             if (value(bestKList[j]) == l_Undef && !tabuList[bestKList[j]]) {
-                VarScore *vs = new VarScore(j, score[j]);
+                VarScore *vs = new VarScore(j, pickBranchLit_score[j]);
                 varScore.push(*vs);
             }
         }
@@ -1516,18 +1524,18 @@ jump:
         case 1:
             pol = true;       break;
         case 2:
-            pol = negScore[bestKList[bestVarIndex]] > posScore[bestKList[bestVarIndex]];          break;
+            pol = pickBranchLit_negScore[bestKList[bestVarIndex]] > pickBranchLit_posScore[bestKList[bestVarIndex]];          break;
         case 3:
-            pol = negScore[bestKList[bestVarIndex]] < posScore[bestKList[bestVarIndex]];         break;
+            pol = pickBranchLit_negScore[bestKList[bestVarIndex]] < pickBranchLit_posScore[bestKList[bestVarIndex]];         break;
         case 4:
             pol = drand(random_seed) < 0.5;                   break;
         case 5:
             pol = phaseSaving[bestKList[bestVarIndex]].polarity;                   break;
         case 6:
-            pol = negScore[bestKList[bestVarIndex]] / posScore[bestKList[bestVarIndex]] <= 1 / opt_child_direction_adaptive_factor &&
-                  negScore[bestKList[bestVarIndex]] / posScore[bestKList[bestVarIndex]] >= opt_child_direction_adaptive_factor ?
-                  negScore[bestKList[bestVarIndex]]<posScore[bestKList[bestVarIndex]] :
-                  negScore[bestKList[bestVarIndex]]>posScore[bestKList[bestVarIndex]];
+            pol = pickBranchLit_negScore[bestKList[bestVarIndex]] / pickBranchLit_posScore[bestKList[bestVarIndex]] <= 1 / opt_child_direction_adaptive_factor &&
+                  pickBranchLit_negScore[bestKList[bestVarIndex]] / pickBranchLit_posScore[bestKList[bestVarIndex]] >= opt_child_direction_adaptive_factor ?
+                  pickBranchLit_negScore[bestKList[bestVarIndex]]<pickBranchLit_posScore[bestKList[bestVarIndex]] :
+                  pickBranchLit_negScore[bestKList[bestVarIndex]]>pickBranchLit_posScore[bestKList[bestVarIndex]];
             break;
         }
         next = mkLit(bestKList[bestVarIndex], pol);
@@ -1552,45 +1560,45 @@ jump:
     lookahead_marker.nextStep();
     vec<Lit>* clause;
     if (opt_failed_literals == 2) {
-        for (int i = 0; i < failedLiterals.size(); i++) {
-            lookahead_marker.setCurrentStep(var(failedLiterals[i]));
+        for (int i = 0; i < pickBranchLit_failedLiterals.size(); i++) {
+            lookahead_marker.setCurrentStep(var(pickBranchLit_failedLiterals[i]));
             clause = new vec<Lit>();
-            clause->push(~failedLiterals[i]);
+            clause->push(~pickBranchLit_failedLiterals[i]);
             (*pickBranchValid)->push(clause);
-             DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: failed literals %d ==========\n", sign(failedLiterals[i]) ? var(failedLiterals[i]) +1: 0-var(failedLiterals[i])-1 ); );
+             DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: failed literals %d ==========\n", sign(pickBranchLit_failedLiterals[i]) ? var(pickBranchLit_failedLiterals[i]) +1: 0-var(pickBranchLit_failedLiterals[i])-1 ); );
         }
     }
     if (opt_nec_assign == 2) {
-        for (int i = 0; i < necAssign.size(); i++) {
-            lookahead_marker.setCurrentStep(var(necAssign[i]));
+        for (int i = 0; i < pickBranchLit_necAssign.size(); i++) {
+            lookahead_marker.setCurrentStep(var(pickBranchLit_necAssign[i]));
             clause = new vec<Lit>();
-            clause->push(necAssign[i]);
+            clause->push(pickBranchLit_necAssign[i]);
             (*pickBranchValid)->push(clause);
-             DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: Necessary Assignment %d +++++++++++\n", sign(necAssign[i]) ? var(necAssign[i]) +1: 0-var(necAssign[i])-1 ); );
+             DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: Necessary Assignment %d +++++++++++\n", sign(pickBranchLit_necAssign[i]) ? var(pickBranchLit_necAssign[i]) +1: 0-var(pickBranchLit_necAssign[i])-1 ); );
         }
     }
     if (opt_clause_learning == 2) {
-        for (int i = 0; i < unitLearnts.size(); i++) {
-            lookahead_marker.setCurrentStep(var(unitLearnts[i]));
+        for (int i = 0; i < pickBranchLit_unitLearnts.size(); i++) {
+            lookahead_marker.setCurrentStep(var(pickBranchLit_unitLearnts[i]));
             clause = new vec<Lit>();
-            clause->push(unitLearnts[i]);
+            clause->push(pickBranchLit_unitLearnts[i]);
             (*pickBranchValid)->push(clause);
-            DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: unit clause learnt %d +++++++++++\n", sign(unitLearnts[i]) ? var(unitLearnts[i]) +1: 0-var(unitLearnts[i])-1 ); );
+            DOUT( if(opt_split_debug_output ) fprintf( stderr, "splitter: unit clause learnt %d +++++++++++\n", sign(pickBranchLit_unitLearnts[i]) ? var(pickBranchLit_unitLearnts[i]) +1: 0-var(pickBranchLit_unitLearnts[i])-1 ); );
         }
     }
     if (opt_var_eq == 3) {
         Lit eqLit;
-        for (int i = 0; i < varEq.size() - 1; i = i + 2) {
+        for (int i = 0; i < pickBranchLit_varEq.size() - 1; i = i + 2) {
             eqLit = lit_Undef;
-            if (value(varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i]))) {
-                eqLit = varEq[i + 1];
-            } else if (value(~varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i]))) {
-                eqLit = ~varEq[i + 1];
+            if (value(pickBranchLit_varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(pickBranchLit_varEq[i]))) {
+                eqLit = pickBranchLit_varEq[i + 1];
+            } else if (value(~pickBranchLit_varEq[i]) == l_True && lookahead_marker.isCurrentStep(var(pickBranchLit_varEq[i]))) {
+                eqLit = ~pickBranchLit_varEq[i + 1];
             }
-            if (value(varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i + 1]))) {
-                eqLit = varEq[i];
-            } else if (value(~varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(varEq[i + 1]))) {
-                eqLit = ~varEq[i];
+            if (value(pickBranchLit_varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(pickBranchLit_varEq[i + 1]))) {
+                eqLit = pickBranchLit_varEq[i];
+            } else if (value(~pickBranchLit_varEq[i + 1]) == l_True && lookahead_marker.isCurrentStep(var(pickBranchLit_varEq[i + 1]))) {
+                eqLit = ~pickBranchLit_varEq[i];
             }
 
             if (eqLit != lit_Undef &&  ! lookahead_marker.isCurrentStep(var(eqLit))) {
@@ -1603,21 +1611,21 @@ jump:
         }
     }
     if (opt_double_lookahead && opt_bin_constraints) {
-        for (int i = 0, j = 0; i < binaryForcedClauses.size() - 1; i = i + 2) {
-            if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True) {
+        for (int i = 0, j = 0; i < pickBranchLit_binaryForcedClauses.size() - 1; i = i + 2) {
+            if ((value(pickBranchLit_binaryForcedClauses[i]) == l_True) || value(pickBranchLit_binaryForcedClauses[i + 1]) == l_True) {
                 continue;
             }
-            if (lookahead_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef) {
+            if (lookahead_marker.isCurrentStep(var(pickBranchLit_binaryForcedClauses[i])) && value(pickBranchLit_binaryForcedClauses[i]) == l_False && value(pickBranchLit_binaryForcedClauses[i + 1]) == l_Undef) {
                 j = i + 1;
-            } else if (lookahead_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef) {
+            } else if (lookahead_marker.isCurrentStep(var(pickBranchLit_binaryForcedClauses[i + 1])) && value(pickBranchLit_binaryForcedClauses[i + 1]) == l_False && value(pickBranchLit_binaryForcedClauses[i]) == l_Undef) {
                 j = i;
             } else {
                 continue;
             }
-            if (! lookahead_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
-                lookahead_marker.setCurrentStep(var(binaryForcedClauses[j]));
+            if (! lookahead_marker.isCurrentStep(var(pickBranchLit_binaryForcedClauses[j]))) {
+                lookahead_marker.setCurrentStep(var(pickBranchLit_binaryForcedClauses[j]));
                 clause = new vec<Lit>();
-                clause->push(binaryForcedClauses[j]);
+                clause->push(pickBranchLit_binaryForcedClauses[j]);
                 (*pickBranchValid)->push(clause);
                 temp++;
             }
@@ -1636,26 +1644,26 @@ jump:
     }
 
     lock();
-    countFailedLiterals += failedLiterals.size();
+    countFailedLiterals += pickBranchLit_failedLiterals.size();
     unlock();
 
-    statistics.changeI(splitterTotalFailedLiteralsID, failedLiterals.size());
-    statistics.changeI(splitterTotalNecessaryAssignmentsID, necAssign.size());
-    statistics.changeI(splitterTotalClauseLearntUnitsID, unitLearnts.size());
+    statistics.changeI(splitterTotalFailedLiteralsID, pickBranchLit_failedLiterals.size());
+    statistics.changeI(splitterTotalNecessaryAssignmentsID, pickBranchLit_necAssign.size());
+    statistics.changeI(splitterTotalClauseLearntUnitsID, pickBranchLit_unitLearnts.size());
     statistics.changeI(splitterTotalLiteralEquivalencesID, numVarEq);
     statistics.changeI(splitterTotalLocalLearningsID, learnts.size() - numLearnts);
 
-    failedLiterals.clear(true);
-    necAssign.clear(true);
-    unitLearnts.clear(true);
-    positiveTrail.clear(true);
-    negativeTrail.clear(true);
-    negScore.clear(true);
-    posScore.clear(true);
-    score.clear(true);
-    binaryForcedClauses.clear(true);
-    varEq.clear(true);
-    varEqCheck.clear(true);
+    pickBranchLit_failedLiterals.clear();
+    pickBranchLit_necAssign.clear();
+    pickBranchLit_unitLearnts.clear();
+    pickBranchLit_positiveTrail.clear();
+    pickBranchLit_negativeTrail.clear();
+    pickBranchLit_negScore.clear();
+    pickBranchLit_posScore.clear();
+    pickBranchLit_score.clear();
+    pickBranchLit_binaryForcedClauses.clear();
+    pickBranchLit_varEq.clear();
+    pickBranchLit_varEqCheck.clear();
     return next;
 }
 
