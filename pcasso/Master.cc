@@ -90,7 +90,8 @@ static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string 
 
 // Options for Priss
 static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver\n", false);
-static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss threads))\n", 2, IntRange(1, 64));
+static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
+static IntOption     global_priss_threads("PRISS", "g-priss-threads",  "threads global Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
@@ -110,6 +111,7 @@ Master::Master(Parameter p) :
     res(0),
     plainpart(opt_scheme_pp)
 {
+
     // decrease available elements in semaphore down to 0 -> next call will be blocking
     sleepLock.wait();
 
@@ -162,44 +164,20 @@ Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 int
 Master::main(int argc, char **argv)
 {
-    fprintf(stderr, "c ===============================[ Pcasso  %13s ]=================================================\n", Pcasso::gitSHA1);
-    fprintf(stderr, "c | PCASSO - a Parallel, CooperAtive Sat SOlver                                                           |\n");
-    fprintf(stderr, "c |                                                                                                       |\n");
-    fprintf(stderr, "c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
-    fprintf(stderr, "c | Contributors:                                                                                         |\n");
-    fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
-    fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
-    fprintf(stderr, "c |                                                                                                       |\n");
 
-    string filename = (argc == 1) ? "" : argv[1];
-
-    // // FILE* out_state_file = fopen("data.txt", "a"); // Davide> for statistics
-
-    // fprintf( out_state_file, "Solving on %s\n", filename.c_str() ); // Davide> for statistics
-    // fclose( out_state_file ); // Davide> for statistics
-
-    // setup everything
-    parseFormula(filename);
-    if (MSverbosity > 1) { fprintf(stderr, "parsed %d clauses with %d variables\n", (int)originalFormula.size(), maxVar); }
-
-    // open output file, in case of a non-valid filename, res will be 0 as well
-    res = (argc >= 3) ? fopen(argv[2], "wb") : 0;
-    if (argc >= 3) {
-        fprintf(stderr, "The output file name should be %s\n", argv[2]);
-    }
-    // push the root node to the solve and split queues
-    if (!plainpart) {
-        solveQueue.push_back(&root);
-    }
-
-    splitQueue.push_back(&root);
-
-    // run the real work loop
-    return run();
 }
+
+PSolver& Master::getGlobalSolver()
+{
+  assert( globalSolver != nullptr && "" );
+  return *globalSolver;
+}
+
 
 int Master::run()
 {
+    if (MSverbosity > 1) { fprintf(stderr, "parsed %d clauses with %d variables\n", (int)originalFormula.size(), maxVar); }
+  
     int solution = 0;
 
     // initialize random number generator

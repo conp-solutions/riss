@@ -38,6 +38,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <semaphore.h>
 #include <errno.h>
 
+#include "pcasso/version.h"
+
 using namespace Pcasso;
 
 //=================================================================================================
@@ -96,11 +98,6 @@ struct shareStruct {
     {}
 };
 
-
-// declare
-void* solverMain(void* pointer);
-
-
 int main(int argc, char** argv)
 {
 
@@ -149,231 +146,64 @@ int main(int argc, char** argv)
         }
     }
 
+    fprintf(stderr, "c ===============================[ Pcasso  %13s ]=================================================\n", Pcasso::gitSHA1);
+    fprintf(stderr, "c | PCASSO - a Parallel, CooperAtive Sat SOlver                                                           |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
+    fprintf(stderr, "c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+    fprintf(stderr, "c | Contributors:                                                                                         |\n");
+    fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
+    fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
+    
     Master::Parameter p;
     p.pre = pre;
     p.verb = verb;
-    if (dimacs) {
-        p.dimacs = (const char*)dimacs;
-    } else {
-        p.dimacs = "";
-    }
 
     Master m(p);
     master = &m;
     signal(SIGINT, SIGINT_exit);
     signal(SIGXCPU, SIGINT_exit);
 
-    return m.main(argc, argv);
-    /*
-
-        parameter p;
-
-
-        int threads = 2;
-        shareStruct shares[threads];
-
-
-        p.argc = argc;
-        p.argv = argv;
-
-        // first one that prints will set it to 1 -> no other can print its solution
-        int printedAlready = 0;
-        pthread_mutex_t mutex;
-        pthread_mutex_init(&mutex, nullptr);
-
-        sem_t sleepSem;
-        sem_init(&(sleepSem), 0, 0);
-
-        pthread_t threaddata [threads];
-        // Make threads Joinable for sure.
-        pthread_attr_t attr;
-        pthread_attr_init (&attr);
-        pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_JOINABLE);
-
-        int ret = 0;
-        for( int i = 0 ; i < threads ; ++i ){
-            shares[i].param=&p;
-            shares[i].printedAlready = &printedAlready;
-            shares[i].mutex = &mutex;
-            shares[i].wakeSem = &sleepSem;
-
-            int rc = pthread_create(&(threaddata[i]), &attr, solverMain, (void *)  &(shares[i]));
-            if (rc) {
-                fprintf( stderr,"ERROR; return code from pthread_create() is %d for thread %d\n",rc,i);
-            }
-        }
-
-        // wait for one of the parallel solvers to return a solution
-        sem_wait( &sleepSem );
-
-        for( int i = 0 ; i < threads ; ++i ){
-            int* status = 0;
-            int err = 0;
-            fprintf( stderr,"c try to join thread %d\n", i);
-            err = pthread_join(threaddata[i], (void**)&status);
-            if( err == EINVAL ) fprintf( stderr,"c tried to cancel wrong thread\n");
-            if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
-            fprintf( stderr,"c joined thread %d\n", i);
-            fprintf( stderr,"Solver %d returned value %d\n", i , shares[i].result );
-        }
-
-        pthread_mutex_destroy(&mutex);
-
-        for( int i = 0 ; i < threads ; ++i ){
-            if( shares[i].result!=0) return shares[i].result;
-        }
-        fprintf( stderr,"done\n");
-        return ret;
-        */
-
-}
-
-//=================================================================================================
-// Main:
-
-void* solverMain(void* pointer)
-{
-    #if 0
-    shareStruct* share = (shareStruct*) pointer;
-    parameter& p = *(share->param);
-
-    // enable canceling
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
-
-    try {
-
-        SimpSolver  S;
-        double      initial_time = cpuTime();
-
-        if (!p.pre) { S.eliminate(true); }
-
-        S.verbosity = p.verb;
-
-        solver = &S;
-        // Use signal handlers that forcibly quit until the solver will be able to respond to
-        // interrupts:
-        signal(SIGINT, SIGINT_exit);
-        signal(SIGXCPU, SIGINT_exit);
-
-
-
-        if (p.argc == 1) {
-            fprintf(stderr, "Reading from standard input... Use '--help' for help.\n");
-        }
-
-        gzFile in = (p.argc == 1) ? gzdopen(0, "rb") : gzopen(p.argv[1], "rb");
-        if (in == nullptr) {
-            fprintf(stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1);
-        }
-
-        if (S.verbosity > 0) {
-            fprintf(stderr, "============================[ Problem Statistics ]=============================\n");
-            fprintf(stderr, "|                                                                             |\n");
-        }
-
-        parse_DIMACS(in, S);
-        gzclose(in);
-
-
-        if (S.verbosity > 0) {
-            fprintf(stderr, "|  Number of variables:  %12d                                         |\n", S.nVars());
-            fprintf(stderr, "|  Number of clauses:    %12d                                         |\n", S.nClauses());
-        }
-
-        double parsed_time = cpuTime();
-        if (S.verbosity > 0) {
-            fprintf(stderr, "|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
-        }
-
-        // Change to signal-handlers that will only notify the solver and allow it to terminate
-        // voluntarily:
-        signal(SIGINT, SIGINT_interrupt);
-        signal(SIGXCPU, SIGINT_interrupt);
-
-        S.eliminate(true);
-        double simplified_time = cpuTime();
-        if (S.verbosity > 0) {
-            fprintf(stderr, "|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
-            fprintf(stderr, "|                                                                             |\n");
-        }
-
-        if (!S.okay()) {
-            // print? -> mutex!
-            pthread_mutex_lock(share->mutex);
-            if (*(share->printedAlready) == 0) {
-                *(share->printedAlready) = 1;
-                FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : nullptr;
-                if (res != nullptr) { ffprintf(stderr, res, "UNSAT\n"), fclose(res); }
-
-                if (S.verbosity > 0) {
-                    fprintf(stderr, "===============================================================================\n");
-                    fprintf(stderr, "Solved by simplification\n");
-                    printStats(S);
-                    fprintf(stderr, "\n");
-                }
-                fprintf(stderr, "UNSATISFIABLE\n");
-
-            }
-            pthread_mutex_unlock(share->mutex);
-            share->result = 20;
-            sem_post(share->wakeSem);
-            return 0;
-        }
-
-        if (p.dimacs) {
-            if (S.verbosity > 0) {
-                fprintf(stderr, "==============================[ Writing DIMACS ]===============================\n");
-            }
-            S.toDimacs((const char*)p.dimacs);
-            if (S.verbosity > 0) {
-                printStats(S);
-            }
-            exit(0);
-        }
-
-        vec<Lit> dummy;
-        lbool ret = S.solveLimited(dummy);
-
-        // do print only, if no other thread has already printed
-        pthread_mutex_lock(share->mutex);
-        if (*(share->printedAlready) == 0) {
-            *(share->printedAlready) = 1;
-            if (S.verbosity > 0) {
-                printStats(S);
-                fprintf(stderr, "\n");
-            }
-            fprintf(stderr, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
-
-            FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : nullptr;
-            if (res != nullptr) {
-                if (ret == l_True) {
-                    fprintf(res, "SAT\n");
-                    for (int i = 0; i < S.nVars(); i++)
-                        if (S.model[i] != l_Undef) {
-                            fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
-                        }
-                    fprintf(res, " 0\n");
-                } else if (ret == l_False) {
-                    fprintf(res, "UNSAT\n");
-                } else {
-                    fprintf(res, "INDET\n");
-                }
-                fclose(res);
-            }
-        }
-        pthread_mutex_unlock(share->mutex);
-
-        // let thread starter know about return value
-        share->result = (int)(ret == l_True ? 10 : ret == l_False ? 20 : 0);
-        sem_post(share->wakeSem);
-        return 0;
-
-    } catch (OutOfMemoryException&) {
-        fprintf(stderr, "===============================================================================\n");
-        fprintf(stderr, "INDETERMINATE\n");
-        sem_post(share->wakeSem);
-        exit(0);
+    if (argc == 1) {
+       printf("c Reading from standard input... Use '--help' for help.\n");
     }
-    #endif
-    return 0;
+    gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+    if (in == nullptr) {
+       printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+    }
+    
+    parse_DIMACS(in, m.getGlobalSolver() );
+    gzclose(in);
+    
+
+
+    string filename = (argc == 1) ? "" : argv[1];
+
+    // setup everything
+    
+    // TODO parse formula here
+#if 0
+     parseFormula(filename);
+
+
+    // open output file, in case of a non-valid filename, res will be 0 as well
+    res = (argc >= 3) ? fopen(argv[2], "wb") : 0;
+    if (argc >= 3) {
+        fprintf(stderr, "The output file name should be %s\n", argv[2]);
+    }
+    // push the root node to the solve and split queues
+    if (!plainpart) {
+        solveQueue.push_back(&root);
+    }
+
+    splitQueue.push_back(&root);
+#endif
+    
+    // run the real work loop
+    m.run();
+    
+    // get model from master, and all that
+    
+    return m.main(argc, argv);
 }
+

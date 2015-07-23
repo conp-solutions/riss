@@ -49,9 +49,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstdio>
 #include <algorithm>    // std::sort
 
-// using namespace std;
-// using namespace Pcasso;
-// using namespace Riss;
+#include "pfolio/PSolver.h"
 
 namespace Pcasso
 {
@@ -72,7 +70,6 @@ class Master
     struct Parameter {
         int    verb;
         bool   pre;
-        std::string dimacs;
     };
 
   private:
@@ -124,6 +121,9 @@ class Master
     // to maintain the parameters that have been specified on the commandline
     Parameter param;
 
+    
+    PSolver* globalSolver;
+    
     unsigned int threads;   // number of threads
     int64_t      space_lim;       // Total number of bytes reserved for Riss::ClauseAllocator and Riss::vec in each solver
     ThreadData* threadData; // data for each thread
@@ -221,6 +221,9 @@ class Master
     // to be called from the main function
     int main(int argc, char** argv);
 
+    /** return reference to global Priss solver */
+    PSolver& getGlobalSolver();
+    
     // setup everything and handle the conrol loop
     int run();
 
