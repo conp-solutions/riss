@@ -886,7 +886,7 @@ class OccLists
         dirty  .clear(free);
         dirties.clear(free);
     }
-    
+
     /** clear dirties -- careful use, use only after clearing all watch lists */
     void clearDirties() { dirties.clear(); }
 

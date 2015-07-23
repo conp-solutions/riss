@@ -121,9 +121,9 @@ class Master
     // to maintain the parameters that have been specified on the commandline
     Parameter param;
 
-    
+
     PSolver* globalSolver;
-    
+
     unsigned int threads;   // number of threads
     int64_t      space_lim;       // Total number of bytes reserved for Riss::ClauseAllocator and Riss::vec in each solver
     ThreadData* threadData; // data for each thread
@@ -223,7 +223,7 @@ class Master
 
     /** return reference to global Priss solver */
     PSolver& getGlobalSolver();
-    
+
     // setup everything and handle the conrol loop
     int run();
 

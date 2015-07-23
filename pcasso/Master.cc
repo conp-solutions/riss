@@ -169,15 +169,15 @@ Master::main(int argc, char **argv)
 
 PSolver& Master::getGlobalSolver()
 {
-  assert( globalSolver != nullptr && "" );
-  return *globalSolver;
+    assert(globalSolver != nullptr && "");
+    return *globalSolver;
 }
 
 
 int Master::run()
 {
     if (MSverbosity > 1) { fprintf(stderr, "parsed %d clauses with %d variables\n", (int)originalFormula.size(), maxVar); }
-  
+
     int solution = 0;
 
     // initialize random number generator
@@ -187,7 +187,7 @@ int Master::run()
     // fill the queue
     // check the state of the tree
     // solve the next node in the tree
-    if (MSverbosity > 0) { fprintf(stderr, "M: start main loop, with %d variables\n", maxVar ); }
+    if (MSverbosity > 0) { fprintf(stderr, "M: start main loop, with %d variables\n", maxVar); }
     while (!done) {
 
         int idles = 0;  // important, because this indicates that there can be done more in the next round!
@@ -259,9 +259,9 @@ int Master::run()
             // check the tree for UNSAT/SAT
             if (MSverbosity > 1) { fprintf(stderr, "M: CHECK TREE\n"); }
             root.evaluate(*this);
-	    
-	    unlock();
-	    
+
+            unlock();
+
             if (root.getState() == TreeNode::unsat) {
                 // assign the according solution
                 solution = 20;
@@ -273,7 +273,7 @@ int Master::run()
                 solution = 10;
                 break;
             }
-            
+
 
             // there is nothing to do for sat or unknown, because sat will be noticed if the model has been given
         }
@@ -516,8 +516,8 @@ int Master::run()
         threadData[i].solver->interrupt(); // Yeah, it takes time.
         // threadData[i].solver->kill();
         PcassoDebug::PRINTLN_NOTE("thread KILLED");
-	if (threadData[i].s == idle) { continue; }
-	
+        if (threadData[i].s == idle) { continue; }
+
         //if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
     }
 
@@ -529,14 +529,14 @@ int Master::run()
         if (MSverbosity > 1) { fprintf(stderr, "c try to join thread %d\n", i); }
         //    if( threadData[i].s == idle || threadData[i].handle == 0 ) continue;
         if (threadData[i].handle != 0) {
-		if( threadData[i].handle != 0 ) pthread_cancel(threadData[i].handle ); // cancel the thread
-                err = pthread_join(threadData[i].handle, (void**)&status);
-                if (err == EINVAL) { fprintf(stderr, "c tried to cancel wrong thread\n"); }
-                else if (err == ESRCH) { fprintf(stderr, "c specified thread does not exist\n"); }
-                else if (err == EDEADLK) { fprintf(stderr, "c deadlock due to join\n"); }
-                else if (MSverbosity > 1) { fprintf(stderr, "c joined thread %d succesfully\n", i); }
+            if (threadData[i].handle != 0) { pthread_cancel(threadData[i].handle); }   // cancel the thread
+            err = pthread_join(threadData[i].handle, (void**)&status);
+            if (err == EINVAL) { fprintf(stderr, "c tried to cancel wrong thread\n"); }
+            else if (err == ESRCH) { fprintf(stderr, "c specified thread does not exist\n"); }
+            else if (err == EDEADLK) { fprintf(stderr, "c deadlock due to join\n"); }
+            else if (MSverbosity > 1) { fprintf(stderr, "c joined thread %d succesfully\n", i); }
         }
-	if (threadData[i].solver != nullptr) {
+        if (threadData[i].solver != nullptr) {
             if (MSverbosity > 1) { fprintf(stderr, "c delete solver %d\n", i); }
             delete threadData[i].solver;
         }
@@ -839,20 +839,20 @@ Master::solveInstance(void* data)
     nanosleep(1000);
     lbool solution = solver->solveLimited(dummy);
     ret = solution == l_True ? 10 : (solution == l_False ? 20 : 0);
-    
-/*************** LOCKS MASTER HERE ALREADY  *******************************************/    
-    
+
+    /*************** LOCKS MASTER HERE ALREADY  *******************************************/
+
     master.lock();
-    if (tData.result == 20) { 
-      assert( ret != 10 && "cannot find sat on unsat node" );
-      ret = 20; 
+    if (tData.result == 20) {
+        assert(ret != 10 && "cannot find sat on unsat node");
+        ret = 20;
     }
 
-    if( ret == 20 ) {
+    if (ret == 20) {
 // #warning remove after debug, does not work with priss
 //       ((Solver*)solver)->printFullSolverState();
     }
-    
+
     // tell statistics
     if (ret != 10 && ret != 20) {
         statistics.changeI(master.unsolvedNodesID, 1);
@@ -947,11 +947,11 @@ Master::solveInstance(void* data)
                     master.polarity[i] = solver->getPolarity(i);
                 }
             }
-            
+
         }
         if (activity_mode != 0) {
-            
-	    /** already locked **/
+
+            /** already locked **/
             if (master.activity.size() == 0) { master.activity.growTo(master.maxVar, false); }
             else {
                 // copy information to solver, use only variables that are available
@@ -962,7 +962,7 @@ Master::solveInstance(void* data)
                     master.activity[i] = solver->getActivity(i);
                 }
             }
-            
+
         }
 
     }
@@ -978,7 +978,7 @@ Master::solveInstance(void* data)
     // wake up the master so that it can check the result
     if (MSverbosity > 0 && tData.nodeToSolve != 0) { fprintf(stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime); }
 
-/*********************** UNLOCK MASTER HERE AGAIN  *****************************/
+    /*********************** UNLOCK MASTER HERE AGAIN  *****************************/
     master.unlock();
     master.notify();
     return (void*)ret;
@@ -990,11 +990,11 @@ Master::splitInstance(void* data)
     // set thread cancelable, and will be canceled immediately
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
 //     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr );
-    
+
     // extract parameter data again
     ThreadData& tData = *((ThreadData*)data);
     Master& master = *(tData.master);
-    
+
     if (MSverbosity > 1) { fprintf(stderr, "create a split thread[%d] that splits node %d\n", tData.id, tData.nodeToSolve->id()); }
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
         cpu_set_t mask;
@@ -1050,7 +1050,7 @@ Master::splitInstance(void* data)
         for (unsigned int j = 0 ; j < clauses[i]->size(); ++ j) {
             lits.push((*clauses[i])[j]);
         }
-        if( lits.size() == 0 ) cerr << "c read empty clause during initializing path constraints" << endl;
+        if (lits.size() == 0) { cerr << "c read empty clause during initializing path constraints" << endl; }
         S->addClause_(lits);
     }
     for (unsigned int i = 0 ; i < master.formula().size(); ++i) {
@@ -1059,12 +1059,12 @@ Master::splitInstance(void* data)
             lits.push(master.formula()[i].lits[j]);
         }
         S->addClause_(lits);
-	if( lits.size() == 0 ) cerr << "c read empty clause during initializing formula constraints" << endl;
+        if (lits.size() == 0) { cerr << "c read empty clause during initializing formula constraints" << endl; }
     }
 
     if (!S->okay()) {
         fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());
-// 	S->printFullSolverState();
+//  S->printFullSolverState();
 #warning: this is ok! (according to LA-splitting author Ahmed)
         ret = 20;
         // tell statistics
@@ -1098,8 +1098,8 @@ Master::splitInstance(void* data)
         exit(127);
         } */
 
-	fprintf(stderr, "master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False );
-	
+        fprintf(stderr, "master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False);
+
         // tell statistics
         PcassoDebug::PRINT_NOTE("c add to created nodes: ");
         PcassoDebug::PRINTLN_NOTE((*splits).size());
@@ -1108,7 +1108,7 @@ Master::splitInstance(void* data)
 
         // only if there is a valid vector, use it!
         if (valid != 0) {
-	    fprintf(stderr, "master: received unit %d clauses\n", valid->size() );
+            fprintf(stderr, "master: received unit %d clauses\n", valid->size());
             for (int i = 0; i < (*valid).size(); i++) {
                 vec<Lit> *tmp_cls = (*valid)[i];
                 validConstraints.push_back(new vector<Lit>);
@@ -1127,7 +1127,7 @@ Master::splitInstance(void* data)
         }
         //          fprintf( stderr,"\n");
 
-        fprintf(stderr, "master: received %d splits\n", splits->size() );
+        fprintf(stderr, "master: received %d splits\n", splits->size());
         for (int i = 0; i < (*splits).size(); i++) {
             if (MSverbosity > 1) { fprintf(stderr, "Split %d\n", i); }
             vec<vec<Lit>*> *tmp_cnf = (*splits)[i];
@@ -1147,8 +1147,8 @@ Master::splitInstance(void* data)
             //          fprintf( stderr,"\n");
             delete tmp_cnf;
         }
-        
-        assert( splits->size() == childConstraints.size() && "all splits have to be copied!" );
+
+        assert(splits->size() == childConstraints.size() && "all splits have to be copied!");
         // if sat has been found, return SAT
         if (solution == l_True) {
             // tell statistics
@@ -1222,7 +1222,7 @@ Master::splitInstance(void* data)
     // set the own state to unclean
     if (MSverbosity > 1) {
         fprintf(stderr, "finished splitting with %d\n", ret);
-// 	S->printFullSolverState();
+//  S->printFullSolverState();
         // wake up the master so that it can check the result
         fprintf(stderr, "thread %d calls notify from splitting\n" , tData.id);
     }
@@ -1246,7 +1246,7 @@ Master::submitModel(const vec<lbool>& fullModel)
     // only store one model
     if (model == 0)  {
         // if( MSverbosity > 0 )
-        DOUT( fprintf(stderr, "c model submitted with %d values\n", fullModel.size() ); );
+        DOUT(fprintf(stderr, "c model submitted with %d values\n", fullModel.size()););
         model = new vec< lbool >;
         fullModel.copyTo(*model);
     }

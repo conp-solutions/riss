@@ -32,6 +32,7 @@
  *
  */
 
+#include "ipasir.h"
 #include "riss/librissc.h" // include actual C-interface of Riss
 
 #ifdef __cplusplus
@@ -45,8 +46,8 @@ extern "C" {
 const char * ipasir_signature()
 {
 #warning return a dynamic version of the signature here!
-    //return riss_signature();
-    return "riss505";
+    return riss_signature();
+    // return "riss_505";
 }
 
 /**

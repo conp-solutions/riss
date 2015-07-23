@@ -154,7 +154,7 @@ int main(int argc, char** argv)
     fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
     fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
     fprintf(stderr, "c |                                                                                                       |\n");
-    
+
     Master::Parameter p;
     p.pre = pre;
     p.verb = verb;
@@ -165,25 +165,25 @@ int main(int argc, char** argv)
     signal(SIGXCPU, SIGINT_exit);
 
     if (argc == 1) {
-       printf("c Reading from standard input... Use '--help' for help.\n");
+        printf("c Reading from standard input... Use '--help' for help.\n");
     }
     gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
     if (in == nullptr) {
-       printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+        printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
     }
-    
-    parse_DIMACS(in, m.getGlobalSolver() );
+
+    parse_DIMACS(in, m.getGlobalSolver());
     gzclose(in);
-    
+
 
 
     string filename = (argc == 1) ? "" : argv[1];
 
     // setup everything
-    
+
     // TODO parse formula here
-#if 0
-     parseFormula(filename);
+    #if 0
+    parseFormula(filename);
 
 
     // open output file, in case of a non-valid filename, res will be 0 as well
@@ -197,13 +197,13 @@ int main(int argc, char** argv)
     }
 
     splitQueue.push_back(&root);
-#endif
-    
+    #endif
+
     // run the real work loop
     m.run();
-    
+
     // get model from master, and all that
-    
+
     return m.main(argc, argv);
 }
 

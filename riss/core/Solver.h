@@ -247,34 +247,34 @@ class Solver
     class SearchConfiguration
     {
       public:
-	
-	SearchConfiguration() : 
-	    K(0.8)
-	  , R(1.4)
-	  , sizeLBDQueue(50)
-	  , sizeTrailQueue(5000)
-	  , firstReduceDB(4000)
-	  , incReduceDB(300)
-	  , specialIncReduceDB(1000)
-	  , lbLBDFrozenClause(30)
-	  , lbSizeMinimizingClause(30)
-	  , lbLBDMinimizingClause(6)
-	  , uhle_minimizing_size(0)
-	  , uhle_minimizing_lbd(6)
-	  , use_reverse_minimization(false)
-	  , lbSizeReverseClause(12)
-	  , lbLBDReverseClause(6)
-	  , var_decay(0.95)
-	  , var_decay_start(0.95)
-	  , var_decay_end(0.95)
-	  , var_decay_inc(0.01)
-	  , var_decay_distance(5000)
-	  , clause_decay(0.999)
-	  , ccmin_mode(2)
-	  , phase_saving(2)
-	  , restarts_type(0)
-	{}
-	
+
+        SearchConfiguration() :
+            K(0.8)
+            , R(1.4)
+            , sizeLBDQueue(50)
+            , sizeTrailQueue(5000)
+            , firstReduceDB(4000)
+            , incReduceDB(300)
+            , specialIncReduceDB(1000)
+            , lbLBDFrozenClause(30)
+            , lbSizeMinimizingClause(30)
+            , lbLBDMinimizingClause(6)
+            , uhle_minimizing_size(0)
+            , uhle_minimizing_lbd(6)
+            , use_reverse_minimization(false)
+            , lbSizeReverseClause(12)
+            , lbLBDReverseClause(6)
+            , var_decay(0.95)
+            , var_decay_start(0.95)
+            , var_decay_end(0.95)
+            , var_decay_inc(0.01)
+            , var_decay_distance(5000)
+            , clause_decay(0.999)
+            , ccmin_mode(2)
+            , phase_saving(2)
+            , restarts_type(0)
+        {}
+
         double    K;
         double    R;
         double    sizeLBDQueue;

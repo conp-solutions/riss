@@ -30,7 +30,7 @@ class LookaheadSplitting : public SplitterSolver
     unsigned extraInfo;
 
     Riss::MarkArray   lookahead_marker; // mark literals during look-ahead
-    
+
   public:
     LookaheadSplitting(Riss::CoreConfig* config);
     ~LookaheadSplitting();
@@ -125,18 +125,18 @@ class LookaheadSplitting : public SplitterSolver
     void preselectVar(Riss::vec<int>& sv, Riss::vec<int>& bkl);
     bool lookahead(Riss::Lit p, Riss::vec<Riss::Lit>& lookaheadTrail, Riss::vec<Riss::Lit>& units);
     bool doubleLookahead(bool& sol, Riss::vec<Riss::Lit>& binClauses, Riss::vec<Riss::Lit>& unitLearnts, Riss::Lit lastDecision);
-    
-    /** pick the next branch literal based on look-ahead 
+
+    /** pick the next branch literal based on look-ahead
      * Note: do not call this method recursively, as the used data structures are members of the object
      */
     Riss::Lit pickBranchLiteral(Riss::vec<Riss::vec<Riss::Lit>* > **valid);
-    
+
     void constraintResolvent(const Riss::vec<Riss::Lit>& t);
     void learntsLimitPush();
     void learntsLimitPop();
 
     virtual inline void interrupt() { Riss::Solver::interrupt(); }
-    
+
 
     /*
      *  vectors that are used in the pickBranchLit method
@@ -152,8 +152,8 @@ class LookaheadSplitting : public SplitterSolver
     Riss::vec<double> pickBranchLit_posScore;
     Riss::vec<double> pickBranchLit_score;
     Riss::vec<Riss::Lit> pickBranchLit_binaryForcedClauses;//all the binary clauses locally learnt by double lookahead; saved in pair: first literal is negated first decision and second is forced literal
-    
-    
+
+
 };
 
 } // namespace Pcasso

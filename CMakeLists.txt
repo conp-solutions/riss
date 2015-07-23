@@ -23,6 +23,12 @@ function(version version_string)
   set(SOVERSION ${VERSION_MAJOR} PARENT_SCOPE)
 endfunction()
 
+# Adds a subdirectories but only if it exists
+function(add_component directory)
+  if(EXISTS ${CMAKE_SOURCE_DIR}/${directory})
+    add_subdirectory(${directory})
+  endif()
+endfunction()
 
 # Options:
 # 
@@ -94,29 +100,29 @@ endif()
 # to include other components and a huge single top-level CMakeLists.txt would
 # be very harsh to manage. With the subdirs we got a much more modular approach.
 # 
-add_subdirectory(riss/)
-add_subdirectory(risslibcheck/)
-add_subdirectory(classifier/)
-add_subdirectory(coprocessor/)
-add_subdirectory(externalTools/)
-add_subdirectory(mprocessor/)
-add_subdirectory(pcasso/)
-add_subdirectory(pfolio/)
-add_subdirectory(proofcheck/)
-add_subdirectory(qprocessor/)
-add_subdirectory(test/)
-add_subdirectory(doc/)
-add_subdirectory(scripts/)
+add_component(riss/)
+add_component(risslibcheck/)
+add_component(classifier/)
+add_component(coprocessor/)
+add_component(externalTools/)
+add_component(mprocessor/)
+add_component(pcasso/)
+add_component(pfolio/)
+add_component(proofcheck/)
+add_component(qprocessor/)
+add_component(test/)
+add_component(doc/)
+add_component(scripts/)
 
 if(SHIFTBMC)
-  add_subdirectory(shiftbmc/)
+  add_component(shiftbmc/)
 endif()
 
 # Subdirectories are not allowed to be included twice,
 # therefore we have two cases for the aiger-tools to
 # be imported.
 if(AIGER-TOOLS OR SHIFTBMC)
-  add_subdirectory(aiger/)
+  add_component(aiger/)
 endif()
 
 if(AIGER-TOOLS)
@@ -144,7 +150,7 @@ if(AIGER-TOOLS)
     LOG_BUILD 1
   )
   add_library(abc-lib-static STATIC IMPORTED)
-  set_property(TARGET abc-lib-static PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libabc${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set_property(TARGET abc-lib-static PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libabc.a)
   add_dependencies(abc-lib-static abc)
 
 endif()

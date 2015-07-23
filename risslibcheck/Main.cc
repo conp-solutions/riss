@@ -78,9 +78,8 @@ int main(int argc, char** argv)
 {
     std::cerr << "c check implemented solver interfaces ... " << std::endl;
 
-    testNuSVM();
-
     testIPASIR();
+    testNuSVM();
 
     return 0;
 }
