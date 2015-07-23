@@ -60,6 +60,7 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
 
 BoundedVariableElimination::~BoundedVariableElimination()
 {
+    // free variable heap
     if (variable_heap != nullptr) {
         delete variable_heap;
     }
@@ -1257,7 +1258,7 @@ void BoundedVariableElimination::destroy()
     vector<Var>().swap(variable_queue);
 
     // if we use a variable heap, clear it -- we do not delete the whole object
-    // (this is done in the destructor of BVE), // because it can be used for
+    // (this is done in the destructor of BVE), because it can be used for
     // the next simplification run
     if (variable_heap != nullptr) {
         variable_heap->clear();
