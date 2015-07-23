@@ -2046,6 +2046,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 
                 data.clss.clear();
                 // check whether one of the EE-class literals is already assigned, if yes, enqueue the remaining literals!
+                assert(var(repr) < data.nVars());
                 lbool setValue =  data.value(repr);
                 if (setValue == l_Undef) {
                     setValue =  data.value(getReplacement(repr));

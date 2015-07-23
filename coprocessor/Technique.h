@@ -61,10 +61,10 @@ class Technique
 
     CP3Config& config;            // store the configuration for the whole preprocessor
 
-    bool modifiedFormula;          // true, if subsumption did something on formula
+    bool modifiedFormula;         // true, if subsumption did something on formula
 
     bool isInitialized;           // true, if the structures have been initialized and the technique can be used
-    uint32_t myModTimer;       // timer to control which deleted variables have been seen already
+    uint32_t myModTimer;          // timer to control which deleted variables have been seen already
 
     Riss::ClauseAllocator& ca;          // clause allocator for direct access to clauses
     Riss::ThreadController& controller; // controller for parallel execution
@@ -91,27 +91,26 @@ class Technique
         , increasePenalty(_increasePenalty)
     {}
 
-    // TODO Maybe we can use a generic interface for all techniques? This would save us a lot of boiler plate code
-    //      Yet, we cannot define a method in this interface that is called from outside to performe a single
-    //      technique, because the signatures are too different yet. This also prevents us from building a wrapping
-    //      function that do automatically check the penalty and stepper system. Below is a first draft:
-    //      "apply()" and "process()"
+    /**
+     * This method will be called by the Coprocessor for each technique before simplifications are
+     * performed. It can be used for bootstrapping tasks.
+     *
+     * Note:
+     *   If your technique needs initialization, you can add an assertion to the top of your process()
+     *   method. Make sure, that you add your technique in Preprocessor::initializePreprocessor() at the bottom.
+     */
+    inline void initializeTechnique(CoprocessorData& data)
+    {
+        // by default, do nothing but setting the initialization flag
+        isInitialized = true;
+    }
 
-    // /**
-    //  * Applies a certain technique on the given data. It makes use of an internal penalty system, that disables a
-    //  * technique for some rounds if it was not successful in the last run.
-    //  * Besides it uses a stepper system to track and limit the computation time taken by this technique.
-    //  */
-    // inline Riss::lbool apply(CoprocessorData& data, const bool doStatistics = true)
-    // {
-    //     modifiedFormula = false;
-    //
-    //     if (!performSimplification()) {
-    //         return l_Undef;
-    //     }
-    //
-    //     return static_cast<T>(this).process(data, doStatistics);
-    // }
+    /** return true, if technique can be used without further initialization */
+    inline bool isInitializedTechnique()
+    {
+        return isInitialized;
+    }
+
 
     /**
      * Return whether some changes have been applied since last time
@@ -144,30 +143,6 @@ class Technique
      *  This method should be overwritten by all techniques that inherit this class
      */
     void reset();
-
-    // TODO see above @ apply()
-    // /**
-    //  * This is the internal process method that have to be implemented for each technique. This is the place where
-    //  * the simplification will finally applied. It will be called by the apply() method.
-    //  *
-    //  * The implementation should call the methods for an (un)successful application. The check, if the technique
-    //  * is allowd to be executed must not be done here. This is already handeled by the "apply()" call.
-    //  *
-    //  * @return Returns l_True/l_False if technique found out that the formula is SAT/UNSAT, otherwise l_Undef
-    //  */
-    // Riss::lbool process(CoprocessorData& data, bool doStatistics = true);
-
-    /** indicate that this technique has been initialized (reset if destroy is called) */
-    inline void initializedTechnique()
-    {
-        isInitialized = true;
-    }
-
-    /** return true, if technique can be used without further initialization */
-    inline bool isInitializedTechnique()
-    {
-        return isInitialized;
-    }
 
     /** give delete timer */
     inline uint32_t lastModTime()

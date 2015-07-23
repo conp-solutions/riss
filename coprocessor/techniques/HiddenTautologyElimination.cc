@@ -37,10 +37,6 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
 
     if (!data.unlimited() && (data.nVars() > config.opt_hte_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_hte_cls && data.nTotLits() > config.opt_hte_lits)) { return ; }
 
-    if (! isInitializedTechnique()) {
-        initializedTechnique();
-    }
-
     // get active flags
     activeFlag.resize(data.nVars(), 0);
     BIG big;

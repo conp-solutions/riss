@@ -60,7 +60,7 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
 
 BoundedVariableElimination::~BoundedVariableElimination()
 {
-    if (variable_heap != 0) {
+    if (variable_heap != nullptr) {
         delete variable_heap;
     }
 }
@@ -168,6 +168,8 @@ bool BoundedVariableElimination::hasToEliminate()   // TODO if heap is used, thi
 
 lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doStatistics)
 {
+    assert(isInitialized && "Technique must be initialized before processing");
+
     // do not do anything?!
     if (!performSimplification()) {
         return l_Undef;
@@ -206,10 +208,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
     // process step, we have to check for duplicates when we insert new variables into the heap / queue
     if (config.opt_bve_heap != 2) {
         // initialize variable heap only once
-        if (variable_heap == nullptr) {
-            VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
-            variable_heap = new Heap<VarOrderBVEHeapLt>(comp);
-        }
+        assert(variable_heap != nullptr && "Variable heap must be initialzied");
         data.getActiveVariables(lastModTime(), *variable_heap, true);
     } else {
         // initialze mark array the first time process() gets called
@@ -218,7 +217,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
             duplicateMarker.nextStep(); // create initial step
         }
         // if new variables are created by other techniques, reserve some space in the marker
-        else  if (duplicateMarker.size() < data.nVars()) {
+        else if (duplicateMarker.size() < data.nVars()) {
             duplicateMarker.resize(data.nVars());
         }
         data.getActiveVariables(lastModTime(), variable_queue, &duplicateMarker);
@@ -1250,14 +1249,17 @@ bool BoundedVariableElimination::findGates(CoprocessorData& data, const Var v, i
 }
 
 /**
- *  Performs clear and minimize on all member vars to release memory
+ * Performs clear and minimize on all member vars to release memory
  */
 void BoundedVariableElimination::destroy()
 {
     vector<Var>().swap(touched_variables);
     vector<Var>().swap(variable_queue);
 
-    if (variable_heap != 0) {
+    // if we use a variable heap, clear it -- we do not delete the whole object
+    // (this is done in the destructor of BVE), // because it can be used for
+    // the next simplification run
+    if (variable_heap != nullptr) {
         variable_heap->clear();
     }
 

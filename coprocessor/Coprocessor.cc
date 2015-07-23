@@ -71,8 +71,10 @@ Preprocessor::~Preprocessor()
 
 lbool Preprocessor::performSimplification()
 {
-    if (! config.opt_enabled) { return l_Undef; }
-    if (config.opt_verbose > 4) { cerr << "c start simplifying with coprocessor" << endl; }
+    if (!config.opt_enabled) { return l_Undef; }
+    if (config.opt_verbose > 4) {
+        cerr << "c start simplifying with coprocessor" << endl;
+    }
 
     if (formulaVariables == -1) {
         if (config.opt_verbose > 2) { cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl; }
@@ -672,7 +674,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
                 currentPosition = 0;
                 if (config.opt_verbose > 1) { cerr << "c new data: current line: " << grammar[currentLine] << " pos: " << currentPosition << endl; }
                 continue;
-            } else { break; }
+            } else {
+                break;
+            }
         }
 
         char execute = grammar[currentLine][currentPosition];
@@ -839,20 +843,19 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
             if (config.opt_verbose > 1) { cerr << "c FM changed formula: " << change << endl; }
         }
 
-        // dense "d"
+        // f "d"
         else if (execute == 'd' && config.opt_dense && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c dense" << endl; }
             dense.compress();
             change = dense.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c Dense changed formula: " << change << endl; }
         }
-
         // none left so far
         else {
             cerr << "c warning: cannot execute technique related to  " << execute << endl;
         }
 
-        // perform afte reach call
+        // perform after reach call
         DOUT(if (config.opt_debug)  { scanCheck("after iteration"); printFormula("after iteration");});
         data.checkGarbage(); // perform garbage collection
         if (config.opt_verbose > 3) { printStatistics(cerr); }
@@ -1026,16 +1029,25 @@ lbool Preprocessor::preprocess()
     const bool wasDoingER = solver->getExtendedResolution();
 
     // do not preprocess, if the formula is considered to be too large!
-    if (!data.unlimited() && (data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls || data.nTotLits() > config.opt_cp3_lits)) { return l_Undef; }
+    if (!data.unlimited() && (   data.nVars() > config.opt_cp3_vars
+                              || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls
+                              || data.nTotLits() > config.opt_cp3_lits)) {
+        return l_Undef;
+    }
 
     if (config.opt_symm && config.opt_enabled) {  // do only if preprocessor is enabled
         symmetry.process();
-        if (config.opt_verbose > 1)  { printStatistics(cerr); symmetry.printStatistics(cerr); }
+        if (config.opt_verbose > 1)  {
+            printStatistics(cerr); symmetry.printStatistics(cerr);
+        }
     }
 
     lbool ret = l_Undef;
-    if (config.opt_ptechs && string(config.opt_ptechs).size() > 0) { ret = performSimplificationScheduled(string(config.opt_ptechs)); }
-    else { ret = performSimplification(); }
+    if (config.opt_ptechs && string(config.opt_ptechs).size() > 0) {
+        ret = performSimplificationScheduled(string(config.opt_ptechs));
+    } else {
+        ret = performSimplification();
+    }
 
     if (config.opt_exit_pp > 0) { // exit?
         if (config.opt_exit_pp > 1) { // print? TODO: have a method for this output!
@@ -1078,8 +1090,12 @@ lbool Preprocessor::inprocess()
     // if no inprocesing enabled, do not do it!
     if (!config.opt_inprocess) { return l_Undef; }
 
-    // do not preprocess, if the formula is considered to be too large!
-    if (!data.unlimited() && ((data.nVars() > config.opt_cp3_ipvars) || ((data.getClauses().size() + data.getLEarnts().size()) > config.opt_cp3_ipcls) || data.nTotLits() > config.opt_cp3_iplits)) { return l_Undef; }
+    // do not inprocess, if the formula is considered to be too large!
+    if (!data.unlimited() && (   data.nVars() > config.opt_cp3_ipvars
+                              || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_ipcls
+                              || data.nTotLits() > config.opt_cp3_iplits)) {
+        return l_Undef;
+    }
 
     // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
     if (config.opt_inprocess) {
@@ -1098,8 +1114,11 @@ lbool Preprocessor::inprocess()
         if (config.opt_inc_inp) { giveMoreSteps(); }
 
         lbool ret = l_Undef;
-        if (config.opt_itechs  && string(config.opt_itechs).size() > 0) { ret = performSimplificationScheduled(string(config.opt_itechs)); }
-        else { ret = performSimplification(); }
+        if (config.opt_itechs  && string(config.opt_itechs).size() > 0) {
+            ret = performSimplificationScheduled(string(config.opt_itechs));
+        } else {
+            ret = performSimplification();
+        }
 
         lastInpConflicts = solver->conflicts;
         if (config.opt_verbose > 4) { cerr << "c finished inprocessing " << endl; }
@@ -1342,10 +1361,31 @@ void Preprocessor::initializePreprocessor()
       }
     }
     */
+
+    // initialize techniques
+    propagation.initializeTechnique(data);
+    subsumption.initializeTechnique(data);
+    ee.initializeTechnique(data);
+    if (config.opt_hte) { hte.initializeTechnique(data); }
+    if (config.opt_bve) { bve.initializeTechnique(data); }
+    if (config.opt_bva) { bva.initializeTechnique(data); }
+    if (config.opt_probe) { probing.initializeTechnique(data); }
+    if (config.opt_unhide) { unhiding.initializeTechnique(data); }
+    if (config.opt_ternResolve || config.opt_addRedBins) { resolving.initializeTechnique(data); }
+    if (config.opt_xor) { xorReasoning.initializeTechnique(data); }
+    if (config.opt_sls) { sls.initializeTechnique(data); }
+    if (config.opt_twosat) { twoSAT.initializeTechnique(data); }
+    if (config.opt_bce) { bce.initializeTechnique(data); }
+    if (config.opt_la) { la.initializeTechnique(data); }
+    if (config.opt_cce) { cce.initializeTechnique(data); }
+    if (config.opt_rate) { rate.initializeTechnique(data); }
+    if (config.opt_ent) { entailedRedundant.initializeTechnique(data); }
 }
+
 
 void Preprocessor::destroyTechniques()
 {
+    DOUT(if (config.opt_verbose > 2) { cerr << "c destroy techniques"; });
     // propagation.destroy();
     subsumption.destroy();
     ee.destroy();

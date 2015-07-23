@@ -10,3 +10,4 @@
  * Use Stepper for Subsumption (lucas)
  * Increase strengthening limit in "giveMoreSteps()" call of Subsumption (lucas)
  * Renames `deleteTimer` into `modTimer`
+ * Introduce proper technique initialization (firstly used by BVE) (lucas)

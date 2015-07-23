@@ -78,10 +78,11 @@ class Heap
   public:
     Heap(const Comp& c) : lt(c) { }
 
-    int  size()          const { return heap.size(); }
-    bool empty()          const { return heap.size() == 0; }
-    bool inHeap(int n)     const { return n < indices.size() && indices[n] >= 0; }
+    int  size()                const { return heap.size(); }
+    bool empty()               const { return heap.size() == 0; }
+    bool inHeap(int n)         const { return n < indices.size() && indices[n] >= 0; }
     int  operator[](int index) const { assert(index < heap.size()); return heap[index]; }
+    Comp getComparator()       const { return lt; }
 
     /** copies the state of this heap to the other heap */
     void copyTo(Heap& copy) const { 
