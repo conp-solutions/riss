@@ -117,6 +117,9 @@ int main(int argc, char** argv)
     StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+    BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
+    BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
+    BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
 
     bool foundHelp = ::parseOptions(argc, argv, true);
     if (foundHelp) { exit(0); }   // stop after printing the help information
@@ -159,8 +162,8 @@ int main(int argc, char** argv)
     p.pre = pre;
     p.verb = verb;
 
-    Master m(p);
-    master = &m;
+    Master pcassoMasert(p);
+    master = &pcassoMasert;
     signal(SIGINT, SIGINT_exit);
     signal(SIGXCPU, SIGINT_exit);
 
@@ -172,38 +175,80 @@ int main(int argc, char** argv)
         printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
     }
 
-    parse_DIMACS(in, m.getGlobalSolver());
+    parse_DIMACS(in, pcassoMasert.getGlobalSolver());
     gzclose(in);
 
+    FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
+    if (!pcassoMasert.getGlobalSolver().simplify()) {
+            if (res != nullptr) {
+                if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
+                else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+            }
+            // add the empty clause to the proof, close proof file
+            // choose among output formats!
+            if (opt_modelStyle) { printf("UNSAT"); }
+            else { printf("s UNSATISFIABLE\n"); }
+            cout.flush(); cerr.flush();
+            exit(20);
+        }
 
+   vec<Lit> dummy;
+   lbool ret = pcassoMasert.solveLimited(dummy); // solve formula with master, and given assumptions
 
-    string filename = (argc == 1) ? "" : argv[1];
+       // check model of the formula
+        if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+            if (check_DIMACS(in, *(pcassoMasert.model))) {
+                printf("c verified model\n");
+            } else {
+                printf("c model invalid -- turn answer into UNKNOWN\n");
+                ret = l_Undef; // turn result into unknown, because the model is not correct
+            }
+        }
 
-    // setup everything
+        // print solution to screen
+        if (opt_modelStyle) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
+        else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
-    // TODO parse formula here
-    #if 0
-    parseFormula(filename);
+        // put empty clause on proof
+        // if (ret == l_False && m.getDrupFile() != nullptr) { fprintf(m.getDrupFile(), "0\n"); }
 
+        // print solution into file
+        if (res != nullptr) {
+            if (ret == l_True) {
+                if (opt_modelStyle) { fprintf(res, "SAT\n"); }
+                else { fprintf(res, "s SATISFIABLE\nv "); }
+                for (int i = 0; i < pcassoMasert.model->size(); i++)
+                    //  if (m.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+                {
+                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (*(pcassoMasert.model)[i] == l_True) ? "" : "-", i + 1);
+                }
+                fprintf(res, " 0\n");
+            } else if (ret == l_False) {
+                if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
+                else { fprintf(res, "s UNSATISFIABLE\n"); }
+            } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
+            else { fprintf(res, "s UNKNOWN\n"); }
+            fclose(res);
+        }
 
-    // open output file, in case of a non-valid filename, res will be 0 as well
-    res = (argc >= 3) ? fopen(argv[2], "wb") : 0;
-    if (argc >= 3) {
-        fprintf(stderr, "The output file name should be %s\n", argv[2]);
-    }
-    // push the root node to the solve and split queues
-    if (!plainpart) {
-        solveQueue.push_back(&root);
-    }
+        // print model to screen
+        if (! opt_quiet && ret == l_True && res == nullptr) {
+            if (!opt_modelStyle) { printf("v "); }
+            for (int i = 0; i < pcassoMasert.model->size(); i++)
+                //  if (m.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+            {
+                printf("%s%s%d", (i == 0) ? "" : " ", (*(pcassoMasert.model)[i] == l_True) ? "" : "-", i + 1);
+            }
+            printf(" 0\n");
+        }
 
-    splitQueue.push_back(&root);
-    #endif
+        cout.flush(); cerr.flush();
 
-    // run the real work loop
-    m.run();
+   #ifdef NDEBUG
+   exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
+   #else
+   return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+   #endif
 
-    // get model from master, and all that
-
-    return m.main(argc, argv);
 }
 

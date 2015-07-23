@@ -28,18 +28,19 @@ static void* runWorkerSolver(void* data);
 
 PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int externalThreads)
     :
-    privateConfig(externalConfig == 0 ? new PfolioConfig(configName) : externalConfig)
+      privateConfig(externalConfig == 0 ? ( configName == 0 ? new PfolioConfig("") : new PfolioConfig(configName)) : externalConfig)
     , deleteConfig(externalConfig == 0)
     , pfolioConfig(* privateConfig)
     , initialized(false)
     , threads(pfolioConfig.threads)
+    , winningSolver( -1 )
     , globalSimplifierConfig(0)
     , globalSimplifier(0)
     , data(0)
     , threadIDs(0)
     , proofMaster(0)
     , opc(0)
-    , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == nullptr ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
+    , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == 0 ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
     , verbosity(0)
     , verbEveryConflicts(0)
@@ -68,6 +69,14 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
         communicators[i] = 0;
     }
 
+    // initialize pinning to hardware cores
+    hardwareCores.clear();
+    cpu_set_t mask;
+    sched_getaffinity(0, sizeof(cpu_set_t), &mask);
+    for (int i = 0; i < sizeof(cpu_set_t) << 3; ++i) // add all available cores to the system
+        if (CPU_ISSET(i, &mask)) { hardwareCores.push_back(i); }
+    if( hardwareCores.size() > threads ) hardwareCores.resize( threads ); // use only the first required available cores!
+    
     // set preset configs here
     createThreadConfigs();
 
@@ -156,6 +165,10 @@ int PSolver::nClauses() const
     return solvers[0]->nClauses();
 }
 
+Clause& PSolver::GetClause( int index ) const {
+    return solvers[0]->ca[ solvers[0]->clauses[index] ];
+}
+
 int PSolver::nTotLits() const
 {
     return solvers[0]->nTotLits();
@@ -175,6 +188,23 @@ bool PSolver::simplify()
 {
     return solvers[0]->simplify();
 }
+
+int PSolver::getNumberOfTopLevelUnits()
+{
+  assert( winningSolver <= threads && "" );
+  const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
+  if( s->trail_lim.size() == 0 ) s->trail.size();
+  else s->trail_lim[0];
+}
+
+Lit PSolver::trailGet(int index)
+{
+  assert( winningSolver <= threads && "" );
+  const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
+  assert( index < s->trail.size() && "elements in trail should be available" );
+  return s->trail[index];
+}
+
 
 void PSolver::interrupt()
 {
@@ -232,7 +262,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 //
 //   return ret;
 
-    int winningSolver = 0;
+    winningSolver = -1;
     lbool ret = l_Undef;
     /*
      * preprocess the formula with the preprocessor of the first solver
@@ -680,6 +710,11 @@ bool PSolver::initializeThreads()
             solvers.push(new Solver(& configs[i]));      // solver 0 should exist already!
         }
 
+        if( hardwareCores.size() > 0 ) { // if cores are available
+	  int coreID = i % hardwareCores.size();
+	  communicators[i]->hardwareCore = coreID;
+	}
+        
         // setup parameters for communication system
         communicators[i]->protectAssumptions = pfolioConfig.opt_protectAssumptions;
         communicators[i]->sendSize = pfolioConfig.opt_sendSize;
@@ -847,6 +882,15 @@ void* runWorkerSolver(void* data)
 
     Communicator& info = * ((Communicator*)data);
 
+    if (info.hardwareCore >= 0) {  // pin this thread to the specified core, if greater equal to zero
+	cpu_set_t mask;
+	CPU_ZERO(&mask); 
+	CPU_SET(info.hardwareCore, &mask);
+	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+	}
+    }
+    
     if (verbose) { cerr << "c started thread with id " << info.getID() << endl; }
     // initially, wait until master provides work!
     info.ownLock->lock();

@@ -27,6 +27,7 @@ class PSolver
 
     bool initialized;
     int threads;
+    int winningSolver;     // id of the thread of the solver that won
 
     Coprocessor::CP3Config*    globalSimplifierConfig; /// configuration object for global simplifier
     Coprocessor::Preprocessor* globalSimplifier;       /// global object that initially runs simplification on the formula for all solvers together
@@ -46,12 +47,14 @@ class PSolver
     std::string defaultSimplifierConfig;           // name of the configuration that should be used by the global simplification
     std::vector< std::string > incarnationConfigs; // strings of incarnation configurations
 
+    std::vector<unsigned short int> hardwareCores; // list of available cores for this parallel solver
+    
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 
   public:
 
-    PSolver(PfolioConfig* externalConfig = 0, const char* configName = 0, int externalThreads = -1) ;
+    PSolver(PfolioConfig* externalConfig = nullptr, const char* configName = nullptr, int externalThreads = -1) ;
 
     ~PSolver();
 
@@ -92,6 +95,9 @@ class PSolver
     /** The current number of original clauses of the 1st solver. */
     int nClauses() const;
 
+    /** return reference to the clause with the given index */
+    Clause& GetClause( int index ) const ;
+    
     /** The current number of variables of the 1st solver. */
     int nVars() const;
 
@@ -103,6 +109,12 @@ class PSolver
 
     /** Removes already satisfied clauses in the first solver */
     bool simplify();
+    
+    /** execute for first solver, or winning solver, if there is a winning solver */
+    int getNumberOfTopLevelUnits();
+    
+    /** execute for first solver, or winning solver, if there is a winning solver */
+    Lit trailGet( int index );
 
     //
     // executed for all present solvers:

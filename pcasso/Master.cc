@@ -93,6 +93,9 @@ static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver
 static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
 static IntOption     global_priss_threads("PRISS", "g-priss-threads",  "threads global Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
 
+
+// my core(s) lowest: global_priss_threads + myID * priss_threads
+// my core(s) highest: global_priss_threads + (myID+1) * priss_threads - 1
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
 Master::Master(Parameter p) :
@@ -141,10 +144,12 @@ Master::Master(Parameter p) :
             if (CPU_ISSET(i, &mask)) { hardwareCores.push_back(i); }
         cerr << "c detected available cores: " << hardwareCores.size() << endl;
         if (hardwareCores.size() < threads) {
-            cerr << "c WARNING: less physical cores that available threads, core-pinning will be disabled" << endl;
+            cerr << "c WARNING: less physical cores than available threads, core-pinning will be disabled" << endl;
             hardwareCores.clear();
         }
     }
+    
+    globalSolver = new PSolver(0,0,global_priss_threads);
 }
 
 
@@ -171,6 +176,50 @@ PSolver& Master::getGlobalSolver()
 {
     assert(globalSolver != nullptr && "");
     return *globalSolver;
+}
+
+
+lbool Master::solveLimited(const vec< Lit >& assumps)
+{
+  
+// #error use globalSolver next to pcasso
+// #error write model in master, instead of in pcasso, use extendmodel from psolver->globalCoprocessor
+  
+  // if there is a global solver, have two threads
+  
+  // 1 transfer formula from psolver to pcasso
+  maxVar = maxVar > globalSolver->nVars() ? maxVar : globalSolver->nVars();
+  
+  // clear current formula
+  cerr << "c remove formula with " << originalFormula.size() << " clauses" << endl;
+  for( int i = 0 ; i < originalFormula.size(); ++ i ) delete [] originalFormula[i].lits; // delete all previous clauses
+  // add all unit clauses
+  cerr << "c copy formula with " << globalSolver->getNumberOfTopLevelUnits() << " units and " << globalSolver->nClauses() << " clauses" << endl;
+  for( int i = 0 ; i < globalSolver->getNumberOfTopLevelUnits(); ++ i ) {
+    Lit unitLiteral = globalSolver->trailGet(i);
+    clause c;
+    c.size = 1;
+    c.lits = new Lit [ 1 ];
+    c.lits[0] = unitLiteral;
+    originalFormula.push_back(c);
+  }
+  // add all remaining clauses
+  for( int i = 0 ; i < globalSolver->nClauses(); ++ i ) {
+    Clause& psolverClause = globalSolver->GetClause(i);
+    clause c;
+    c.size = psolverClause.size();
+    c.lits = new Lit [ c.size ];
+    for( int j = 0 ; j < c.size; ++ j ) c.lits[j] = psolverClause[j];
+    originalFormula.push_back(c);
+  }  
+  
+  int ret = run();
+  
+  
+  
+  if( ret == 10 ) return l_True;
+  else if ( ret == 20 ) return l_False;
+  else return l_Undef;
 }
 
 
@@ -706,13 +755,16 @@ Master::solveInstance(void* data)
     PcassoDebug::PRINT_NOTE(" with PT_Level ");
     PcassoDebug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
 
-#warning TODO FIXME take number of cores for PRISS into account!
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
-        cpu_set_t mask;
-        CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
-        if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
-        }
+	cpu_set_t mask;
+	CPU_ZERO(&mask); 
+	for( int lokalID = 0; lokalID < priss_threads; lokalID ++ ) { // in case of using priss, use multiple cores
+  	  int coreID = (global_priss_threads + tData.id * priss_threads + lokalID) % hardwareCores.size();
+	  CPU_SET(hardwareCores[coreID], &mask);
+	}
+	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+	}
     }
 
     long long int cputime = Master::getCpuTimeMS();
@@ -997,11 +1049,15 @@ Master::splitInstance(void* data)
 
     if (MSverbosity > 1) { fprintf(stderr, "create a split thread[%d] that splits node %d\n", tData.id, tData.nodeToSolve->id()); }
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
-        cpu_set_t mask;
-        CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
-        if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
-        }
+	cpu_set_t mask;
+	CPU_ZERO(&mask); 
+	for( int lokalID = 0; lokalID < priss_threads; lokalID ++ ) { // in case of using priss, use multiple cores
+  	  int coreID = (global_priss_threads + tData.id * priss_threads + lokalID) % hardwareCores.size();
+	  CPU_SET(hardwareCores[coreID], &mask);
+	}
+	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+	}
     }
 
     long long int cputime = Master::getCpuTimeMS();

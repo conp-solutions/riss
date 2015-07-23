@@ -477,6 +477,8 @@ class Communicator
     // methods
   public:
 
+    int hardwareCore; // core on which this thread should be pinned (if -1, do not use pinning)
+    
     vec<Lit> assumptions;
 
     // seet default values, ownLock is set to initial sleep
@@ -495,6 +497,9 @@ class Communicator
         , lastSeenSpecialIndex(0)
         , doSend(true)              // should this thread send clauses
         , doReceive(true)
+	
+	, hardwareCore(-1) // so far, do not use a core
+	
         , protectAssumptions(false) // should the size limit check also consider assumed variables?
         , sendSize(10)    // initial value, also minimum limit (smaller clauses can be shared if LBD is also accepted)
         , sendLbd(5)      // initial value, also minimum limit (smaller clauses can be shared if size is also accepted)

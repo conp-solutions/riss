@@ -114,7 +114,7 @@ class Master
     // to maintain the original formula
     int maxVar;
     std::vector< clause > originalFormula;
-    Riss::vec<Riss::lbool>* model;       // model that will be produced by one of the child nodes
+    
     //std::vector<char> polarity;   // preferred polarity from the last solver, for the next solvers
     // std::vector<double> activity; // activity of each variable
 
@@ -224,9 +224,11 @@ class Master
     /** return reference to global Priss solver */
     PSolver& getGlobalSolver();
 
-    // setup everything and handle the conrol loop
-    int run();
-
+    
+    Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
+    
+    Riss::vec<Riss::lbool>* model;       // model that will be produced by one of the child nodes
+    
     void shutdown() { done = true; notify(); }
 
     friend class TreeNode;
@@ -244,6 +246,11 @@ class Master
 
     // statistics section
   public:
+    
+    /** setup everything and handle the conrol loop */
+    int run();
+    
+    
     unsigned createdNodeID;
     unsigned unsolvedNodesID;
     unsigned splitSolvedNodesID;
