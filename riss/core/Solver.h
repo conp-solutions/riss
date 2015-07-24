@@ -296,7 +296,7 @@ class Solver
         float growFactor;                       // increase of all conflict limits after running each configuration once
 
         void reset(Riss::Solver::SearchConfiguration& searchConfiguration);
-        void initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, string schedule, float factor, int defaultC, int usualC);                     // initialize all configurations
+        void initConfigs(const Riss::Solver::SearchConfiguration& searchConfiguration, std::string schedule, float factor, int defaultC, int usualC);                     // initialize all configurations
         bool checkAndChangeSearchConfig(int conflicts, SearchConfiguration& searchConfiguration);       // takes care of whether the configuration should be changed at this restart, @return true, if new configuration was picked
         ConfigurationScheduler();
     } configScheduler;
@@ -532,10 +532,10 @@ class Solver
 
     vec<VarFlags> varFlags;
 
-//     vec<lbool>          assigns;          // The current assignments.
-//     vec<char>           polarity;         // The preferred polarity of each variable.
-//     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
-//     vec<char>           seen;
+    // vec<lbool>          assigns;          // The current assignments.
+    // vec<char>           polarity;         // The preferred polarity of each variable.
+    // vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
+    // vec<char>           seen;
 
 
   public:
@@ -548,8 +548,9 @@ class Solver
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     
 
-//     vec<int>            nbpos;
+    // vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
+
   protected:
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
     int                 realHead;         // indicate last literal that has been analyzed for unit propagation
@@ -1479,12 +1480,11 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
     const bool localDebug = false; // for temporarly debugging this method
 
-    DOUT(
-    if (false) {
-    for (int i = 0 ; i < nVars(); ++ i) {
-            cerr << "c value var " << i + 1 << " sat: " << (reverseMinimization.value(i) == l_True)
-                 << " unsat: " << (reverseMinimization.value(i) == l_False)
-                 << " undef: " << (reverseMinimization.value(i) == l_Undef) << endl;
+    DOUT(if (false) {
+        for (int i = 0 ; i < nVars(); ++ i) {
+            std::cerr << "c value var " << i + 1 << " sat: " << (reverseMinimization.value(i) == l_True)
+                      << " unsat: " << (reverseMinimization.value(i) == l_False)
+                      << " undef: " << (reverseMinimization.value(i) == l_Undef) << std::endl;
         }
     });
 
@@ -1498,7 +1498,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
     // perform vivification
     int keptLits = 0;
-    if (localDebug) { cerr << "c rev minimize clause with " << learned_clause << " trail: " << reverseMinimization.trail << endl; }
+    if (localDebug) { std::cerr << "c rev minimize clause with " << learned_clause << " trail: " << reverseMinimization.trail << std::endl; }
     for (int i = 0; i < learned_clause.size(); ++ i) {
         // first propagate, then add literals. this way, the empty clause could be learned
         CRef    confl     = CRef_Undef;
@@ -1510,7 +1510,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
             // propagate longer clauses here!
             for (i = (Watcher*)ws, end = i + ws.size();  i != end; i++) {
 
-                if (localDebug) { cerr << "c propagate " << p << " on clause " << ca[i->cref()] << endl; }
+                if (localDebug) { std::cerr << "c propagate " << p << " on clause " << ca[i->cref()] << std::endl; }
 
                 if (i->isBinary()) {   // handle binary clauses as usual (no write access necessary!)
                     const Lit& imp = i->blocker();
@@ -1518,14 +1518,13 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
                         confl = i->cref();              // store the conflict
                         trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
                         DOUT(if (localDebug) {
-                        cerr << "reverse minimization hit a conflict during propagation" << endl;
-                        cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << endl;
-                            cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << endl;
-                        }
-                            );
+                            std::cerr << "reverse minimization hit a conflict during propagation" << std::endl;
+                            std::cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << std::endl;
+                            std::cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << std::endl;
+                        });
                         break;
                     } else if (reverseMinimization.value(imp) == l_Undef) {  // imply other literal
-                        if (localDebug) { cerr << "c enqueue " << imp << " due to " << ca[ i->cref() ] << endl; }
+                        if (localDebug) { std::cerr << "c enqueue " << imp << " due to " << ca[ i->cref() ] << std::endl; }
                         reverseMinimization.uncheckedEnqueue(imp);
                     }
                     continue;
@@ -1561,7 +1560,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
                         confl = i->cref();
                         trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
                     } else {
-                        if (localDebug) { cerr << "c enqueue " << impliedLit << " due to " << ca[ i->cref() ] << endl; }
+                        if (localDebug) { std::cerr << "c enqueue " << impliedLit << " due to " << ca[ i->cref() ] << std::endl; }
                         reverseMinimization.uncheckedEnqueue(impliedLit);
                     }
                 }
@@ -1573,9 +1572,9 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
         if (confl != CRef_Undef) {
 
             DOUT(if (localDebug) {
-            cerr << "reverse minimization hit a conflict during propagation (" << i << ") with conflict " << ca[confl] << endl;
-                cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << endl;
-                cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << endl;
+            std::cerr << "reverse minimization hit a conflict during propagation (" << i << ") with conflict " << ca[confl] << std::endl;
+                std::cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << std::endl;
+                std::cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << std::endl;
             }
                 );
             if (i + 1 < learned_clause.size()) { reverseMinimization.revMinConflicts ++; } // count cases when the technique was succesful
@@ -1586,11 +1585,11 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
 
         const Lit l = learned_clause[i];
         assert(level(var(l)) != 0 && "there should not be any literal of the top level in the clause");
-// DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
+// DOUT(   std::cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << std::endl; );
         if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
             learned_clause[keptLits++ ] = l; // keep literal
         } else if (reverseMinimization.value(l) == l_True) {
-// DOUT(   cerr << "c add implied lit " << l << " and abort" << endl; );
+// DOUT(   std::cerr << "c add implied lit " << l << " and abort" << std::endl; );
             learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
             break;
         } else {
@@ -1601,7 +1600,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
         }
 
         // propagate the current literal in next iteration of the loop
-        if (localDebug) { cerr << "c enqueue next literal: " << ~l << " (pos: " << i << " / " << learned_clause.size() << ")" << endl; }
+        if (localDebug) { std::cerr << "c enqueue next literal: " << ~l << " (pos: " << i << " / " << learned_clause.size() << ")" << std::endl; }
         reverseMinimization.uncheckedEnqueue(~l);
 
 

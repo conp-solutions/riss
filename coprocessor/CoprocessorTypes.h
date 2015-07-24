@@ -16,9 +16,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <vector>
 #include <ostream>
 
-// using namespace Riss;
-// using namespace std;
-
 namespace Coprocessor
 {
 
@@ -208,13 +205,15 @@ class CoprocessorData
     bool isInterupted();                    // has received signal from the outside
 
 // adding, removing clauses and literals =======
-    void addClause(const Riss::CRef& cr, bool check = false);                           // add clause to data structures, update counters
-    void addClause(const Riss::CRef& cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const bool update = false, const Riss::Var ignore = (-1), SpinLock* data_lock = 0, SpinLock* heap_lock = 0);             // add clause to data structures, update counters
-    bool removeClauseFrom(const Riss::CRef& cr, const Riss::Lit& l);                     // remove clause reference from list of clauses for literal l, returns true, if successful
-    void removeClauseFrom(const Riss::CRef& cr, const Riss::Lit& l, const int index);    // remove clause reference from list of clauses for literal l, returns true, if successful
-    inline bool removeClauseFromThreadSafe(const Riss::CRef& cr, const Riss::Lit& l);    // replaces clause reference from clause list by Riss::CRef_Undef, returns true, if successful
-    inline void cleanUpOccurrences(const Riss::MarkArray& dirtyOccs, const uint32_t timer);  // removes Riss::CRef_Undef from all dirty occurrences
-    void cleanOccurrences();                                                           // remove all clauses and set counters to 0
+    void addClause(const Riss::CRef& cr, bool check = false);                              // add clause to data structures, update counters
+    void addClause(const Riss::CRef& cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap,
+                   const bool update = false, const Riss::Var ignore = (-1),
+                   SpinLock* data_lock = 0, SpinLock* heap_lock = 0);                       // add clause to data structures, update counters
+    bool removeClauseFrom(const Riss::CRef& cr, const Riss::Lit& l);                        // remove clause reference from list of clauses for literal l, returns true, if successful
+    void removeClauseFrom(const Riss::CRef& cr, const Riss::Lit& l, const int index);       // remove clause reference from list of clauses for literal l, returns true, if successful
+    inline bool removeClauseFromThreadSafe(const Riss::CRef& cr, const Riss::Lit& l);       // replaces clause reference from clause list by Riss::CRef_Undef, returns true, if successful
+    inline void cleanUpOccurrences(const Riss::MarkArray& dirtyOccs, const uint32_t timer); // removes Riss::CRef_Undef from all dirty occurrences
+    void cleanOccurrences();                                                                // remove all clauses and set counters to 0
 
     // Garbage Collection
     void garbageCollect(std::vector<Riss::CRef> ** updateVectors = 0, int size = 0);
@@ -269,7 +268,7 @@ class CoprocessorData
     // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
     void addToExtension(const Riss::CRef& cr, const Riss::Lit& l = Riss::lit_Error);
     void addToExtension(const Riss::vec< Riss::Lit >& lits, const Riss::Lit& l);
-    void addToExtension(const vector< Riss::Lit >& lits, const Riss::Lit& l);
+    void addToExtension(const std::vector< Riss::Lit >& lits, const Riss::Lit& l);
     void addToExtension(const Riss::Lit& dontTouch, const Riss::Lit& l = Riss::lit_Error);
 
     /** add already created std::vector to extension std::vector */
@@ -303,7 +302,7 @@ class CoprocessorData
     #endif
 
     /// handling equivalent literals, not a constant list to be able to share it in priss (will not alter the list)
-    void addEquivalences(const vector< Riss::Lit >& list);
+    void addEquivalences(const std::vector< Riss::Lit >& list);
     void addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2);
     Riss::vec< Riss::Lit >& getEquivalences();
     Riss::vec< Riss::Lit >& replacedBy() { return solver->eqInfo.replacedBy; }
@@ -396,7 +395,7 @@ class BIG
 
     uint32_t duringCreationVariables; // number of variables for the last construction call
 
-    uint32_t stampLiteral(const Riss::Lit& literal, uint32_t stamp, int32_t* index, deque< Riss::Lit >& stampQueue);
+    uint32_t stampLiteral(const Riss::Lit& literal, uint32_t stamp, int32_t* index, std::deque< Riss::Lit >& stampQueue);
     void shuffle(Riss::Lit* adj, int size) const;
 
   public:

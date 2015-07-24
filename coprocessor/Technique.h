@@ -197,7 +197,7 @@ class Technique
 
 
     /** tell via stream that the technique does not support DRUP proofs */
-    inline void printDRUPwarning(ostream& stream, const string& s)
+    inline void printDRUPwarning(std::ostream& stream, const std::string& s)
     {
         if (!didPrintCannotDrup) {
             stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl;
@@ -206,7 +206,7 @@ class Technique
     }
 
     /** tell via stream that the technique does not support extra clause info proofs */
-    inline void printExtraInfowarning(ostream& stream, const string& s)
+    inline void printExtraInfowarning(std::ostream& stream, const std::string& s)
     {
         if (!didPrintCannotExtraInfo) {
             stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl;

@@ -180,7 +180,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
 
     if (! communication->sendEquivalences && equivalences) {
 // #warning remove after debug
-//         cerr << "c reject equivalences due to disabled option" << endl;
+//         std::cerr << "c reject equivalences due to disabled option" << std::endl;
         return 0;
     }  // do not share equivalences
 
@@ -345,7 +345,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 //                     std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
                     assert(false && "received variables have to be smaller than maximum!");
                 }
-//                 cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << endl;
+//                 std::cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << std::endl;
                 if (value(c[j]) == l_True) { c.mark(1); break; }     // this clause is already satisfied -> remove it! (we are on level 0!)
                 else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; --j; c.shrink(1); }     // this literal is mapped to false -> remove it! repeat check for this position
                 else {
@@ -361,7 +361,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
                 if (c.size() > 1 && communicationClient.refineReceived) {
                     if (! reverseMinimization.enabled) {  // enable reverseMinimization to be able to use it
-                        cerr << "c initialize reverseMinimization during receiving" << endl;
+                        std::cerr << "c initialize reverseMinimization during receiving" << std::endl;
                         reverseMinimization.enabled = true;
                         reverseMinimization.assigns.growTo(nVars() + 1, l_Undef); // grow assignment
                         reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
@@ -378,21 +378,21 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                     #else
                     unsigned dependency = currentDependencyLevel();
                     DOUT(if (localDebug) {
-                    cerr << "c received clause(" << i << "): " << c << endl;
+                    std::cerr << "c received clause(" << i << "): " << c << std::endl;
                     {
-                        stringstream s;
+                        std::stringstream s;
                         s << "c sat: ";
                         for (int k  = 0 ; k < c.size(); ++ k) { s << " " << (value(c[k]) == l_True) << "/" << (value(c[k]) == l_False); }
-                            s << endl;
-                            cerr << s.str();
+                            s << std::endl;
+                            std::cerr << s.str();
                         }
                     });
                     shrinkedClause = reverseLearntClause(c, lbd, dependency);
                     #endif
-//            cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << endl;
+//            std::cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << std::endl;
                     communication->vivifiedLiterals += beforeSize - c.size();
                     if (shrinkedClause && communicationClient.resendRefined) {  // re-share clause (should be performed only by one thread per group
-//          cerr << "c recend received clause(" << i << "): " << c << endl;
+//          std::cerr << "c recend received clause(" << i << "): " << c << std::endl;
                         #ifdef PCASSO
                         updateSleep(&(c), c.size(), dependency);
                         #else

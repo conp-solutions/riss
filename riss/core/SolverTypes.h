@@ -50,8 +50,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 /// TODO remove after debug
 #include <iostream>
-using namespace std;
-
 
 namespace Riss
 {
@@ -81,9 +79,9 @@ struct Lit {
 
     bool operator == (Lit p) const { return x == p.x; }
     bool operator != (Lit p) const { return x != p.x; }
-    bool operator < (Lit p) const { return x < p.x;  }  // '<' makes p, ~p adjacent in the ordering.
-    bool operator <= (Lit p) const { return x <= p.x; } // '<' makes p, ~p adjacent in the ordering.
-    bool operator > (Lit p) const { return x > p.x;  }  // '>' makes p, ~p adjacent in the ordering.
+    bool operator <  (Lit p) const { return x < p.x;  }  // '<' makes p, ~p adjacent in the ordering.
+    bool operator <= (Lit p) const { return x <= p.x; }  // '<' makes p, ~p adjacent in the ordering.
+    bool operator >  (Lit p) const { return x > p.x;  }  // '>' makes p, ~p adjacent in the ordering.
 };
 
 
