@@ -73,8 +73,6 @@ class Master
     };
 
   private:
-    // Non-limiting memory limit
-    //MLim  ub_lim;
 
     // represents the state of a thread
     // describe what the thread does at the moment
@@ -82,6 +80,41 @@ class Master
     // only the master thread is allowed to set this back to idle and reuse it
     enum state { idle = 1, working = 2, splitting = 3, unclean = 4, sleeping = 5 };
 
+    /************* BEGIN OF HYBRID CODE ***************/
+    
+    /** data to be used by the hybrid version with pfolio and pcasso */
+    struct HybridSharedData {
+      Master* master;
+      SleepLock *masterLock;  // one sleeplock for the master
+      lbool ret;              // return state of this solver
+    };
+    
+    pthread_t* hybridThreads;    /// thread handles of the two threads that run in parallel
+    
+    SleepLock* hybridMasterLock; /// lock to be used when pfolio is executed next to pcasso
+    
+    HybridSharedData* hybridData; /// data that is forwarded to created thread
+    
+    /** solve current formula in parallel with pfolio and pcasso */
+    lbool solveHybrid();
+    
+    /** solve current state with pcasso (to be executed in a new thread)*/
+    static void* solveWithPcasso(void* data);
+    
+    /** solve current state with pfolio (to be executed in a new thread)*/
+    static void* solveWithPfolio(void* data);
+    
+    /************** END OF HYBRID CODE ****************/
+    
+
+public: 
+    /** simple call to solve current formula with pcasso */
+    lbool solvePcasso();
+    
+    /** simple call to solve current formula with pfolio */
+    lbool solvePfolio();
+    
+private:
     // to be stored in original formula
     struct clause {
         int size;

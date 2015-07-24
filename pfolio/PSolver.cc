@@ -33,6 +33,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , pfolioConfig(* privateConfig)
     , initialized(false)
     , simplified(false)
+    , killed(false)
     , threads(pfolioConfig.threads)
     , winningSolver( -1 )
     , globalSimplifierConfig(0)
@@ -317,6 +318,9 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
          * copy the formula from the first solver to all the other solvers
          */
 
+	/// if the first solver was not initialized due to simplification, set it up correctly before copying to the other incarnations
+	if( !simplified ) solvers[0]->solve_(Solver::SolveCallType::initializeOnly);
+	
         for (int i = 1; i < solvers.size(); ++ i) {
             solvers[i]->reserveVars(solvers[0]->nVars());
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
@@ -882,7 +886,8 @@ void PSolver::waitFor(const WaitState waitState)
 void PSolver::kill()
 {
     if (!initialized) { return; }  // child threads have never been created - no need to kill them
-
+    if( killed ) return; // killed already
+    killed = true;
     if (verbosity > 0) { cerr << "c MASTER kills all child threads ..." << endl; }
     // set all threads to working (they'll have a look for new work on their own)
     for (unsigned i = 0 ; i < threads; ++ i) {

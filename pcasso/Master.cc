@@ -104,6 +104,9 @@ static IntOption     global_priss_threads("PRISS", "g-priss-threads",  "threads 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
 Master::Master(Parameter p) :
+    hybridThreads( nullptr ),
+    hybridMasterLock (nullptr),
+    hybridData(nullptr),
     defaultSolverConfig((const char*)prissConfig == 0 ? "" : prissConfig),
     defaultPfolioConfig((const char*)rissConfig == 0 ? ""  : rissConfig),
     maxVar(0),
@@ -237,16 +240,131 @@ lbool Master::solveLimited(const vec< Lit >& assumps)
   
   // if there is a global solver, have two threads
   
-  int ret = run();
-  
-  
-  
-  if( ret == 10 ) {
-    globalSolver->extendModel(*model); // undo simplifications
-    return l_True;
+  if( global_priss_threads == 0 ) { // run only pcasso
+    return solvePcasso();
+  } else if (global_priss_threads == threads ) { // run pfolio with all threads
+    return solvePfolio();
   }
-  else if ( ret == 20 ) return l_False;
-  else return l_Undef;
+  
+  // otherwise, create two threads, one runs pfolio, one runs pcasso
+  return solveHybrid();
+}
+
+lbool Master::solveHybrid() {
+  // thread handles
+  hybridThreads = new pthread_t[2];
+  hybridMasterLock = new SleepLock();
+  
+  lbool ret = l_Undef;
+  hybridMasterLock->lock(); // start critical section, setup the two threads
+  
+  hybridData = new HybridSharedData[2]; // data that points to the shared data for the threads
+  
+  bool pfolioSolved = false, pcassoSolved = false;
+  
+  for( int i = 0 ; i < 2; ++ i ) { // setup all threads, which can start with work immediately
+    // setup data
+    hybridData[i].master = this;
+    hybridData[i].masterLock = hybridMasterLock;
+    hybridData[i].ret = l_Undef;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    // create one thread
+    int rc = pthread_create(&(hybridThreads[i]), &attr, (i == 0 ? solveWithPfolio : solveWithPcasso), (void *) &(hybridData[i]));
+    if (rc) {
+        fprintf(stderr, "ERROR; return code from pthread_create() is %d for thread %d, when creating hybrid threads\n", rc, i);
+    }
+    pthread_attr_destroy(&attr);
+  }
+  
+  hybridMasterLock->sleep(); // wait until one of the other threads calls awake again
+  
+  // check who solved the formula
+  if( hybridData[0].ret != l_Undef ) pfolioSolved = true;
+  if( hybridData[1].ret != l_Undef ) pcassoSolved = true;
+  
+  cerr << "c solved by pcasso: " << pcassoSolved << " pfolio: " << pfolioSolved << endl;
+  
+  hybridMasterLock->unlock(); // we are finished here, the other thread can call awake or overwrite its value, it would not help
+  
+  // terminate both threads
+  if( !pfolioSolved ) {
+    globalSolver->interrupt(); // first be friendly,
+    globalSolver->kill();      // next, not so friendly
+  }
+  if( !pcassoSolved) this->shutdown(); // shutdown the pcasso master, if its still running
+  
+  
+  // return result
+  if ( pcassoSolved ) {
+    return hybridData[1].ret; // simpy return result, model has been extended already
+  } else if( pfolioSolved ) {
+    if( ret == l_True ) {
+      model = new vec<lbool>();
+      globalSolver->model.copyTo( *model ); // make sure that the other thread is not running any more
+    }
+    return hybridData[0].ret;
+  } 
+  return l_Undef; // abortet, or some other problem
+}
+
+void* Master::solveWithPcasso(void* data)
+{
+  // make thread joinable
+  pthread_attr_t attr; pthread_attr_init(&attr); pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+  
+  HybridSharedData *sharedData = (HybridSharedData*)data;
+  lbool ret = sharedData->master->solvePcasso();
+  
+  if( ret != l_Undef ) {
+    sharedData->masterLock->lock();   // make sure the master sleeps already
+    sharedData->ret = ret;
+    cerr << "c pcasso solved formula, awake master" << endl;
+    sharedData->masterLock->unlock(); // free lock again, so that master can continue its work
+    sharedData->masterLock->awake();  // awake master thread
+  }
+}
+
+void* Master::solveWithPfolio(void* data)
+{
+  // make thread joinable
+  pthread_attr_t attr; pthread_attr_init(&attr); pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+  
+  HybridSharedData *sharedData = (HybridSharedData*)data;
+  lbool ret = sharedData->master->solvePfolio();
+  
+  if( ret != l_Undef ) {
+    sharedData->masterLock->lock();   // make sure the master sleeps already
+    sharedData->ret = ret;
+    cerr << "c pfolio solved formula, awake master" << endl;
+    sharedData->masterLock->unlock(); // free lock again, so that master can continue its work
+    sharedData->masterLock->awake();  // awake master thread
+  }
+}
+
+lbool Master::solvePcasso()
+{
+    int ret = run();
+    
+    if( ret == 10 ) {
+      globalSolver->extendModel(*model); // undo simplifications
+      return l_True;
+    }
+    else if ( ret == 20 ) return l_False;
+    else return l_Undef;
+}
+
+
+lbool Master::solvePfolio()
+{
+    vec<Lit> dummy;
+    lbool ret = globalSolver->solveLimited(dummy);
+    if( ret == l_True ) {
+      model = new vec<lbool>();
+      globalSolver->model.copyTo( *model );
+    }
+    return ret;
 }
 
 

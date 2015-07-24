@@ -27,6 +27,7 @@ class PSolver
 
     bool initialized;     // indicate whether everything has been setup already
     bool simplified;      // indicate whether global formula has been simplified with global preprocessor already
+    bool killed;          // killed all childs already?
     int threads;
     int winningSolver;     // id of the thread of the solver that won
 
@@ -186,6 +187,7 @@ class PSolver
      */
     void continueWork();
 
+public:
     /** stops all parallel workers and kill their processes
      * note: afterwards, no other operations should be executed any more (for now)
      */

@@ -643,7 +643,7 @@ class Communicator
     {
         // FIXME to be adapted to the actual tree
 #warning USE TREE INFORMATION HERE!
-        assert(false && "this method should do something useful");
+//         assert(false && "this method should do something useful");
         return INT32_MAX; // return highest possible value
     };
 
@@ -663,7 +663,8 @@ class Communicator
     #endif
     {
         #ifdef PCASSO
-        assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
+#warning enable assertion again later
+//        assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
         if (!multiUnits && !equivalences) { data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel); }     // usual buffer
         else { data->getSpecialBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences); } // special buffer
         #else
