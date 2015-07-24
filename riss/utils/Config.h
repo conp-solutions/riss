@@ -287,6 +287,8 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense") , false);
     } else if (optionSet == "Riss427-NoCLE") {
         parseOptions(std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -dense"), false);
+    } else if (optionSet == "505") {
+        parseOptions(std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -keepWorst=0.01") , false);
     } else if (optionSet == "RISSLGL3") {
         parseOptions(
             std::string("-R=1.5 -szLBDQueue=45 -incReduceDB=450 -specialIncReduceDB=1100 -minLBDFrozenClause=15 -lbdIgnL0 -lbdupd=0 -incLBD -keepWorst=0.001 -biAsFreq=16 -var-decay-b=0.85 -var-decay-e=0.85 -agil-limit=0.33 -agil-init=0.01 -agil-add=32 -rnd-freq=0.005 -phase-saving=0 -init-act=1 -init-pol=4 -rlevel=1 -rtype=1 -rfirst=32 -rinc=4 -clsActB=1 -lhbr-max=16000 -longConflict -actIncMode=1 -rMax=1024 -rMaxInc=1.2 -laHack -laEEp=50 -hlaLevel=1 -hlaevery=8 -hlabound=16000 -sInterval=1 -otfss -otfssMLDB=64 -learnDecP=80 -no-rer-l -rer-r=1 -rer-min-size=6 -rer-max-size=30 -rer-maxLBD=6 -rer-new-act=2 -rer-freq=0.1")
