@@ -182,8 +182,9 @@ class Master
 
     /** adds a newly created TreeNode to the two workqueues
      *  NOTE: not thread safe
+     *  @param splitOnly add only to split queue, as its the only child of another node
      */
-    void addNode(TreeNode*);
+    void addNode(Pcasso::TreeNode* t, bool splitOnly = false);
 
     /* parses formula into originalFormulaVector
      * @param filename if empty, parse from stdin

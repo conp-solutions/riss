@@ -32,6 +32,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , deleteConfig(externalConfig == 0)
     , pfolioConfig(* privateConfig)
     , initialized(false)
+    , simplified(false)
     , threads(pfolioConfig.threads)
     , winningSolver( -1 )
     , globalSimplifierConfig(0)
@@ -42,10 +43,10 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , opc(0)
     , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == 0 ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
-    , verbosity(0)
+    , verbosity(1)
     , verbEveryConflicts(0)
 {
-    cerr << "c sizes: Solver: " << sizeof(Solver) << " Coprocessor: " << sizeof(Preprocessor) << endl;
+//     cerr << "c sizes: Solver: " << sizeof(Solver) << " Coprocessor: " << sizeof(Preprocessor) << endl;
   
     if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
 
@@ -62,6 +63,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     // set global coprocessor configuratoin
     if ((const char*)pfolioConfig.opt_ppconfig != nullptr) {
         defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
+	cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl;
     }
 
     // set preprocessor, if there is one selected
@@ -244,33 +246,17 @@ bool PSolver::addClause_(vec< Lit >& ps)
     return ret;
 }
 
-lbool PSolver::solveLimited(const vec< Lit >& assumps)
+lbool PSolver::simplifyFormula()
 {
-//   // for now, simply let the first solver solve the formula!
-//   lbool ret = solvers[0]->solveLimited( assumps );
-//
-//   int winningSolver = 0;
-//   if( ret == l_True ) {
-//     model.clear();
-//     model.capacity( solvers[winningSolver]->model.size() );
-//     for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) model.push(solvers[winningSolver]->model[i]);
-//   } else if ( ret == l_False ) {
-//     conflict.clear();
-//     conflict.capacity( solvers[winningSolver]->conflict.size() );
-//     for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) conflict.push(solvers[winningSolver]->conflict[i]);
-//   } else {
-//
-//   }
-//
-//   return ret;
-
-    winningSolver = -1;
+    cerr << "c cakk simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;
+    if( winningSolver != -1 ) return l_Undef; // simplify only, if there is no winning solver already
     lbool ret = l_Undef;
     /*
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration!
      */
-    if (!initialized && defaultSimplifierConfig.size() != 0) {
+    if (!simplified && defaultSimplifierConfig.size() != 0) {
+	simplified = true;
         assert(globalSimplifierConfig == 0 && globalSimplifier == 0 && "so far we did not setup global solver and simplifier");
 
         globalSimplifierConfig = new Coprocessor::CP3Config(defaultSimplifierConfig.c_str());
@@ -290,11 +276,29 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             winningSolver = 0;
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-            if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
+	    extendModel(model);
             if (ret == l_True && verbosity > 0) { cerr << "c solved formula with simplification" << endl; }
             return ret;
         }
     }
+    return ret; // we do not know the state, if we should not run simplification
+}
+
+void PSolver::extendModel( Riss::vec< Riss::lbool >& externalModel ) {
+  if (globalSimplifier != 0) { globalSimplifier->extendModel(externalModel); }
+}
+
+lbool PSolver::solveLimited(const vec< Lit >& assumps)
+{
+
+    winningSolver = -1;
+    lbool ret = l_Undef;
+    /*
+     * preprocess the formula with the preprocessor of the first solver
+     * but only in the very first iteration (there is a simplified-flag that is set accordingly)
+     */
+    ret = simplifyFormula();
+    if( ret != l_Undef ) return ret; // simplification resulted in UNSAT or SAT already
 
     if (! initialized) {  // distribute the formula, if this is the first call to this method!
 
@@ -414,7 +418,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (ret == l_True) {
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-            if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
+            extendModel(model);
 
             if (false && verbosity > 2) {
                 cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;

@@ -351,14 +351,20 @@ class Solver
         #ifdef PCASSO
         unsigned dependencyLevel;
         #endif
+	VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
+	#ifdef PCASSO
+         , dependencyLevel(0)
+        #endif
+	{}
+	VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+	#ifdef PCASSO
+         , dependencyLevel(0)
+        #endif
+	{}
     };
     static inline VarData mkVarData(CRef cr, int l)
     {
-        VarData d = {cr, l, lit_Undef, -1
-                     #ifdef PCASSO
-                     , 0
-                     #endif
-                    };
+        VarData d(cr, l, lit_Undef, -1);
         return d;
     }
 

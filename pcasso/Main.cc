@@ -218,7 +218,6 @@ int main(int argc, char** argv)
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
                 for (int i = 0; i < pcassoMasert.model->size(); i++)
-                    //  if (m.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                 {
                     fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (*(pcassoMasert.model)[i] == l_True) ? "" : "-", i + 1);
                 }
@@ -235,9 +234,8 @@ int main(int argc, char** argv)
         if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < pcassoMasert.model->size(); i++)
-                //  if (m.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
             {
-                printf("%s%s%d", (i == 0) ? "" : " ", (*(pcassoMasert.model)[i] == l_True) ? "" : "-", i + 1);
+                printf("%s%s%d", (i == 0) ? "" : " ", ( (*pcassoMasert.model)[i] == l_True) ? "" : "-", i + 1);
             }
             printf(" 0\n");
         }

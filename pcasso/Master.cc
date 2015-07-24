@@ -78,6 +78,7 @@ static BoolOption    stopUnsatChilds("SPLITTER", "stop-children", "If a child fo
 static IntOption     phase_saving_mode("SPLITTER", "phase-saving-mode", "how to handle the phase saving information (0=not,1=use last)\n", 0, IntRange(0, 1));
 static IntOption     activity_mode("SPLITTER", "activity-mode", "how to handle the activity information (0=not,1=use last)\n", 0, IntRange(0, 1));
 static IntOption     keepToplevelUnits("SPLITTER", "forward-units", "propagate found toplevel units downwards (0=no, 1=yes)\n", 1, IntRange(0, 1));
+static BoolOption    opt_collect_all_valid("SPLITTER", "all-valids", "collect all implied literals for the branch\n", false);
 static IntOption     seed("SPLITTER", "seed", "Seed to initialize randomization\n", 0, IntRange(0, INT32_MAX));
 static Int64Option   data_space("SPLITTER", "data-lim", "total bytes reserved for internal data of the solvers.\n", INT64_MAX, Int64Range(0, INT64_MAX));
 static BoolOption    opt_scheme_pp("SPLITTER", "plain-scheme", "Use the plain partitioning paralellization scheme.\n", false);
@@ -88,6 +89,7 @@ static BoolOption    Portfolio("SPLITTER", "portfolio",  "Portfolio mode.\n", fa
 static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX));     // depends on option above!
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
 
+static StringOption global_prissConfig("GLOBAL - CONFIG", "g-priss-config", "config string used to initialize global priss", 0);
 static StringOption prissConfig("WORKER - CONFIG", "priss-config", "config string used to initialize priss incarnations", 0);
 static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string used to initialize riss incarnations", 0);
 
@@ -154,7 +156,9 @@ Master::Master(Parameter p) :
         }
     }
     
-    globalSolver = new PSolver(0,0,global_priss_threads);
+    cerr << "c create new pfolio solver" << endl;
+    globalSolver = new PSolver(0,(const char*)global_prissConfig == 0 ? 0 : (const char*)global_prissConfig, global_priss_threads);
+    cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl;
 }
 
 
@@ -187,10 +191,16 @@ PSolver& Master::getGlobalSolver()
 lbool Master::solveLimited(const vec< Lit >& assumps)
 {
   
-// #error use globalSolver next to pcasso
-// #error write model in master, instead of in pcasso, use extendmodel from psolver->globalCoprocessor
-  
-  // if there is a global solver, have two threads
+  // simplify the formula
+  lbool simplifyReturn = globalSolver->simplifyFormula();
+  if( simplifyReturn != l_Undef ) {
+    if( simplifyReturn == l_True ) { // copy model
+      if( model == 0 ) model = new vec<lbool>();
+      globalSolver->model.copyTo( *model );
+    }
+    cerr << "c solved formula by simplification with sat: " << (simplifyReturn == l_True) << " unsat: " << (simplifyReturn == l_False) << endl;
+    return simplifyReturn; // return value here already
+  }
   
   // 1 transfer formula from psolver to pcasso
   maxVar = maxVar > globalSolver->nVars() ? maxVar : globalSolver->nVars();
@@ -218,11 +228,23 @@ lbool Master::solveLimited(const vec< Lit >& assumps)
     originalFormula.push_back(c);
   }  
   
+  // push the root node to the solve and split queues
+  if (!plainpart) {
+    solveQueue.push_back(&root);
+  }
+  splitQueue.push_back(&root);
+  
+  
+  // if there is a global solver, have two threads
+  
   int ret = run();
   
   
   
-  if( ret == 10 ) return l_True;
+  if( ret == 10 ) {
+    globalSolver->extendModel(*model); // undo simplifications
+    return l_True;
+  }
   else if ( ret == 20 ) return l_False;
   else return l_Undef;
 }
@@ -486,72 +508,6 @@ int Master::run()
 
     assert(model != 0 || solution != 10);
 
-    if (printModel) {
-
-        if (res != nullptr) { fprintf(stderr, "c write model to file\n"); }
-
-        if (model != 0) {
-            assert(solution == 10 && "the solution has to be 20");
-            fprintf(stderr, "c SATISFIABLE\n");
-
-            // fprintf(out_state_file, "SAT %g\n", cpuTime()); // Davide> for statistics
-
-            // print model only, if a file has been specified
-            if (res != nullptr) {
-                fprintf(res, "s SATISFIABLE\nv ");
-                /*
-                if( model.size() != maxVar ){
-                fprintf( stderr,"different model sizes: model: %d variables: %d", model.size(), maxVar);
-                }
-                 */
-                for (int i = 0; i < maxVar; i++) {
-                    if ((*model)[i] != l_Undef) {
-                        fprintf(res, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1);
-                    }
-                    /*
-                    else
-                    fprintf(res, "%s%s%d", (i==0)?"":" ", (true)?"":"-", i+1);
-                     */
-                }
-                fprintf(res, " 0\n");
-            } else {
-                fprintf(stdout, "s SATISFIABLE\nv ");
-                /*
-                if( model.size() != maxVar ){
-                fprintf( stdout,"different model sizes: model: %d variables: %d", model.size(), maxVar);
-                }
-                 */
-                for (int i = 0; i < maxVar; i++) {
-                    if ((*model)[i] != l_Undef) {
-                        fprintf(stdout, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1);
-                    }
-                    /*
-                    else
-                    fprintf(res, "%s%s%d", (i==0)?"":" ", (true)?"":"-", i+1);
-                     */
-                }
-                fprintf(stdout, " 0\n");
-            }
-        } else if (solution == 20) {
-            fprintf(stdout, "UNSATISFIABLE\n");
-
-            // fprintf(out_state_file, "UNSAT %g\n", cpuTime()); // Davide> for statistics
-
-            fprintf(stdout, "UNSATISFIABLE\n");
-
-            if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); }
-            fprintf(stdout, "s UNSATISFIABLE\n");
-        } else {
-            fprintf(stdout, "s INDETERMINATE\n");
-        }
-
-
-        // fclose(out_state_file); // Davide> for statistics
-
-    }
-
-    if (res != 0) { fclose(res); }
-
     struct timespec ts;
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) != 0) {
         perror("clock_gettime()");
@@ -616,15 +572,14 @@ int Master::run()
     int evaLevel = root.getEvaLevel();
     //statistics.changeI( evaLevelID, evaLevel );
 
-    string statOutput;
-    statistics.print(statOutput);
-
-    fprintf(stderr, "c statistics:\n%s\n", statOutput.c_str());
-
-    fprintf(stderr, "c solved instance with result %d\n", solution);
-
-    printf("c CPU time              : %g s\n", cpuTime());
-    printf("c memory                : %g MB\n", memUsedPeak());
+    if (MSverbosity > 0) {
+      string statOutput;
+      statistics.print(statOutput);
+      fprintf(stderr, "c statistics:\n%s\n", statOutput.c_str());
+      fprintf(stderr, "c solved instance with result %d\n", solution);
+      printf("c CPU time              : %g s\n", cpuTime());
+      printf("c memory                : %g MB\n", memUsedPeak());
+    }
 
     // report found value to calling method
     return solution;
@@ -799,8 +754,8 @@ Master::solveInstance(void* data)
 
     // setup the parameters, setup varCnt
     solver->setVerbosity(tData.master->param.verb);
-    if (master.varCnt() >= (unsigned int) solver->nVars()) { solver->reserveVars(master.varCnt()); }
-    while (master.varCnt() >= (unsigned int) solver->nVars()) {
+    if (master.varCnt() > (unsigned int) solver->nVars()) { solver->reserveVars(master.varCnt()); }
+    while (master.varCnt() > (unsigned int) solver->nVars()) {
         solver->newVar();
     }
     // setup communication
@@ -1099,8 +1054,8 @@ Master::splitInstance(void* data)
 
 
     // feed the instance into the solver
-    if (master.varCnt() >= (unsigned int) S->nVars()) { S->reserveVars(master.varCnt()); }
-    while (master.varCnt() >= (unsigned int)S->nVars()) { S->newVar(); }
+    if (master.varCnt() > (unsigned int) S->nVars()) { S->reserveVars(master.varCnt()); }
+    while (master.varCnt() > (unsigned int)S->nVars()) { S->newVar(); }
 
     vector< vector<Lit>* > clauses;
     assert(tData.nodeToSolve != 0);
@@ -1262,7 +1217,9 @@ Master::splitInstance(void* data)
         // simply set the node to the unknown state
         tData.nodeToSolve->setState(TreeNode::unknown);
         for (unsigned int i = 0; i < validConstraints.size(); i++) {
-            tData.nodeToSolve->addNodeConstraint(validConstraints[i]);
+	    // can add all constraints here from 0 to i!
+	    int validStart = opt_collect_all_valid ? 0 : i;
+	    for( int j = validStart; j <= i; ++ j ) tData.nodeToSolve->addNodeConstraint(validConstraints[j]);
         }
         // expand the node
         tData.nodeToSolve->expand(childConstraints);
@@ -1271,7 +1228,7 @@ Master::splitInstance(void* data)
         }
         // add childs to both queues
         for (unsigned int i = 0 ; i < tData.nodeToSolve->size(); ++ i) {
-            master.addNode(tData.nodeToSolve->getChild(i));
+            master.addNode(tData.nodeToSolve->getChild(i), tData.nodeToSolve->size() == 1); // add only to solve queue, if there have been multiple child nodes
         }
     }
     tData.result = ret;
@@ -1293,12 +1250,10 @@ Master::splitInstance(void* data)
 }
 
 void
-Master::addNode(TreeNode* t)
+Master::addNode(TreeNode* t, bool splitOnly)
 {
-    solveQueue.push_back(t);
-    if (!plainpart) {
-        splitQueue.push_back(t);
-    }
+    if( !splitOnly ) solveQueue.push_back(t);
+    if( !plainpart ) splitQueue.push_back(t);
 }
 
 void

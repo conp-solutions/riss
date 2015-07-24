@@ -225,9 +225,6 @@ class Clause
             , shared(0)
             , shCleanDelay(0)
             #endif
-            #ifdef CLS_EXTRA_INFO
-            , extra_info(0)
-            #endif
         {}
 
         ClauseHeader(volatile ClauseHeader& rhs)
@@ -250,9 +247,6 @@ class Clause
             shared = rhs.shared;
             shCleanDelay = rhs.shCleanDelay;
             #endif
-            #ifdef CLS_EXTRA_INFO
-            extra_info = rhs.extra_info;
-            #endif
         }
 
         ClauseHeader& operator = (volatile ClauseHeader& rhs)
@@ -274,9 +268,6 @@ class Clause
             pt_level = rhs.pt_level;
             shared = rhs.shared;
             shCleanDelay = rhs.shCleanDelay;
-            #endif
-            #ifdef CLS_EXTRA_INFO
-            extra_info = rhs.extra_info;
             #endif
             return *this;
         }
@@ -553,7 +544,7 @@ class Clause
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level)
     {
-        assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
+        // TODO FIXME debug this check before using upward sharing again: assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
         header.pt_level = _pt_level;
     }
 
@@ -745,7 +736,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         to[cr].mark(c.mark());
 
 
-
+/*
         if (to[cr].learnt())        {
             to[cr].activity() = c.activity();
             to[cr].setLBD(c.lbd());
@@ -758,7 +749,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         #ifdef PCASSO
         to[cr].header.pt_level = c.getPTLevel();
         #endif
-
+*/
     }
 
     // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3

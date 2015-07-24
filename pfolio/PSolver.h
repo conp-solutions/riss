@@ -25,7 +25,8 @@ class PSolver
     bool deleteConfig;
     Riss::PfolioConfig& pfolioConfig;  // configuration for this portfolio solver
 
-    bool initialized;
+    bool initialized;     // indicate whether everything has been setup already
+    bool simplified;      // indicate whether global formula has been simplified with global preprocessor already
     int threads;
     int winningSolver;     // id of the thread of the solver that won
 
@@ -87,6 +88,15 @@ class PSolver
      */
     Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
 
+    /** simplify given formula with the global preprocessor 
+     *  (only once, sets simplified flag)
+     *  @return state of the formula, adds model, if state is l_true
+     */
+    Riss::lbool simplifyFormula();
+
+    /** use global simplifier to re-setup given model */
+    void extendModel( Riss::vec< Riss::lbool>& externalModel );
+    
     //
     // executed only for the first solver (e.g. for parsing and simplification)
     //
