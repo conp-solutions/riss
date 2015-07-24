@@ -332,7 +332,6 @@ class CP3Config : public Riss::Config
     Riss::IntOption dense_debug_out;
     #endif
     Riss::IntOption  opt_dense_fragmentation;
-    Riss::BoolOption opt_dense_store_forward;
     Riss::BoolOption opt_dense_keep_assigned;
 
 //

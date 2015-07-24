@@ -27,10 +27,6 @@ void Dense::compress(const char* newWhiteFile)
 
     DOUT(if (config.dense_debug_out) {cerr << "c dense compress" << endl;});
 
-    Compression compression;
-    compression.variables = data.nVars();
-    compression.mapping = (Var*)malloc(sizeof(Var) * (data.nVars()));
-    for (Var v = 0; v < data.nVars(); ++v) { compression.mapping[v] = -1; }
 
     uint32_t* count = (uint32_t*)malloc((data.nVars()) * sizeof(uint32_t));
     memset(count, 0, sizeof(uint32_t) * (data.nVars()));
@@ -58,7 +54,7 @@ void Dense::compress(const char* newWhiteFile)
 
     uint32_t diff = 0;
     for (Var v = 0 ; v < data.nVars(); v++) {
-        assert(diff <= v && "there cannot be more variables that variables that have been analyzed so far");
+        assert(diff <= v && "there cannot be more variables then variables that have been analyzed so far");
         if (count[v] != 0 || data.doNotTouch(v) ||
                 (data.value(mkLit(v, false)) != l_Undef && (config.opt_dense_keep_assigned))) {    // do not drop assigned variables!
             // do not rewrite the trail!
@@ -67,8 +63,11 @@ void Dense::compress(const char* newWhiteFile)
         } else {
             diff++;
             DOUT(if (config.dense_debug_out) {
-            if (data.doNotTouch(v)) { cerr << "c do not touch variable will be dropped: " << v + 1 << " mapping: " << compression.mapping[v] + 1 << endl; }
-                else { cerr << "c variable " << v + 1 << " occurrs " << count[v] << " times, and is undefined: " << (data.value(mkLit(v, false)) == l_Undef) << endl; }
+                if (data.doNotTouch(v)) {
+                    cerr << "c do not touch variable will be dropped: " << v + 1 << " mapping: " << compression.mapping[v] + 1 << endl;
+                } else {
+                    cerr << "c variable " << v + 1 << " occurrs "<< count[v] << " times, and is undefined: " << (data.value(mkLit(v, false)) == l_Undef) << endl;
+                }
             });
             assert(compression.mapping[v] == -1);
         }
@@ -78,12 +77,9 @@ void Dense::compress(const char* newWhiteFile)
     if (diff == 0 || (config.opt_dense_fragmentation > 1.0 + ((diff * 100)  / data.nVars()))) {
         DOUT(if (config.dense_debug_out > 0) cerr << "c [DENSE] no fragmentation, do not compress!" << endl;);
 
-        if (config.opt_dense_store_forward) {
-            DOUT(if (config.dense_debug_out) cerr << "c store forward mapping " << endl;);
-            forward_mapping.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
-            for (Var v = 0; v < data.nVars() ; v++) {
-                forward_mapping[v] = compression.mapping[v];    // store everything into the new mapping file!
-            }
+        compression.forward.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
+        for (Var v = 0; v < data.nVars() ; v++) {
+            compression.forward[v] = compression.mapping[v];    // store everything into the new mapping file!
         }
 
         free(count);   // do not need the count array any more
@@ -165,12 +161,9 @@ void Dense::compress(const char* newWhiteFile)
         cerr << endl;
     });
 
-    if (config.opt_dense_store_forward) {
-        DOUT(if (config.dense_debug_out) cerr << "c store forward mapping " << endl;);
-        forward_mapping.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
-        for (Var v = 0; v < data.nVars() ; v++) {
-            forward_mapping[v] = compression.mapping[v];    // store everything into the new mapping file!
-        }
+    compression.forward.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
+    for (Var v = 0; v < data.nVars() ; v++) {
+        compression.forward[v] = compression.mapping[v];    // store everything into the new mapping file!
     }
 
 
@@ -310,8 +303,8 @@ bool Dense::writeUndoInfo(const string& filename)
 {
 
     DOUT(if (config.dense_debug_out) {
-    cerr << "c write undo info" << endl;
-});
+        cerr << "c write undo info" << endl;
+    });
 
     ofstream file(filename.c_str(), ios_base::out);
     if (! file) {
@@ -319,17 +312,11 @@ bool Dense::writeUndoInfo(const string& filename)
         return false;
     }
 
-    if (map_stack.size() == 0) { file.close(); return true; }   // nothing to write -> clear file!
-
-    // for each mapping, write two lines in the file
-    for (int i = 0 ; i < map_stack.size(); ++ i) {
-        Compression& compression = map_stack[i];
-        file << "p cnf " << compression.variables << " " << compression.trail.size() + 1 << endl;
-        for (int j = 0 ; j < compression.variables; ++ j) { file << compression.mapping[j] + 2 << " "; }   // since we are also using -1 and 0
-        file << "0" << endl;
-        for (int j = 0 ; j < compression.trail.size(); ++ j) {
-            file <<  compression.trail[j] << " 0" << endl;
-        }
+    file << "p cnf " << compression.variables << " " << compression.trail.size() + 1 << endl;
+    for (int j = 0 ; j < compression.variables; ++ j) { file << compression.mapping[j] + 2 << " "; }   // since we are also using -1 and 0
+    file << "0" << endl;
+    for (int j = 0 ; j < compression.trail.size(); ++ j) {
+        file <<  compression.trail[j] << " 0" << endl;
     }
 
     file.close();
@@ -418,6 +405,7 @@ bool Dense::readUndoInfo(const string& filename)
             parseClause(line , literals);
             Compression compression;
             compression.variables = variables;
+            compression.mapping.clear();
             compression.mapping = (Var*)malloc(sizeof(Var) * (variables));
             for (Var v = 0; v < variables; ++v) { compression.mapping[v] = -1; }
             for (int i = 0 ; i < literals.size(); ++ i) {
@@ -452,6 +440,14 @@ Lit Dense::giveNewLit(const Lit& l) const
             lit_Undef : mkLit(forward_mapping[ var(l) ], sign(l));
 }
 
+void Dense::initializeTechnique(CoprocessorData& data)
+{
+    if (compression.variables == 0) {
+        compression.variables = data.nVars();
+        compression.mapping.resize(data.nVars(), -1);
+        compression.forward.resize(data.nVars(), -1);
+    }
+}
 
 
 void Dense::destroy()
