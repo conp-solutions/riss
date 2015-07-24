@@ -17,8 +17,37 @@ Dense::Dense(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _contro
     : Technique(_config, _ca, _controller)
     , data(_data)
     , propagation(_propagation)
+    , compression(_data.getCompression())
     , globalDiff(0)
 {}
+
+void Dense::countLiterals(vector<uint32_t>& count, vec<CRef>& list)
+{
+    for (uint32_t i = 0 ; i < list.size(); ++i) {
+        Clause& clause = ca[ list[i] ];
+
+        // consider only clauses in the formula!
+        if (!clause.can_be_deleted() && !clause.learnt()) {
+            for (uint32_t j = 0; j < clause.size(); ++j) {
+                const Lit l = clause[j];
+
+                DOUT(if (config.dense_debug_out && l_Undef != data.value(l)) {
+                    cerr << "c DENSE found assigned literal " << l << " in clause [" << data.getClauses()[i] << "] : "
+                    << clause << " learned?: " << clause.learnt() << endl;
+                });
+
+                assert(l_Undef == data.value(l) && "there cannot be assigned literals");
+                assert(var(l) < data.nVars());
+
+                count[ var(l) ] ++;
+            }
+            // found empty clause?
+            if (clause.size() == 0) {
+                data.setFailed();
+            }
+        }
+    }
+}
 
 void Dense::compress(const char* newWhiteFile)
 {
@@ -27,39 +56,23 @@ void Dense::compress(const char* newWhiteFile)
 
     DOUT(if (config.dense_debug_out) {cerr << "c dense compress" << endl;});
 
-
-    uint32_t* count = (uint32_t*)malloc((data.nVars()) * sizeof(uint32_t));
-    memset(count, 0, sizeof(uint32_t) * (data.nVars()));
     // count literals occuring in clauses
+    vector<uint32_t> count(data.nVars(), 0);
 
-    for (int s = 0 ; s < 2; ++ s) {
-        vec<CRef>& list = s == 0 ? data.getClauses() : data.getLEarnts();
-        for (uint32_t i = 0 ; i < list.size(); ++i) {
-            Clause& clause = ca[ list[i] ];
-            if (clause.can_be_deleted() || clause.learnt()) { continue; }   // consider only clauses in the formula!
-            uint32_t j = 0 ;
-            for (; j < clause.size(); ++j) {
-                const Lit l = clause[j];
-
-                DOUT(if (config.dense_debug_out && l_Undef != data.value(l)) cerr << "c DENSE found assigned literal " << l << " in clause [" << data.getClauses()[i] << "] : " << clause << " learned?: " << clause.learnt() << endl ;);
-                assert(l_Undef == data.value(l) && "there cannot be assigned literals");
-                assert(var(l) < data.nVars());
-
-                count[ var(l) ] ++;
-            }
-            // found empty clause?
-            if (clause.size() == 0) { data.setFailed(); }
-        }
-    }
+    countLiterals(count, data.getClauses());
+    countLiterals(count, data.getLEarnts());
 
     uint32_t diff = 0;
     for (Var v = 0 ; v < data.nVars(); v++) {
         assert(diff <= v && "there cannot be more variables then variables that have been analyzed so far");
-        if (count[v] != 0 || data.doNotTouch(v) ||
-                (data.value(mkLit(v, false)) != l_Undef && (config.opt_dense_keep_assigned))) {    // do not drop assigned variables!
+
+        // do not drop assigned variables!
+        if (count[v] != 0 || data.doNotTouch(v) || (data.value(mkLit(v, false)) != l_Undef && (config.opt_dense_keep_assigned))) {
             // do not rewrite the trail!
             compression.mapping[v] = v - diff;
-            DOUT(if (config.dense_debug_out && data.doNotTouch(v)) cerr << "c mapping for variable " << v + 1 << " is: " << compression.mapping[v] + 1 << endl;);
+            DOUT(if (config.dense_debug_out && data.doNotTouch(v)) {
+                cerr << "c mapping for variable " << v + 1 << " is: " << compression.mapping[v] + 1 << endl;
+            });
         } else {
             diff++;
             DOUT(if (config.dense_debug_out) {
@@ -442,10 +455,9 @@ Lit Dense::giveNewLit(const Lit& l) const
 
 void Dense::initializeTechnique(CoprocessorData& data)
 {
-    if (compression.variables == 0) {
-        compression.variables = data.nVars();
-        compression.mapping.resize(data.nVars(), -1);
-        compression.forward.resize(data.nVars(), -1);
+    // if compression is not already initialized, do it here
+    if (!compression.isAvailable()) {
+        compression.reset(data.nVars());
     }
 }
 

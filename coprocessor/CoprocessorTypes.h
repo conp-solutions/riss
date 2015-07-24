@@ -146,6 +146,7 @@ class CoprocessorData
     Riss::vec<Riss::CRef>& getClauses();   // return the std::vector of clauses in the solver object
     Riss::vec<Riss::CRef>& getLEarnts();   // return the std::vector of learnt clauses in the solver object
     Riss::vec<Riss::Lit>&  getTrail();     // return trail
+    Riss::Compression& getCompression();   // return compression table of the solver
     void clearTrail();                     // remove all variables from the trail, and reset qhead in the solver
     void resetPPhead();                    // set the pointer to the next element to be propagated to 0
 
@@ -618,6 +619,11 @@ inline Riss::vec< Riss::CRef >& CoprocessorData::getLEarnts()
 inline Riss::vec< Riss::Lit >& CoprocessorData::getTrail()
 {
     return solver->trail;
+}
+
+inline Riss::Compression& CoprocessorData::getCompression()
+{
+    return solver->compression;
 }
 
 inline void CoprocessorData::clearTrail()

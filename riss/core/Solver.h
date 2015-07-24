@@ -39,6 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/core/BoundedQueue.h"
 #include "riss/core/Constants.h"
 #include "riss/core/CoreConfig.h"
+#include "riss/core/Compression.h"
 
 //
 // choose which bit width should be used
@@ -550,6 +551,7 @@ class Solver
 
     // vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
+    Compression         compression;      // if compression is enabled, this transformation info will be stored here
 
   protected:
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
