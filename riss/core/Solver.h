@@ -617,9 +617,14 @@ class Solver
 
 //     vec<int> trailPos;          /// store the position where the variable is located in the trail exactly (for hack)
 
-    double              max_learnts;
-    double              learntsize_adjust_confl;
-    int                 learntsize_adjust_cnt;
+    // minisat style removal
+    double max_learnts;
+    double learntsize_factor;
+    double learntsize_inc;
+    double learntsize_adjust_start_confl;
+    double learntsize_adjust_inc;
+    double learntsize_adjust_confl;
+    int    learntsize_adjust_cnt;
 
     Clock totalTime, propagationTime, analysisTime, preprocessTime, inprocessTime, extResTime, reduceDBTime, icsTime; // times for methods during search
     int preprocessCalls, inprocessCalls;    // stats

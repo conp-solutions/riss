@@ -73,6 +73,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
     , curRestart(1)
 
+
+    
     , ok(true)
     , cla_inc(1)
     , var_inc(1)
@@ -90,6 +92,15 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , progress_estimate(0)
     , remove_satisfied(true)
 
+    // removal setup
+    , max_learnts( config.opt_min_learnts_lim )
+    , learntsize_factor( config.opt_learnt_size_factor )
+    , learntsize_inc( config.opt_learntsize_inc )
+    , learntsize_adjust_start_confl( config.opt_learntsize_adjust_start_confl )
+    , learntsize_adjust_inc( config.opt_learntsize_adjust_inc )
+    , learntsize_adjust_confl( config.opt_learntsize_adjust_start_confl )
+    , learntsize_adjust_cnt( config.opt_learntsize_adjust_start_confl )
+    
     , preprocessCalls(0)
     , inprocessCalls(0)
 
@@ -1900,6 +1911,14 @@ lbool Solver::search(int nof_conflicts)
             claDecayActivity();
 
             conflictsSinceLastRestart ++;
+	    
+	    if( config.opt_reduceType == 1 ) {
+	      if (--learntsize_adjust_cnt == 0){
+		  learntsize_adjust_confl *= learntsize_adjust_inc;
+		  learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
+		  max_learnts             *= learntsize_inc;
+	      }
+	    }
 
         } else { // there has not been a conflict
             if (restartSearch(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
@@ -2009,7 +2028,9 @@ lbool Solver::search(int nof_conflicts)
 
 void Solver::clauseRemoval()
 {
-    if (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) { // perform only if learnt clauses are present
+    if(  ( config.opt_reduceType == 1 && (learnts.size()-nAssigns() >= max_learnts) )                                // minisat style removal
+      || (config.opt_reduceType == 0 && (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) ) )  // glucose style removal
+    { // perform only if learnt clauses are present
         curRestart = (conflicts / nbclausesbeforereduce) + 1;
         reduceDB();
         nbclausesbeforereduce += searchconfiguration.incReduceDB;
@@ -2645,6 +2666,15 @@ void Solver::applyConfiguration()
     assert(searchconfiguration.sizeTrailQueue > 0 && "thera have to be some elements (at least one)");
     trailQueue.initSize(searchconfiguration.sizeTrailQueue);
 
+    if( config.opt_reduceType == 1 ) { // minisat style removal?
+      max_learnts = nClauses() * learntsize_factor;
+      if (max_learnts < config.opt_min_learnts_lim)
+	  max_learnts = config.opt_min_learnts_lim;
+
+      learntsize_adjust_confl   = learntsize_adjust_start_confl;
+      learntsize_adjust_cnt     = (int)learntsize_adjust_confl; 
+    }
+    
     nbclausesbeforereduce = searchconfiguration.firstReduceDB;
     sumLBD = 0;
 }
