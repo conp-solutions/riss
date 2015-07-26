@@ -4,6 +4,10 @@
 #ifndef ipasir_h_INCLUDED
 #define ipasir_h_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Return the name and the version of the incremental SAT
  * solving library.
@@ -108,5 +112,9 @@ int ipasir_failed(void * solver, int lit);
  * State after: INPUT or SAT or UNSAT
  */
 void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * state));
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

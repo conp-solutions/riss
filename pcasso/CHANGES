@@ -1,0 +1,7 @@
+# ChangeLog for pcasso
+
+## v5.0.3
+
+ * can run priss and pcasso in parallel, yet without communication between the two
+ * uses one global PSolver object to parse the formula
+ * can use preprocessor of global PSolver object to simplify the formula internally

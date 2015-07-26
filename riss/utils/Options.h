@@ -523,20 +523,29 @@ class Int64Option : public Option
 
 class StringOption : public Option
 {
-    const char* value;
+    std::string* value;
     const char* defaultValue;
   public:
     StringOption(const char* c, const char* n, const char* d, const char* def = nullptr, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
-        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def), defaultValue(def) {}
+        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def == nullptr ? nullptr : new std::string(def) ), defaultValue(def) {}
 
-    operator      const char*  (void) const     { return value; }
-    operator      const char*& (void)           { return value; }
-    StringOption& operator= (const char* x)  { value = x; return *this; }
+    ~StringOption() { if( value != nullptr) delete value; }
+        
+    operator      const char*  (void) const     { return value == nullptr ? nullptr : value->c_str(); }
+//     operator      const char*& (void)           { return value; }
+    StringOption& operator= (const char* x)  { 
+      if( value == nullptr ) value = new std::string(x); 
+      else *value = std::string(x);
+      return *this; 
+    }
 
-    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual bool hasDefaultValue() { 
+      if( value == nullptr ) return defaultValue == nullptr; 
+      else return *value == std::string(defaultValue);
+    }
     virtual void printOptionCall(std::stringstream& s)
     {
-        if (value != 0) { s << "-" << name << "=" << value; }
+        if (value != nullptr) { s << "-" << name << "=" << *value; }
         else { s << "-" << name << "=\"\""; }
     }
 
@@ -548,7 +557,9 @@ class StringOption : public Option
             return false;
         }
 
-        value = span;
+        if( value == nullptr ) value = new std::string(span); 
+	else *value = std::string(span);
+	std::cerr << "c parse stringoption " << name << " with value " << value << std::endl;
         return true;
     }
 

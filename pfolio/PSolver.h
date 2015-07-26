@@ -25,8 +25,11 @@ class PSolver
     bool deleteConfig;
     Riss::PfolioConfig& pfolioConfig;  // configuration for this portfolio solver
 
-    bool initialized;
+    bool initialized;     // indicate whether everything has been setup already
+    bool simplified;      // indicate whether global formula has been simplified with global preprocessor already
+    bool killed;          // killed all childs already?
     int threads;
+    int winningSolver;     // id of the thread of the solver that won
 
     Coprocessor::CP3Config*    globalSimplifierConfig; /// configuration object for global simplifier
     Coprocessor::Preprocessor* globalSimplifier;       /// global object that initially runs simplification on the formula for all solvers together
@@ -46,12 +49,14 @@ class PSolver
     std::string defaultSimplifierConfig;           // name of the configuration that should be used by the global simplification
     std::vector< std::string > incarnationConfigs; // strings of incarnation configurations
 
+    std::vector<unsigned short int> hardwareCores; // list of available cores for this parallel solver
+    
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 
   public:
 
-    PSolver(PfolioConfig* externalConfig = 0, const char* configName = 0, int externalThreads = -1) ;
+    PSolver(PfolioConfig* externalConfig = nullptr, const char* configName = nullptr, int externalThreads = -1) ;
 
     ~PSolver();
 
@@ -84,6 +89,15 @@ class PSolver
      */
     Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
 
+    /** simplify given formula with the global preprocessor 
+     *  (only once, sets simplified flag)
+     *  @return state of the formula, adds model, if state is l_true
+     */
+    Riss::lbool simplifyFormula();
+
+    /** use global simplifier to re-setup given model */
+    void extendModel( Riss::vec< Riss::lbool>& externalModel );
+    
     //
     // executed only for the first solver (e.g. for parsing and simplification)
     //
@@ -92,6 +106,9 @@ class PSolver
     /** The current number of original clauses of the 1st solver. */
     int nClauses() const;
 
+    /** return reference to the clause with the given index */
+    Clause& GetClause( int index ) const ;
+    
     /** The current number of variables of the 1st solver. */
     int nVars() const;
 
@@ -103,6 +120,12 @@ class PSolver
 
     /** Removes already satisfied clauses in the first solver */
     bool simplify();
+    
+    /** execute for first solver, or winning solver, if there is a winning solver */
+    int getNumberOfTopLevelUnits();
+    
+    /** execute for first solver, or winning solver, if there is a winning solver */
+    Lit trailGet( int index );
 
     //
     // executed for all present solvers:
@@ -164,6 +187,7 @@ class PSolver
      */
     void continueWork();
 
+public:
     /** stops all parallel workers and kill their processes
      * note: afterwards, no other operations should be executed any more (for now)
      */
