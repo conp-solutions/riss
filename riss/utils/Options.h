@@ -541,6 +541,7 @@ class StringOption : public Option
 
     virtual bool hasDefaultValue() { 
       if( value == nullptr ) return defaultValue == nullptr; 
+      else if( defaultValue== nullptr ) return value == nullptr; 
       else return *value == std::string(defaultValue);
     }
     virtual void printOptionCall(std::stringstream& s)
@@ -595,7 +596,7 @@ class StringOption : public Option
 
     void giveRndValue(std::string& optionText)
     {
-        optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special std::strings, another way might be found...)
+        optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special strings, another way might be found...)
     }
 };
 
