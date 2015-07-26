@@ -18,7 +18,6 @@ include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
 include_directories(${LIBRT_INCLUDES})
 
 
-# Libraries:
 # 
 # Libraries
 # 
@@ -88,11 +87,11 @@ add_custom_command(TARGET  riss-simp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink riss-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
 
 if(STATIC_BINARIES)
-  target_link_libraries(riss-core riss-lib-static coprocessor-lib-static)
-  target_link_libraries(riss-simp riss-lib-static coprocessor-lib-static)
+  target_link_libraries(riss-core riss-lib-static coprocessor-lib-static classifier-lib-static libpca-static)
+  target_link_libraries(riss-simp riss-lib-static coprocessor-lib-static classifier-lib-static libpca-static)
 else()
-  target_link_libraries(riss-core riss-lib-shared coprocessor-lib-shared)
-  target_link_libraries(riss-simp riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(riss-core riss-lib-shared coprocessor-lib-shared classifier-lib-shared libpca-shared)
+  target_link_libraries(riss-simp riss-lib-shared coprocessor-lib-shared classifier-lib-shared libpca-shared)
 endif()
 
 # Installation:
