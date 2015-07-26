@@ -38,6 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // configurations
 #include "riss/core/CoreConfig.h"  // configuration object for riss
 #include "pfolio/PfolioConfig.h"   // configuration object for priss
+#include "PcassoComConfig.h"
 
 // libs
 #include <pthread.h>
@@ -66,6 +67,7 @@ class Master
     /** configuration with which each solver is initialized */
     Riss::CoreConfig defaultSolverConfig;
     Riss::PfolioConfig defaultPfolioConfig;
+    Riss::PcassoComConfig defaultPcassoConfig;
 
     struct Parameter {
         int    verb;
