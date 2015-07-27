@@ -235,8 +235,6 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , communication(0)
     , sharingTimePoint(config.sharingType)
 {
-
-    cerr << "c sizes: Solver: " << sizeof(Solver) << " Coprocessor: " << sizeof(Preprocessor) << endl;
   
     // Parameters (user settable):
     //
@@ -3060,9 +3058,9 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     int keptClauses = 0;
     for (int i = 0; i < learnts.size(); i++) {
-        ca.reloc(learnts[i], to);
-        if (!to[ learnts[i]].mark()) {
-            learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
+	if (!ca[ clauses[i] ].mark()) { // reloc only if not marked already
+	  ca.reloc(learnts[i], to);
+          learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
         }
     }
     learnts.shrink_(learnts.size() - keptClauses);
@@ -3071,19 +3069,19 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     keptClauses = 0;
     for (int i = 0; i < clauses.size(); i++) {
-        ca.reloc(clauses[i], to);
-        if (!to[ clauses[i]].mark()) {
-            clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
+	if (!ca[ clauses[i]].mark()) { // reloc only if not marked already
+	  ca.reloc(clauses[i], to);
+          clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
         }
     }
     clauses.shrink_(clauses.size() - keptClauses);
     // handle all clause pointers from OTFSS
     keptClauses = 0;
     for (int i = 0 ; i < otfss.info.size(); ++ i) {
+      if (!ca[otfss.info[i].cr].mark()) { // keep only relevant clauses (checks mark() != 0 )
         ca.reloc(otfss.info[i].cr, to);
-        if (!to[ otfss.info[i].cr ].mark()) {
-            otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
-        }
+        otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
+      }
     }
     otfss.info.shrink_(otfss.info.size() - keptClauses);
 }
@@ -4100,6 +4098,7 @@ lbool Solver::preprocess()
         preprocessTime.start();
         status = coprocessor->preprocess();
         preprocessTime.stop();
+	otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
     }
     if (verbosity >= 1) { printf("c =========================================================================================================\n"); }
     return status;
@@ -4119,6 +4118,7 @@ lbool Solver::inprocess(lbool status)
                 inprocessTime.start();
                 status = coprocessor->inprocess();
                 inprocessTime.stop();
+		otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
                 if (big != 0) {
                     big->recreate(ca, nVars(), clauses, learnts);   // build a new BIG that is valid on the "new" formula!
                     big->removeDuplicateEdges(nVars());

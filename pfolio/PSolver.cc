@@ -47,8 +47,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , verbosity(1)
     , verbEveryConflicts(0)
 {
-//     cerr << "c sizes: Solver: " << sizeof(Solver) << " Coprocessor: " << sizeof(Preprocessor) << endl;
-  
+ 
     if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
 
     // setup the default configuration for all the solvers!
@@ -249,7 +248,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
 
 lbool PSolver::simplifyFormula()
 {
-    cerr << "c cakk simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;
+    cerr << "c call simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;
     if( winningSolver != -1 ) return l_Undef; // simplify only, if there is no winning solver already
     lbool ret = l_Undef;
     /*

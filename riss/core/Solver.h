@@ -903,7 +903,8 @@ class Solver
     int learnedDecisionClauses;
 
     /** all info neede to perform lazy on the fly self subsumption */
-    struct OTFSS {
+    class OTFSS {
+    public:
         int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause, removedSat; // otfss stats
 
         /** store for each clause which literal can be removed */
@@ -919,6 +920,8 @@ class Solver
         vec<Lit> tmpPropagateLits;  // literals that should be propagated after otfss
         OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0), removedSat(0) {}
 
+        /** to be used to keep a state clean, e.g. after preprocessing/inprocessing */
+	void clearQueues() { info.clear(); tmpPropagateLits.clear(); } 
     } otfss;
 
     /** run over the stored clauses and remove the indicated literal

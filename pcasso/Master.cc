@@ -122,9 +122,6 @@ Master::Master(Parameter p) :
     res(0),
     plainpart(opt_scheme_pp)
 {
-    cerr << "c sizes: Solver: " << sizeof(Riss::Solver) << " Coprocessor: " << sizeof(Coprocessor::Preprocessor) << " PSolver: " << sizeof(Riss::PSolver) << endl;
-  
-  
     // decrease available elements in semaphore down to 0 -> next call will be blocking
     sleepLock.wait();
 

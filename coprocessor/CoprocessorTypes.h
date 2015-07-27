@@ -1312,6 +1312,18 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
         }
         learnts.shrink_(i - j);
     }
+    
+    // handle all clause pointers from OTFSS
+    int keptClauses = 0;
+    for (int i = 0 ; i < solver->otfss.info.size(); ++ i) {
+      if (!ca[solver->otfss.info[i].cr].can_be_deleted()) { // keep only relevant clauses (checks mark() != 0 )
+        ca.reloc(solver->otfss.info[i].cr, to);
+        if (!to[ solver->otfss.info[i].cr ].mark()) {
+            solver->otfss.info[keptClauses++] = solver->otfss.info[i]; // keep the clause only if its not marked!
+        }
+      }
+    }
+    solver->otfss.info.shrink_(solver->otfss.info.size() - keptClauses);
 }
 
 /** Mark all variables that occure together with _x_.
