@@ -95,6 +95,10 @@ class Technique
      * This method will be called by the Coprocessor for each technique before simplifications are
      * performed. It can be used for bootstrapping tasks.
      *
+     * This step is needed, because at the time the constructor of a technique is called, the CoprocessorData
+     * object is not initialized. Therefore, if your technique depends on some properties of the data object,
+     * access them in this method.
+     *
      * Note:
      *   If your technique needs initialization, you can add an assertion to the top of your process()
      *   method. Make sure, that you add your technique in Preprocessor::initializePreprocessor() at the bottom.
@@ -106,7 +110,7 @@ class Technique
     }
 
     /** return true, if technique can be used without further initialization */
-    inline bool isInitializedTechnique()
+    inline bool isInitializedTechnique() const
     {
         return isInitialized;
     }

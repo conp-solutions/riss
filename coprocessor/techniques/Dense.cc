@@ -18,36 +18,9 @@ Dense::Dense(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _contro
     , data(_data)
     , propagation(_propagation)
     , compression(_data.getCompression())
-    , globalDiff(0)
 {}
 
-void Dense::countLiterals(vector<uint32_t>& count, vec<CRef>& list)
-{
-    for (uint32_t i = 0 ; i < list.size(); ++i) {
-        Clause& clause = ca[ list[i] ];
 
-        // consider only clauses in the formula!
-        if (!clause.can_be_deleted() && !clause.learnt()) {
-            for (uint32_t j = 0; j < clause.size(); ++j) {
-                const Lit l = clause[j];
-
-                DOUT(if (config.dense_debug_out && l_Undef != data.value(l)) {
-                    cerr << "c DENSE found assigned literal " << l << " in clause [" << data.getClauses()[i] << "] : "
-                    << clause << " learned?: " << clause.learnt() << endl;
-                });
-
-                assert(l_Undef == data.value(l) && "there cannot be assigned literals");
-                assert(var(l) < data.nVars());
-
-                count[ var(l) ] ++;
-            }
-            // found empty clause?
-            if (clause.size() == 0) {
-                data.setFailed();
-            }
-        }
-    }
-}
 
 void Dense::compress(const char* newWhiteFile)
 {
@@ -58,46 +31,55 @@ void Dense::compress(const char* newWhiteFile)
 
     // count literals occuring in clauses
     vector<uint32_t> count(data.nVars(), 0);
-
     countLiterals(count, data.getClauses());
     countLiterals(count, data.getLEarnts());
+
+    // resize and clear temporary mappings - the mappings will only be used if the fragmentation is high enough
+    mapping.resize(data.nVars());
+    trail.resize(data.nVars());
+    fill(mapping.begin(), mapping.end(), Compression::UNIT);
+    fill(trail.begin(), trail.end(), l_Undef);
 
     uint32_t diff = 0;
     for (Var v = 0 ; v < data.nVars(); v++) {
         assert(diff <= v && "there cannot be more variables then variables that have been analyzed so far");
 
-        // do not drop assigned variables!
-        if (count[v] != 0 || data.doNotTouch(v) || (data.value(mkLit(v, false)) != l_Undef && (config.opt_dense_keep_assigned))) {
-            // do not rewrite the trail!
-            compression.mapping[v] = v - diff;
+        // keep variable
+        if (count[v] != 0            // literal does occure in formula
+            || data.doNotTouch(v)    // variable must not be modified
+            || (config.opt_dense_keep_assigned && data.value(v) != l_Undef) // do not drop assigned variables
+        ) {
+            mapping[v] = v - diff;
+
             DOUT(if (config.dense_debug_out && data.doNotTouch(v)) {
-                cerr << "c mapping for variable " << v + 1 << " is: " << compression.mapping[v] + 1 << endl;
+                cerr << "c mapping for variable " << v + 1 << " is: " << mapping[v] + 1 << endl;
             });
-        } else {
+        }
+        // compress (remove) variable
+        else {
             diff++;
+            trail[v] = data.value(v);
+
             DOUT(if (config.dense_debug_out) {
                 if (data.doNotTouch(v)) {
-                    cerr << "c do not touch variable will be dropped: " << v + 1 << " mapping: " << compression.mapping[v] + 1 << endl;
+                    cerr << "c do not touch variable will be dropped: "
+                         << v + 1 << " mapping: " << mapping[v] + 1 << endl;
                 } else {
-                    cerr << "c variable " << v + 1 << " occurrs "<< count[v] << " times, and is undefined: " << (data.value(mkLit(v, false)) == l_Undef) << endl;
+                    cerr << "c variable " << v + 1 << " occurrs "<< count[v] << " times, and is undefined: "
+                         << (data.value(mkLit(v, false)) == l_Undef) << endl;
                 }
             });
-            assert(compression.mapping[v] == -1);
         }
     }
 
     // formula is already compact, or not too loose
-    if (diff == 0 || (config.opt_dense_fragmentation > 1.0 + ((diff * 100)  / data.nVars()))) {
+    if (isCompact(diff)) {
         DOUT(if (config.dense_debug_out > 0) cerr << "c [DENSE] no fragmentation, do not compress!" << endl;);
-
-        compression.forward.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
-        for (Var v = 0; v < data.nVars() ; v++) {
-            compression.forward[v] = compression.mapping[v];    // store everything into the new mapping file!
-        }
-
-        free(count);   // do not need the count array any more
         return;
     }
+
+    compression.update(mapping, trail);
+
 
     // first, take care of the undo stack that has been created until this compression
     adoptUndoStack();
@@ -451,20 +433,6 @@ Lit Dense::giveNewLit(const Lit& l) const
     else return
             forward_mapping[ var(l) ] == -1 ?
             lit_Undef : mkLit(forward_mapping[ var(l) ], sign(l));
-}
-
-void Dense::initializeTechnique(CoprocessorData& data)
-{
-    // if compression is not already initialized, do it here
-    if (!compression.isAvailable()) {
-        compression.reset(data.nVars());
-    }
-}
-
-
-void Dense::destroy()
-{
-
 }
 
 } // namespace Coprocessor

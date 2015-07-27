@@ -33,24 +33,23 @@ class Compression
     std::vector<Var> mapping;   // mapping from old variables to new ones
     std::vector<Var> forward;   // store to which new variable an old variable has been mapped
 
-    uint32_t variables;         // number of variables before compression
-    uint32_t postvariables;     // number of variables after compression
+    uint32_t postnvars;         // number of variables after compression
 
-    std::vector<Lit> trail;     // already assigned literals (units) - this variables are removed from the formula
+    std::vector<lbool> trail;   // already assigned literals (units) - this variables are removed from the formula
 
   public:
 
     enum {
-        NOT_MAPPED = -1, // variable is not mapped
-        UNIT       = -2, // variable is unit and therefore removed in the compressed formula
+        NOT_MAPPED = -2, // variable is not mapped
+        UNIT       = -1, // variable is unit and therefore removed in the compressed formula
     };
 
-    Compression() : variables(0), postvariables(0) {};
+    Compression() : postnvars(0) {};
 
     /**
      * @return true, if compression is active and variable renaming was performed
      */
-    inline bool isAvailable() const { return variables == 0; }
+    inline bool isAvailable() const { return mapping.size() == 0; }
 
     /**
      * Clear and resize all mappings
@@ -70,8 +69,21 @@ class Compression
         std::fill(mapping.begin(), mapping.end(), NOT_MAPPED);
         std::fill(forward.begin(), forward.end(), NOT_MAPPED);
 
-        variables = nvars;
         postvariables = nvars;
+    }
+
+    /**
+     * Use the passed mapping as the new mapping. The current trail and forward mapping will be adjusted
+     */
+    void update(std::vector<Riss::Var>& _mapping, std::vector<lbool>& _trail)
+    {
+        if (!isAvailable()) {
+            // simply copying the content of the mappings - this is the inital mapping
+            mapping = _mapping;
+            trail = _trail;
+        } else {
+
+        }
     }
 
     /**
@@ -84,10 +96,10 @@ class Compression
      */
     inline Lit importLit(const Lit& lit) const
     {
-        assert(var(lit) <= forward.size() && "Variable must not be larger than current mapping");
+        assert(var(lit) <= mapping.size() && "Variable must not be larger than current mapping");
         
         if (isAvailable()) {
-           Var compressed = forward[var(lit)];
+           Var compressed = mapping[var(lit)];
         
            // if the variable is unit, it is removed in the compressed formula. Therefore
            // we return undefined
@@ -111,10 +123,10 @@ class Compression
     {
         // @see import for literals above for comments
 
-        assert(var <= forward.size() && "Variable must not be larger than current mapping");
+        assert(var <= mapping.size() && "Variable must not be larger than current mapping");
 
         if (isAvailable()) {
-            Var compressed = forward[var];
+            Var compressed = mapping[var];
 
             if (compressed == UNIT) {
                 return var_Undef;
@@ -135,16 +147,16 @@ class Compression
      */
     inline Lit exportLit(const Lit& lit) const
     {
-        assert(var(lit) <= mapping.size() && "Variable must not be larger than current mapping");
+        assert(var(lit) <= forward.size() && "Variable must not be larger than current mapping");
 
         if (isAvailable()) {
-            const Var original = mapping[var(lit)];
+            const Var original = forward[var(lit)];
 
             // variable was removed by compression, but is requested for export
             assert(original != NOT_MAPPED && "Variable is not in compression map. "
                                              "Do you forget to update compressed variables?");
 
-            return mkLit(mapping[var(lit)], sign(lit));
+            return mkLit(forward[var(lit)], sign(lit));
         }
         // no compression available, nothing to do! :)
         else {
@@ -159,17 +171,25 @@ class Compression
     {
         // @see export for literals above for comments
 
-        assert(var <= mapping.size() && "Variable must not be larger than current mapping");
+        assert(var <= forward.size() && "Variable must not be larger than current mapping");
 
         if (isAvailable()) {
-            const Var original = mapping[var];
+            const Var original = forward[var];
 
             assert(original != NOT_MAPPED && "Variable is not in compression map. "
                                              "Do you forget to update compressed variables?");
-            return mapping[var];
+            return forward[var];
         } else {
             return var;
         }
+    }
+
+    /**
+     * Returns the number of variables reduced by compression
+     * between the */
+    inline uint32_t diff() const
+    {
+        return variables - postvariables;
     }
 
 };

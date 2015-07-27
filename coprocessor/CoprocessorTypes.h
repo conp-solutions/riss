@@ -195,7 +195,8 @@ class CoprocessorData
     bool ok();                                             // return ok-state of solver
     void setFailed();                                      // found UNSAT, set ok state to false
     Riss::lbool enqueue(const Riss::Lit& l, const unsigned dependencyLevel = 0);  // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
-    Riss::lbool value(const Riss::Lit& l) const ;           // return the assignment of a literal
+    Riss::lbool value(const Riss::Lit& l) const;           // return the assignment of a literal
+    Riss::lbool value(const Riss::Var& v) const;           // return the assignment of a variable
     void resetAssignment(const Riss::Var v);               // set the polarity of a variable to l_Undef -- Note: be careful with this!
 
     Riss::Solver* getSolver();                             // return the pointer to the solver object
@@ -748,6 +749,11 @@ inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit& l, const unsigned i
 inline Riss::lbool CoprocessorData::value(const Riss::Lit& l) const
 {
     return solver->value(l);
+}
+
+inline Riss::lbool CoprocessorData::value(const Riss::Var& v) const
+{
+    return solver->value(v);
 }
 
 inline void CoprocessorData::resetAssignment(const Riss::Var v)
