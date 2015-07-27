@@ -17,6 +17,7 @@ set(LIB_SOURCES
     SolverPriss.cc
     shared_pool.cc
     vsidsSplitting.cc
+    PcassoComConfig.cc
     ${VERSION_CC})
 
 add_library(pcasso-lib-static STATIC ${LIB_SOURCES})

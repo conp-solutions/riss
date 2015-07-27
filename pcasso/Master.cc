@@ -92,6 +92,7 @@ static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin t
 static StringOption global_prissConfig("GLOBAL - CONFIG", "g-priss-config", "config string used to initialize global priss", 0);
 static StringOption prissConfig("WORKER - CONFIG", "priss-config", "config string used to initialize priss incarnations", 0);
 static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string used to initialize riss incarnations", 0);
+static StringOption pcassoConfig("WORKER - CONFIG", "pcasso-config", "config string used to initialize riss incarnations", 0);
 
 // Options for Priss
 static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver\n", false);
@@ -107,8 +108,9 @@ Master::Master(Parameter p) :
     hybridThreads( nullptr ),
     hybridMasterLock (nullptr),
     hybridData(nullptr),
-    defaultSolverConfig((const char*)prissConfig == 0 ? "" : prissConfig),
-    defaultPfolioConfig((const char*)rissConfig == 0 ? ""  : rissConfig),
+    defaultSolverConfig((const char*)prissConfig == nullptr ? "" : prissConfig),
+    defaultPfolioConfig((const char*)rissConfig == nullptr ? ""  : rissConfig),
+    defaultPcassoConfig((const char*)pcassoConfig == nullptr ? ""  : pcassoConfig),
     maxVar(0),
     model(0),
     param(p),
@@ -126,7 +128,6 @@ Master::Master(Parameter p) :
     sleepLock.wait();
 
     threadData = new ThreadData[threads];
-
 
     createdNodeID = statistics.registerI("createdNodes");
     loadSplitID = statistics.registerI("loadSplits");
@@ -876,38 +877,38 @@ Master::solveInstance(void* data)
     // setup communication
 
 	// create ringbuffer for node
-	CommunicationData* data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
-	tData.nodeToSolve->sharingPool = data;
-	
-	// setup communication layer
-	Communicator communicator = new Communicator(i, data);
-         // setup parameters for communication system
-        communicator->protectAssumptions = pfolioConfig.opt_protectAssumptions;
-        communicator->sendSize = pfolioConfig.opt_sendSize;
-        communicator->sendLbd = pfolioConfig.opt_sendLbd;
-        communicator->sendMaxSize = pfolioConfig.opt_sendMaxSize;
-        communicator->sendMaxLbd = pfolioConfig.opt_sendMaxLbd;
-        communicator->sizeChange = pfolioConfig.opt_sizeChange;
-        communicator->lbdChange = pfolioConfig.opt_lbdChange;
-        communicator->sendRatio = pfolioConfig.opt_sendRatio;
-        communicator->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
+	CommunicationData* comData = new CommunicationData(master.defaultPcassoConfig.opt_storageSize);
+	tData.nodeToSolve->sharingPool = comData;
 
-        communicator->sendIncModel = pfolioConfig.opt_sendIncModel;
-        communicator->sendDecModel = pfolioConfig.opt_sendDecModel;
-        communicator->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
-        communicator->sendEquivalences = pfolioConfig.opt_sendEquivalences;
-	if (! pfolioConfig.opt_share) { communicator->setDoSend(false); }   // no sending
-        if (!pfolioConfig.opt_receive) { communicator->setDoReceive(false); }  // no sending
+	// setup communication layer with default values
+	Communicator* communicator = new Communicator(tData.id, comData);
+    // setup parameters for communication system
+    communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
+    communicator->sendSize = master.defaultPcassoConfig.opt_sendSize;
+    communicator->sendLbd = master.defaultPcassoConfig.opt_sendLbd;
+    communicator->sendMaxSize = master.defaultPcassoConfig.opt_sendMaxSize;
+    communicator->sendMaxLbd = master.defaultPcassoConfig.opt_sendMaxLbd;
+    communicator->sizeChange = master.defaultPcassoConfig.opt_sizeChange;
+    communicator->lbdChange = master.defaultPcassoConfig.opt_lbdChange;
+    communicator->sendRatio = master.defaultPcassoConfig.opt_sendRatio;
+    communicator->doBumpClauseActivity = master.defaultPcassoConfig.opt_doBumpClauseActivity;
 
-        
-        // tell the communicator about the proof master
-        // communicator->setProofMaster(proofMaster);
-        // tell solver about its communication interface
-        solver->setCommunication(communicator);
-	communicator->setSolver(solvers[i]); // TODO have extra method in solverinterface that takes care, because of priss
-	
+    communicator->sendIncModel = master.defaultPcassoConfig.opt_sendIncModel;
+    communicator->sendDecModel = master.defaultPcassoConfig.opt_sendDecModel;
+    communicator->useDynamicLimits = master.defaultPcassoConfig.opt_useDynamicLimits;
+    communicator->sendEquivalences = master.defaultPcassoConfig.opt_sendEquivalences;
+	if (! master.defaultPcassoConfig.opt_share) { communicator->setDoSend(false); }   // no sending
+        if (!master.defaultPcassoConfig.opt_receive) { communicator->setDoReceive(false); }  // no sending
+
+
+    // tell the communicator about the proof master
+    // communicator->setProofMaster(proofMaster);
+    // tell solver about its communication interface
+    solver->setCommunication(*communicator);
+//	communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
+
 #warning create a communicator for each parent up to the root node, adapt receive method to also check the parent communicators receive
-	
+
 
 #warning check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
 	

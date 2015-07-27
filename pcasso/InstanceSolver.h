@@ -45,6 +45,7 @@ class InstanceSolver : public SolverInterface
     virtual double      getActivity(Riss::Var var) = 0;
     virtual void        reserveVars(Riss::Var var) = 0;
     virtual void        interrupt() = 0;
+    virtual void        setCommunication(Riss::Communicator& comunicator) = 0;
 
     // for partitioning tree
     //
