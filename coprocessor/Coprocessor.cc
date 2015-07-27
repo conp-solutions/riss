@@ -496,8 +496,8 @@ lbool Preprocessor::performSimplification()
 
     DOUT(if (config.opt_check) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
 
-    // if( config.opt_dense && !data.isInprocessing() ) {
-    if (config.opt_dense) {
+    // dense only if not inprocessing, or if enabled explicitly
+    if (config.opt_dense && ( !data.isInprocessing() || config.opt_dense_inprocess) ) {
         // do as very last step -- not nice, if there are units on the trail!
         dense.compress();
     }
@@ -959,8 +959,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
     DOUT(if (config.opt_check) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
 
-    //if( config.opt_dense && !data.isInprocessing() ) {
-    if (config.opt_dense) {
+    // dense only if not inprocessing, or if enabled explicitly
+    if (config.opt_dense && ( !data.isInprocessing() || config.opt_dense_inprocess) ) {
         // do as very last step -- not nice, if there are units on the trail!
         dense.compress();
     }

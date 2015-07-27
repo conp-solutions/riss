@@ -123,8 +123,17 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(" -cp3_stats -solververb=2 -cp3_bve_verbose=2 -cp3-debug -cp3-check=2 -cp3_verbose=3", false);
     } else if (optionSet == "NOCP") {
         parseOptions(" -no-enabled_cp3", false);
+    } else if (optionSet == "STRONGUNSAT") {
+        parseOptions( std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE ")
+	             + std::string("-cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense ")
+		     + std::string("-probe -no-pr-vivi -pr-bins -pr-lhbr ")
+		     + std::string("-xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed ")
+		     + std::string("-cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early ")
+		     + std::string("-revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgsxvf ")
+		     + std::string("-sUhdProbe=3 -sUHLEsize=30 ")
+		     , false);
     }
-
+    
     /*
      *  Options for CVC4 (intermediate version Riss 5.0.1)
      */
