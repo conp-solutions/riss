@@ -65,6 +65,13 @@ class CoreConfig : public Config
     BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
     DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
+    IntOption     opt_reduceType;          // which strategy to be used
+    DoubleOption  opt_learnt_size_factor;  
+    DoubleOption  opt_learntsize_inc;
+    IntOption     opt_learntsize_adjust_start_confl;
+    DoubleOption  opt_learntsize_adjust_inc;
+    IntOption     opt_min_learnts_lim;
+    
     BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
     IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;

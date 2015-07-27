@@ -731,25 +731,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].header.has_extra = to.extra_clause_field;
         }
 
-        // Copy extra data-fields:
-        // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
-        to[cr].mark(c.mark());
-
-
-/*
         if (to[cr].learnt())        {
             to[cr].activity() = c.activity();
             to[cr].setLBD(c.lbd());
             to[cr].setCanBeDel(c.canBeDel());
-            #ifdef PCASSO
-            to[cr].header.shCleanDelay = c.getShCleanDelay();
-            to[cr].header.shared = c.isShared() ? 1 : 0;
-            #endif
         } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
-        #ifdef PCASSO
-        to[cr].header.pt_level = c.getPTLevel();
-        #endif
-*/
     }
 
     // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3
