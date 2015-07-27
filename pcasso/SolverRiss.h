@@ -54,7 +54,7 @@ class SolverRiss : public InstanceSolver
     void                setupForPortfolio(const int nodeLevel);
     void                setTimeOut(double timeout);                               // FIXME: not implemented
     inline unsigned int getNumberOfTopLevelUnits() const;                         // returns the trail size of Riss
-    inline unsigned int getLiteralPTLevel(const Riss::Lit& l) const { return 0; } // FIXME: return correct PT level
+    inline unsigned int getLiteralPTLevel(const Riss::Lit& l) const;
     inline void         setCommunication(Riss::Communicator& comunicator);
 
   private:
