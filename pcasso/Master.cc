@@ -98,6 +98,7 @@ static StringOption pcassoConfig("WORKER - CONFIG", "pcasso-config", "config str
 static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver\n", false);
 static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
 static IntOption     global_priss_threads("PRISS", "g-priss-threads",  "threads global Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
+static BoolOption    opt_crossLink("SPLITTER", "crosslink",  "enable communication between global priss and pcasso.\n", false);
 
 
 // my core(s) lowest: global_priss_threads + myID * priss_threads
@@ -259,6 +260,13 @@ lbool Master::solveHybrid() {
   hybridData = new HybridSharedData[2]; // data that points to the shared data for the threads
   
   bool pfolioSolved = false, pcassoSolved = false;
+  
+  // enable link to global portfolio solver
+  if( opt_crossLink ) {
+    assert( root.sharingPool == 0 && "can set pool only once per node" );
+    root.sharingPool = new CommunicationData( defaultPcassoConfig.opt_storageSize );
+    globalSolver->setExternBuffers( &root.sharingPool->getBuffer(), &root.sharingPool->getSpecialBuffer() );
+  }
   
   for( int i = 0 ; i < 2; ++ i ) { // setup all threads, which can start with work immediately
     // setup data
@@ -877,11 +885,18 @@ Master::solveInstance(void* data)
     // setup communication
 
 	// create ringbuffer for node
-	CommunicationData* comData = new CommunicationData(master.defaultPcassoConfig.opt_storageSize);
-	tData.nodeToSolve->sharingPool = comData;
-
+	CommunicationData* comData = nullptr; 
+	if( tData.nodeToSolve->sharingPool == nullptr ) {
+	  comData = new CommunicationData(master.defaultPcassoConfig.opt_storageSize);
+	  tData.nodeToSolve->sharingPool = comData;
+	} else {
+	  assert( tData.nodeToSolve == tData.master->getRoot() && opt_crossLink && "only support this for the root node so far, and only if crosslink is enabled" );
+	  comData = tData.nodeToSolve->sharingPool; // talk about the same object in this routine
+	}
+	
 	// setup communication layer with default values
 	Communicator* communicator = new Communicator(tData.id, comData);
+	
     // setup parameters for communication system
     communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
     communicator->sendSize = master.defaultPcassoConfig.opt_sendSize;

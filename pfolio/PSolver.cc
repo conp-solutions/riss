@@ -46,6 +46,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , drupProofFile(0)
     , verbosity(1)
     , verbEveryConflicts(0)
+    , externBuffer(0)
+    , externSpecialBuffer(0)
 {
  
     if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
@@ -93,6 +95,19 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     solvers.push(new Solver(&configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
+
+void PSolver::setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* getSpecialBuffer)
+{
+   // simply set buffers
+   externBuffer = getBuffer;
+   externSpecialBuffer = getSpecialBuffer;
+   
+   // if we already ran (or are currently running), store pointers forward
+   if( data != 0 ) {
+     data->setExternBuffers(externBuffer, externSpecialBuffer);
+   }
+}
+
 
 void PSolver::parseConfigurations(const string& combinedConfigurations)
 {
@@ -738,6 +753,10 @@ bool PSolver::initializeThreads()
 
     data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
 
+    // communicate with external data pool, if there are links present
+    if( externBuffer != 0 || externSpecialBuffer != 0) {
+      data->setExternBuffers(externBuffer, externSpecialBuffer);
+    }
 
     // the portfolio should print proofs
     if (drupProofFile != 0) {

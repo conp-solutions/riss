@@ -51,6 +51,10 @@ class PSolver
 
     std::vector<unsigned short int> hardwareCores; // list of available cores for this parallel solver
     
+    // communicate with external solvers
+    ClauseRingBuffer* externBuffer;            // special buffer that should be used to send clauses to
+    ClauseRingBuffer* externSpecialBuffer;     // special buffer that should be used to send clauses to
+    
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 
@@ -98,6 +102,10 @@ class PSolver
     /** use global simplifier to re-setup given model */
     void extendModel( Riss::vec< Riss::lbool>& externalModel );
     
+    
+    /** use these buffers when initializin the solver to send clauses to, also cross link own buffers back */
+    void setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* getSpecialBuffer);
+	
     //
     // executed only for the first solver (e.g. for parsing and simplification)
     //

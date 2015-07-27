@@ -280,6 +280,8 @@ private:
         return (long long int) ts.tv_sec * 1000 + ts.tv_nsec / 1000000.0;
     }
 
+    TreeNode* getRoot() { return &root; }
+    
     // statistics section
   public:
     

@@ -499,8 +499,48 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(std::string(" -rnd-seed=9207562  -no-unhide -szTrailQueue=6000 -no-sls -no-probe -gc-frac=0.3 -dense -bve -no-bva -minSizeMinimizingClause=30 -no-laHack -up -rMax=40000  -cla-decay=0.999 -no-bve_totalG -bve_cgrow=10 -subsimp -cp3_str_limit=300000000 -cp3_bve_limit=2500000 -no-cce -R=2.0 -K=0.95 -rtype=0 -cp3_strength -cp3_call_inc=200 -no-bve_BCElim -phase-saving=2 -minLBDMinimizingClause=6 -no-inprocess -no-bve_gates")
                      + std::string(" -alluiphack=2 -all_strength_res=5 -var-decay-e=0.7 -var-decay-b=0.7 -rMaxInc=1.5 -longConflict -cp3_sub_limit=300000 -specialIncReduceDB=1000 -rnd-freq=0 -minLBDFrozenClause=15 -enabled_cp3 -ccmin-mode=2 -no-bve_unlimited -incReduceDB=450 -hack=0 -firstReduceDB=16000 -no-ee -no-cp3_randomized -szLBDQueue=30 -no-rew -no-hte -cp3_bve_heap=0 -bve_strength -bve_red_lits=0 -bve_heap_updates=2 -no-3resolve ")
                      , false);
-    }
-
+	/** test configs for Blackbox */
+    } else if (optionSet == "Realtime.data1") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
+    } else if (optionSet == "Realtime.data2") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=4 -actStart=2048"), false);
+    } else if (optionSet == "Realtime.data3") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -lbd-core-th=5 "), false);
+    } else if (optionSet == "Realtime.data4") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000"), false);
+    } else if (optionSet == "Realtime.data5") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based"), false);
+    } else if (optionSet == "Realtime.data6") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5"), false);
+    } else if (optionSet == "Realtime.data7") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=100 -rinc=1.5 -act-based"), false);
+    } else if (optionSet == "Realtime.data8") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=20000 -cp3_itechs=ue -no-dense -up"), false);
+    } else if (optionSet == "Realtime.data9") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -keepWorst=0.01"), false);
+    } else if (optionSet == "Realtime.data10") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -probe -no-pr-vivi -pr-bins -pr-lhbr -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
+    } else if (optionSet == "Realtime.data11") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -bva -cp3_bva_limit=5000000"), false);
+    } else if (optionSet == "Realtime.data12") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -bce -bce-bce -no-bce-cle -bce-bin "), false);
+    } else if (optionSet == "Realtime.data13") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
+    } else if (optionSet == "Realtime.data14") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=500000 -cp3_itechs=uev -no-dense -up"), false);
+    } else if (optionSet == "Realtime.data15") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up"), false);
+    } else if (optionSet == "Realtime.data16") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up"), false);
+    } else if (optionSet == "Realtime.data17") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -sUHLEsize=30 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
+    } else if (optionSet == "Realtime.data18") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -symm -sym-clLearn -sym-prop -sym-propF -sym-cons=128 -sym-consT=128000 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
+    } else if (optionSet == "Realtime.data19") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -longConflict"), false);
+    } else if (optionSet == "Realtime.data20") {
+      parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed  -biAsserting -biAsFreq=4 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
+    } 
 
     else {
         ret = false; // indicate that no configuration has been found here!

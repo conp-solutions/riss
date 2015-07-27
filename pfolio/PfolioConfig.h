@@ -63,8 +63,38 @@ class PfolioConfig : public Config
     BoolOption opt_sendDecModel;            // allow sending with variables where the number of models potentially deecreased
     BoolOption opt_useDynamicLimits;        // use dynamic limits for clause sharing
     BoolOption opt_sendEquivalences;        // send info about equivalences
+    
+    
+    /** set options of the specified preset option set (only one possible!)
+     *  Note: overwrites the method of the class Riss::Config, but calls this method, if no match if found within this class
+     *  @return true, if the option set is known and has been set!
+     */
+    bool addPreset(const std::string& optionSet);
 };
 
+inline
+bool PfolioConfig::addPreset(const std::string& optionSet)
+{
+    parsePreset = true;
+    bool ret = true;
+
+    if (optionSet == "alpha") {
+        parseOptions("-ppconfig=Riss427:plain_XOR:-cp3_iters=2:-ee:-cp3_ee_level=3:-cp3_ee_it:-rlevel=2:-bve_early -psetup=alpha -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+    } else if (optionSet == "beta") {
+        parseOptions("-ppconfig=Riss427:plain_XOR:-cp3_iters=2:-ee:-cp3_ee_level=3:-cp3_ee_it:-rlevel=2:-bve_early -psetup=beta -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+    } else if (optionSet == "gamma") {
+        parseOptions("-ppconfig=Riss427:plain_XOR:-cp3_iters=2:-ee:-cp3_ee_level=3:-cp3_ee_it:-rlevel=2:-bve_early -psetup=gamma -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+    } else if (optionSet == "delta") {
+        parseOptions("-ppconfig=Riss427:plain_XOR:-cp3_iters=2:-ee:-cp3_ee_level=3:-cp3_ee_it:-rlevel=2:-bve_early -psetup=delta -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+    } else {
+      ret = false; // indicate that no configuration has been found here!
+      if (optionSet != "") { 
+	Riss::Config::parseOptions(optionSet);     // pass string to parent class, which might find a valid setup
+      } 
+    }
+    parsePreset = false;
+    return ret; // return whether a preset configuration has been found
+}
 }
 
 #endif

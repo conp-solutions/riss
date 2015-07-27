@@ -35,6 +35,15 @@ enum WaitState {
  */
 class ClauseRingBuffer
 {
+public:
+  
+    /** author ID that can be used for special sharing, received by all receivers (there should not be a thread with this ID) */
+    const int specialAuthor () { return 1073741823; /* 2^30 - 1 */ }
+  
+    /** author ID that can be used for special sharing (there should not be a thread with this ID) */
+    const int maxRegularAuthor () { return 1073741822; /* 2^30 - 2 */ }
+  
+private:
     /** item for the pool, remembers the sender so that own clauses are not received again, the type (and the dependencies)
      */
     struct poolItem {
@@ -45,7 +54,7 @@ class ClauseRingBuffer
         #ifdef PCASSO
         int dependencyLevel;        /** store depth in the partition tree where this share-element depends on */
         #endif
-        poolItem() : author(~(0)), multiunits(0), equivalence(0)     /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
+        poolItem() : author(1073741823), multiunits(0), equivalence(0)     /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
             #ifdef PCASSO
             , dependencyLevel(0)
             #endif
@@ -365,6 +374,10 @@ class CommunicationData
     ClauseRingBuffer clauseBuffer;  /** buffer that stores the shared clauses */
     ClauseRingBuffer specialBuffer; /** buffer for multiunits and equivalences (should not be missed, and not overwritten too regularly) */
 
+    // enable communication between global psolver and pcasso in pcasso
+    ClauseRingBuffer* extraClauseBuffer;  /** buffer that should be filled by add clause as well (author will be Ringbuffer::externAuthor) */
+    ClauseRingBuffer* extraSpecialBuffer; /** buffer that should be filled by add clause as well (author will be Ringbuffer::externAuthor) */
+    
     Lock dataLock;               /** lock that protects the access to the task data structures */
     SleepLock masterLock;        /** lock that enables the master thread to sleep during waiting for child threads */
 
@@ -375,7 +388,9 @@ class CommunicationData
     /** @param buffersize sets up a buffer with the given number of elements, and another buffer with quarter the number of elements */
     CommunicationData(const int buffersize) :
         clauseBuffer(buffersize),
-        specialBuffer(buffersize / 4)
+        specialBuffer(buffersize / 4),
+        extraClauseBuffer(nullptr),
+        extraSpecialBuffer(nullptr)
     {
     }
 
@@ -393,6 +408,21 @@ class CommunicationData
      */
     ClauseRingBuffer& getSpecialBuffer() { return specialBuffer; }
 
+    /** return a reference to the ringbuffer
+     */
+    ClauseRingBuffer* getExtraBuffer() { return extraClauseBuffer; }
+
+    /** return a reference to the ringbuffer
+     */
+    ClauseRingBuffer* getExtraSpecialBuffer() { return extraSpecialBuffer; }
+    
+    /** set pointers to extra buffers */
+    void setExternBuffers(ClauseRingBuffer* externClauseBuffer, ClauseRingBuffer* externSpecialBuffer ) {
+      extraClauseBuffer  = externClauseBuffer;
+      extraSpecialBuffer = externSpecialBuffer;
+    }
+    
+    
     /** clears the std::vector of units to send
      * should be called by the master thread only!
      */
@@ -665,11 +695,29 @@ class Communicator
         #ifdef PCASSO
 #warning enable assertion again later
 //        assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
-        if (!multiUnits && !equivalences) { data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel); }     // usual buffer
-        else { data->getSpecialBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences); } // special buffer
+        if (!multiUnits && !equivalences) { 
+	  data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel);     // usual buffer
+	  if( data->getExtraBuffer() != nullptr ) {
+	    data->getExtraBuffer()->addClause(data->getExtraBuffer()->specialAuthor(), clause, toSendSize, dependencyLevel);     // usual special buffer
+	  }
+	} else {
+	  data->getSpecialBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences);  // special buffer
+	  if( data->getExtraSpecialBuffer() != nullptr ) {
+	    data->getExtraSpecialBuffer()->addClause(data->getExtraSpecialBuffer()->specialAuthor(), clause, toSendSize, dependencyLevel, multiUnits, equivalences);  // special buffer
+	  }
+	} 
         #else
-        if (!multiUnits && !equivalences) { data->getBuffer().addClause(id, clause, toSendSize); }     // usual buffer
-        else { data->getSpecialBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences); } // special buffer
+        if (!multiUnits && !equivalences) { 
+	  data->getBuffer().addClause(id, clause, toSendSize); // usual buffer
+	  if( data->getExtraBuffer() != nullptr ) {
+	    data->getExtraBuffer()->addClause(data->getExtraBuffer()->specialAuthor(), clause, toSendSize);     // usual special buffer
+	  }
+	} else { 
+	  data->getSpecialBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences);  // special buffer
+	  if( data->getExtraSpecialBuffer() != nullptr ) {
+	    data->getExtraSpecialBuffer()->addClause(data->getExtraSpecialBuffer()->specialAuthor(), clause, toSendSize, multiUnits, equivalences);  // special buffer
+	  }
+	} 
         #endif
     }
 
