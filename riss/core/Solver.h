@@ -35,11 +35,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/mtl/Alg.h"
 #include "riss/utils/Options.h"
 #include "riss/utils/System.h"
+#include "riss/utils/Compression.h"
 #include "riss/core/SolverTypes.h"
 #include "riss/core/BoundedQueue.h"
 #include "riss/core/Constants.h"
 #include "riss/core/CoreConfig.h"
-#include "riss/core/Compression.h"
 
 //
 // choose which bit width should be used
