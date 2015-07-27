@@ -907,8 +907,8 @@ Master::solveInstance(void* data)
     // tell the communicator about the proof master
     // communicator->setProofMaster(proofMaster);
     // tell solver about its communication interface
-//    solver->setCommunication(communicator);
-//	communicator->setSolver(solvers[i]); // TODO have extra method in solverinterface that takes care, because of priss
+    solver->setCommunication(*communicator);
+//	communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
 
 #warning create a communicator for each parent up to the root node, adapt receive method to also check the parent communicators receive
 
