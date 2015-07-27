@@ -875,6 +875,42 @@ Master::solveInstance(void* data)
     }
     // setup communication
 
+	// create ringbuffer for node
+	CommunicationData* data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
+	tData.nodeToSolve->sharingPool = data;
+	
+	// setup communication layer
+	Communicator communicator = new Communicator(i, data);
+         // setup parameters for communication system
+        communicator->protectAssumptions = pfolioConfig.opt_protectAssumptions;
+        communicator->sendSize = pfolioConfig.opt_sendSize;
+        communicator->sendLbd = pfolioConfig.opt_sendLbd;
+        communicator->sendMaxSize = pfolioConfig.opt_sendMaxSize;
+        communicator->sendMaxLbd = pfolioConfig.opt_sendMaxLbd;
+        communicator->sizeChange = pfolioConfig.opt_sizeChange;
+        communicator->lbdChange = pfolioConfig.opt_lbdChange;
+        communicator->sendRatio = pfolioConfig.opt_sendRatio;
+        communicator->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
+
+        communicator->sendIncModel = pfolioConfig.opt_sendIncModel;
+        communicator->sendDecModel = pfolioConfig.opt_sendDecModel;
+        communicator->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
+        communicator->sendEquivalences = pfolioConfig.opt_sendEquivalences;
+	if (! pfolioConfig.opt_share) { communicator->setDoSend(false); }   // no sending
+        if (!pfolioConfig.opt_receive) { communicator->setDoReceive(false); }  // no sending
+
+        
+        // tell the communicator about the proof master
+        // communicator->setProofMaster(proofMaster);
+        // tell solver about its communication interface
+        solver->setCommunication(communicator);
+	communicator->setSolver(solvers[i]); // TODO have extra method in solverinterface that takes care, because of priss
+	
+#warning create a communicator for each parent up to the root node, adapt receive method to also check the parent communicators receive
+	
+
+#warning check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
+	
 //    // Davide> Initialize the shared indeces to zero
 //    for (unsigned int i = 0; i <= solver->curPTLevel; i++)   // Davide> I put my level, also
 //    { solver->shared_indeces.push_back(0); }
