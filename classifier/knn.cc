@@ -11,7 +11,7 @@ using namespace std;
 
 string computeKNN ( int k, vector<double>& features){
   
-  int zero = 0; //TODO change type
+  double zero = 0.00001; //TODO change type
 
   vector< vector<double> > points;
   vector<pair<int, double> > distances;
@@ -19,7 +19,7 @@ string computeKNN ( int k, vector<double>& features){
   
  // vector<double> features = readInputVector();
         
-  cerr << "NormalizeMod = div" << endl;
+  //cerr << "NormalizeMod = div" << endl;
   
    for ( int i = 0; i < dimensionCC; ++i ){
     values.push_back(features[featureIdentsCC[i].first-1]); // -1 is crucial, because the instance row is missig (is simply no double)
@@ -36,7 +36,7 @@ string computeKNN ( int k, vector<double>& features){
   
   /////////////// begin projection ////////////
     // create a pca object
-  //stats::pca pca("dummy");
+ // stats::pca pca("dummy");
   stats::pca pca(416);
   pca.load("pca");
   values = pca.to_principal_space(values);
@@ -44,6 +44,7 @@ string computeKNN ( int k, vector<double>& features){
     //cout << test.size() << values.size()<< endl;
   for (int i = 0; i < sizeDataset; ++i){
     points.push_back(pca.get_principalrow(i));
+  //  printVector(points[i]);
   }
   //printVector(points[0]);
   //cout << endl << points.size() << points[1].size()<< endl << endl;
@@ -53,7 +54,7 @@ string computeKNN ( int k, vector<double>& features){
   }
   
   sort(distances.begin(), distances.end(), sort_pred());
-  for ( int i = 0; i < 30; ++i ) cerr << distances[i].second << " class: " << distances[i].first << endl;
+ // for ( int i = 0; i < 30; ++i ) cerr << distances[i].second << " class: " << distances[i].first << endl;
   
   classEstimation nearestClassNeigbours[amountClassesCC]{{0,0}}; // start counting by zero
   
@@ -72,7 +73,7 @@ string computeKNN ( int k, vector<double>& features){
     classEstimation max = nearestClassNeigbours[0];
     
     for (int i = 1; i < amountClassesCC; ++i) { // start by 1 because max is nearestClassNeigbours[0]
-      cerr << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
+      //cerr << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
       if (max.first <= nearestClassNeigbours[i].first){
 	if (max.first == nearestClassNeigbours[i].first){  // nearestNeighbours << sum of the distance
 	  if (max.second > nearestClassNeigbours[i].second){
@@ -87,9 +88,9 @@ string computeKNN ( int k, vector<double>& features){
       }
     }
   }
-  cout << result << " " << classNamesCC[result] << endl;
-  cerr << "Dimension: " << dimensionCC << endl;
-  cerr << "Size of the dataset: " << sizeDataset << " instances." << endl;
+  //cout << result << " " << classNamesCC[result] << endl;
+  //cerr << "Dimension: " << dimensionCC << endl;
+  //cerr << "Size of the dataset: " << sizeDataset << " instances." << endl;
   return classNamesCC[result];
   
 }

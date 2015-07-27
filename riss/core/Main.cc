@@ -257,14 +257,12 @@ int main(int argc, char** argv)
 	  cnfclassifier->setComputeConstraints(true);
 	  cnfclassifier->setComputeXor(false);
 	  cnfclassifier->setQuantilesCount(4);
-// 	  cnfclassifier->setPlotsFileName(plotFile);
 	  cnfclassifier->setComputingVarGraph(false);
 	  cnfclassifier->setAttrFileName(NULL);
 	  cnfclassifier->setComputingDerivative(true);
 	  
 	  string config = cnfclassifier->getConfig( *S );//TODO
 	  //string config = cnfclassifier->getConfig( S, string( opt_db_name ) );//TODO add functionality for the use of an external database
-	  printf("%s", config.c_str());
 	  // get new autoconfigured config
 	  
 	  delete cnfclassifier;
@@ -274,7 +272,7 @@ int main(int argc, char** argv)
 
 	  // set up the new configuration
 	  coreConfig = new CoreConfig( config.c_str() );
-	  cp3config = new Coprocessor::CP3Config( config.c_str() ); // use new and pointer!
+	  cp3config = new Coprocessor::CP3Config( config.c_str() ); // use new and pointer
 	  
 	  // reset the solver with the new configuration
 	  S = new Solver(coreConfig);
@@ -284,7 +282,7 @@ int main(int argc, char** argv)
 	
 	  gzclose(in); // reopening the formula file. (old one refers to EOF)
 	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
-	
+	  printf("%s%s\n", "c ChoosenConfig = ", config.c_str());	
 	}
 
         // open file for proof

@@ -30,6 +30,7 @@ pca::pca(string dummy)
 	    eigval_boot_(num_bootstraps_CC, num_vars_CC),
 	    proj_eigvec_(num_vars_CC, num_vars_CC)
 {
+// 	cout << "TEST" << endl << endl;
 	num_vars_ = num_vars_CC;
 	num_records_ = num_records_CC;
         record_buffer_ = 1000;

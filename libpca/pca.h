@@ -23,7 +23,7 @@ public:
 	 */
 	pca();
 	
-	pca(string dummy);
+	explicit pca(string dummy);
 	/**
 	 * @brief Constructor
 	 * @param num_vars Number of variables
