@@ -178,7 +178,7 @@ class CNFClassifier
         return precision;
     }
 
-    void setPrecision(int precision = 4)
+    void setPrecision(int precision = 10)
     {
         this->precision = precision;
     }

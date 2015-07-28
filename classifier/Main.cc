@@ -153,7 +153,7 @@ void dumpData()
         (*fileout).open(attrFile, fstream::out | fstream::app);
     }
     fout.setf(ios::fixed);
-    fout.precision(4);
+    fout.precision(10);
     if (attr && fileoutput) {
         configuration->removeIndex(1);
         int featuresSize = features.size();
@@ -168,7 +168,7 @@ void dumpData()
     for (int k = 0; k < features.size(); ++k) {
         stringstream s;
         s.setf(ios::fixed);
-        s.precision(4);
+        s.precision(10);
         if (isInfinite(features[k])) { s << ",?"; }     // weka cannot handle "inf" -- FIXME should be replaced with a high cut-off value
         else { s << "," << features[k]; }
         if (s.str().find("inf") != string::npos) { cerr << "c there are infinite features (index " << k << " -- " << features[k] << " isInf: " << isInfinite(features[k]) <<  ")" << endl; }
@@ -266,7 +266,7 @@ void printFeatures(int argc, char** argv)
 
     if (verb > 1) {
         cout.setf(ios::fixed);
-        cout.precision(4);
+        cout.precision(10);
         vector<string> names = cnfclassifier->getFeaturesNames();
         for (int k = 0; k < features.size(); ++k) {
             cout << "c " << names[k] << "  :  " << features[k] << endl;

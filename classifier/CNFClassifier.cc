@@ -59,7 +59,7 @@ CNFClassifier::CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVa
     ca(_ca), clauses(_clauses), nVars(_nVars)
 {
     quantilesCount = 4;
-    precision = 4;
+    precision = 10;
     dumpingPlots = false;
     computingResolutionGraph = true;
     computingClausesGraph = true;
