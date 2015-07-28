@@ -7,6 +7,8 @@
 #include "knn.h"
 #include "methods.h"
 
+#include <iostream>
+
 using namespace std;
 
 string computeKNN ( int k, vector<double>& features){
@@ -20,12 +22,19 @@ string computeKNN ( int k, vector<double>& features){
  // vector<double> features = readInputVector();
         
   //cerr << "NormalizeMod = div" << endl;
+
+  cerr << "c 1 ... " << __FILE__ << "@" << __LINE__ << endl;
+  
+  cerr << "c dim: " << dimensionCC << " featureIdentsCC: " << featureIdentsCC.size() << endl;
   
    for ( int i = 0; i < dimensionCC; ++i ){
     values.push_back(features[featureIdentsCC[i].first-1]); // -1 is crucial, because the instance row is missig (is simply no double)
   }
+  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
+  
   normalizeDiv(values, divisorsCC); //normalize the input vector as well
 
+  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
 
   int sizeDataset = allClassCC.size();
   for ( int i = 0; i < sizeDataset; ++i ){
@@ -39,6 +48,9 @@ string computeKNN ( int k, vector<double>& features){
   stats::pca pca("dummy");
   //stats::pca pca(416);
   //pca.load("pca");
+  
+  cerr << "c pca.toprincipalspace ... " << __FILE__ << "@" << __LINE__ << endl;
+  
   values = pca.to_principal_space(values);
   
   for (int i = 0; i < sizeDataset; ++i){
@@ -46,11 +58,15 @@ string computeKNN ( int k, vector<double>& features){
     //printVector(points[i]);
   }
  
+   cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
+ 
   //cout << endl << points.size() << points[1].size()<< endl << endl;
   ////////////// calculate distance ////////////
   for ( int i = 0; i < sizeDataset; ++i ){
      distances[i].second = euclideanDistance(values, points[i], pca.get_num_retained());
   }
+  
+    cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
   
   sort(distances.begin(), distances.end(), sort_pred()); //sort distances vector with respect to the distance
   for ( int i = 0; i < 15; ++i ) cerr << "c " << distances[i].second << " class: " << distances[i].first << endl;
@@ -59,11 +75,16 @@ string computeKNN ( int k, vector<double>& features){
   
   int result = 0; 
   
+    cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
+  
   if ( distances[0].second < zero ){
   cout << "c Match file in database!" << endl;
   result = getNearestPoint(distances, amountClassesCC);
   }
   else {
+  
+  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
+  
     for (int i = 0; i < k; ++i) {
       nearestClassNeigbours[distances[i].first].first++;
       nearestClassNeigbours[distances[i].first].second += distances[i].second;
@@ -72,6 +93,8 @@ string computeKNN ( int k, vector<double>& features){
     //if something happens //TODO
     result = 0;
     classEstimation max = nearestClassNeigbours[0];
+    
+  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
     
     cerr << "c c = 0 " << nearestClassNeigbours[0].first << " " << nearestClassNeigbours[0].second << endl;
     

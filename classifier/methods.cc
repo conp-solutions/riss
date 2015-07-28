@@ -112,6 +112,7 @@ void normalizeLog ( vector<double>& values, vector<pair <double,double> >& divis
 
 void normalizeDiv ( vector<double>& values, const vector<double>& divisors ){
 
+	if( values.size() != divisors.size() ) cerr << "c wrong vector sizes" << endl;
   for ( int i = 0; i < values.size(); ++i ){
     if (divisors[i] != 0) values[i] = (values[i])/divisors[i];
   }
