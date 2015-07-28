@@ -76,11 +76,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")  # strip shared libs
 endif()
 
-
-# Dependencies:
+# 
+# Dependencies
 #
-find_package(Git)
 include_directories(${PROJECT_SOURCE_DIR})
+
+find_package(Git)
 include(GitSignature)
 
 # Compile flags:

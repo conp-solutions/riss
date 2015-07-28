@@ -436,7 +436,7 @@ void pca::saveCC() {
   
   ofstream ofs ("pcasave.cc", ofstream::out); //TODO pecision
   ofs.precision(10);
-  ofs << "#include <armadillo>" << endl;
+  ofs << "#include \"armadillo/armadillo\"" << endl;
   ofs << "#include <string>" << endl << endl;
   ofs << "long num_vars_CC = " << num_vars_ << ";" << endl;
   ofs << "long num_records_CC = " << num_records_ << ";" << endl;
