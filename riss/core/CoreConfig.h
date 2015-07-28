@@ -116,6 +116,7 @@ class CoreConfig : public Config
     BoolOption opt_dynLimit;              // use dynamic sharing limits
     BoolOption opt_keepLonger;            // keep received clauses for at least one removal iteration
     DoubleOption opt_recLBDfactor;        // how to construct LBD for received clause
+    BoolOption opt_useOriginal;           // operate on the original formula instead of working on the simplified formula (do not share information in this case!)
 
     BoolOption opt_pq_order;           // If true, use a priority queue to decide the order in which literals are implied
     // and what antecedent is used.  The priority attempts to choose an antecedent

@@ -25,6 +25,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
     #include <fpu_control.h>
 #endif
 
+#include "riss/mtl/XAlloc.h"   // to find nullptr if std11 is not used
 #include "riss/mtl/IntTypes.h"
 
 //-------------------------------------------------------------------------------------------------

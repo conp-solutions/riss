@@ -655,7 +655,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::moveTo(to);
     }
 
-    void copyTo(ClauseAllocator& to)
+    void copyTo(ClauseAllocator& to) const 
     {
         to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::copyTo(to);

@@ -165,6 +165,8 @@ int main(int argc, char** argv)
 
     Master pcassoMasert(p);
     master = &pcassoMasert;
+    
+#error have working signal for hybrid pcasso
 //     signal(SIGINT, SIGINT_exit);
 //     signal(SIGXCPU, SIGINT_exit);
 

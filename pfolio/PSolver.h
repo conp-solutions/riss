@@ -55,6 +55,48 @@ class PSolver
     ClauseRingBuffer* externBuffer;            // special buffer that should be used to send clauses to
     ClauseRingBuffer* externSpecialBuffer;     // special buffer that should be used to send clauses to
     
+    /** store original formula for incarnations that do not want to use global preprocessing */
+    class OriginalFormula {
+    public: 
+      vec<Lit>    trail;    // trail for learned clause minimization
+      vec<CRef>   clauses;  // List of problem clauses.
+      ClauseAllocator ca; // clause allocator
+      vec<double> activity; // A heuristic measurement of the activity of a variable.
+      Heap<Solver::VarOrderLt> order_heap;  // A priority queue of variables ordered with respect to the variable activity.
+      vec<Solver::VarFlags>    varFlags;    // state of variables
+      vec<Solver::VarData>     vardata;     // Stores reason and level for each variable.
+      int nVars;
+      
+      OriginalFormula(const vec<Lit>&  originaltrail, const vec<CRef>& originalclauses, const ClauseAllocator& originalca, const int vars,
+	const vec<double>& originalactivity,
+	const Heap<Solver::VarOrderLt>& originalorder_heap,
+	const vec<Solver::VarFlags>&    originalvarFlags,
+	const vec<Solver::VarData>&     originalvardata
+      ) : nVars(vars)
+      , order_heap(Solver::VarOrderLt(activity))
+      {
+	originaltrail.copyTo( trail );
+	originalclauses.copyTo( clauses );
+	originalca.copyTo( ca );
+	originalactivity.copyTo(activity);
+	originalorder_heap.copyOrderTo(order_heap);
+	originalvarFlags.copyTo( varFlags );
+	originalvardata.copyTo(  vardata  );
+      }
+      
+      ~OriginalFormula () {
+	vardata.clear(true);
+	varFlags.clear(true);
+	order_heap.clear(true);
+	activity.clear(true);
+	ca.clear(true);
+	clauses.clear(true);
+	trail.clear(true);
+      }
+    };
+    OriginalFormula* originalFormula; // data of original formula after parsing (if not set to be used, equal to nullptr)
+    
+    
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 

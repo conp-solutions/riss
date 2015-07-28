@@ -131,6 +131,9 @@ class Solver
     /// tell the solver to delete the configuration it just received
     void setDeleteConfig() { deleteConfig = true; }
 
+    /** indicate whether this incarnation is working on the original formula in pfolio*/
+    bool independent() const { return privateConfig->opt_useOriginal; }
+    
     // Problem specification:
     //
 
@@ -155,7 +158,7 @@ class Solver
     //
     bool    simplify();                             /// Removes already satisfied clauses.
     bool    solve(const vec<Lit>& assumps);         /// Search for a model that respects a given set of assumptions.
-    lbool   solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall = SolveCallType::full);  /// Search for a model that respects a given set of assumptions (With resource constraints).
+    lbool   solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall = full);  /// Search for a model that respects a given set of assumptions (With resource constraints).
     bool    solve();                                /// Search without assumptions.
     bool    solve(Lit p);                           /// Search for a model that respects a single assumption.
     bool    solve(Lit p, Lit q);                    /// Search for a model that respects two assumptions.
@@ -343,7 +346,7 @@ class Solver
     long curRestart;
     // Helper structures:
     //
-
+  public:
     struct VarData {
         CRef reason; int level;
         Lit dom;
@@ -362,6 +365,8 @@ class Solver
         #endif
 	{}
     };
+
+  protected:
     static inline VarData mkVarData(CRef cr, int l)
     {
         VarData d(cr, l, lit_Undef, -1);
@@ -663,7 +668,7 @@ class Solver
      *        2 leave out everything above preprocessing
      * @return status of the formula
      */
-    lbool    solve_(const SolveCallType preprocessCall = SolveCallType::full);
+    lbool    solve_(const SolveCallType preprocessCall = full);
 
   protected:
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
@@ -1461,12 +1466,12 @@ inline bool     Solver::withinBudget() const
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
 // pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or
 // all calls to solve must return an 'lbool'. I'm not yet sure which I prefer.
-inline bool     Solver::solve()                    { budgetOff(); assumptions.clear(); return solve_() == l_True; }
-inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_() == l_True; }
-inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_() == l_True; }
-inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
-inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
-inline lbool    Solver::solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
+inline bool     Solver::solve()                    { budgetOff(); assumptions.clear(); return solve_(full) == l_True; }
+inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_(full) == l_True; }
+inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_(full) == l_True; }
+inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_(full) == l_True; }
+inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_(full) == l_True; }
+inline lbool    Solver::solveLimited(const Riss::vec< Riss::Lit >& assumps, const Solver::SolveCallType preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
 inline void     Solver::setRandomSeed(double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay()      const   { return ok; }
 

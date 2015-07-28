@@ -2723,7 +2723,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
 //     cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
-    if (preprocessCall != SolveCallType::afterSimplification) {
+    if (preprocessCall != afterSimplification) {
 
         // print formula of the call?
         if ((const char*)config.printOnSolveTo != 0) {
@@ -2744,12 +2744,12 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
         printHeader();
 
-        if (preprocessCall == SolveCallType::initializeOnly) { return status; }
+        if (preprocessCall == initializeOnly) { return status; }
 
         // preprocess
         if (status == l_Undef) {   // TODO: freeze variables of assumptions!
             status = preprocess();
-            if (config.ppOnly || preprocessCall == SolveCallType::simplificationOnly) { return status; }  // stop also if preprocessing should be done only
+            if (config.ppOnly || preprocessCall == simplificationOnly) { return status; }  // stop also if preprocessing should be done only
         }
 
     }

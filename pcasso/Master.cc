@@ -896,7 +896,10 @@ Master::solveInstance(void* data)
 	
 	// setup communication layer with default values
 	Communicator* communicator = new Communicator(tData.id, comData);
-
+#error add option do enable communication (or if storage-size is 0)
+#error add recursively receinving communicators to the communicator
+#error extend the receiving method of an communicator to receive also from parent communicator (receive all)
+#error note for future: how to hande author IDs in ringbuffers with multiple writers from different nodes in one buffer (not necessary for downward.only)
 	
     // setup parameters for communication system
     communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;

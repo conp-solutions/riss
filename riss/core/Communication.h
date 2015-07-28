@@ -764,6 +764,10 @@ class Communicator
     }
 
     bool variableProtection() const { return protectAssumptions; }
+    
+    
+    /** return whether this solver works on the original formula (independently, maybe later with communication)*/
+    bool independent() const { return solver->independent(); }
 
   public:       // this probably is not a good idea, but ah well ...
 

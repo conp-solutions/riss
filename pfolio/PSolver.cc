@@ -48,6 +48,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , verbEveryConflicts(0)
     , externBuffer(0)
     , externSpecialBuffer(0)
+    , originalFormula(nullptr)
 {
  
     if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
@@ -308,12 +309,37 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
     winningSolver = -1;
     lbool ret = l_Undef;
+    
+    if( !initialized ) {  // check whether some solver wants to work on the original formula
+      cerr << "c check for 'use original'" << endl;
+      bool keepOriginal = false;
+      for (int i = 1; i < threads; ++ i) { // iterate over threads, as we do not have solvers at the moment
+	if( configs[i].opt_useOriginal ) { // a configuration that wants to work on the original formula should not share anything
+	  cerr << "c found 'use original' for configuration " << i+1 << endl;
+	  keepOriginal = keepOriginal || configs[i].opt_useOriginal;
+	}
+      }
+      if( keepOriginal ) {
+	assert( originalFormula == nullptr && "set this only once" );
+	cerr << "c create original formula" << endl;
+	originalFormula = new OriginalFormula(solvers[0]->trail, solvers[0]->clauses, solvers[0]->ca, solvers[0]->nVars(),
+	    solvers[0]->activity, solvers[0]->order_heap, solvers[0]->varFlags, solvers[0]->vardata); // memorize current state for initialization
+      }
+    }
+    
+    
     /*
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration (there is a simplified-flag that is set accordingly)
      */
     ret = simplifyFormula();
-    if( ret != l_Undef ) return ret; // simplification resulted in UNSAT or SAT already
+    if( ret != l_Undef ) {
+      if( originalFormula != nullptr ) {
+	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
+	  originalFormula = nullptr;
+      }
+      return ret; // simplification resulted in UNSAT or SAT already
+    }
 
     if (! initialized) {  // distribute the formula, if this is the first call to this method!
 
@@ -322,6 +348,10 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         */
         if (initializeThreads()) {
             cerr << "c initialization of " << threads << " threads: failed" << endl;
+	    if( originalFormula != nullptr ) {
+	      delete originalFormula ;   // free resources again, as we initialized all incarnations now
+	      originalFormula = nullptr;
+	    }
             return l_Undef;
         } else {
             if (verbosity > 0) { cerr << "c initialization of " << threads << " threads: succeeded" << endl; }
@@ -336,6 +366,9 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 	if( !simplified ) solvers[0]->solve_(Solver::SolveCallType::initializeOnly);
 	
         for (int i = 1; i < solvers.size(); ++ i) {
+	  
+	  if( ! configs[i].opt_useOriginal ) {
+	  
             solvers[i]->reserveVars(solvers[0]->nVars());
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
@@ -357,9 +390,35 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
                 solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
             }
-            solvers[i]->solve_(Solver::SolveCallType::initializeOnly);   // let solve initialize itself
-            if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
-            solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
+            
+            assert(! configs[i].opt_useOriginal && "run initializeOnly only if we are working with the simplified formula already" );
+            solvers[i]->solve_(Solver::SolveCallType::initializeOnly);   // let solve initialize itself, if it does not want to perform the full solving process on its own
+	  } else { // initialize based on original formula
+	    
+	    communicators[i]->setDoSend(false);     // disable sending hard   // TODO might be disabled once sharing and simplification works nicely together
+	    communicators[i]->setDoReceive(false);  // disable receiving hard // TODO might be disabled once sharing and simplification works nicely together
+	    
+	    assert( originalFormula != nullptr && "had to be collected before" );
+	    solvers[i]->reserveVars(originalFormula->nVars);
+            while (solvers[i]->nVars() < originalFormula->nVars) { solvers[i]->newVar(); }
+            communicators[i]->setFormulaVariables(originalFormula->nVars);   // tell which variables can be shared
+	    
+            solvers[i]->addUnitClauses(originalFormula->trail);   // copy all the unit clauses, adds to the proof
+            originalFormula->ca.copyTo(solvers[i]->ca);             // have information about clauses
+            originalFormula->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
+	    originalFormula->activity.copyTo(solvers[i]->activity); // copy activity
+            originalFormula->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
+            originalFormula->varFlags.copyTo(solvers[i]->varFlags);
+            originalFormula->vardata.copyTo(solvers[i]->vardata);
+	    
+            // attach all clauses
+            for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
+                solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+            }
+	  }
+	  
+          if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
+          solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
 
         // copy the formula of the solver 0 number of thread times
@@ -378,6 +437,12 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
 
         initialized = true;
+	
+	if( originalFormula != nullptr ) {
+	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
+	  originalFormula = nullptr;
+	}
+	
     } else {
         // already initialized -- simply print the summary
         for (int i = 0; i < solvers.size(); ++ i) {
@@ -763,6 +828,17 @@ void PSolver::createThreadConfigs()
     }
 
 
+    // add extra commands, even if a preset is used
+    if( pfolioConfig.addExtraSetup ) { 
+      // assign options from the commandline additionally to already set uptions
+      for (int t = 0 ; t < threads; ++ t) {
+        if (incarnationConfigs.size() > t && incarnationConfigs[t].size() > 0) {
+          configs[t].setPreset(incarnationConfigs[t]);
+          ppconfigs[t].setPreset(incarnationConfigs[t]);
+	}
+      }
+    }
+
     // assign common setup prefix
     if ((const char*)pfolioConfig.opt_allIncPresets != 0) {
         for (int t = 0 ; t < threads; ++ t) {
@@ -1016,7 +1092,13 @@ void* runWorkerSolver(void* data)
         // do work
         lbool result l_Undef;
         if (!info.getSolver()->okay()) { result = l_False; }
-        else { result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification); }
+        else { 
+	  if( info.independent() ) {
+	    result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::full);  // as we are working on the original formula, have the change to initialize amd simplify
+	  } else {
+	    result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification); // we work on a simplified formula, do not simplify/initialize again
+	  }
+	}
 
         info.setReturnValue(result);
         if (verbose) cerr << "c [THREAD] " << info.getID() << " result " <<
