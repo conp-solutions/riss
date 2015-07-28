@@ -196,3 +196,12 @@ This project is supported by the DFG grant HO 1294/11-1.
 
 
 
+% more infos
+
+current pcasso call (test tree communication, no parallel priss, no cross link, no priss in pcasso)
+
+./pcasso -threads=2 -model -work-conflicts=-1 -work-timeout=-1 -split-mode=2 -split-timeout=1024 -presel-fac=0.1 -presel-min=64-presel-max=1024 -fail-lit=2 -nec-assign=2 -num-iterat=3 -con-resolv=1 -bin-const -la-heur=4 -presel-heur=2-clause-learn=2 -dir-prior=3 -child-count=7 -shrk-clause -var-eq=3-split-method=1 -split-depth=0 -dseq -h-acc=3 -h-maxcl=7 -h-cl-wg=5-h-upper=10900 -h-lower=0.1 -shpool-size=15000-shclause-size=2 -stop-children -adp-preselS=7 -sort-split -verbosity=1 -verb=1 -print-tree -g-priss-threads=0 -no-use-priss -no-crosslink -pcasso-com-config=small -g-priss-config=delta -quiet ~/cnf/safe-30-h29-unsat.cnf
+
+current priss call: (especially the independent flag can be combined with other configuration presents to run independent solvers in parallel without communication)
+
+./priss -threads=4 -showUnusedParam -pIncSetup=[3]-independent -addSetup -ppconfig="Riss427:plain_XOR:-cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early" -psetup=delta
