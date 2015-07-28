@@ -4,8 +4,9 @@
  *  Created on: Jun 4, 2015
  *      Author: Aaron Stephan
  */
-#include "knn.h"
-#include "methods.h"
+#include "classifier/knn.h"
+#include "classifier/methods.h"
+#include "classifier/knnvar.cc"
 
 #include <iostream>
 
@@ -19,22 +20,14 @@ string computeKNN ( int k, vector<double>& features){
   vector<pair<int, double> > distances;
   vector<double> values;   
   
- // vector<double> features = readInputVector();
-        
-  //cerr << "NormalizeMod = div" << endl;
-
-  cerr << "c 1 ... " << __FILE__ << "@" << __LINE__ << endl;
+//  // vector<double> features = readInputVector();
   
-  cerr << "c dim: " << dimensionCC << " featureIdentsCC: " << featureIdentsCC.size() << endl;
   
    for ( int i = 0; i < dimensionCC; ++i ){
     values.push_back(features[featureIdentsCC[i].first-1]); // -1 is crucial, because the instance row is missig (is simply no double)
   }
-  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
   
   normalizeDiv(values, divisorsCC); //normalize the input vector as well
-
-  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
 
   int sizeDataset = allClassCC.size();
   for ( int i = 0; i < sizeDataset; ++i ){
@@ -49,7 +42,6 @@ string computeKNN ( int k, vector<double>& features){
   //stats::pca pca(416);
   //pca.load("pca");
   
-  cerr << "c pca.toprincipalspace ... " << __FILE__ << "@" << __LINE__ << endl;
   
   values = pca.to_principal_space(values);
   
@@ -58,32 +50,24 @@ string computeKNN ( int k, vector<double>& features){
     //printVector(points[i]);
   }
  
-   cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
- 
   //cout << endl << points.size() << points[1].size()<< endl << endl;
   ////////////// calculate distance ////////////
   for ( int i = 0; i < sizeDataset; ++i ){
      distances[i].second = euclideanDistance(values, points[i], pca.get_num_retained());
   }
   
-    cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
-  
   sort(distances.begin(), distances.end(), sort_pred()); //sort distances vector with respect to the distance
   for ( int i = 0; i < 15; ++i ) cerr << "c " << distances[i].second << " class: " << distances[i].first << endl;
   
-  classEstimation nearestClassNeigbours[amountClassesCC]{{0,0}}; // start counting by zero
-  
+  classEstimation nearestClassNeigbours[amountClassesCC];
+  nearestClassNeigbours[0] = pair<int, double>(0,0); // start counting by zero
   int result = 0; 
-  
-    cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
   
   if ( distances[0].second < zero ){
   cout << "c Match file in database!" << endl;
   result = getNearestPoint(distances, amountClassesCC);
   }
   else {
-  
-  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
   
     for (int i = 0; i < k; ++i) {
       nearestClassNeigbours[distances[i].first].first++;
@@ -93,11 +77,7 @@ string computeKNN ( int k, vector<double>& features){
     //if something happens //TODO
     result = 0;
     classEstimation max = nearestClassNeigbours[0];
-    
-  cerr << "c 2 ... " << __FILE__ << "@" << __LINE__ << endl;
-    
-    cerr << "c c = 0 " << nearestClassNeigbours[0].first << " " << nearestClassNeigbours[0].second << endl;
-    
+        
     for (int i = 1; i < amountClassesCC; ++i) { // start by 1 because max is nearestClassNeigbours[0]
       cerr << "c c = " << i << " " << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
       if (max.first <= nearestClassNeigbours[i].first){
@@ -235,10 +215,9 @@ string computeIgrKNN ( int k, int zero, string dataset ){
   for ( int i = 0; i < 30; ++i ) cerr << distances[i].second << " class: " << distances[i].first << endl;
   
   assert(amountClasses > 0 && "array must have at least 1 fields");
-  classEstimation nearestClassNeigbours[amountClasses];
-  // start counting by zero
-  nearestClassNeigbours[0] = pair<int,int>(0,0);
-  
+
+  classEstimation nearestClassNeigbours[amountClassesCC];
+  nearestClassNeigbours[0] = pair<int, double>(0,0); // start counting by zero
   int result = 100; // TODO some configuration 
   
   if ( distances[0].second < zero ) result = getNearestPoint(distances, amountClasses);
