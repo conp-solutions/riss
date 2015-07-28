@@ -899,7 +899,6 @@ Master::solveInstance(void* data)
 	  assert( tData.nodeToSolve == tData.master->getRoot() && opt_crossLink && "only support this for the root node so far, and only if crosslink is enabled" );
 	  comData = tData.nodeToSolve->sharingPool; // talk about the same object in this routine
 	}
-
 	
 	  // setup communication layer with default values
 	  Communicator* communicator = new Communicator(tData.id, comData);
@@ -944,7 +943,8 @@ Master::solveInstance(void* data)
 	    }
 	  }
 
-	  
+	  // do not use this interface in pcasso to interrupt solver, hence, simply set to working, so that worker is not waiting for commands
+	  communicator->setState( Communicator::working );
 
       // tell the communicator about the proof master
       // communicator->setProofMaster(proofMaster);
