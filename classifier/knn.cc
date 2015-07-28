@@ -36,32 +36,33 @@ string computeKNN ( int k, vector<double>& features){
   
   /////////////// begin projection ////////////
     // create a pca object
- // stats::pca pca("dummy");
-  stats::pca pca(416);
-  pca.load("pca");
+  stats::pca pca("dummy");
+  //stats::pca pca(416);
+  //pca.load("pca");
   values = pca.to_principal_space(values);
-    //vector <double> test = pca.get_principalrow(2);
-    //cout << test.size() << values.size()<< endl;
+  
   for (int i = 0; i < sizeDataset; ++i){
-    points.push_back(pca.get_principalrow(i));
-  //  printVector(points[i]);
+    points.push_back(pca.get_principal(i));
+    //printVector(points[i]);
   }
-  //printVector(points[0]);
+ 
   //cout << endl << points.size() << points[1].size()<< endl << endl;
   ////////////// calculate distance ////////////
   for ( int i = 0; i < sizeDataset; ++i ){
      distances[i].second = euclideanDistance(values, points[i], pca.get_num_retained());
   }
   
-  sort(distances.begin(), distances.end(), sort_pred());
- // for ( int i = 0; i < 30; ++i ) cerr << distances[i].second << " class: " << distances[i].first << endl;
+  sort(distances.begin(), distances.end(), sort_pred()); //sort distances vector with respect to the distance
+  for ( int i = 0; i < 15; ++i ) cerr << "c " << distances[i].second << " class: " << distances[i].first << endl;
   
   classEstimation nearestClassNeigbours[amountClassesCC]{{0,0}}; // start counting by zero
   
-  int result = 100; // TODO some configuration 
+  int result = 0; 
   
-  if ( distances[0].second < zero ) result = getNearestPoint(distances, amountClassesCC);
-  
+  if ( distances[0].second < zero ){
+  cout << "c Match file in database!" << endl;
+  result = getNearestPoint(distances, amountClassesCC);
+  }
   else {
     for (int i = 0; i < k; ++i) {
       nearestClassNeigbours[distances[i].first].first++;
@@ -72,8 +73,10 @@ string computeKNN ( int k, vector<double>& features){
     result = 0;
     classEstimation max = nearestClassNeigbours[0];
     
+    cerr << "c c = 0 " << nearestClassNeigbours[0].first << " " << nearestClassNeigbours[0].second << endl;
+    
     for (int i = 1; i < amountClassesCC; ++i) { // start by 1 because max is nearestClassNeigbours[0]
-      //cerr << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
+      cerr << "c c = " << i << " " << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
       if (max.first <= nearestClassNeigbours[i].first){
 	if (max.first == nearestClassNeigbours[i].first){  // nearestNeighbours << sum of the distance
 	  if (max.second > nearestClassNeigbours[i].second){

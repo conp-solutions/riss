@@ -248,19 +248,31 @@ int main(int argc, char** argv)
 	  parse_DIMACS(in, *S);
 	  //gzclose(in);
 	  
-	  CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
-	  cnfclassifier->setVerb(0);
-	  cnfclassifier->setComputingClausesGraph(false);
-	  cnfclassifier->setComputingResolutionGraph(false);
-	  cnfclassifier->setComputingRwh(true);
-	  cnfclassifier->setComputeBinaryImplicationGraph(true);
-	  cnfclassifier->setComputeConstraints(true);
-	  cnfclassifier->setComputeXor(false);
-	  cnfclassifier->setQuantilesCount(4);
-	  cnfclassifier->setComputingVarGraph(false);
-	  cnfclassifier->setAttrFileName(NULL);
-	  cnfclassifier->setComputingDerivative(true);
+// 	  CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
+// 	  cnfclassifier->setVerb(0);
+// 	  cnfclassifier->setComputingClausesGraph(false);
+// 	  cnfclassifier->setComputingResolutionGraph(false);
+// 	  //cnfclassifier->setComputingRwh(true);
+// 	  //cnfclassifier->setComputeBinaryImplicationGraph(true);
+// 	  //cnfclassifier->setComputeConstraints(true);
+// 	  cnfclassifier->setComputeXor(false);
+// 	  //cnfclassifier->setQuantilesCount(4);
+// 	  cnfclassifier->setComputingVarGraph(false);
+// 	  //cnfclassifier->setAttrFileName(NULL);
+// 	  //cnfclassifier->setComputingDerivative(true);
 	  
+    CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
+    cnfclassifier->setVerb(verb);
+    cnfclassifier->setComputingClausesGraph(false);
+    cnfclassifier->setComputingResolutionGraph(false);
+    cnfclassifier->setComputingRwh(true);
+    cnfclassifier->setComputeBinaryImplicationGraph(true);
+    cnfclassifier->setComputeConstraints(true);
+    cnfclassifier->setComputeXor(false);
+    cnfclassifier->setQuantilesCount(4);
+    cnfclassifier->setComputingVarGraph(false); 
+    cnfclassifier->setAttrFileName(nullptr);
+    cnfclassifier->setComputingDerivative(true);
 	  string config = cnfclassifier->getConfig( *S );//TODO
 	  //string config = cnfclassifier->getConfig( S, string( opt_db_name ) );//TODO add functionality for the use of an external database
 	  // get new autoconfigured config
@@ -290,7 +302,7 @@ int main(int argc, char** argv)
         if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S->proofFile != nullptr) { fprintf(S->proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
    	parse_DIMACS(in, *S);
-	printf("\n%d\n", S->nClauses());
+	//printf("\n%d\n", S->nClauses());
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 

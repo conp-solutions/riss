@@ -435,7 +435,7 @@ void pca::load(const std::string& basename) {
 void pca::saveCC() {
   
   ofstream ofs ("pcasave.cc", ofstream::out); //TODO pecision
-  ofs.precision(10);
+  ofs.precision(15);
   ofs << "#include <armadillo>" << endl;
   ofs << "#include <string>" << endl << endl;
   ofs << "long num_vars_CC = " << num_vars_ << ";" << endl;
@@ -500,23 +500,24 @@ void pca::saveCC() {
   } 
   ofs << tmp[n] << endl << "} }; " << endl;
   
+  // wrinte eigenvectors
+  vector<vector<double> > tmp1;
+  for (int j = 0; j < num_vars_; ++j){
+    tmp1.push_back(get_eigenvector(j));
+  }  
   ofs << "arma::Mat<double> eigvec_CC = {" << endl;
   for (int j = 0; j < num_vars_-1; ++j){
-    tmp = get_eigenvector(j);
-    n = tmp.size() -1;
     ofs << " { "; 
-    for ( int i = 0; i < n; ++i){
-      ofs << tmp[i] << ", ";
+    for ( int i = 0; i < num_vars_-1; ++i){
+      ofs << tmp1[i][j] << ", ";
     }
-    ofs << tmp[n] << endl << "}, " << endl;
+    ofs << tmp1[num_vars_-1][j] << endl << "}, " << endl;
   }
-  tmp = get_eigenvector(num_vars_-1);
-  n = tmp.size() -1;
   ofs << " { "; 
-  for ( int i = 0; i < n; ++i){
-    ofs << tmp[i] << ", ";
+  for ( int i = 0; i < num_vars_-1; ++i){
+    ofs << tmp1[i][num_vars_-1] << ", ";
   }
-  ofs << tmp[n] << endl << "} }; " << endl;
+  ofs << tmp1[num_vars_-1][num_vars_-1] << endl << "} }; " << endl;
 
   ofs.close();
     
