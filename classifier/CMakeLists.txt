@@ -28,6 +28,9 @@ set(LIB_SOURCES
 add_library(classifier-lib-static STATIC ${LIB_SOURCES})
 add_library(classifier-lib-shared SHARED ${LIB_SOURCES})
 
+target_link_libraries(classifier-lib-static libpca-static)
+target_link_libraries(classifier-lib-shared libpca-shared)
+
 set_target_properties(classifier-lib-static PROPERTIES
                                             OUTPUT_NAME "classifier")
 set_target_properties(classifier-lib-shared PROPERTIES
@@ -41,9 +44,9 @@ set_target_properties(classifier-lib-shared PROPERTIES
 add_executable(classifier Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(classifier classifier-lib-static riss-lib-static coprocessor-lib-static libpca-static)
+  target_link_libraries(classifier classifier-lib-static riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(classifier classifier-lib-shared riss-lib-shared coprocessor-lib-shared libpca-shared)
+  target_link_libraries(classifier classifier-lib-shared riss-lib-shared coprocessor-lib-shared)
 endif()
 
 # 

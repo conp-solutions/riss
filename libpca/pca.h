@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <armadillo>
+#include "armadillo/armadillo"
 
 using namespace std;
 /**
