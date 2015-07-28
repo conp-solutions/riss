@@ -68,17 +68,17 @@ static Master* master;
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
 
+
+// make sure hybrid solver is killed correctly, until then, do not use signals
 // static void SIGINT_exit(int signum)
 // {
 //     fprintf(stderr, "\n"); fprintf(stderr, "*** INTERRUPTED ***\n");
-//     master->shutdown();
+//     master->killHybrid();
 // }
 //    if (solver->verbosity > 0){
 //       printStats(*solver);
 //       fprintf( stderr,"\n"); fprintf( stderr,"*** INTERRUPTED ***\n"); }
 //    _exit(1); }
-
-// #error TODO FIXME react on signal, or disable signals completely
 
 struct parameter {
     IntOption    verb;
@@ -166,9 +166,9 @@ int main(int argc, char** argv)
     Master pcassoMasert(p);
     master = &pcassoMasert;
     
-#error have working signal for hybrid pcasso
-//     signal(SIGINT, SIGINT_exit);
-//     signal(SIGXCPU, SIGINT_exit);
+/*  // for now, handling signals is disabled  
+    signal(SIGINT, SIGINT_exit);
+    signal(SIGXCPU, SIGINT_exit);*/
 
     if (argc == 1) {
         printf("c Reading from standard input... Use '--help' for help.\n");

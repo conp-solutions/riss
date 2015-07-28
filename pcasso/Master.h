@@ -263,6 +263,9 @@ private:
     
     Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
     
+    /** kill both pcasso and pfolio */
+    void killHybrid();
+    
     Riss::vec<Riss::lbool>* model;       // model that will be produced by one of the child nodes
     
     void shutdown() { done = true; notify(); }

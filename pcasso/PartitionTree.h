@@ -57,7 +57,6 @@ class TreeNode
 #warning to be removed
     PcassoDavide::LevelPool* lv_pool;
     TreeNode* childs;
-#warning not initialized
     CommunicationData* sharingPool; /// ringbuffer to share learnt clauses and other information
 
   private:

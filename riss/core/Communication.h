@@ -39,9 +39,12 @@ public:
   
     /** author ID that can be used for special sharing, received by all receivers (there should not be a thread with this ID) */
     const int specialAuthor () { return 1073741823; /* 2^30 - 1 */ }
+    
+    /** to be used to receive only (do not use for sending) */
+    const int allReceivAuthor () { return 1073741822; /* 2^30 - 2 */ }
   
     /** author ID that can be used for special sharing (there should not be a thread with this ID) */
-    const int maxRegularAuthor () { return 1073741822; /* 2^30 - 2 */ }
+    const int maxRegularAuthor () { return 1073741821; /* 2^30 - 3 */ }
   
 private:
     /** item for the pool, remembers the sender so that own clauses are not received again, the type (and the dependencies)
@@ -453,6 +456,68 @@ class CommunicationData
     }
 };
 
+/** during receive, also receive from parent tree receivers */
+class TreeReceiver {
+  TreeReceiver* parent;
+  CommunicationData* data;
+  
+  unsigned lastSeenIndex;         // position of the last clause that has been incorporated
+  unsigned lastSeenSpecialIndex;  // position of the last clause that has been incorporated
+  
+public:
+  TreeReceiver() : 
+    parent(nullptr)
+  , data(nullptr)
+  , lastSeenIndex(0)
+  , lastSeenSpecialIndex(0)
+  {}
+  
+  /** calls delete to its parent */
+  ~TreeReceiver() {
+    if ( parent != nullptr ) delete parent;
+    parent = nullptr;
+  }
+  
+  void setParent( TreeReceiver* outerParent ) { parent = outerParent; }
+  
+  void setData( CommunicationData* outerData ) { data = outerData; }
+  
+    /** receive clauses from current data, as well as from parents data recursively
+     * follow recursion, even if there is no data element in the middle 
+     * copy all clauses into the clauses std::vector that have been received since the last call to this method
+     * note: only an approximation, can happen that ringbuffer overflows!
+     * note: should be called by the worker solver only!
+     * @param ca clause allocator, to avoid unnecessary copies
+     * @param clauses vector to new clause references of received clauses
+     * @param receivedUnits vector of received units
+     * @param receivedEquivalences vector of received equivalence classes, classes are separated by lit_Undef
+     * @param receiveData object that can tell per variable whether receiving is ok, get set dependency value per variable (for Pcasso, clauses have their value stored already)
+     */
+    template <typename T>
+    #ifdef PCASSO
+    void receiveClauses(Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<int>& receivedUnitsDependencies, vec<Lit>& receivedEquivalences, vec<int>& receivedEquivalencesDependencies, T& receiveData)
+    #else
+    void receiveClauses(Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<Lit>& receivedEquivalences, T& receiveData)
+    #endif
+    {
+        // receive from special buffer first
+        #ifdef PCASSO
+	if( data != nullptr ) {
+	  lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(data->getSpecialBuffer().allReceivAuthor(), lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	  lastSeenIndex        = data->getBuffer().receiveClauses(data->getBuffer().allReceivAuthor(), lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	}
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive from parent, if activated
+        #else
+	if( data != nullptr ) {
+	  lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(data->getSpecialBuffer().allReceivAuthor(), lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	  lastSeenIndex        = data->getBuffer().receiveClauses(data->getSpecialBuffer().allReceivAuthor(), lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	}
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+        #endif
+    }
+  
+};
+
 /** provide the major communication between thread and master!
  */
 class Communicator
@@ -502,7 +567,7 @@ class Communicator
 
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
-
+    TreeReceiver* parent; // handle to communcation of parent node
 
     // methods
   public:
@@ -527,6 +592,8 @@ class Communicator
         , lastSeenSpecialIndex(0)
         , doSend(true)              // should this thread send clauses
         , doReceive(true)
+	
+	, parent( nullptr )
 	
 	, hardwareCore(-1) // so far, do not use a core
 	
@@ -568,6 +635,9 @@ class Communicator
     ~Communicator()
     {
         if (ownLock != 0) { delete ownLock; }
+        ownLock = 0;
+        if( parent  != nullptr ) delete parent;
+	parent = nullptr;
     }
 
     void setSolver(Riss::Solver* s)
@@ -582,13 +652,18 @@ class Communicator
         assert(proofMaster == 0 && "will not overwrite handle to another proof master");
         proofMaster = pm;
     }
-
+    
     /** a parallel proof is constructed, if there is a proof master */
     bool generateProof() const { return proofMaster != 0; }
 
     /** forward the API of the proof master to the solver (or other callers) */
     ProofMaster* getPM() { return proofMaster ; }
-
+    
+    /** set object to receive clauses from, this object will be deleted during destruction of the called object*/
+    void setParentReceiver( TreeReceiver* receiver ) {
+      parent = receiver;
+    }
+    
     State getState() const
     {
         return state;
@@ -740,11 +815,15 @@ class Communicator
         if (!doReceive) { return; }
         // receive from special buffer first
         #ifdef PCASSO
-        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
         lastSeenIndex        = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive from parent, if activated
         #else
-        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
         lastSeenIndex        = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedEquivalences, receiveData); // receive from parent, if activated
         #endif
     }
 

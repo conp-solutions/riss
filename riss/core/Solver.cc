@@ -2740,8 +2740,6 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         lbool initValue = initSolve(solves);
         if (initValue != l_Undef)  { return initValue; }
 
-
-
         printHeader();
 
         if (preprocessCall == initializeOnly) { return status; }

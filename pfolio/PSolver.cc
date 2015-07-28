@@ -51,7 +51,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , originalFormula(nullptr)
 {
  
-    if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
+    // set number of threads from constructor, overwrite command line, have at least one thread to allocate all structures
+    if (externalThreads != -1) { threads = externalThreads > 0 ? externalThreads : 1; }
 
     // setup the default configuration for all the solvers!
     configs   = new CoreConfig        [ threads ];
@@ -311,17 +312,17 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     lbool ret = l_Undef;
     
     if( !initialized ) {  // check whether some solver wants to work on the original formula
-      cerr << "c check for 'use original'" << endl;
+      DOUT( cerr << "c check for 'use original'" << endl; );
       bool keepOriginal = false;
       for (int i = 1; i < threads; ++ i) { // iterate over threads, as we do not have solvers at the moment
 	if( configs[i].opt_useOriginal ) { // a configuration that wants to work on the original formula should not share anything
-	  cerr << "c found 'use original' for configuration " << i+1 << endl;
+	  DOUT( cerr << "c found 'use original' for configuration " << i+1 << endl; );
 	  keepOriginal = keepOriginal || configs[i].opt_useOriginal;
 	}
       }
       if( keepOriginal ) {
 	assert( originalFormula == nullptr && "set this only once" );
-	cerr << "c create original formula" << endl;
+	DOUT( cerr << "c create original formula" << endl; );
 	originalFormula = new OriginalFormula(solvers[0]->trail, solvers[0]->clauses, solvers[0]->ca, solvers[0]->nVars(),
 	    solvers[0]->activity, solvers[0]->order_heap, solvers[0]->varFlags, solvers[0]->vardata); // memorize current state for initialization
       }
@@ -347,7 +348,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         * setup the communication system for the solvers, including the number of commonly known variables
         */
         if (initializeThreads()) {
-            cerr << "c initialization of " << threads << " threads: failed" << endl;
+            DOUT( cerr << "c initialization of " << threads << " threads: failed" << endl; );
 	    if( originalFormula != nullptr ) {
 	      delete originalFormula ;   // free resources again, as we initialized all incarnations now
 	      originalFormula = nullptr;

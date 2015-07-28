@@ -92,12 +92,12 @@ static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin t
 static StringOption global_prissConfig("GLOBAL - CONFIG", "g-priss-config", "config string used to initialize global priss", 0);
 static StringOption prissConfig("WORKER - CONFIG", "priss-config", "config string used to initialize priss incarnations", 0);
 static StringOption rissConfig("WORKER - CONFIG", "riss-config", "config string used to initialize riss incarnations", 0);
-static StringOption pcassoConfig("WORKER - CONFIG", "pcasso-config", "config string used to initialize riss incarnations", 0);
+static StringOption pcassoConfig("WORKER - CONFIG", "pcasso-com-config", "config string used to initialize pcasso communication", 0);
 
 // Options for Priss
 static BoolOption    priss("PRISS", "use-priss",  "Uses Priss as instance solver\n", false);
 static IntOption     priss_threads("PRISS", "priss-threads",  "Number of threads which Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
-static IntOption     global_priss_threads("PRISS", "g-priss-threads",  "threads global Priss should use (overall threads=pcasso * priss + g-priss))\n", 2, IntRange(1, 64));
+static IntOption     global_priss_threads("PRISS", "g-priss-threads",  "threads global Priss should use (0=disable,overall threads=pcasso * priss + g-priss))\n", 2, IntRange(0, 64));
 static BoolOption    opt_crossLink("SPLITTER", "crosslink",  "enable communication between global priss and pcasso.\n", false);
 
 
@@ -314,6 +314,7 @@ lbool Master::solveHybrid() {
   } 
   return l_Undef; // abortet, or some other problem
 }
+  
 
 void* Master::solveWithPcasso(void* data)
 {
@@ -884,6 +885,11 @@ Master::solveInstance(void* data)
     }
     // setup communication
 
+    const int storageSize = master.defaultPcassoConfig.opt_storageSize;
+
+
+    if( storageSize > 0 ) {
+    
 	// create ringbuffer for node
 	CommunicationData* comData = nullptr; 
 	if( tData.nodeToSolve->sharingPool == nullptr ) {
@@ -893,43 +899,65 @@ Master::solveInstance(void* data)
 	  assert( tData.nodeToSolve == tData.master->getRoot() && opt_crossLink && "only support this for the root node so far, and only if crosslink is enabled" );
 	  comData = tData.nodeToSolve->sharingPool; // talk about the same object in this routine
 	}
+
 	
-	// setup communication layer with default values
-	Communicator* communicator = new Communicator(tData.id, comData);
-#error add option do enable communication (or if storage-size is 0)
-#error add recursively receinving communicators to the communicator
-#error extend the receiving method of an communicator to receive also from parent communicator (receive all)
-#error note for future: how to hande author IDs in ringbuffers with multiple writers from different nodes in one buffer (not necessary for downward.only)
-	
-    // setup parameters for communication system
-    communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
-    communicator->sendSize = master.defaultPcassoConfig.opt_sendSize;
-    communicator->sendLbd = master.defaultPcassoConfig.opt_sendLbd;
-    communicator->sendMaxSize = master.defaultPcassoConfig.opt_sendMaxSize;
-    communicator->sendMaxLbd = master.defaultPcassoConfig.opt_sendMaxLbd;
-    communicator->sizeChange = master.defaultPcassoConfig.opt_sizeChange;
-    communicator->lbdChange = master.defaultPcassoConfig.opt_lbdChange;
-    communicator->sendRatio = master.defaultPcassoConfig.opt_sendRatio;
-    communicator->doBumpClauseActivity = master.defaultPcassoConfig.opt_doBumpClauseActivity;
+	  // setup communication layer with default values
+	  Communicator* communicator = new Communicator(tData.id, comData);
+  #warning add recursively receinving communicators to the communicator
+  #warning extend the receiving method of an communicator to receive also from parent communicator (receive all)
+  #warning note for future: how to hande author IDs in ringbuffers with multiple writers from different nodes in one buffer (not necessary for downward.only)
+	  
+	  // setup parameters for communication system
+	  communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
+	  communicator->sendSize = master.defaultPcassoConfig.opt_sendSize;
+	  communicator->sendLbd = master.defaultPcassoConfig.opt_sendLbd;
+	  communicator->sendMaxSize = master.defaultPcassoConfig.opt_sendMaxSize;
+	  communicator->sendMaxLbd = master.defaultPcassoConfig.opt_sendMaxLbd;
+	  communicator->sizeChange = master.defaultPcassoConfig.opt_sizeChange;
+	  communicator->lbdChange = master.defaultPcassoConfig.opt_lbdChange;
+	  communicator->sendRatio = master.defaultPcassoConfig.opt_sendRatio;
+	  communicator->doBumpClauseActivity = master.defaultPcassoConfig.opt_doBumpClauseActivity;
 
-    communicator->sendIncModel = master.defaultPcassoConfig.opt_sendIncModel;
-    communicator->sendDecModel = master.defaultPcassoConfig.opt_sendDecModel;
-    communicator->useDynamicLimits = master.defaultPcassoConfig.opt_useDynamicLimits;
-    communicator->sendEquivalences = master.defaultPcassoConfig.opt_sendEquivalences;
-	if (! master.defaultPcassoConfig.opt_share) { communicator->setDoSend(false); }   // no sending
-        if (!master.defaultPcassoConfig.opt_receive) { communicator->setDoReceive(false); }  // no sending
+	  communicator->sendIncModel = master.defaultPcassoConfig.opt_sendIncModel;
+	  communicator->sendDecModel = master.defaultPcassoConfig.opt_sendDecModel;
+	  communicator->useDynamicLimits = master.defaultPcassoConfig.opt_useDynamicLimits;
+	  communicator->sendEquivalences = master.defaultPcassoConfig.opt_sendEquivalences;
+	  if (!master.defaultPcassoConfig.opt_share  ) { communicator->setDoSend(false);    }  // no sending
+	  if (!master.defaultPcassoConfig.opt_receive) { communicator->setDoReceive(false); }  // no receiving
+
+	  // add tree receivers recursively to communication object
+	  TreeNode* parent = tData.nodeToSolve->getFather();
+	  TreeReceiver* receiver = nullptr ; 
+	  if( parent != nullptr ) {
+	    receiver = new TreeReceiver();
+	    receiver->setData( parent->sharingPool );    // set data for communicator
+	    communicator->setParentReceiver( receiver ); // tell communicator object about this receiver
+	    
+	    while( parent->getFather() != nullptr ) { // there is another tree level
+	      TreeReceiver* nlReceiver = new TreeReceiver(); // create receiver for the new level
+	      nlReceiver->setData( parent->getFather()->sharingPool );    // add data for the new level
+	      receiver->setParent( nlReceiver );             // tell this level about the new level
+	      
+	      // prepare for next iteration
+	      receiver = nlReceiver;                         // work on parent node in next iteration!
+	      parent = parent->getFather();
+	    }
+	  }
+
+	  
+
+      // tell the communicator about the proof master
+      // communicator->setProofMaster(proofMaster);
+      // tell solver about its communication interface
+      solver->setCommunication(*communicator);
+  //	communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
+
+  #warning create a communicator for each parent up to the root node, adapt receive method to also check the parent communicators receive
 
 
-    // tell the communicator about the proof master
-    // communicator->setProofMaster(proofMaster);
-    // tell solver about its communication interface
-    solver->setCommunication(*communicator);
-//	communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
-
-#warning create a communicator for each parent up to the root node, adapt receive method to also check the parent communicators receive
-
-
-#warning check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
+  #warning check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
+    
+	}
 	
 //    // Davide> Initialize the shared indeces to zero
 //    for (unsigned int i = 0; i <= solver->curPTLevel; i++)   // Davide> I put my level, also
@@ -1018,8 +1046,6 @@ Master::solveInstance(void* data)
 
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
-#warning TODO FIXME remove nanosleep after debug!
-    nanosleep(1000);
     lbool solution = solver->solveLimited(dummy);
     ret = solution == l_True ? 10 : (solution == l_False ? 20 : 0);
 
