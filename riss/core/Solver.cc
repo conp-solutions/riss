@@ -3058,7 +3058,7 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     int keptClauses = 0;
     for (int i = 0; i < learnts.size(); i++) {
-	if (!ca[ clauses[i] ].mark()) { // reloc only if not marked already
+	if (!ca[ learnts[i] ].mark()) { // reloc only if not marked already
 	  ca.reloc(learnts[i], to);
           learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
         }

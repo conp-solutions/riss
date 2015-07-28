@@ -896,6 +896,7 @@ Master::solveInstance(void* data)
 	
 	// setup communication layer with default values
 	Communicator* communicator = new Communicator(tData.id, comData);
+
 	
     // setup parameters for communication system
     communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
