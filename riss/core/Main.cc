@@ -245,39 +245,33 @@ int main(int argc, char** argv)
 	    exit(0);
 	  }
 	  
-	  parse_DIMACS(in, *S);
-	  //gzclose(in);
+	  string config = "RealTime.data7";
 	  
-// 	  CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
-// 	  cnfclassifier->setVerb(0);
-// 	  cnfclassifier->setComputingClausesGraph(false);
-// 	  cnfclassifier->setComputingResolutionGraph(false);
-// 	  //cnfclassifier->setComputingRwh(true);
-// 	  //cnfclassifier->setComputeBinaryImplicationGraph(true);
-// 	  //cnfclassifier->setComputeConstraints(true);
-// 	  cnfclassifier->setComputeXor(false);
-// 	  //cnfclassifier->setQuantilesCount(4);
-// 	  cnfclassifier->setComputingVarGraph(false);
-// 	  //cnfclassifier->setAttrFileName(NULL);
-// 	  //cnfclassifier->setComputingDerivative(true);
-	  
-    CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
-    cnfclassifier->setVerb(verb);
-    cnfclassifier->setComputingClausesGraph(false);
-    cnfclassifier->setComputingResolutionGraph(false);
-    cnfclassifier->setComputingRwh(true);
-    cnfclassifier->setComputeBinaryImplicationGraph(true);
-    cnfclassifier->setComputeConstraints(true);
-    cnfclassifier->setComputeXor(false);
-    cnfclassifier->setQuantilesCount(4);
-    cnfclassifier->setComputingVarGraph(false); 
-    cnfclassifier->setAttrFileName(nullptr);
-    cnfclassifier->setComputingDerivative(true);
-	  string config = cnfclassifier->getConfig( *S );//TODO
-	  //string config = cnfclassifier->getConfig( S, string( opt_db_name ) );//TODO add functionality for the use of an external database
-	  // get new autoconfigured config
-	  
-	  delete cnfclassifier;
+	  if ( S->nClauses() < 1900000 || S->nVars() < 4000000 || S->nTotLits() < 12000000){
+	    
+	    parse_DIMACS(in, *S);
+	    //gzclose(in);
+	    
+	    CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
+	    cnfclassifier->setVerb(verb);
+	    cnfclassifier->setComputingClausesGraph(false);
+	    cnfclassifier->setComputingResolutionGraph(false);
+	    cnfclassifier->setComputingRwh(true);
+	    cnfclassifier->setComputeBinaryImplicationGraph(true);
+	    cnfclassifier->setComputeConstraints(true);
+	    cnfclassifier->setComputeXor(false);
+	    cnfclassifier->setQuantilesCount(4);
+	    cnfclassifier->setComputingVarGraph(false); 
+	    cnfclassifier->setAttrFileName(nullptr);
+	    cnfclassifier->setComputingDerivative(true);
+	    
+	    config = cnfclassifier->getConfig( *S );
+	    // get new autoconfigured config
+	    
+	    delete cnfclassifier;
+	    
+	  }
+	    
 	  delete S;
 	  delete coreConfig;
 	  delete cp3config; 
@@ -294,7 +288,7 @@ int main(int argc, char** argv)
 	
 	  gzclose(in); // reopening the formula file. (old one refers to EOF)
 	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
-	  printf("%s%s\n", "c ChoosenConfig = ", config.c_str());	
+	  printf("%s%s\n", "c ChoosenConfig = ", config.c_str());
 	}
 
         // open file for proof

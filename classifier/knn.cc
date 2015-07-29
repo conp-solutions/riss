@@ -14,13 +14,11 @@ using namespace std;
 
 string computeKNN ( int k, vector<double>& features){
   
-  double zero = 0.00001; //TODO change type
+  double zero = 0.000001; //TODO change type
 
   vector< vector<double> > points;
   vector<pair<int, double> > distances;
   vector<double> values;   
-  
-//  // vector<double> features = readInputVector();
   
   
    for ( int i = 0; i < dimensionCC; ++i ){
@@ -43,14 +41,13 @@ string computeKNN ( int k, vector<double>& features){
   //pca.load("pca");
   
   
-  values = pca.to_principal_space(values);
+  values = pca.to_principal_space(values); //projection
   
   for (int i = 0; i < sizeDataset; ++i){
     points.push_back(pca.get_principal(i));
     //printVector(points[i]);
   }
  
-  //cout << endl << points.size() << points[1].size()<< endl << endl;
   ////////////// calculate distance ////////////
   for ( int i = 0; i < sizeDataset; ++i ){
      distances[i].second = euclideanDistance(values, points[i], pca.get_num_retained());

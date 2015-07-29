@@ -101,7 +101,7 @@ string CNFClassifier::getConfig(Solver& S)
     vector<double> features; // temporary storage
     extractFeatures(features); // also print the formula name!!
 
-    return computeKNN(3, features);
+    return computeKNN(1, features);
 }
 
 
