@@ -9,7 +9,7 @@
 int main(int argc, char* argv[])
 {
     if (argc == 1) {   // no arguments, then print the headline of a data file for the extracted data
-        cout << "Instance Status ExitCode RealTime CpuTime Memory ParseTime Variables Clauses "
+        cout << "Instance Status ExitCode RealTime CpuTime Memory ParseTime Variables Clauses Lits "
              << "Decisions Conflicts PropagatedLits PLitsPerSec Restarts ConPerRestart Removals RemovedClauses ConclictLiterals "
              << "avgLsize avgLBD maxLsize "
              << "CP3-pp-time CP3-ip-time CP3-rem-cls "
@@ -83,6 +83,7 @@ int main(int argc, char* argv[])
     // instance
     string variables; // 31
     string clauses; // 32
+    string literals; 
 
 
     // parse all files that are given as parameters
@@ -306,7 +307,11 @@ int main(int argc, char* argv[])
                 handled[33] = true;
                 rateTime  = Get(line, 3);
                 rateSteps = Get(line, 5);
+            } else if (line.find("c |  Number of total literals:") == 0) {
+                literals =  Get(line, 6);
             }
+            
+            
         }
 
 
@@ -329,6 +334,8 @@ int main(int argc, char* argv[])
     if (handled[31] || variables != "") { cout << variables ; }  else { cout << "-"; }
     cout << " ";
     if (handled[32] || clauses != "") { cout << clauses ; }  else { cout << "-"; }
+    cout << " ";
+    if( literals != "" ) { cout << literals; } else { cout << "-"; }
     cout << " ";
     if (handled[5] || Decisions != "") { cout << Decisions ; }  else { cout << "-"; }
     cout << " ";

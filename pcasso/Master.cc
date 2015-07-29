@@ -952,11 +952,15 @@ Master::solveInstance(void* data)
       solver->setCommunication(*communicator);
   //	communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
 
-  #warning create a communicator for each parent up to the root node, adapt receive method to also check the parent communicators receive
-
-
-  #warning check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
+#if 0
+#error somehow extract statistics about shared clauses
+#error integrate sharing into pcasso with priss
+#error check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
     
+#error check prototype
+#error check invalid configurations of 2200 experiment
+#endif
+      
 	}
 	
 //    // Davide> Initialize the shared indeces to zero
