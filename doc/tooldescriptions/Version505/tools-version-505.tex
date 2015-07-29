@@ -138,8 +138,13 @@ Finally, the search configuration has been combined with the techniques of the f
 \section{Special Algorithms, Data Structures, and Other Features}
 
 \todo{Mention machine leraning frontend}, that can be used over all tools
-
-
+\begin{itemize}
+	\item Reduzierung des Feature-Raums nicht mittels Information Gain Ratio, sondern der Prinicpal Component Analysis --> Vorteil, weniger Dimensionen bei mehr Informationsgehalt, keine Korrelation
+	\item klassifikation mittels k-nearest-neighbors, nicht mit einem random-decision-forest
+	\item verwendung von k = 1 (nearest-neighbor) --> vermutlich beste wahl (durch testen herausgefunden) bei kleinen, spezialisierten Trainingsdaten (nur application, wenige Familien, 2200 Instanzen), bevorzugung der robustesten configuration --> Cluster enthalten nur einzelne 'andere' Klassen
+	\item http://sourceforge.net/projects/libpca/ Libpca (MIT)
+	\item http://arma.sourceforge.net/ armaillo (MPL)
+\end{itemize}
 \section{Implementation details}
 
 \riss and \coprocessor are implemented in \CC. 
