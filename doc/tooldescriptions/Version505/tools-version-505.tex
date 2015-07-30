@@ -152,7 +152,12 @@ Finally, the search configuration has been combined with the techniques of the f
 All simplification techniques inside \coprocessor are implemented in separate classes to increase the structure of the code. 
 \priss and \pcasso implement the parallel code for multi-core architectures with the pthreads library.
  
-\include{schema}
+\begin{figure}[t]
+\include{schema} 
+\caption{Schema of \pcasso with \priss incarntions to solve partitions recursively and a global \priss to simplify the original formula.}
+\end{figure}
+
+
  
 \section{SAT Race 2015 Specifics}
 
