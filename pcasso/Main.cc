@@ -43,7 +43,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to classify formula
 #include "riss/core/Solver.h"
 #include "coprocessor/Coprocessor.h"
-#include "classifier/CNFClassifier.h"
+
+#ifdef CLASSIFIER
+    #include "classifier/CNFClassifier.h"
+#endif
 
 using namespace Pcasso;
 using namespace Riss;
@@ -105,6 +108,8 @@ struct shareStruct {
     {}
 };
 
+
+#ifdef CLASSIFIER
 /** method that returns a config that should be used based on a given CNF file */
 string findConfig( const string filename ) {
 
@@ -148,6 +153,7 @@ string findConfig( const string filename ) {
 	    
 	  }
 }
+#endif // CLASSIFIER
 
 int main(int argc, char** argv)
 {
@@ -211,14 +217,16 @@ int main(int argc, char** argv)
     fprintf(stderr, "c |                                                                                                       |\n");
 
     string autoConfig = "";
-    if( opt_autoconfig ) {
-      if( argc == 1 ) {
-	fprintf(stderr, "c |  REJECT AUTOCONFIG WHEN READING FROM STDIN                                                            |\n");
-      } else {
-	autoConfig = findConfig( string(argv[1]) );
-      }
+    #ifdef CLASSIFIER
+    if (opt_autoconfig) {
+        if (argc == 1) {
+            fprintf(stderr, "c |  REJECT AUTOCONFIG WHEN READING FROM STDIN                                                            |\n");
+        } else {
+            autoConfig = findConfig( string(argv[1]) );
+        }
     }
-    
+    #endif    
+
     Master::Parameter p;
     p.pre = pre;
     p.verb = verb;

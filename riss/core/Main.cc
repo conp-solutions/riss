@@ -237,7 +237,8 @@ int main(int argc, char** argv)
             printf("c ============================[ Problem Statistics ]=======================================================\n");
             printf("c |                                                                                                       |\n");
         }
-	
+
+    #ifdef CLASSIFIER
 	if( opt_autoconfig ) { // do configuration based on integrated configuration database
 	  
 	  if( (argc == 1) ) {
@@ -271,7 +272,7 @@ int main(int argc, char** argv)
 	    delete cnfclassifier;
 	    
 	  }
-	    
+	  
 	  delete S;
 	  delete coreConfig;
 	  delete cp3config; 
@@ -290,6 +291,7 @@ int main(int argc, char** argv)
 	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
 	  if (S->verbosity > 0) { printf("c |  Config: %12s                                                                              |\n", config.c_str() ); }
 	}
+    #endif // CLASSIFIER
 
         // open file for proof
         S->proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;

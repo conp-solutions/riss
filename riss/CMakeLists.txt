@@ -74,6 +74,11 @@ git_signature(PROJECT_NAME "riss"
 add_executable(riss-core core/Main.cc)
 add_executable(riss-simp simp/Main.cc)
 
+if(CLASSIFIER)
+  set_target_properties(riss-core PROPERTIES COMPILE_FLAGS "-DCLASSIFIER")
+  set_target_properties(riss-simp PROPERTIES COMPILE_FLAGS "-DCLASSIFIER")
+endif()
+
 message("-- DRAT proofs ${DRATPROOF}")
 if(DRATPROOF)
     set_target_properties(riss-core PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
@@ -87,11 +92,21 @@ add_custom_command(TARGET  riss-simp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink riss-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
 
 if(STATIC_BINARIES)
-  target_link_libraries(riss-core riss-lib-static coprocessor-lib-static classifier-lib-static libpca-static)
-  target_link_libraries(riss-simp riss-lib-static coprocessor-lib-static classifier-lib-static libpca-static)
+  target_link_libraries(riss-core riss-lib-static coprocessor-lib-static)
+  target_link_libraries(riss-simp riss-lib-static coprocessor-lib-static)
+
+  if(CLASSIFIER)
+    target_link_libraries(riss-core classifier-lib-static libpca-static)
+    target_link_libraries(riss-simp classifier-lib-static libpca-static)
+   endif()
 else()
-  target_link_libraries(riss-core riss-lib-shared coprocessor-lib-shared classifier-lib-shared libpca-shared)
-  target_link_libraries(riss-simp riss-lib-shared coprocessor-lib-shared classifier-lib-shared libpca-shared)
+  target_link_libraries(riss-core riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(riss-simp riss-lib-shared coprocessor-lib-shared)
+
+  if(CLASSIFIER)
+    target_link_libraries(riss-core classifier-lib-shared libpca-shared)
+    target_link_libraries(riss-simp classifier-lib-shared libpca-shared)
+   endif()
 endif()
 
 # Installation:
