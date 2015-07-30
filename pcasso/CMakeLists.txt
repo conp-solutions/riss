@@ -41,13 +41,28 @@ git_signature(PROJECT_NAME pcasso
 # 
 add_executable(pcasso Main.cc)
 
-set_target_properties(pcasso PROPERTIES
-                             COMPILE_FLAGS "-DPCASSO")
+set_target_properties(pcasso PROPERTIES COMPILE_FLAGS "-DPCASSO")
 
+# 
+# Note:
+#   pcasso uses a specific preprocessor flag. All used libraries has
+#   to be build with this flag, except they are completly independent
+#   of the solver toolchain (e.g. libpca)
+# 
 if(STATIC_BINARIES)
-  target_link_libraries(pcasso pcasso-lib-static riss-pcasso-lib-static pfolio-pcasso-lib-static coprocessor-pcasso-lib-static classifier-lib-static libpca-static)
+  target_link_libraries(pcasso pcasso-lib-static
+                               riss-pcasso-lib-static
+                               pfolio-pcasso-lib-static
+                               coprocessor-pcasso-lib-static
+                               classifier-pcasso-lib-static
+                               libpca-static)
 else()
-  target_link_libraries(pcasso pcasso-lib-shared riss-pcasso-lib-shared pfolio-pcasso-lib-shared coprocessor-pcasso-lib-shared classifier-lib-shared libpca-shared)
+  target_link_libraries(pcasso pcasso-lib-shared
+                               riss-pcasso-lib-shared
+                               pfolio-pcasso-lib-shared
+                               coprocessor-pcasso-lib-shared
+                               classifier-pcasso-lib-shared
+                               libpca-shared)
 endif()
 
 # 

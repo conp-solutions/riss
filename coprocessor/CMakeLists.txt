@@ -43,6 +43,7 @@ set(LIB_SOURCES
 add_library(coprocessor-lib-static STATIC ${LIB_SOURCES})
 add_library(coprocessor-lib-shared SHARED ${LIB_SOURCES})
 add_library(coprocessor-lib-object OBJECT ${LIB_SOURCES})
+
 # This extra libraries are build for pcasso, because pcasso needs some
 # extensions to the riss source code
 add_library(coprocessor-pcasso-lib-static STATIC ${LIB_SOURCES})
