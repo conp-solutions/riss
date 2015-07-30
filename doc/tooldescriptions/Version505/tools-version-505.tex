@@ -3,6 +3,7 @@
 \usepackage{xspace}
 \usepackage{hyperref}
 \usepackage{todonotes}
+\usepackage{tikz}
 \usepackage[utf8]{inputenc}
 
 %  commands
@@ -36,8 +37,8 @@
 \begin{abstract}
 The sequential SAT solver \riss combines the Minisat-style solving engine of \glucose with a state-of-the-art preprocessor \textsc{Coprocessor} and adds many modifications to the search process. 
 \riss allows to use inprocessing based on \coprocessor.
-Based on this \riss, we create a parallel porftolio solver \priss, which allows clause sharing among the incarnations, as well as sharing information about equivalent literals. 
-Finally, the search space partitioning SAT solver \pcasso is built on top of \priss, allowing to solve a formula with a porftolio solver, and additionally solve this formula with iterative partitioning where each partition is solved with the porftolio solver \priss, including clause sharing over partitions. 
+Based on this \riss, we create a parallel portfolio solver \priss, which allows clause sharing among the incarnations, as well as sharing information about equivalent literals. 
+Finally, the search space partitioning SAT solver \pcasso is built on top of \priss, allowing to solve a formula with a portfolio solver, and additionally solve this formula with iterative partitioning where each partition is solved with the portfolio solver \priss, including clause sharing over partitions. 
 \end{abstract}
 
 \section{Introduction}
@@ -150,6 +151,8 @@ Finally, the search configuration has been combined with the techniques of the f
 \riss and \coprocessor are implemented in \CC. 
 All simplification techniques inside \coprocessor are implemented in separate classes to increase the structure of the code. 
 \priss and \pcasso implement the parallel code for multi-core architectures with the pthreads library.
+ 
+\include{schema}
  
 \section{SAT Race 2015 Specifics}
 
