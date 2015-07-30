@@ -174,6 +174,11 @@ Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
     for (unsigned int i = 0 ; i < originalFormula.size(); ++i) {
         delete [] originalFormula[i].lits;
     }
+    
+    // free resources
+    if( globalSolver != nullptr ) delete globalSolver;
+    globalSolver = nullptr;
+    
     // clear vector
     originalFormula.clear();
     delete [] threadData;

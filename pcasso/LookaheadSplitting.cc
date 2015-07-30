@@ -600,6 +600,7 @@ jump:
             PcassoDebug::PRINTLN_NOTE(":");
             continue;
         }
+        
         decList = new vec<Lit>();
         (*splitting)[i]->copyTo(*decList);
         PcassoDebug::PRINT_NOTE("Child-");

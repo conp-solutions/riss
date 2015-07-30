@@ -5,6 +5,6 @@
  */
 #include "pcasso/version.h"
 
-const char* Pcasso::gitSHA1   = "36b4196-dirty";
-const char* Pcasso::gitDate   = "Thu Jul 30 12:11:39 2015";
-const char* Pcasso::signature = "pcasso  build 36b4196-dirty";
+const char* Pcasso::gitSHA1   = "9c928c3-dirty";
+const char* Pcasso::gitDate   = "Thu Jul 30 13:19:13 2015";
+const char* Pcasso::signature = "pcasso  build 9c928c3-dirty";

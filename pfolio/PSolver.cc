@@ -148,7 +148,7 @@ PSolver::~PSolver()
 
     sleep(0.2);
 
-    if (globalSimplifier != 0) { delete globalSimplifier; }
+    if (globalSimplifier != 0)       { delete globalSimplifier; }
     if (globalSimplifierConfig != 0) { delete globalSimplifierConfig; }
 
     for (int i = 0 ; i < solvers.size(); ++ i) {
@@ -502,7 +502,11 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (ret == l_True) {
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-            extendModel(model);
+	    
+	    // only extend model, if not independently solved
+	    if( ! configs[winningSolver].opt_useOriginal ) {
+	      extendModel(model);
+	    }
 
             if (false && verbosity > 2) {
                 cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;

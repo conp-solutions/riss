@@ -51,7 +51,8 @@ class Circuit
   public:
 
     Circuit(CP3Config& _config, Riss::ClauseAllocator& _ca);
-
+    ~Circuit();
+    
     class Gate
     {
         union {
