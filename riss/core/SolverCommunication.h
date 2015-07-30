@@ -365,7 +365,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
                 if (c.size() > 1 && communicationClient.refineReceived) {
                     if (! reverseMinimization.enabled) {  // enable reverseMinimization to be able to use it
-                        DOUT( cerr << "c initialize reverseMinimization during receiving" << endl; );
+//                         DOUT( cerr << "c initialize reverseMinimization during receiving" << endl; );
                         reverseMinimization.enabled = true;
                         reverseMinimization.assigns.growTo(nVars() + 1, l_Undef); // grow assignment
                         reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail

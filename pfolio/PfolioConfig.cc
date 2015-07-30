@@ -54,7 +54,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
 
 {
   if (defaultPreset.size() != 0) { 
-    std::cerr << "c set preset for pfolio: " << defaultPreset << std::endl; 
+//     DOUT( std::cerr << "c set preset for pfolio: " << defaultPreset << std::endl;  );
     setPreset(defaultPreset);
   }    // set configuration options immediately
 }

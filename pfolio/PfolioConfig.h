@@ -78,6 +78,9 @@ class PfolioConfig : public Config
 inline
 void PfolioConfig::setPreset(const std::string& optionSet)
 {
+  
+    std::cerr << "parse preset: " << optionSet << std::endl;
+    
     // split std::string into sub std::strings, separated by ':'
     std::vector<std::string> optionList;
     int lastStart = 0;

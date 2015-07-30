@@ -44,7 +44,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , opc(0)
     , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == 0 ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
-    , verbosity(1)
+    , verbosity(0)
     , verbEveryConflicts(0)
     , externBuffer(0)
     , externSpecialBuffer(0)
@@ -67,7 +67,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     // set global coprocessor configuratoin
     if ((const char*)pfolioConfig.opt_ppconfig != nullptr) {
         defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
-	cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl;
+// 	DOUT( cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl; );
     }
 
     // set preprocessor, if there is one selected
@@ -265,7 +265,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
 
 lbool PSolver::simplifyFormula()
 {
-    cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;
+//     cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;
     if( winningSolver != -1 ) return l_Undef; // simplify only, if there is no winning solver already
     lbool ret = l_Undef;
     /*
@@ -312,17 +312,14 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     lbool ret = l_Undef;
     
     if( !initialized ) {  // check whether some solver wants to work on the original formula
-      DOUT( cerr << "c check for 'use original'" << endl; );
       bool keepOriginal = false;
       for (int i = 1; i < threads; ++ i) { // iterate over threads, as we do not have solvers at the moment
 	if( configs[i].opt_useOriginal ) { // a configuration that wants to work on the original formula should not share anything
-	  DOUT( cerr << "c found 'use original' for configuration " << i+1 << endl; );
 	  keepOriginal = keepOriginal || configs[i].opt_useOriginal;
 	}
       }
       if( keepOriginal ) {
 	assert( originalFormula == nullptr && "set this only once" );
-	DOUT( cerr << "c create original formula" << endl; );
 	originalFormula = new OriginalFormula(solvers[0]->trail, solvers[0]->clauses, solvers[0]->ca, solvers[0]->nVars(),
 	    solvers[0]->activity, solvers[0]->order_heap, solvers[0]->varFlags, solvers[0]->vardata); // memorize current state for initialization
       }
@@ -541,7 +538,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                                         <<  "  \t|\t" << communicators[i]->nrReceivedMultiUnits
                                         << endl;
         }
-        if (verbosity > 0) { cerr << "attempts:" << endl; }
+        if (verbosity > 0) { cerr << "c attempts:" << endl; }
         if (verbosity > 0) { cerr << "c thread  SCls\t|\tS-EE\t|\tS-U\t|\tRec\t" << endl; }
         for (int i = 0 ; i < threads; ++ i) {
             if (verbosity > 0) cerr << "c " << i << " : " << communicators[i]->nrSendCattempt
@@ -550,7 +547,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                                         <<  "  \t|\t" << communicators[i]->nrReceiveAttempts
                                         << endl;
         }
-        if (verbosity > 0) { cerr << "search data:" << endl; }
+        if (verbosity > 0) { cerr << "c search data:" << endl; }
         for (int i = 0 ; i < threads; ++ i) {
             if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
@@ -568,19 +565,19 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 void PSolver::createThreadConfigs()
 {
     const char* Configs[] = {
+        "STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll", 
+        "-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec",
+        "-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ""-revMin -init-act=4 -actStart=2048 -refRec",
+        "-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ",
+        "-revMin -init-act=3 -actStart=2048 -longConflict -refRec ",
+        "Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegsv -no-dense -up -refRec ",
         "",         // 0
         "PLAINBIASSERTING", // 1
         "LLA",      // 2
         "AUIP",     // 3
         "SUHD",     // 4
         "OTFSS",        // 5
-        "SUHLE",        // 6
-        "LHBR",     // 7
-        "HACKTWO",      // 8
-        "NOTRUST",      // 9
-        "DECLEARN",     // 10
         "PLAINBIASSERTING", // 11
-        "LBD",      // 12
         "FASTRESTART",  // 13
         "AGILREJECT",   // 14
         "LIGHT",        // 15
@@ -589,6 +586,8 @@ void PSolver::createThreadConfigs()
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", // 48 - 63
     };
 
+
+    
     if (defaultConfig.size() > 0) {
         if (verbosity > 1) { cerr << "c setup pfolio with config " << defaultConfig << endl; }
     }
@@ -679,7 +678,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "beta") {
@@ -716,7 +715,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     }  else if (defaultConfig == "gamma") {
@@ -753,7 +752,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "delta") {
@@ -790,7 +789,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "epsilon") {
@@ -827,10 +826,80 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
-    }
+    } else if (defaultConfig == "best3") {
+	if (threads > 0) {
+            ppconfigs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits");
+            configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+	if (threads > 1) {
+            ppconfigs[1].setPreset("CircuitFuzz:-independent");
+              configs[1].setPreset("CircuitFuzz:-independent");
+        }
+	if (threads > 2) {
+            ppconfigs[2].setPreset("EDACC1:-independent");
+              configs[2].setPreset("EDACC1:-independent");
+        }
+        for (int t = 3 ; t < threads; ++ t) {  // set configurations for remaining (beyond 3)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-3]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "best4") {
+	if (threads > 0) {
+            ppconfigs[0].setPreset("OldRealTime.data2");
+            configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+	if (threads > 1) {
+            ppconfigs[1].setPreset("CircuitFuzz:-independent");
+              configs[1].setPreset("CircuitFuzz:-independent");
+        }
+	if (threads > 2) {
+            ppconfigs[2].setPreset("EDACC1:-independent");
+              configs[2].setPreset("EDACC1:-independent");
+        }
+	if (threads > 3) {
+            ppconfigs[3].setPreset("LABS:-independent");
+              configs[3].setPreset("LABS:-independent");
+        }
+	for (int t = 4 ; t < threads; ++ t) {  // set configurations for remaining (beyond 4)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-4]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "best6") {
+	if (threads > 0) {
+            ppconfigs[0].setPreset("OldRealTime.data2");
+            configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+	if (threads > 1) {
+            ppconfigs[1].setPreset("CircuitFuzz:-independent");
+              configs[1].setPreset("CircuitFuzz:-independent");
+        }
+	if (threads > 2) {
+            ppconfigs[2].setPreset("EDACC1:-independent");
+              configs[2].setPreset("EDACC1:-independent");
+        }
+	if (threads > 3) {
+            ppconfigs[3].setPreset("LABS:-independent");
+              configs[3].setPreset("LABS:-independent");
+        }
+	if (threads > 4) {
+            ppconfigs[4].setPreset("RealTime.data2:-independent");
+              configs[4].setPreset("RealTime.data2:-independent");
+        }
+	if (threads > 5) {
+            ppconfigs[5].setPreset("GI:-independent");
+              configs[5].setPreset("GI:-independent");
+        }
+	for (int t = 6 ; t < threads; ++ t) {  // set configurations for remaining (beyond 6)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-6]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } 
+      
+    
+
 
 
     // add extra commands, even if a preset is used

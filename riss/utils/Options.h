@@ -577,7 +577,6 @@ class StringOption : public Option
 
         if( value == nullptr ) value = new std::string(span); 
 	else *value = std::string(span);
-	std::cerr << "c parse stringoption " << name << " with value " << value << std::endl;
         return true;
     }
 

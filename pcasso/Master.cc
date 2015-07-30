@@ -158,19 +158,20 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
         }
     }
     
-    cerr << "c create new pfolio solver" << endl;
+//     DOUT( cerr << "c create new pfolio solver" << endl; );
     globalSolver = new PSolver(0,(const char*)global_prissConfig == 0 ? 0 : (const char*)global_prissConfig, global_priss_threads);
+    globalSolver->verbosity = MSverbosity;
     
     // set the preferred sequential configuration to be executed in the global priss, if enabled
     if( preferredSequentialConfig != "" && global_priss_threads > 0) globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads-1);
-    cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl;
+//     DOUT( cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl; );
 }
 
 
 Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 {
     // free allocated literals
-    fprintf(stderr, "c destruct master\n");
+//     DOUT( fprintf(stderr, "c destruct master\n"); );
     for (unsigned int i = 0 ; i < originalFormula.size(); ++i) {
         delete [] originalFormula[i].lits;
     }
@@ -208,7 +209,7 @@ lbool Master::solveLimited(const vec< Lit >& assumps)
       if( model == 0 ) model = new vec<lbool>();
       globalSolver->model.copyTo( *model );
     }
-    cerr << "c solved formula by simplification with sat: " << (simplifyReturn == l_True) << " unsat: " << (simplifyReturn == l_False) << endl;
+    DOUT( cerr << "c solved formula by simplification with sat: " << (simplifyReturn == l_True) << " unsat: " << (simplifyReturn == l_False) << endl; );
     return simplifyReturn; // return value here already
   }
   
@@ -216,10 +217,10 @@ lbool Master::solveLimited(const vec< Lit >& assumps)
   maxVar = maxVar > globalSolver->nVars() ? maxVar : globalSolver->nVars();
   
   // clear current formula
-  cerr << "c remove formula with " << originalFormula.size() << " clauses" << endl;
+//   DOUT( cerr << "c remove formula with " << originalFormula.size() << " clauses" << endl; );
   for( int i = 0 ; i < originalFormula.size(); ++ i ) delete [] originalFormula[i].lits; // delete all previous clauses
   // add all unit clauses
-  cerr << "c copy formula with " << globalSolver->getNumberOfTopLevelUnits() << " units and " << globalSolver->nClauses() << " clauses" << endl;
+//   DOUT( cerr << "c copy formula with " << globalSolver->getNumberOfTopLevelUnits() << " units and " << globalSolver->nClauses() << " clauses" << endl; );
   for( int i = 0 ; i < globalSolver->getNumberOfTopLevelUnits(); ++ i ) {
     Lit unitLiteral = globalSolver->trailGet(i);
     clause c;
@@ -653,7 +654,7 @@ int Master::run()
     // cancel all threads
     for (unsigned int i = 0 ; i < threads ; ++i) {
         //    int err = 0;
-        fprintf(stderr, "c try to cancel thread %d\n", i);
+        DOUT( fprintf(stderr, "c try to cancel thread %d\n", i); );
         // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == nullptr) continue;
         if (threadData[i].solver == 0) { continue; }
         threadData[i].solver->interrupt(); // Yeah, it takes time.
@@ -1332,7 +1333,7 @@ Master::splitInstance(void* data)
         exit(127);
         } */
 
-        fprintf(stderr, "c master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False);
+//         DOUT( fprintf(stderr, "c master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False); );
 
         // tell statistics
         PcassoDebug::PRINT_NOTE("c add to created nodes: ");
@@ -1342,7 +1343,7 @@ Master::splitInstance(void* data)
 
         // only if there is a valid vector, use it!
         if (valid != 0) {
-            fprintf(stderr, "c master: received unit %d clauses\n", valid->size());
+//             DOUT( fprintf(stderr, "c master: received unit %d clauses\n", valid->size()); );
             for (int i = 0; i < (*valid).size(); i++) {
                 vec<Lit> *tmp_cls = (*valid)[i];
                 validConstraints.push_back(new vector<Lit>);
@@ -1361,7 +1362,7 @@ Master::splitInstance(void* data)
         }
         //          fprintf( stderr,"\n");
 
-        fprintf(stderr, "c master: received %d splits\n", splits->size());
+//         DOUT( fprintf(stderr, "c master: received %d splits\n", splits->size()); );
         for (int i = 0; i < (*splits).size(); i++) {
             if (MSverbosity > 1) { fprintf(stderr, "Split %d\n", i); }
             vec<vec<Lit>*> *tmp_cnf = (*splits)[i];

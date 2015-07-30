@@ -214,7 +214,8 @@ int main(int argc, char** argv)
     fprintf(stderr, "c | Contributors:                                                                                         |\n");
     fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
     fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
-    fprintf(stderr, "c |                                                                                                       |\n");
+    fprintf(stderr, "c |     Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                    |\n");
+    fprintf(stderr, "c =========================================================================================================\n");
 
     string autoConfig = "";
     #ifdef CLASSIFIER

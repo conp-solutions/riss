@@ -114,7 +114,7 @@ lbool Preprocessor::performSimplification()
 
     for (int ppIteration = 0; ppIteration < (data.isInprocessing() ? 1 : config.opt_simplifyRounds); ++ ppIteration) {
         double iterTime = cpuTime();
-        DOUT(if (config.opt_verbose > 0 || config.opt_debug || true) cerr << "c pp iteration " << ppIteration << endl;);
+        DOUT(if (config.opt_verbose > 0 || config.opt_debug ) cerr << "c pp iteration " << ppIteration << endl;);
         // do preprocessing
         if (config.opt_up) {
             if (config.opt_verbose > 0) { cerr << "c up ..." << endl; }

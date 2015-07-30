@@ -52,7 +52,7 @@ PcassoComConfig::PcassoComConfig(const std::string& presetOptions)  // add new o
 
 {
   if (defaultPreset.size() != 0) { 
-    std::cerr << "c set preset for pcasso: " << defaultPreset << std::endl;
+//     DOUT( std::cerr << "c set preset for pcasso: " << defaultPreset << std::endl; );
     setPreset(defaultPreset);
   }    // set configuration options immediately
 }

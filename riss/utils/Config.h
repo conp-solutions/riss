@@ -35,7 +35,7 @@ class Config
   public:
 
     Config(vec<Option*>* ptr, const std::string& presetOptions = "");
-    
+
     /** parse all options from the command line
       * @return true, if "help" has been found in the parameters
       */
@@ -71,7 +71,7 @@ class Config
 
     /** print dependencies of the options that belong to this configuration */
     void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
-    
+
     /** set all options back to their default value */
     void reset();
 };
@@ -115,6 +115,8 @@ bool Config::addPreset(const std::string& optionSet)
 {
     parsePreset = true;
     bool ret = true;
+    
+    std::cerr << "parse preset: " << optionSet << std::endl;
 
     if (optionSet == "PLAIN") {
         parseOptions(" ", false);
@@ -560,8 +562,8 @@ bool Config::addPreset(const std::string& optionSet)
       parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -longConflict"), false);
     } else if (optionSet == "OldRealTime.data20") {
       parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed  -biAsserting -biAsFreq=4 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
-    } 
-    
+    }
+
     /* new blackbox configurations */
     else if (optionSet == "RealTime.data1") {
       parseOptions(std::string("-keepWorst=0.01 -init-act=3 -rlevel=2 -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
@@ -592,7 +594,8 @@ bool Config::addPreset(const std::string& optionSet)
     } else if (optionSet == "RealTime.data12") {
       parseOptions(std::string(" -K=0.7 -szLBDQueue=30 -szTrailQueue=4000 -specialIncReduceDB=1100 -minLBDFrozenClause=15 -minLBDMinimizingClause=9 -var-decay-b=0.99 -var-decay-e=0.99 -cla-decay=0.995 -rnd-seed=9.20756e+06 -phase-saving=0 -gc-frac=0.1 -alluiphack=2 -bve_early"), false);
     } else if (optionSet == "RealTime.data13") {
-      parseOptions(std::string("-K=0.85 -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -firstReduceDB=8000 -incReduceDB=450 -specialIncReduceDB=2000 -lbdIgnL0 -quickRed -keepWorst=0.001 -biAsserting -biAsFreq=16 -minSizeMinimizingClause=50 -minLBDMinimizingClause=9 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-i=0.001 -var-decay-d=10000 -cla-decay=0.995 -rnd-freq=0.01 -init-act=3 -init-pol=5 -rlevel=1 -rtype=1 -rfirst=32 -alluiphack=2 -clsActB=2 -laHack -dyn -laEEl -laEEp=66 -hlaMax=25 -hlaLevel=1") + std::string(" -hlaevery=8 -hlabound=-1 -hlaTop=512 -sInterval=1 -otfss -otfssL -otfssMLDB=16 -learnDecP=80 -no-rer-l -rer-rn -er-size=16 -er-lbd=12 -ics -ics_window=40000 -ics_processLast=50000 -ics_keepNew -ics_relLBD=0.5 -ics_relSIZE=1.2 -sUhdProbe=1 -sUhdPrSh=8 -sUHLEsize=64 -sUHLElbd=12 -cp3_stats -bce -bve -bva -unhide -fm -bve_early -cp3_bva_limit=120000 -no-bce-bce -bce-cle -no-cp3_fm_vMulAMO -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce -cp3_res_bin -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorMaxSize=9 -xorSelect=1 -no-xorKeepUsed -no-xorFindSubs"), false);
+      parseOptions(std::string("-K=0.85 -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -firstReduceDB=8000 -incReduceDB=450 -specialIncReduceDB=2000 -lbdIgnL0 -quickRed -keepWorst=0.001 -biAsserting -biAsFreq=16 -minSizeMinimizingClause=50 -minLBDMinimizingClause=9 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-i=0.001 -var-decay-d=10000 -cla-decay=0.995")
+                 + std::string(" -rnd-freq=0.01 -init-act=3 -init-pol=5 -rlevel=1 -rtype=1 -rfirst=32 -alluiphack=2 -clsActB=2 -laHack -dyn -laEEl -laEEp=66 -hlaMax=25 -hlaLevel=1") + std::string(" -hlaevery=8 -hlabound=-1 -hlaTop=512 -sInterval=1 -otfss -otfssL -otfssMLDB=16 -learnDecP=80 -no-rer-l -rer-rn -er-size=16 -er-lbd=12 -ics -ics_window=40000 -ics_processLast=50000 -ics_keepNew -ics_relLBD=0.5 -ics_relSIZE=1.2 -sUhdProbe=1 -sUhdPrSh=8 -sUHLEsize=64 -sUHLElbd=12 -cp3_stats -bce -bve -bva -unhide -fm -bve_early -cp3_bva_limit=120000 -no-bce-bce -bce-cle -no-cp3_fm_vMulAMO -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce -cp3_res_bin -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorMaxSize=9 -xorSelect=1 -no-xorKeepUsed -no-xorFindSubs"), false);
     } else if (optionSet == "RealTime.data14") {
       parseOptions(std::string("-R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -actIncMode=2 -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -sUHLEsize=30 -sUHLElbd=12 -enabled_cp3 -cp3_stats -bce -bve -unhide -fm -bve_early -no-bce-bce -bce-cle -cp3_ee_bIter=400000000 -no-cp3_fm_vMulAMO -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE"), false);
     }
