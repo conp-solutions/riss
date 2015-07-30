@@ -41,7 +41,11 @@ git_signature(PROJECT_NAME pcasso
 # 
 add_executable(pcasso Main.cc)
 
-set_target_properties(pcasso PROPERTIES COMPILE_FLAGS "-DPCASSO")
+if(CLASSIFIER)
+  set_target_properties(pcasso PROPERTIES COMPILE_FLAGS "-DPCASSO -DCLASSIFIER")
+else()
+  set_target_properties(pcasso PROPERTIES COMPILE_FLAGS "-DPCASSO")
+endif()
 
 # 
 # Note:
@@ -53,16 +57,18 @@ if(STATIC_BINARIES)
   target_link_libraries(pcasso pcasso-lib-static
                                riss-pcasso-lib-static
                                pfolio-pcasso-lib-static
-                               coprocessor-pcasso-lib-static
-                               classifier-pcasso-lib-static
-                               libpca-static)
+                               coprocessor-pcasso-lib-static)
+  if(CLASSIFIER)
+    target_link_libraries(pcasso classifier-pcasso-lib-static libpca-static)
+  endif()
 else()
   target_link_libraries(pcasso pcasso-lib-shared
                                riss-pcasso-lib-shared
                                pfolio-pcasso-lib-shared
-                               coprocessor-pcasso-lib-shared
-                               classifier-pcasso-lib-shared
-                               libpca-shared)
+                               coprocessor-pcasso-lib-shared)
+  if(CLASSIFIER)
+    target_link_libraries(pcasso classifier-pcasso-lib-shared libpca-shared)
+  endif()
 endif()
 
 # 

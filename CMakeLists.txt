@@ -40,6 +40,7 @@ option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
+option(CLASSIFIER      "Use classifier in riss and pcasso" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
 # Print option settings
@@ -47,6 +48,7 @@ message(STATUS "Build type ${CMAKE_BUILD_TYPE}")
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "aiger-tools ${AIGER-TOOLS}")
+message(STATUS "classifier ${CLASSIFIER}")
 message(STATUS "Verbose warnings ${WARNINGS}")
 
 # Output directory definitions
