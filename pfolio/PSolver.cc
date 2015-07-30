@@ -849,6 +849,22 @@ void PSolver::createThreadConfigs()
     }
 }
 
+void PSolver::overwriteAsIndependent(const string& preferredSequentialConfig, int thread)
+{
+  assert( thread > 0 && thread < threads && "worker must exist" );
+  
+  // remove parsed values
+  configs[thread].reset();
+  ppconfigs[thread].reset();
+  
+  // set preset
+  configs[thread].setPreset( preferredSequentialConfig );
+  ppconfigs[thread].setPreset( preferredSequentialConfig );
+  // tell system that this configuration is independent
+  configs[thread].opt_useOriginal = true;
+}
+
+
 void PSolver::addInputClause_(vec< Lit >& ps)
 {
     if (opc != 0) {

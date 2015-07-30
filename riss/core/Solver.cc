@@ -51,7 +51,7 @@ namespace Riss
 
 
 Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreConfig& _config
-    privateConfig(externalConfig == 0 ? new CoreConfig(configName) : externalConfig)
+    privateConfig(externalConfig == 0 ? new CoreConfig(configName == 0 ? "" : configName) : externalConfig)
     , deleteConfig(externalConfig == 0)
     , config(* privateConfig)
     // DRUP output file

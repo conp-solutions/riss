@@ -105,7 +105,7 @@ static BoolOption    opt_crossLink("SPLITTER", "crosslink",  "enable communicati
 // my core(s) highest: global_priss_threads + (myID+1) * priss_threads - 1
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
-Master::Master(Parameter p) :
+Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
     hybridThreads( nullptr ),
     hybridMasterLock (nullptr),
     hybridData(nullptr),
@@ -160,6 +160,9 @@ Master::Master(Parameter p) :
     
     cerr << "c create new pfolio solver" << endl;
     globalSolver = new PSolver(0,(const char*)global_prissConfig == 0 ? 0 : (const char*)global_prissConfig, global_priss_threads);
+    
+    // set the preferred sequential configuration to be executed in the global priss, if enabled
+    if( preferredSequentialConfig != "" && global_priss_threads > 0) globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads-1);
     cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl;
 }
 

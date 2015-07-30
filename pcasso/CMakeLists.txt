@@ -45,9 +45,9 @@ set_target_properties(pcasso PROPERTIES
                              COMPILE_FLAGS "-DPCASSO")
 
 if(STATIC_BINARIES)
-  target_link_libraries(pcasso pcasso-lib-static riss-pcasso-lib-static pfolio-pcasso-lib-static coprocessor-pcasso-lib-static)
+  target_link_libraries(pcasso pcasso-lib-static riss-pcasso-lib-static pfolio-pcasso-lib-static coprocessor-pcasso-lib-static classifier-lib-static libpca-static)
 else()
-  target_link_libraries(pcasso pcasso-lib-shared riss-pcasso-lib-shared pfolio-pcasso-lib-shared coprocessor-pcasso-lib-shared)
+  target_link_libraries(pcasso pcasso-lib-shared riss-pcasso-lib-shared pfolio-pcasso-lib-shared coprocessor-pcasso-lib-shared classifier-lib-shared libpca-shared)
 endif()
 
 # 

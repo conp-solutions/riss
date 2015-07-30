@@ -423,7 +423,7 @@ void Classifier::writeTestDetails(const char* wekaFile)
     }
     out.open(file.c_str(), ostream::out);
     out.setf(ios::fixed);
-    out.precision(4);
+    out.precision(10);
     const char* delim = " ";
 
     out << "instance" << delim;
@@ -467,7 +467,7 @@ void Classifier::writeTestDetails(const char* wekaFile)
     string file2 = "classification.totals";
     out2.open(file2.c_str(), ostream::app);
     out2.setf(ios::fixed);
-    out2.precision(4);
+    out2.precision(10);
     out2 << file.c_str() << " " << average << " " << intime << endl;
     out2.close();
     out.close();

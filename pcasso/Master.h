@@ -250,7 +250,7 @@ private:
   public:
 
     // setup the object correctly
-    Master(Parameter p);
+    Master(Parameter p, std::string preferredSequentialConfig = "");
     // free all the resources again
     ~Master();
 

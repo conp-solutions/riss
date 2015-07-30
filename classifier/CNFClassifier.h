@@ -60,6 +60,9 @@ class CNFClassifier
 
     ~CNFClassifier();
 
+    /** return config for given file */
+    //std::string getConfig( Riss::Solver& S, string dbName );
+    std::string getConfig(Riss::Solver& S);
     /** return the names of the features */
     std::vector<std::string> featureNames();
 
@@ -175,7 +178,7 @@ class CNFClassifier
         return precision;
     }
 
-    void setPrecision(int precision = 4)
+    void setPrecision(int precision = 10)
     {
         this->precision = precision;
     }

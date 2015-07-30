@@ -110,6 +110,8 @@ class Option
 
     virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
 
+    virtual void reset() = 0;
+    
     int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
     {
         if (dependOnNonDefaultOf == 0) { return 0; }
@@ -199,6 +201,8 @@ class DoubleOption : public Option
         s << "-" << name << "=" << value;
     }
 
+    virtual void reset() { value = defaultValue; }
+    
     virtual bool parse(const char* str)
     {
         const char* span = str;
@@ -300,6 +304,8 @@ class IntOption : public Option
     {
         s << "-" << name << "=" << value;
     }
+    
+    virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
     {
@@ -420,6 +426,8 @@ class Int64Option : public Option
     {
         s << "-" << name << "=" << value;
     }
+    
+    virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
     {
@@ -549,6 +557,15 @@ class StringOption : public Option
         if (value != nullptr) { s << "-" << name << "=" << *value; }
         else { s << "-" << name << "=\"\""; }
     }
+    
+    virtual void reset() { 
+      if( defaultValue == nullptr ) { 
+	if( value != nullptr ) { delete value; value = nullptr; }
+      } else {	
+	if( value != nullptr ) { *value = std::string(defaultValue); }
+	else value = new std::string(defaultValue);
+      }
+    }
 
     virtual bool parse(const char* str)
     {
@@ -624,6 +641,8 @@ class BoolOption : public Option
         if (value) { s << "-" << name ; }
         else { s << "-no-" << name ; }
     }
+    
+    virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
     {

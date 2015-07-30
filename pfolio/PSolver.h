@@ -204,6 +204,12 @@ class PSolver
      * and split them into the data strcuture incarnationConfigs
      */
     void parseConfigurations(const std::string& combinedConfigurations);
+    
+    /** overwrite a thread configuration from the outside, the thread will work on the original formula then
+     * @param preferredSequentialConfig configuration to be set with "setPreset" for the given thread
+     * @param thread worker number that should use this configuration
+     */
+    void overwriteAsIndependent(const string& preferredSequentialConfig, int thread);
 
   protected:
 

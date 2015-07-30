@@ -123,3 +123,9 @@ a CNF file by calling the tool as follows. Features can be disabled separately.
 For more information use the "--help" parameter.
 
     bin/classifier <input.cnf>
+
+
+## Third party libraries
+
+ * [Armadillo](http://arma.sourceforge.net/). MLP License. Linear algebra library for C++
+ * [libpca](http://sourceforge.net/projects/libpca/). MIT License. C++ library for principal component analysis

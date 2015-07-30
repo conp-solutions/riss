@@ -150,6 +150,7 @@ lbool Preprocessor::performSimplification()
                                 << "c =================================" << endl;
                         // initial twosat model should always be used as a model!
                         for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
+                        break;
                     }
                 } else {
                     data.setFailed();
