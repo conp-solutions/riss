@@ -42,6 +42,7 @@ option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
 option(CLASSIFIER      "Use classifier in riss and pcasso" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
+option(QUIET           "Disable all #warnings" OFF)
 
 # Print option settings
 message(STATUS "Build type ${CMAKE_BUILD_TYPE}")
@@ -50,6 +51,7 @@ message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "aiger-tools ${AIGER-TOOLS}")
 message(STATUS "classifier ${CLASSIFIER}")
 message(STATUS "Verbose warnings ${WARNINGS}")
+message(STATUS "Quiet ${QUIET}")
 
 # Output directory definitions
 # 
@@ -90,12 +92,19 @@ include(GitSignature)
 # 
 add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g")
 
-if(CMAKE_COMPILER_IS_GNUCXX AND WARNINGS)
-  message(STATUS "enable verbose compiler warnings")
-  add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
-                  "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
-                  "-Wno-parentheses")
+if(CMAKE_COMPILER_IS_GNUCXX)
+  if(WARNINGS)
+    message(STATUS "enable verbose compiler warnings")
+    add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
+                    "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
+                    "-Wno-parentheses")
+   endif()
+   if(QUIET)
+      message(STATUS "disable #warnings")
+     add_definitions("-Wno-cpp")
+   endif()
 endif()
+
 
 # Sub-Projects:
 # 
