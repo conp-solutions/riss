@@ -290,7 +290,7 @@ int main(int argc, char** argv)
 	
 	  gzclose(in); // reopening the formula file. (old one refers to EOF)
 	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
-	  if (S->verbosity > 0) { printf("c |  Config: %12s                                                                              |\n", config.c_str() ); }
+	  if (S->verbosity > 0) { printf("c |  Config: %12s                                                                                |\n", config.c_str() ); }
 	}
     #endif // CLASSIFIER
 

@@ -713,7 +713,10 @@ bool Unhiding::process()
                     sort(big.getArray(l), big.getSize(l));
                     for (int i = 0; i + 1 < big.getSize(l); ++i) {
                         assert(big.getArray(l)[i] <= big.getArray(l)[i + 1] && "implication list should be ordered");
-                        if (big.getArray(l)[i] == big.getArray(l)[i + 1]) { duplImps++; cerr << "c duplicate " << l << " -> " << big.getArray(l)[i] << endl; }
+                        if (big.getArray(l)[i] == big.getArray(l)[i + 1]) { duplImps++; 
+			  DOUT( if (config.opt_uhd_Debug)  cerr << "c duplicate " << l << " -> " << big.getArray(l)[i] << endl;  );
+			  
+			}
                     }
                 }
             }
