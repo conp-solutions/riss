@@ -23,6 +23,7 @@ if(STATIC_BINARIES)
                # get IDEs working with the "#include"s. We do not want to install
                # the project system wide but only locally for this project.
                -DINSTALL_INCLUDE_DIR=${CMAKE_SOURCE_DIR}/armadillo
+    PATCH_COMMAND patch -N include/armadillo_bits/config.hpp ${CMAKE_CURRENT_SOURCE_DIR}/config.patch
   )
 
   # add static armadillo library
