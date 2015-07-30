@@ -286,8 +286,8 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
             const Lit& unit = communicationClient.receivedUnits[i];
             if (value(unit) == l_False) { // we found a conflict
                 #ifdef PCASSO
-                assert(false && "take care to set the unsatPTlevel correctly!");
-#warning take care to set the unsatPTlevel correctly!
+//                 assert(false && "take care to set the unsatPTlevel correctly!");
+#warning take care to set the unsatPTlevel correctly! for upward sharing!
                 #endif
                 return 1;
             } else if (value(unit) == l_Undef) {

@@ -107,7 +107,13 @@ struct shareStruct {
 
 /** method that returns a config that should be used based on a given CNF file */
 string findConfig( const string filename ) {
+
+// compilation  
+# warning link against libclassifier-pcasso!!!
+  
     Solver S; // have a default solver object
+    
+    cerr << "c find config for file " << filename.c_str() << endl;
     
     gzFile in = gzopen(filename.c_str(), "rb");
     if (in == nullptr) {
@@ -119,9 +125,8 @@ string findConfig( const string filename ) {
 	  
 	  string config = "RealTime.data7";
 
-	  if ( S.nClauses() < 1900000 || S.nVars() < 4000000 || S.nTotLits() < 12000000){
-	    
-	    parse_DIMACS(in, S);
+	  cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl;
+	  if ( S.nClauses() < 1900000 || S.nVars() < 4000000 || S.nTotLits() < 12000000) {
 	    
 	    CNFClassifier* cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
 	    cnfclassifier->setVerb(0);

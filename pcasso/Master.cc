@@ -891,6 +891,7 @@ Master::solveInstance(void* data)
     const int storageSize = master.defaultPcassoConfig.opt_storageSize;
 
 
+    Communicator* communicator = nullptr;
     if( storageSize > 0 ) {
     
 	// create ringbuffer for node
@@ -904,9 +905,7 @@ Master::solveInstance(void* data)
 	}
 	
 	  // setup communication layer with default values
-	  Communicator* communicator = new Communicator(tData.id, comData);
-  #warning add recursively receinving communicators to the communicator
-  #warning extend the receiving method of an communicator to receive also from parent communicator (receive all)
+	  communicator = new Communicator(tData.id, comData);
   #warning note for future: how to hande author IDs in ringbuffers with multiple writers from different nodes in one buffer (not necessary for downward.only)
 	  
 	  // setup parameters for communication system
@@ -1078,9 +1077,19 @@ Master::solveInstance(void* data)
     }
 
     // take care about the output
-    if (MSverbosity > 1) { fprintf(stderr, "finished working on an instance (node %d, level %d)\n", tData.nodeToSolve->id(), tData.nodeToSolve->getLevel()); }
+    if (MSverbosity > 1) { fprintf(stderr, "c finished working on an instance (node %d, level %d)\n", tData.nodeToSolve->id(), tData.nodeToSolve->getLevel()); }
 
-
+    // tell about sharing
+    if( tData.nodeToSolve->sharingPool != nullptr ) {
+      if (MSverbosity > 0) { fprintf(stderr, "c sharing on node %d : %d sent, %d received\n", tData.nodeToSolve->id(), communicator->nrSendCls, communicator->nrReceivedCls ); }  
+    }
+    
+    // make sure that the communicator is delete again
+    if( communicator != nullptr ) {
+      delete communicator;
+      communicator = nullptr;
+    }
+    
     // take care about statistics
     // since solver is dead, there is no need to have a lock for reading statistics!
     // since we are in the master, there is also no need to lock changing statistics here, however, its there ...
@@ -1318,7 +1327,7 @@ Master::splitInstance(void* data)
         exit(127);
         } */
 
-        fprintf(stderr, "master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False);
+        fprintf(stderr, "c master: splitting instance returned with sat: %d, unsat: %d\n", solution == l_True, solution == l_False);
 
         // tell statistics
         PcassoDebug::PRINT_NOTE("c add to created nodes: ");
@@ -1328,7 +1337,7 @@ Master::splitInstance(void* data)
 
         // only if there is a valid vector, use it!
         if (valid != 0) {
-            fprintf(stderr, "master: received unit %d clauses\n", valid->size());
+            fprintf(stderr, "c master: received unit %d clauses\n", valid->size());
             for (int i = 0; i < (*valid).size(); i++) {
                 vec<Lit> *tmp_cls = (*valid)[i];
                 validConstraints.push_back(new vector<Lit>);
@@ -1347,7 +1356,7 @@ Master::splitInstance(void* data)
         }
         //          fprintf( stderr,"\n");
 
-        fprintf(stderr, "master: received %d splits\n", splits->size());
+        fprintf(stderr, "c master: received %d splits\n", splits->size());
         for (int i = 0; i < (*splits).size(); i++) {
             if (MSverbosity > 1) { fprintf(stderr, "Split %d\n", i); }
             vec<vec<Lit>*> *tmp_cnf = (*splits)[i];

@@ -283,6 +283,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
 
     if (onlineDratChecker != 0) { onlineDratChecker->setVerbosity(config.opt_checkProofOnline); }
 
+//     cerr << "c sizes: solver: " << sizeof(Solver) << " comm: " << sizeof(Communicator) << endl;
+    
     if ((const char*)config.search_schedule != 0) {
         configScheduler.initConfigs(searchconfiguration, string(config.search_schedule), config.sscheduleGrowFactor, config.scheduleDefaultConflicts, config.scheduleConflicts);    // setup configuration
     }
