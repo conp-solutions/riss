@@ -252,8 +252,10 @@ int main(int argc, char** argv)
 	  // The below limits should also be set automatically. 
 	  string config = "505-O";
 	  
+	  parse_DIMACS(in, *S);
+	  
 	  if ( S->nClauses() < 4000000 || S->nVars() < 1900000 || S->nTotLits() < 12000000){
-	    parse_DIMACS(in, *S);
+	    
 	    //gzclose(in);
 	    
 	    CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());

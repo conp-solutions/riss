@@ -131,7 +131,7 @@ string findConfig( const string filename ) {
 	  string config = "RealTime.data7";
 
 	  cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl;
-	  if ( S.nClauses() < 1900000 || S.nVars() < 4000000 || S.nTotLits() < 12000000) {
+	  if ( S.nClauses() < 4000000 || S.nVars() < 1900000 || S.nTotLits() < 12000000) {
 	    
 	    CNFClassifier* cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
 	    cnfclassifier->setVerb(0);
