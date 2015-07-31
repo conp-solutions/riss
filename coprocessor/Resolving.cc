@@ -52,6 +52,7 @@ bool Resolving::process(bool post)
         if (config.opt_add2_red) {
             // do not simplify, if the formula is considered to be too large!
             if (!data.unlimited() && (data.nVars() > config.opt_addRedBins_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_addRedBins_cls && data.nTotLits() > config.opt_addRedBins_lits)) { return false; }
+            cerr << "c add redundant binary clauses" << endl;
             addRedundantBinaries();
         }
     }

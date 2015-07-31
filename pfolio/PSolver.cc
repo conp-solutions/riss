@@ -67,7 +67,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     // set global coprocessor configuratoin
     if ((const char*)pfolioConfig.opt_ppconfig != nullptr) {
         defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
-// 	DOUT( cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl; );
+ 	DOUT( cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl; );
     }
 
     // set preprocessor, if there is one selected
@@ -265,7 +265,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
 
 lbool PSolver::simplifyFormula()
 {
-//     cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;
+    DOUT( cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl; );
     if( winningSolver != -1 ) return l_Undef; // simplify only, if there is no winning solver already
     lbool ret = l_Undef;
     /*
@@ -1115,6 +1115,10 @@ void PSolver::kill()
     if( killed ) return; // killed already
     killed = true;
     if (verbosity > 0) { cerr << "c MASTER kills all child threads ..." << endl; }
+    
+    // tell each incarnation that it should stop now
+    interrupt();
+    
     // set all threads to working (they'll have a look for new work on their own)
     for (unsigned i = 0 ; i < threads; ++ i) {
         communicators[i]->ownLock->lock();
@@ -1136,7 +1140,8 @@ void PSolver::kill()
     for (unsigned i = 0 ; i < threads; ++ i) {
         int* status = 0;
         int err = 0;
-        err = pthread_join(threadIDs[i], (void**)&status);
+	pthread_cancel(threadIDs[i]); // terminate thread
+        err = pthread_join(threadIDs[i], (void**)&status); // wait for terminated thread
         if (err != 0) { cerr << "c joining a thread resulted in a failure with status " << *status << endl; }
     }
     if (verbosity > 1) { cerr << "c finished killing" << endl; }
@@ -1153,6 +1158,7 @@ void* runWorkerSolver(void* data)
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
 
     Communicator& info = * ((Communicator*)data);
 

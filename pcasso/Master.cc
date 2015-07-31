@@ -70,7 +70,7 @@ static IntOption     split_mode("SPLITTER", "split-mode",  splitString.c_str(), 
 static DoubleOption  work_timeout("SPLITTER", "work-timeout", "timeout for worker theards (seconds).\n", -1, DoubleRange(-1, true, 2000000000, true));
 static IntOption     work_conflicts("SPLITTER", "work-conflicts", "limit for conflicts in a working thread.\n", -1, IntRange(-1, INT32_MAX));
 static DoubleOption  split_timeout("SPLITTER", "split-timeout", "timeout for splitter theards (seconds).\n", 1024, DoubleRange(-1, true, 2000000000, true));
-static IntOption     work_threads("SPLITTER", "threads", "number of threads that should be used.\n", 1, IntRange(1, 64));
+static IntOption     work_threads("SPLITTER", "threads", "number of threads that should be used.\n", 1, IntRange(0, 64));
 //static IntOption     solve_mode        ("SPLITTER", "solve-mode","how to solve child nodes (0=usual, 1=simplification)\n", 0, IntRange(0, 1));
 static IntOption     maxSplitters("SPLITTER", "max-splitters", "how many splitters can be used simultaneously\n", 1, IntRange(1, 1024));
 static BoolOption    loadSplit("SPLITTER", "load-split", "If there is nothing to solve,but to split, split!.\n", false);
@@ -128,7 +128,7 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
     // decrease available elements in semaphore down to 0 -> next call will be blocking
     sleepLock.wait();
 
-    threadData = new ThreadData[threads];
+    threadData = new ThreadData[threads == 0 ? 1 : threads];
 
     createdNodeID = statistics.registerI("createdNodes");
     loadSplitID = statistics.registerI("loadSplits");
@@ -162,9 +162,10 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
     globalSolver = new PSolver(0,(const char*)global_prissConfig == 0 ? 0 : (const char*)global_prissConfig, global_priss_threads);
     globalSolver->verbosity = MSverbosity;
     
+     DOUT( cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl; );
     // set the preferred sequential configuration to be executed in the global priss, if enabled
     if( preferredSequentialConfig != "" && global_priss_threads > 0) globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads-1);
-//     DOUT( cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl; );
+
 }
 
 

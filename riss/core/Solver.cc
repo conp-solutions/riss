@@ -2729,8 +2729,6 @@ void Solver::dumpAndExit(const char* filename)
 lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
-
-    cerr << "c call solve proof: " << outputsProof() << endl;
     
     if (preprocessCall != afterSimplification) {
 

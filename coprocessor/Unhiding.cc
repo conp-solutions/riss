@@ -68,7 +68,11 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
     assert(stampInfo[ toInt(literal) ].dsc == 0 && "the literal should not have been visitted before");
     stampInfo[ toInt(literal) ].dsc = stamp;
     stampInfo[ toInt(literal) ].obs = stamp;
+    assert(stampInfo[ toInt(literal) ].root == literal && "the literal should not have a root");
+//     stampInfo[ toInt(literal) ].root = literal;
+    assert(stampInfo[ toInt(literal) ].parent == literal && "the literal should not have a parent");
 //     stampInfo[ toInt(literal) ].parent = literal;
+    
     // bool flag = true;
     Lit* adj = big.getArray(literal);
     if (!uhdNoShuffle) { shuffleVector(adj, big.getSize(literal)); }
@@ -111,6 +115,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
                 continue;
             }
 
+            assert( stampInfo[ toInt(l) ].root != lit_Undef && "root of the literal cannot be litundef" );
             if (stampInfo[ toInt(stampInfo[ toInt(l) ].root) ].dsc <= stampInfo[ toInt(~l1) ].obs) {
                 Lit lfailed = l;
                 while (stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt(~l1) ].obs
@@ -754,6 +759,7 @@ bool Unhiding::process()
             }
         }
         assert(stampInfo.size() == 2 * data.nVars() && "should not have more elements");
+	if( data.isInterupted() ) break; // stop here, if interupted
         // do stamping for all roots, shuffle first
         const uint32_t ts = data.lits.size();
         if (!uhdNoShuffle) {
