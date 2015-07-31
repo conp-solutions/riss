@@ -1177,16 +1177,16 @@ inline void CoprocessorData::correctCounters()
 inline void CoprocessorData::garbageCollect(std::vector<Riss::CRef> ** updateVectors, int size)
 {
     if (debugging) {
-        std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
+         std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
         return;
     }
     Riss::ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
     // correct add / remove would be nicer
 
-    std::cerr << "c garbage collection ... " << std::endl;
+    DOUT( std::cerr << "c garbage collection ... " << std::endl; );
     relocAll(to, updateVectors);
-    std::cerr << "c Garbage collection: " << ca.size()*Riss::ClauseAllocator::Unit_Size
-              << " bytes => " << to.size()*Riss::ClauseAllocator::Unit_Size <<  " bytes " << std::endl;
+    DOUT( std::cerr << "c Garbage collection: " << ca.size()*Riss::ClauseAllocator::Unit_Size
+              << " bytes => " << to.size()*Riss::ClauseAllocator::Unit_Size <<  " bytes " << std::endl; );
 
     to.moveTo(ca);
 }

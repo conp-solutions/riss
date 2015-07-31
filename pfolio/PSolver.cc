@@ -899,6 +899,11 @@ void PSolver::createThreadConfigs()
     } 
       
     
+    /*
+    *
+    * Configurations that are added here might also be added as preset to PfolioConfig.cc
+    *
+    */
 
 
 

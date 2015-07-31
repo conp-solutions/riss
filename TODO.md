@@ -15,3 +15,5 @@ A list of known bugs of the solver (use involved techniques are your own risk)!
 
 riss-core DimacsSorterHalf_0_6.cnf.gz -enabled_cp3 -rew -no-cp3_rew_amo -cp3_rew_imp
 
+# one some small.cnf
+-rfirst=32 -rtype=1 -init-pol=5 -init-act=3 -rnd-freq=0.01 -var-decay-b=0.85 -biAsFreq=16 -biAsserting -otfss -sUHLEsize=64 -sUHLElbd=1
