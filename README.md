@@ -73,7 +73,24 @@ cmake -D OPTION_NAME=value ..
 | SHIFTBMC           | Include build targets for shiftbmc and aiger library   |     OFF |
 | AIGER-TOOLSS       | Include build targets for all agier executables        |     OFF |
 | WARNINGS           | Set verbose warning flags                              |     OFF |
+| QUIET              | Disable Wcpp                                           |     OFF |
+| CLASSIFIER         | Use the classifier in Riss and Pcasso                  |     OFF |
 
+
+## Incremental Solving
+
+Riss supports two different C interfaces, where one is the IPASIR interface, which has been
+set up for incremental track of the SAT Race in 2015. The actual interface of Riss supports
+a few more routines. Furthermore, Coprocessor's simplification can be used via a C interface.
+
+### Build the solver for the IPASIR interface
+
+After running cmake (see above), build the following library:
+
+```bash
+make riss-coprocessor-lib-static
+```
+Then, include the header file "riss/ipasir.h" into your project, and link against the library.
 
 ## Common Usage
 
@@ -88,7 +105,8 @@ Due to the large number of parameters, a more helpful alternative is:
 The configuration specification can be written to a pcs file automatically. 
 Before using this file with an automated configuration framework, please check
 that only necessary parameters appear in the file. The procedure will include 
-all parameters, also the cpu or memory limit parameters.
+all parameters, also the cpu or memory limit parameters, and is currently considered
+experimental.
 
   bin/<tool> -pcs-file=<pcs-filename>
   
@@ -126,6 +144,8 @@ For more information use the "--help" parameter.
 
 
 ## Third party libraries
+
+The configuration prediction code is based on two external libraries:
 
  * [Armadillo](http://arma.sourceforge.net/). MLP License. Linear algebra library for C++
  * [libpca](http://sourceforge.net/projects/libpca/). MIT License. C++ library for principal component analysis

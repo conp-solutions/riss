@@ -330,7 +330,7 @@ int main(int argc, char** argv)
             // add the empty clause to the proof, close proof file
             if (S->proofFile != nullptr) {
                 bool validProof = S->checkProof(); // check the proof that is generated inside the solver
-                if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
+//                 DOUT( if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; } ); // TODO FIXME this is not implemented right now (online checked is not activated by default)
                 fprintf(S->proofFile, "0\n"), fclose(S->proofFile);
             }
             if (S->verbosity > 0) {

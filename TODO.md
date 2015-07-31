@@ -5,6 +5,10 @@ http://tools.computational-logic.org
 
 Please send bug reports to norbert.manthey@tu-dresden.de
 
+## To be implemented next
+
+* Online-proof-checking with proof validation after finishing a run on unsatisfiable formulas
+
 ## Known Bugs
 
 A list of known bugs of the solver (use involved techniques are your own risk)!
