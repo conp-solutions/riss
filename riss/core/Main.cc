@@ -247,7 +247,8 @@ int main(int argc, char** argv)
 	    exit(0);
 	  }
 	  
-	  string config = "RealTime.data7";
+	  // TODO FIXME set string according to current database "automatically"
+	  string config = "505-O";
 	  
 	  if ( S->nClauses() < 1900000 || S->nVars() < 4000000 || S->nTotLits() < 12000000){
 	    
