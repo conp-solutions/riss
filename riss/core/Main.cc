@@ -247,11 +247,12 @@ int main(int argc, char** argv)
 	    exit(0);
 	  }
 	  
-	  // TODO FIXME set string according to current database "automatically"
+	  // TODO FIXME set string according to current database "automatically". 
+	  // Here, the best configuration for the "cut" formulas should be used. 
+	  // The below limits should also be set automatically. 
 	  string config = "505-O";
 	  
-	  if ( S->nClauses() < 1900000 || S->nVars() < 4000000 || S->nTotLits() < 12000000){
-	    
+	  if ( S->nClauses() < 4000000 || S->nVars() < 1900000 || S->nTotLits() < 12000000){
 	    parse_DIMACS(in, *S);
 	    //gzclose(in);
 	    
