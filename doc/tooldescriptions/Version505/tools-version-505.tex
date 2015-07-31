@@ -63,11 +63,11 @@ Similarly to the other two solvers, \pcasso first simplifies the formula with a 
 The incremental solver interface is currently only supported by \riss. 
 \priss supports a similar interface, and can be used to use a parallel portfolio solver as incremental solver. 
 
-The remainder of the document describes only the changes that have been applied to the tools compared to their previous versions of 2014.
+The remainder of the document describes only the changes that have been applied to the tools compared to their previous versions of 2014~\cite{Mriss427-2014,MRissBlackbox-2014,pcasso2014}.
 
 \section{Modifications of Riss and Coprocessor}
 
-\textsc{Riss 5.05} is an extension of \textsc{Riss 4.27}, where a few techniques have been removed to clean the code base, for example \emph{lazy hyper binary resolution}~\cite{precosat}, which has been executed during search. 
+\textsc{Riss 5.05} is an extension of \textsc{Riss 4.27}, where a few techniques have been removed to clean the code base, which has been executed during search. 
 On the other hand, many modification have been added, among others ideas that have been proposed in recent \textsc{Minisat}-Hack-Tracks. 
 The considered extensions come from the solvers \textsc{RestartSAT}, \textsc{CirMiniSAT}, \textsc{MinitSAT}, \textsc{mipisat} and \textsc{MiniSat\_HACK\_999ED}. 
 All novel features are turned off by default, such that the default behavior of the solver does not change too much when modifying the implementation. 
@@ -76,17 +76,17 @@ The initialization of the solver has been improved: the activities for decision 
 \subsection{Conflict Analysis and Minimization}
 
 Compared to \glucose, the LBD of the currently constructed learnt clause is only re-calculated if a minimization technique modified the clause.
-Finally, \riss implements a modified variables on \emph{restricted extended-resolution}~\cite{glucoseER,dedtreff2014}. 
+Finally, \riss implements a modified variables on \emph{restricted extended-resolution}~\cite{DBLP:conf/aaai/AudemardKS10,MextendedResolutionInModernSAT}. 
 This variant also allows to structurally extract binary AND-gates from the formula, to later use this information to reduce learned clauses by replacing both input literals with the output literal of such a gate. 
 Finally, another unpublished additional clause minimization technique is added to conflict analysis. 
 Removing learnt clauses can be done as in \glucose based on the LBD of the clause, and an dynamic schedule. 
-However, the clause activity based version and the more static schedule of \minisat are also supported, including the ideas of the randomly assigned activity from~\cite{frenchPaper}. 
+However, the clause activity based version and the more static schedule of \minisat are also supported, including the ideas of the randomly assigned activity from~\cite{DBLP:journals/corr/JabbourLSS14}. 
 
 \subsection{Unit Propagation}
 
 The implementation of unit propagation has also been improved: 
 Instead of storing binary clauses in an extra watch list, as implemented in \glucose, we store all clauses in a common watch list. 
-However, each list entry stores a Boolean flag which indicated whether the current clause is binary, such that we just have to work with the \emph{blocking literal}~\cite{minisat21}, and do not need to access the actual clause. 
+However, each list entry stores a Boolean flag which indicated whether the current clause is binary, such that we just have to work with the \emph{blocking literal}, and do not need to access the actual clause. 
 By using only one watch list, the used memory can be reduced compared to \glucose.
 
 \subsection{Coprocessor}
@@ -95,9 +95,9 @@ By using only one watch list, the used memory can be reduced compared to \glucos
 Small changes have been applied to the execution order of the simplification techniques, which now all process least occurring literals first (except \emph{bounded variable addition}~\cite{Mbva}). 
 Furthermore, \coprocessor now runs all activated simplification techniques twice in the specified order. 
 
-We added an implementation of an elimination routine to remove \emph{resolution asymmetric tautologies} (RAT)~\cite{?}. 
-Based on this routine, and the idea of \emph{covered literal elimination}~\cite{MantheyP:KI:2014}, we implemented routines to add a redundant clause, if it subsumes another clause that is present in the formula. 
-Hence, \coprocessor allows to perform \emph{vivification}~\cite{?} by adding \emph{asymmetric tautologies} that subsume other clauses. 
+We added an implementation of an elimination routine to remove \emph{resolution asymmetric tautologies} (RAT)~\cite{inprocessingRules}. 
+Based on this routine, and the idea of \emph{covered literal elimination}~\cite{MclePPdrat}\footnote{Developped independly also by Heule et al.}, we implemented routines to add a redundant clause, if it subsumes another clause that is present in the formula. 
+Hence, \coprocessor allows to perform \emph{vivification} by adding \emph{asymmetric tautologies} that subsume other clauses. 
 Similarly, \coprocessor can add \emph{blocked clauses}, \emph{covered clauses}, or \emph{RATs}. 
 
 The implemented extraction of XORs in the formula does not use a detection based on subsumption due to its high time consumption. 
@@ -107,7 +107,7 @@ On the other hand, the XOR reasoning does not only use information about retriev
 
 The parallel portfolio solver \priss can simplify the formula with \coprocessor for all its incarnations in parallel. 
 Afterwards, each incarnation can work on this formula, such that information sharing is easier -- all clauses can be shared as long as no further simplification that do not preserve equivalence are applied. 
-An incarnation can choose to to work on the original formula instead, but then (currently) Knowledge sharing with this incarnation is disabled. 
+An incarnation can choose to to work on the original formula instead, but then (currently) knowledge sharing with this incarnation is disabled. 
 
 \subsection{Information Sharing}
 
@@ -119,8 +119,8 @@ Information is received whenever an incarnation should do a search decision for 
 Due to the ring buffer implementation, incarnations might miss shared clauses. 
 On the other hand, this implementation ensures that the size of the shared buffer is limited. 
 
-Received clauses can be minimized by \emph{vivification} and reduced clauses can be shared immediately, as proposed in~\cite{siert}. 
-Learned clauses are shared after (i) they have been learned, (ii) they have been used in unit propagation~\cite{glucose4-sat2014}, or (iii) after they have been used for conflict analysis again. 
+Received clauses can be minimized by \emph{vivification} and reduced clauses can be shared immediately, as proposed in~\cite{DBLP:conf/sat/WieringaH13}. 
+Learned clauses are shared after (i) they have been learned, (ii) they have been used in unit propagation~\cite{glucose4sharing}, or (iii) after they have been used for conflict analysis again. 
 This way, only ``relevant'' learned clauses are shared. 
 
 Before a clause is shared, it has to pass a size filter and an LBD filter. 
@@ -144,7 +144,7 @@ Furthermore, \emph{inprocessing} with equivalence preserving techniques is enabl
 
 \section{The Search Space Partitioning Solver Pcasso}
 
-\pcasso implements solving formulas in parallel based on iterative search space partitioning~\cite{sat2012}. 
+\pcasso implements solving formulas in parallel based on iterative search space partitioning~\cite{Miterative-splitting}. 
 The partitioning is the same as in last years version. 
 
 \subsection{Solving In Parallel}
@@ -176,7 +176,7 @@ Due to the high number of parameters \riss implements a configuration prediction
 
 \subsection{Black Box}
 
-The machine learning front end is based on the feature extraction routines implemented in \riss. 
+The machine learning front end is based on the feature extraction routines implemented in \riss~\cite{Mblackbox}. 
 Compared to last years version we improved the implementation of the extraction to reduce the memory consumption considerably by consuming slightly more run time. 
 
 The Knowledge base for prediction is now integrated into the solver, such that there are no dependencies to external tools any longer. 
@@ -227,7 +227,7 @@ In \pcasso, we use different configurations depending on the number of available
 The configuration of \pcasso uses a global \priss incarnation with $3$ workers. 
 Another $3$ workers are used for solving in the partitioning approach. 
 The values are increased to $4$ workers in \priss and $8$ in partitioning. 
-The full number of cores is not used, as the slowdown based on resource sharing is too high with the currently implemented data structures, as explained in~\cite{?arminSharing}. 
+The full number of cores is not used, as the slowdown based on resource sharing is too high with the currently implemented data structures, as explained in~\cite{portfolioSlowdown}. 
 We furthermore do not utilize hyper threads. 
 
 The second configuration of \pcasso (BlackBox) uses the same number of workers. 
