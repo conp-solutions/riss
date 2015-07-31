@@ -598,6 +598,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
         const Lit p = learned_clause[0]; // this literal cannot be removed!
         const uint32_t cs = learned_clause.size(); // store the size of the initial clause
         Lit Splus  [cs];      // store sorted literals of the clause
+        DOUT( if (config.opt_learn_debug) cerr << "c minimize with UHLE: " << learned_clause << endl; );
         for (uint32_t ci = 0 ; ci  < cs; ++ ci) { Splus [ci] = learned_clause[ci]; }
 
         {
@@ -622,7 +623,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
             const Lit l = Splus[ pp - 1];
             const uint32_t fin = big->getStop(l);
             if (fin > finished) {
-                for (int i = 0 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned clause
+                for (int i = 1 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned claus, do not remove the asserting literal!
                     if (learned_clause[i] == l) {
                         learned_clause[i] = learned_clause[ learned_clause.size() - 1]; learned_clause.pop();
                     }
@@ -661,7 +662,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
             const Lit l = Sminus[ pn ];
             const uint32_t fin = big->getStop(l);
             if (fin < finished) {   // remove the complementary literal from the clause!
-                for (int i = 0 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned clause
+                for (int i = 1 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned clause, do not remove the asserting literal
                     if (learned_clause[i] == ~l) {
                         learned_clause[i] = learned_clause[ learned_clause.size() - 1]; learned_clause.pop();
                     }
@@ -674,7 +675,11 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
         // do some stats!
         searchUHLEs ++;
         searchUHLElits += (cs - learned_clause.size());
-        if (cs != learned_clause.size()) { return true; }   // some literals have been removed
+        if (cs != learned_clause.size()) { 
+	  DOUT( if (config.opt_learn_debug) cerr << "c UHLE result: " << learned_clause << endl; )
+	  // some literals have been removed
+	  return true; 
+	}   
         else { return false; } // no literals have been removed
     } else { return false; }// no literals have been removed
 }
@@ -2724,7 +2729,9 @@ void Solver::dumpAndExit(const char* filename)
 lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
-//     cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
+
+    cerr << "c call solve proof: " << outputsProof() << endl;
+    
     if (preprocessCall != afterSimplification) {
 
         // print formula of the call?
@@ -4345,7 +4352,10 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 data.tmpPropagateLits.push(other);
                 DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << other << endl;);
                 data.otfssUnits ++; data.otfssClss++;
-                c.setLocked(); // tell the clause it must go, will be satisfied after unit propagation anyways
+		// tell proof about reduced clause
+		addCommentToProof("shrink to unit due to otfss");
+		addUnitToProof(other);
+		// clause will be removed later, when check for satisfied clauses is performed
             }
         } else if (c.size() == 3) {
             if (c[0] == removeLit || c[1] == removeLit || c[2] == removeLit) { // literal must not be in the clause anymore, because clause was in list multiple times
@@ -4356,6 +4366,11 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 assert(c.size() == 2 && "clause has to be binary now");
                 attachClause(data.info[i].cr);   // added as binary watch again
                 data.otfssBinaries ++; data.otfssClss++;
+		// tell proof about reduced clause
+		addCommentToProof("shrink ternary to binary due to otfss");
+		addToProof(c);
+		addToProof(c, true, removeLit);
+		// remove clause, enqueue unit clause if necessary
                 c.mark(1); // mark clause, so that its not processed twice, is undone afterwards again
                 assert((value(c[0]) != l_False || value(c[1]) != l_False) && "otherwise the clause would have been found before");
                 if (value(c[0]) == l_False) {
@@ -4373,6 +4388,11 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                     data.otfssClss++;
                     c[j] = c[ c.size() - 1 ]; // move last literal forward
                     c.pop();                  // remove the literal
+		    // tell proof about reduced clause
+		    addCommentToProof("shrink clause due to otfss");
+		    addToProof(c);
+		    addToProof(c, true, removeLit);
+		    // handle new clause
                     c.mark(1);                // mark clause, so that its not processed twice, is undone afterwards again
                     if (j < 2) {              // the literal was a watched literal
                         assert((value(removeLit) == l_True || value(c[ 1 - j ]) != l_False) && "the two watched literals of the clause should be free (true of undef");
@@ -4427,13 +4447,17 @@ bool Solver::processOtfss(Solver::OTFSS& data)
     // enqueue all found unit clauses, propagate afterwards (all new clauses are present already)
     for (int i = 0 ; i < data.tmpPropagateLits.size() ; ++ i) {
         const Lit& propLit = data.tmpPropagateLits[i];
-        if (value(propLit) == l_False) { return true; }
-        else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
+        if (value(propLit) == l_False) { 
+	  data.clearQueues(); // make sure that after processing otfss all data is removed. 
+	  return true; 
+	} else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
     }
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after enqueue: " << trail << endl;);
     bool failed = propagate() != CRef_Undef;
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after propagate: " << trail << endl;);
     if (failed) { ok = false; }
+    
+    data.clearQueues(); // make sure that after processing otfss all data is removed. 
     return failed;
 }
 

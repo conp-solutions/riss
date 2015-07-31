@@ -36,6 +36,7 @@ endfunction()
 # no version is specified, this "global" version will be used,
 version("5.0.5")
 
+option(DRATPROOF       "Produce DRAFT-proofs (disabled by default)" OFF)
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
@@ -78,6 +79,12 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -s")  # strip binary
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")  # strip shared libs
+endif()
+
+# proofs
+message("-- DRAT proofs ${DRATPROOF}")
+if(DRATPROOF)
+    add_definitions(" -DDRATPROOF")
 endif()
 
 # 

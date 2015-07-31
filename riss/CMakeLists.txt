@@ -3,9 +3,6 @@
 # Use the global version of the whole tool box. 
 project(riss)
 
-option(DRATPROOF "Produce DRAFT-proofs (disabled by default)" OFF)
-
-
 # 
 # Dependencies
 # 
@@ -77,12 +74,6 @@ add_executable(riss-simp simp/Main.cc)
 if(CLASSIFIER)
   set_target_properties(riss-core PROPERTIES COMPILE_FLAGS "-DCLASSIFIER")
   set_target_properties(riss-simp PROPERTIES COMPILE_FLAGS "-DCLASSIFIER")
-endif()
-
-message("-- DRAT proofs ${DRATPROOF}")
-if(DRATPROOF)
-    set_target_properties(riss-core PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
-    set_target_properties(riss-simp PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
 endif()
 
 # Create a symlink to the binary as shortcut

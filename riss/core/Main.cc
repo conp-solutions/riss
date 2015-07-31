@@ -386,8 +386,10 @@ int main(int argc, char** argv)
 
         // put empty clause on proof
         if (ret == l_False && S->proofFile != nullptr) {
+#ifdef DRATPROOF
             bool validProof = S->checkProof(); // check the proof that is generated inside the solver
             if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
+#endif
             fprintf(S->proofFile, "0\n");
         }
 
