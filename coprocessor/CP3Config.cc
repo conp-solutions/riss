@@ -67,6 +67,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_unlimited     (_cat, "cp3_limited",     "Limits for preprocessing techniques", true,                                                       optionListPtr, &opt_enabled),
     opt_randomized    (_cat, "cp3_randomized",  "Steps withing preprocessing techniques are executed in random order", false,                      optionListPtr, &opt_enabled),
     opt_inprocessInt  (_cat, "cp3_inp_cons",    "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX),                  optionListPtr, &opt_inprocess),
+    opt_inpIntInc     (_cat, "cp3_iinp_cons",   "Increase inprocessing interval in each iteration", 0, IntRange(0, INT32_MAX),                 optionListPtr, &opt_inprocess),
     opt_simplifyRounds(_cat, "cp3_iters",       "simplification rounds in preprocessing", 1, IntRange(0, INT32_MAX),                               optionListPtr, &opt_enabled),
 
     opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3), optionListPtr, &opt_enabled),

@@ -60,7 +60,7 @@ const char * ipasir_signature()
  */
 void * ipasir_init()
 {
-    return riss_init("INCREMENTAL:-init-act=3:-actStart=2048"); // use riss with the configuration for incremental solving
+    return riss_init("INCSOLVE:-init-act=3:-actStart=2048:INCSIMP"); // use riss with the configuration for incremental solving, and incremental simplification (after 50000 conflicts)
 }
 
 /**

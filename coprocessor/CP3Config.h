@@ -50,6 +50,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_unlimited  ;
     Riss::BoolOption opt_randomized  ;
     Riss::IntOption  opt_inprocessInt;
+    Riss::IntOption  opt_inpIntInc;
     Riss::IntOption  opt_simplifyRounds;
 
     Riss::IntOption  opt_exit_pp     ;

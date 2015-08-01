@@ -1097,6 +1097,9 @@ lbool Preprocessor::inprocess()
     // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
     if (config.opt_inprocess) {
 
+        // increase the distance to the next inprocessing according to the parameter
+	config.opt_inprocessInt = config.opt_inprocessInt + config.opt_inpIntInc;
+      
         freezeSearchVariables(); // take care that special variables of the search are not destroyed during simplification
 
         /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/
