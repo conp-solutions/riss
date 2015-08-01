@@ -53,7 +53,7 @@ using namespace Riss;
 
 //=================================================================================================
 
-
+/*
 void printStats(SplitterSolver& solver)
 {
     double cpu_time = cpuTime();
@@ -64,8 +64,9 @@ void printStats(SplitterSolver& solver)
     fprintf(stderr, "propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations / cpu_time);
     fprintf(stderr, "conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
     if (mem_used != 0) { fprintf(stderr, "Memory used           : %.2f MB\n", mem_used); }
-    fprintf(stderr, "cCPU time              : %g s\n", cpu_time);
+    fprintf(stderr, "c CPU time              : %g s\n", cpu_time);
 }
+*/
 
 
 static Master* master;
@@ -118,7 +119,7 @@ string findConfig( const string filename ) {
   
     Solver S; // have a default solver object
     
-    cerr << "c find config for file " << filename.c_str() << endl;
+    DOUT( cerr << "c find config for file " << filename.c_str() << endl; );
     
     gzFile in = gzopen(filename.c_str(), "rb");
     if (in == nullptr) {
@@ -127,10 +128,10 @@ string findConfig( const string filename ) {
     parse_DIMACS(in, S);
     gzclose(in);
 	  
-	  
-	  string config = "RealTime.data7";
+	  // default configuration, if parsed formula is too large
+	  string config = "505-O";
 
-	  cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl;
+	  DOUT( cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl; );
 	  if ( S.nClauses() < 4000000 || S.nVars() < 1900000 || S.nTotLits() < 12000000) {
 	    
 	    CNFClassifier* cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
@@ -152,6 +153,7 @@ string findConfig( const string filename ) {
 	    delete cnfclassifier;
 	    
 	  }
+    return config;
 }
 #endif // CLASSIFIER
 
@@ -232,7 +234,7 @@ int main(int argc, char** argv)
     p.pre = pre;
     p.verb = verb;
 
-    Master pcassoMaster(p);
+    Master pcassoMaster(p, autoConfig); // tell pcasso about the automatically determined configuration
     master = &pcassoMaster;
     
 /*  // for now, handling signals is disabled  

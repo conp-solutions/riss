@@ -111,13 +111,13 @@ bool PfolioConfig::addPreset(const std::string& optionSet)
     } else if (optionSet == "delta") {
         parseOptions("-ppconfig=Riss427:plain_XOR:-cp3_iters=2:-ee:-cp3_ee_level=3:-cp3_ee_it:-rlevel=2:-bve_early -psetup=delta -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     } else if (optionSet == "epsilon") {
-        parseOptions("-ppconfig=STRONGUNSAT -psetup=epsilon -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+        parseOptions("-ppconfig=STRONGUNSAT:-no-cp3_stats -psetup=epsilon -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     } else if (optionSet == "best3") {
-        parseOptions("-ppconfig=505-O -psetup=best3 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+        parseOptions("-ppconfig=505-O:-no-cp3_stats -psetup=best3 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     } else if (optionSet == "best4") {
-        parseOptions("-ppconfig=505-O -psetup=best4 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+        parseOptions("-ppconfig=505-O:-no-cp3_stats -psetup=best4 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     } else if (optionSet == "best6") {
-        parseOptions("-ppconfig=505-O -psetup=best6 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+        parseOptions("-ppconfig=505-O:-no-cp3_stats -psetup=best6 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     }
     
     else {

@@ -73,7 +73,7 @@ static DoubleOption  split_timeout("SPLITTER", "split-timeout", "timeout for spl
 static IntOption     work_threads("SPLITTER", "threads", "number of threads that should be used.\n", 1, IntRange(0, 64));
 //static IntOption     solve_mode        ("SPLITTER", "solve-mode","how to solve child nodes (0=usual, 1=simplification)\n", 0, IntRange(0, 1));
 static IntOption     maxSplitters("SPLITTER", "max-splitters", "how many splitters can be used simultaneously\n", 1, IntRange(1, 1024));
-static BoolOption    loadSplit("SPLITTER", "load-split", "If there is nothing to solve,but to split, split!.\n", false);
+static BoolOption    loadSplit("SPLITTER", "load-split", "If there is nothing to solve, but to split, split!.\n", false);
 static BoolOption    stopUnsatChilds("SPLITTER", "stop-children", "If a child formula is known to be unsat, stop that solver.\n", false);
 static IntOption     phase_saving_mode("SPLITTER", "phase-saving-mode", "how to handle the phase saving information (0=not,1=use last)\n", 0, IntRange(0, 1));
 static IntOption     activity_mode("SPLITTER", "activity-mode", "how to handle the activity information (0=not,1=use last)\n", 0, IntRange(0, 1));
@@ -116,7 +116,7 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
     model(0),
     param(p),
     threads(work_threads),
-    space_lim(data_space / threads),
+    space_lim(data_space / (threads==0 ? 1 : threads) ),
     communicationLock(1),
     sleepLock(1),
     masterState(working),
@@ -164,7 +164,11 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
     
      DOUT( cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl; );
     // set the preferred sequential configuration to be executed in the global priss, if enabled
-    if( preferredSequentialConfig != "" && global_priss_threads > 0) globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads-1);
+    if( preferredSequentialConfig != "" && global_priss_threads > 0) { 
+      preferredSequentialConfig = preferredSequentialConfig + ":-no-cp3_stats"; // disable simplification output for extra configuration
+      DOUT( cerr << "c set preferred config for worker " << global_priss_threads - 1 << " : " << preferredSequentialConfig << endl; );
+      globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads-1);
+    }
 
 }
 
@@ -251,7 +255,7 @@ lbool Master::solveLimited(const vec< Lit >& assumps)
   
   if( global_priss_threads == 0 ) { // run only pcasso
     return solvePcasso();
-  } else if (global_priss_threads == threads ) { // run pfolio with all threads
+  } else if ( 0 == threads ) { // run pfolio with all threads
     return solvePfolio();
   }
   

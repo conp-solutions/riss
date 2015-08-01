@@ -3126,7 +3126,7 @@ void Solver::buildReduct()
             clauses[ keptClauses++ ] = clauses [j];
         }
     }
-    cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl;
+    DOUT (if (verbosity>2) cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl; );
     clauses.shrink_(clauses.size() - keptClauses);
 
 }

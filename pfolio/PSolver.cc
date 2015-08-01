@@ -566,10 +566,10 @@ void PSolver::createThreadConfigs()
 {
     const char* Configs[] = {
         "STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll", 
-        "-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec",
-        "-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ""-revMin -init-act=4 -actStart=2048 -refRec",
-        "-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ",
-        "-revMin -init-act=3 -actStart=2048 -longConflict -refRec ",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ""-revMin -init-act=4 -actStart=2048 -refRec",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -longConflict -refRec ",
         "Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegsv -no-dense -up -refRec ",
         "",         // 0
         "PLAINBIASSERTING", // 1
@@ -885,8 +885,8 @@ void PSolver::createThreadConfigs()
               configs[3].setPreset("LABS:-independent");
         }
 	if (threads > 4) {
-            ppconfigs[4].setPreset("RealTime.data2:-independent");
-              configs[4].setPreset("RealTime.data2:-independent");
+            ppconfigs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP");
+              configs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP"); // same pp as above, hence share clauses, but do not receive!
         }
 	if (threads > 5) {
             ppconfigs[5].setPreset("GI:-independent");

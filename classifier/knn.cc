@@ -54,14 +54,14 @@ string computeKNN ( int k, vector<double>& features){
   }
   
   sort(distances.begin(), distances.end(), sort_pred()); //sort distances vector with respect to the distance
-  for ( int i = 0; i < 15; ++i ) cerr << "c " << distances[i].second << " class: " << distances[i].first << endl;
+  // for ( int i = 0; i < 15; ++i ) cerr << "c " << distances[i].second << " class: " << distances[i].first << endl;
   
   classEstimation nearestClassNeigbours[amountClassesCC];
   nearestClassNeigbours[0] = pair<int, double>(0,0); // start counting by zero
   int result = 0; 
   
   if ( distances[0].second < zero ){
-  cout << "c Match file in database!" << endl;
+  // cerr << "c Match file in database!" << endl;
   result = getNearestPoint(distances, amountClassesCC);
   }
   else {
@@ -76,7 +76,7 @@ string computeKNN ( int k, vector<double>& features){
     classEstimation max = nearestClassNeigbours[0];
         
     for (int i = 1; i < amountClassesCC; ++i) { // start by 1 because max is nearestClassNeigbours[0]
-      cerr << "c c = " << i << " " << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
+      // cerr << "c c = " << i << " " << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl; 
       if (max.first <= nearestClassNeigbours[i].first){
 	if (max.first == nearestClassNeigbours[i].first){  // nearestNeighbours << sum of the distance
 	  if (max.second > nearestClassNeigbours[i].second){
@@ -230,7 +230,7 @@ string computeIgrKNN ( int k, int zero, string dataset ){
     classEstimation max = nearestClassNeigbours[0];
     
     for (int i = 1; i < amountClasses; ++i) { // start by 1 because max is nearestClassNeigbours[0]
-      cerr << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
+//       cerr << nearestClassNeigbours[i].first << " " << nearestClassNeigbours[i].second << endl;
       if (max.first <= nearestClassNeigbours[i].first){
 	if (max.first == nearestClassNeigbours[i].first){  // nearestNeighbours << sum of the distance
 	  if (max.second > nearestClassNeigbours[i].second){
@@ -245,11 +245,11 @@ string computeIgrKNN ( int k, int zero, string dataset ){
       }
     }
   }
+/*  
   cout << result << " " << classNames[result] << endl;
-  
   cerr << "Dimension: " << dimension << endl;
   cerr << "Size of the dataset: " << sizeDataset << " instances." << endl;
-  
+  */
   return classNames[result];
   
 }

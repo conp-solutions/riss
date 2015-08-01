@@ -48,6 +48,7 @@ Afterwards, more search algorithm extensions have been added, and \riss is equip
 that implements most of the recently published formula simplification techniques, ready to be used as inprocessing as well by taking care of learned clauses. 
 The parallel simplification techniques of \coprocessor are disables in the used configurations. 
 The aim of the solver is to provide a huge set of options on the one hand, to be able to adapt to new SAT applications, and an efficient implementation on the other hand. 
+Due to the huge configuration space, to increase robustness an algorithm for checking the reported satisfying assignment, as well as an on-the-fly DRAT proof verification are added to the sequential solver -- as the combination of all parameter configurations cannot be tested extensively. 
 
 Similarly, we build the parallel solver \priss and \pcasso, which again are highly configurable. 
 In \priss, each incarnation of \riss can be configured, and furthermore the properties of information sharing can be set. 
