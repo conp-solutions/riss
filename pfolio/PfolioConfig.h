@@ -118,7 +118,9 @@ bool PfolioConfig::addPreset(const std::string& optionSet)
         parseOptions("-ppconfig=505-O:-no-cp3_stats -psetup=best4 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     } else if (optionSet == "best6") {
         parseOptions("-ppconfig=505-O:-no-cp3_stats -psetup=best6 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
-    }
+    } else if (optionSet == "pcassoworker") {
+        parseOptions("-psetup=epsilon -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
+    } 
     
     else {
       ret = false; // indicate that no configuration has been found here!

@@ -97,6 +97,9 @@ class PSolver
     OriginalFormula* originalFormula; // data of original formula after parsing (if not set to be used, equal to nullptr)
     
     
+    CommunicationData* externalData;    // pointer to the data, that is shared among all threads
+    TreeReceiver* externalParent;       // handle to communcation of parent node
+    
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 
@@ -211,6 +214,11 @@ class PSolver
      */
     void overwriteAsIndependent(const string& preferredSequentialConfig, int thread);
 
+    /** set CommunicationData from the outside, to be used to setup the solver
+     *  Note: when this solver is shut down, nothing is deleted additionally
+     */
+    void setExternalCommunication(Communicator* com);
+    
   protected:
 
     /** initialize all the thread configurations
@@ -248,6 +256,7 @@ public:
      * note: afterwards, no other operations should be executed any more (for now)
      */
     void kill();
+
 };
 
 inline FILE* PSolver::getDrupFile()

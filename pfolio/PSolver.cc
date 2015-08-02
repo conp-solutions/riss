@@ -49,6 +49,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , externBuffer(0)
     , externSpecialBuffer(0)
     , originalFormula(nullptr)
+    , externalData(nullptr)
+    , externalParent(nullptr)
 {
  
     // set number of threads from constructor, overwrite command line, have at least one thread to allocate all structures
@@ -111,6 +113,13 @@ void PSolver::setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* ge
 }
 
 
+void PSolver::setExternalCommunication(Communicator* com)
+{
+  externalData   = com->data;
+  externalParent = com->parent;
+}
+
+
 void PSolver::parseConfigurations(const string& combinedConfigurations)
 {
     assert(threads == incarnationConfigs.size() && "have enough space for the threads already");
@@ -161,7 +170,8 @@ PSolver::~PSolver()
     solvers.clear(true);
 
     if (threadIDs != 0) { delete [] threadIDs; threadIDs = 0; }
-    if (data != 0) { delete data; data = 0; }
+    if (data != 0 && data != externalData ) { delete data; } // only delete, if we created this object
+    data = 0;
 
     if (deleteConfig) { delete privateConfig; }
 }
@@ -829,6 +839,43 @@ void PSolver::createThreadConfigs()
             if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
+    }  else if (defaultConfig == "pcassoworker") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+            configs[1].setPreset("STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uespgxv -no-dense -up -refRec -shareTime=1 -sendAll -init-pol=3 -init-act=6 -lbdIgnL0 -otfss -otfssL");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[2].setPreset("-revMin -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll -rnd-freq=0.01 -init-pol=6 -init-act=4 -biAsserting -minSizeMinimizingClause=0 -no-revMin -rmf");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll -rnd-freq=0.05 -init-pol=4 -init-act=5");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits -lbd-core-th=5 -var-decay-b=0.8 -var-decay-e=0.99  -rnd-freq=0.01 -init-pol=5");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("AUIP:LLA:SUHD:-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec -shareTime=0 -dynLimits -biAsserting");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegsv -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
     } else if (defaultConfig == "best3") {
 	if (threads > 0) {
             ppconfigs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits");
@@ -959,7 +1006,12 @@ bool PSolver::initializeThreads()
     // get space for thread ids
     threadIDs = new pthread_t [threads];
 
-    data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
+    
+    if( externalData != nullptr ) {
+      data = externalData;  // use the external data 
+    } else {
+      data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
+    }
 
     // communicate with external data pool, if there are links present
     if( externBuffer != 0 || externSpecialBuffer != 0) {
@@ -1012,6 +1064,22 @@ bool PSolver::initializeThreads()
 
             }
         }
+        
+        // forward tree parents (which will be deleted when this communicator is deleted)
+        if( externalParent != nullptr ) {
+	  TreeReceiver* p = externalParent;     // working pointer for the existing hierarchy
+	  TreeReceiver *r = new TreeReceiver(); // pointer for the copy of the hierarchy
+	  r->setData( p->getData() );           // link first level
+	  communicators[i]->setParentReceiver( r ); // tell communicator
+	  
+	  while( p->hasParent() ) {
+	    p = p->getParent();                    // move one level upwards
+	    TreeReceiver* n = new TreeReceiver();  // create new receiver
+	    n->setData( p->getData() );            // link data
+	    r->setParent( n );                     // store parent
+	    r = n;                                 // follow one level up
+	  }
+	}
 
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);

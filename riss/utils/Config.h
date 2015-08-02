@@ -145,6 +145,12 @@ bool Config::addPreset(const std::string& optionSet)
 		     + std::string("-revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgsxvf ")
 		     + std::string("-sUhdProbe=3 -sUHLEsize=30 ")
 		     , false);
+    } else if (optionSet == "equival") {
+        parseOptions( std::string("-enabled_cp3 -subsimp -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 ")
+	             + std::string("-cp3_uhdTrans ")
+		     + std::string("-xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed ")
+		     + std::string("-cp3_iters=2 -up ")
+		     , false);
     }
 
     /*

@@ -482,6 +482,13 @@ public:
   
   void setData( CommunicationData* outerData ) { data = outerData; }
   
+  bool hasParent() const { return parent != nullptr ; }
+  
+  TreeReceiver* getParent() { return parent ; }
+  
+  /** return pointer to data object (e.g. to initialize incarnations of PSolver */
+  CommunicationData* getData() { return data; }
+  
     /** receive clauses from current data, as well as from parents data recursively
      * follow recursion, even if there is no data element in the middle 
      * copy all clauses into the clauses std::vector that have been received since the last call to this method
@@ -567,11 +574,11 @@ class Communicator
 
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
-    TreeReceiver* parent; // handle to communcation of parent node
-
     // methods
   public:
 
+    TreeReceiver* parent; // handle to communcation of parent node
+    
     int hardwareCore; // core on which this thread should be pinned (if -1, do not use pinning)
     
     vec<Lit> assumptions;

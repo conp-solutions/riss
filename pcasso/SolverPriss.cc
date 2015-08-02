@@ -78,5 +78,7 @@ inline uint64_t SolverPriss::getConflicts()              { return 0; } // FIXME:
 inline void     SolverPriss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
 inline Lit      SolverPriss::trailGet(const unsigned int index) { Lit l = lit_Undef; return l; } // FIXME: solver.trail[index]; }
 inline unsigned int SolverPriss::getNumberOfTopLevelUnits() const    { return 0; } // FIXME: solver.trail.size(); }
-inline void     SolverPriss::setCommunication(Communicator& com) { ; } // FIXME: set communication?
+inline void     SolverPriss::setCommunication(Riss::Communicator& com)   { 
+  solver.setExternalCommunication(&com); // its a two way interface 
+}
 } // namespace Pcasso

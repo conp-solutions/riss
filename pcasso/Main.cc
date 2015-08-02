@@ -226,6 +226,7 @@ int main(int argc, char** argv)
             fprintf(stderr, "c |  REJECT AUTOCONFIG WHEN READING FROM STDIN                                                            |\n");
         } else {
             autoConfig = findConfig( string(argv[1]) );
+	    fprintf(stderr, "c |  USE AUTOCONFIG: %20s                                                                 |\n", autoConfig.c_str() );
         }
     }
     #endif    
