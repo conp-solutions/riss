@@ -680,7 +680,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         bool use_extra = learnt | extra_clause_field;
-
+	
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(psSize, use_extra));
         new(lea(cid)) Clause(ps, psSize, use_extra, learnt);
 

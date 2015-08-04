@@ -97,7 +97,7 @@ include(GitSignature)
 
 # Compile flags:
 # 
-add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g")
+add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g -DNDBG")
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   if(WARNINGS)

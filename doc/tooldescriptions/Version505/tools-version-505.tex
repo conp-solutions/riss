@@ -221,22 +221,7 @@ Furthermore, the unpublished learned clause minimization is used, and the activi
 Finally, during clause removal we keep $1$ percent of the heuristically ``worst'' learned clauses. 
 The second sequential configuration uses the \emph{black box} prediction. 
 
-
-\subsection{Parallel SAT Solving}
-
-In \pcasso, we use different configurations depending on the number of available computational resources. 
-The configuration of \pcasso uses a global \priss incarnation with $3$ workers. 
-Another $3$ workers are used for solving in the partitioning approach. 
-The values are increased to $4$ workers in \priss and $8$ in partitioning. 
-The full number of cores is not used, as the slowdown based on resource sharing is too high with the currently implemented data structures, as explained in~\cite{portfolioSlowdown}. 
-We furthermore do not utilize hyper threads. 
-
-The second configuration of \pcasso (BlackBox) uses the same number of workers. 
-However, one configuration of \priss uses the predicted configuration. 
-Furthermore, instead of \riss, \priss incarnations with a setup with two workers that performs well on unsatisfiable formulas is used. 
-% This approach is visualized in Figure~\ref{fig:pcassoBlackbox}.
-
-\subsection{Incremental SAT Solving}
+\subsection{Incremental SAT Solving} \label{ss:incsolving}
 
 The incremental versions do not use formula simplification, but instead use methods to reduce the overhead of solver calls. 
 \textsc{Riss 5.04} removes satisfied clauses only if one of the first two literals is satisfied, similarly to \textsc{Glucose 3.0}. 
@@ -248,6 +233,28 @@ During a restart, \riss does not jump beyond assumptions (except every 1024th at
 Finally, the counters of the solver are reset every $3$rd call to solve an updated formula. 
 
 The incremental version of \textsc{Riss 5.05} uses the same configuration and furthermore adds initializing the variable activities as in the usual configuration. 
+Furthermore, after $50000$ conflicts (dependent on counter resets), a formula simplification is triggered, which executes the same techniques as in the sequential solver configurations, except variable elimination, covered literal elimination and variable renaming. 
+Instead, subsumption and self-subsuming resolution are executed, such that only equivalence preserving techniques are used and no variables are eliminated or renamed. 
+After this simplification, the next simplification is allowed after another $1000000$ conflicts.
+
+
+\subsection{Parallel SAT Solving}
+
+\todo{update numbers}
+
+In \pcasso, we use different configurations depending on the number of available computational resources. 
+The configuration of \pcasso uses a global \priss incarnation with $3$ workers. 
+Another $3$ workers are used for solving in the partitioning approach. 
+The values are increased to $4$ workers in \priss and $8$ in partitioning. 
+The full number of cores is not used, as the slowdown based on resource sharing is too high with the currently implemented data structures, as explained in~\cite{portfolioSlowdown}. 
+Each node in the partition tree is allowed to store 100 learned clauses, as well as 100 groups of unit clauses or equivalent literals. 
+We do not utilize hyper threads. 
+
+The second configuration of \pcasso (BlackBox) uses the same number of workers. 
+However, one configuration of \priss uses the predicted configuration. 
+Furthermore, clause sharing inside the partition tree is enhanced by allowing larger ring buffers to store more clauses, namely 16000 per partition. 
+The incarnations of \riss use the same inprocessing setup as the solver that is used in version $5.05$ in the incremental track (see Section~\ref{ss:incsolving}).
+% This approach is visualized in Figure~\ref{fig:pcassoBlackbox}.
 
 \section{Availability}
 
