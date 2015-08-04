@@ -278,7 +278,7 @@ lbool Master::solveHybrid() {
   // enable link to global portfolio solver
   if( opt_crossLink ) {
     assert( root.sharingPool == 0 && "can set pool only once per node" );
-    root.sharingPool = new CommunicationData( defaultPcassoConfig.opt_storageSize );
+    root.sharingPool = new CommunicationData( defaultPcassoConfig.opt_storageSize  * 4 ); // have more space in the root node, as its an important node for the partition tree
     globalSolver->setExternBuffers( &root.sharingPool->getBuffer(), &root.sharingPool->getSpecialBuffer() );
   }
   
