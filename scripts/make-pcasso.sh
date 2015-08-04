@@ -36,7 +36,7 @@ rm -f */*.or */*/*.or */*.od */*/*.od
 
 # produce the tar ball, and copy back to calling directory
 cd ..
-tar czf $version.tar.gz makefile $version
+tar czf $version.tar.gz makefile pcasso_505.sh pcasso_505bb.sh $version
 cp $version.tar.gz $wd
 
 # go back to calling directory
