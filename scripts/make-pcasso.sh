@@ -19,7 +19,7 @@ mkdir $version
 cd $version 
 # copy necessary content here
 cp -r $wd/{riss,cmake,coprocessor,classifier,proofcheck,pfolio,libpca,pcasso,CMakeLists.txt,license.txt,README.md} .
-cp $wd/scripts/{pcasso_505.sh,pcasso_505bb.sh} ..
+cp $wd/scripts/{pcasso_505.sh,pcasso_505-blackbox.sh} ..
 cp $wd/scripts/makefile-pcasso ../makefile
 
 
@@ -36,7 +36,7 @@ rm -f */*.or */*/*.or */*.od */*/*.od
 
 # produce the tar ball, and copy back to calling directory
 cd ..
-tar czf $version.tar.gz makefile pcasso_505.sh pcasso_505bb.sh $version
+tar czf $version.tar.gz makefile pcasso_505.sh pcasso_505-blackbox.sh $version
 cp $version.tar.gz $wd
 
 # go back to calling directory
