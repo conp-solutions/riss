@@ -1445,6 +1445,7 @@ Master::splitInstance(void* data)
 	    int validStart = opt_collect_all_valid ? 0 : i;
 	    for( int j = validStart; j <= i; ++ j ) tData.nodeToSolve->addNodeConstraint(validConstraints[j]);
         }
+        //TODO FIXME: check whether the first valid constraints are actually valid for the node (they should)
         // expand the node
         tData.nodeToSolve->expand(childConstraints);
         for (unsigned int i = 0; i < childConstraints.size(); i++) {
