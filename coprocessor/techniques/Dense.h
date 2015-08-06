@@ -52,10 +52,6 @@ class Dense : public Technique<Dense>
      */
     bool readCompressionMap(const std::string &filename);
 
-    /** return the new variable for the old variable */
-    Riss::Lit giveNewLit(const Riss::Lit& l) const ;
-
-
   /*
    * Helper members and methods
    */

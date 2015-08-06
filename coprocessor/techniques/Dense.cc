@@ -112,34 +112,33 @@ void Dense::compress(const char* newWhiteFile)
 
     // erase all top level units after backup!
     // keep the literals that are not removed!
-
     int j = 0; // count literals that stay on trail!
-    vec<Riss::Lit> trail = data.getTrail();
+    vec<Riss::Lit>& _trail = data.getTrail();
 
-    for (int i = 0 ; i < trail.size(); ++i) {
-        const Lit lit = trail[i];
+    for (int i = 0; i < _trail.size(); ++i) {
+        const Lit lit = _trail[i];
 
         // keep the assigned literal
         if (count[var(lit)] != 0
             || data.doNotTouch(var(lit))
             || config.opt_dense_keep_assigned
-        ) {
+            ) {
             Lit compressed = compression.importLit(lit);
-            trail[j++] = compressed;
+            _trail[j++] = compressed;
 
             DOUT(if (config.dense_debug_out) {
                 cerr << "c move literal " << lit << " from " << i << " to pos "
-                     << j << " as " << compressed << endl;
+                << j << " as " << compressed << endl;
             });
         }
-        // remove literal from trail
-        // the assigned value (lbool) is already kept in the compression object
+            // remove literal from trail
+            // the assigned value (lbool) is already kept in the compression object
         else {
             data.resetAssignment(var(lit));
         }
     }
     // do not clear, but resize to keep the literals that have not been removed
-    trail.shrink_(trail.size() - j);
+    _trail.shrink_(_trail.size() - j);
 
     // reset propagated literals in UP
     propagation.reset(data);
@@ -151,7 +150,7 @@ void Dense::compress(const char* newWhiteFile)
 
 
     // rewriting everything finnished
-    // invert mapping - and re-arrange all variable data
+    // re-arrange all variable data
     for (Var var = 0; var < data.nVars() ; var++) {
         if (!config.opt_dense_keep_assigned) {
             assert((data.doNotTouch(var) || data.value(var) == l_Undef) && "Assigned variable are not allowed");
@@ -176,7 +175,7 @@ void Dense::compress(const char* newWhiteFile)
                 assert((data.doNotTouch(compressed) || data.value(compressed) == l_Undef) && "Assigned variable are not allowed");
             }
         }
-        // variable was removed by compression (meaning, that the variable is a unit)
+        // variable was removed by compression (that means the variable is a unit)
         else {
             DOUT(if (config.dense_debug_out) cerr << "c remove variable " << var + 1  << endl;);
             // if( v+1 == data.nVars() ) cerr << "c final round without move" << endl;
@@ -190,9 +189,9 @@ void Dense::compress(const char* newWhiteFile)
     }
 
     // after full compression took place, set known assignments again
-    for (int i = 0 ; i < trail.size(); ++i) {
+    for (int i = 0 ; i < _trail.size(); ++i) {
         // put rewritten literals back on the trail
-        data.enqueue(trail[i]);
+        data.enqueue(_trail[i]);
     }
 
     // ensure we compressed something
@@ -208,6 +207,15 @@ void Dense::compress(const char* newWhiteFile)
 
 void Dense::decompress(vec<lbool>& model)
 {
+    // only decompress, if mapping is available -- the compression would map the forumla
+    // to itself (identity map), but this would be a waste of resources
+    if (!compression.isAvailable()) {
+        DOUT(if (config.dense_debug_out) {
+            cerr << "c no decompression needed" << endl;
+        });
+        return;
+    }
+
     DOUT(if (config.dense_debug_out) {
         cerr << "c dense decompress, model to work on: ";
         printModel(model);
@@ -230,12 +238,11 @@ void Dense::decompress(vec<lbool>& model)
 
     // backwards, because variables will increase - do not overwrite old values!
     for (int var = compression.nvars() - 1; var >= 0 ; --var) {
-
         const Var compressed = compression.importVar(var);
 
         // units - simply copy, because they do not occure in the compressed formula
         if (compressed == Compression::UNIT) {
-            lbool unit = compression.trail(var);
+            lbool unit = compression.value(var);
             model[var] = unit;
 
             assert(unit != l_Undef && "Variable must not be undefined, because it is marked as unit");
@@ -276,7 +283,7 @@ void Dense::decompress(vec<lbool>& model)
 bool Dense::writeCompressionMap(const string &filename)
 {
     DOUT(if (config.dense_debug_out) {
-        cerr << "c write undo info" << endl;
+        cerr << "c write compression map" << endl;
     });
 
     return compression.serialize(filename, config.dense_debug_out);
@@ -284,6 +291,9 @@ bool Dense::writeCompressionMap(const string &filename)
 
 bool Dense::readCompressionMap(const string &filename)
 {
+    DOUT(if (config.dense_debug_out) {
+        cerr << "c read compression map" << endl;
+    });
     return compression.deserialize(filename, config.dense_debug_out);
 }
 
@@ -329,14 +339,6 @@ static int parseClause(const string& line, vector<Lit>& literals)
 void Dense::printStatistics(ostream& stream)
 {
     cerr << "c [STAT] DENSE " << compression.diff() << " gaps" << endl;
-}
-
-Lit Dense::giveNewLit(const Lit& l) const
-{
-    if (forward_mapping.size() == 0) { return lit_Error; }
-    else return
-            forward_mapping[ var(l) ] == -1 ?
-            lit_Undef : mkLit(forward_mapping[ var(l) ], sign(l));
 }
 
 void Dense::compressClauses(vec<CRef> &clauses)

@@ -52,6 +52,8 @@ set_target_properties(coprocessor-lib-shared PROPERTIES
                                              VERSION ${VERSION}
                                              SOVERSION ${SOVERSION})
 
+target_link_libraries(coprocessor-lib-static riss-lib-static)
+
 git_signature(PROJECT_NAME "coprocessor"
               SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake
               DESTINATION ${VERSION_CC}
@@ -63,9 +65,9 @@ git_signature(PROJECT_NAME "coprocessor"
 add_executable(coprocessor Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(coprocessor riss-lib-static coprocessor-lib-static)
+  target_link_libraries(coprocessor coprocessor-lib-static)
 else()
-  target_link_libraries(coprocessor riss-lib-shared coprocessor-lib-shared)
+  target_link_libraries(coprocessor coprocessor-lib-shared)
 endif()
 
 # Installation:

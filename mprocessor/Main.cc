@@ -188,7 +188,6 @@ int main(int argc, char** argv)
             // if we are densing, the the units should be rewritten and kept, and, the soft clauses need to be rewritten!
             if (cp3config.opt_dense) {
                 cp3config.opt_dense_keep_assigned = true; // keep the units on the trail!
-                cp3config.opt_dense_store_forward = true; // store a forward mapping
             }
 
             Preprocessor preprocessor(&S , cp3config);
@@ -250,7 +249,7 @@ int main(int argc, char** argv)
                 // write all the soft clauses (write after hard clauses, because there might be units that can have positive effects on the next tool in the chain!)
                 for (Var v = 0 ; v < fullVariables; ++ v) {  // for each weighted literal, have an extra clause!
                     Lit l = mkLit(v);
-                    Lit nl = preprocessor.giveNewLit(l);
+                    Lit nl = preprocessor.importLit(l);
                     cerr << "c lit " << l << " is compress lit " << nl << endl;
                     if (nl != lit_Undef && nl != lit_Error) { l = nl; }
                     else if (nl == lit_Undef && cp3config.opt_dense) {

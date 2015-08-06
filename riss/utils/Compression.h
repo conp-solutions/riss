@@ -14,6 +14,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <sstream>
 
 #include "riss/utils/Debug.h"
 
@@ -27,7 +29,7 @@ namespace Riss
  *
  * The variable in the compressed formula will always be equal or smaller than in the original
  * formula.
- *
+ * 
  * @author Lucas Kahlert <lucas.kahlert@tu-dresden.de>
  */
 class Compression
@@ -41,6 +43,44 @@ class Compression
     enum {
         UNIT = -1, // variable is unit and therefore removed in the compressed formula
     };
+
+    /**
+     * Returns value of an assigned variable (aka. unit) that was removed from the formula
+     * and is therefore in the trail of the compression.
+     *
+     * If the variable is not a unit, l_Undef will be returned.
+     */
+    inline lbool value(const Var& var) const
+    {
+        assert(var < trail.size() && "Variable must not be greater than current mapping");
+
+        return trail[var];
+    }
+
+    /**
+     * @return number of variables in the original uncompressed formula
+     */
+    inline uint32_t nvars() const { return mapping.size(); }
+
+    /**
+     * @return number of variables after compression
+     */
+    inline uint32_t postvars() const { return forward.size(); }
+
+    /**
+     * Returns the number of variables reduced by compression
+     * between the */
+    inline uint32_t diff() const { return nvars() - postvars(); }
+
+    /**
+     * @return true, if compression is active and variable renaming was performed
+     */
+    inline bool isAvailable() const { return mapping.size() > 0; }
+
+    /**
+     * use the passed mapping as the new mapping. the current trail and forward mapping will be adjusted
+     */
+    void update(std::vector<Riss::Var>& _mapping, std::vector<lbool>& _trail);
 
     /**
      * Writes the compression map to a file, so that it can be loaded
@@ -58,11 +98,6 @@ class Compression
     bool deserialize(const std::string &filename, bool verbose = false);
 
     /**
-     * @return true, if compression is active and variable renaming was performed
-     */
-    inline bool isAvailable() const { return mapping.size() > 0; }
-
-    /**
      * Clear all mappings
      */
     void reset()
@@ -74,11 +109,6 @@ class Compression
         forward.clear();
         trail.clear();
     }
-
-    /**
-     * Use the passed mapping as the new mapping. The current trail and forward mapping will be adjusted
-     */
-    void update(std::vector<Riss::Var>& _mapping, std::vector<lbool>& _trail);
 
     /**
      * Takes a literal from outside and import it into the compressed formula. This means that eventually
@@ -94,6 +124,10 @@ class Compression
     {
         if (isAvailable()) {
             assert(var(lit) < mapping.size() && "Variable must not be larger than current mapping");
+
+            if (var(lit) >= mapping.size()) {
+                return lit_Error;
+            }
 
             const Var compressed = mapping[var(lit)];
         
@@ -121,7 +155,7 @@ class Compression
 
         if (isAvailable()) {
             assert(var < mapping.size() && "Variable must not be larger than current mapping");
-            
+
             const Var compressed = mapping[var];
 
             if (compressed == UNIT) {
@@ -172,34 +206,6 @@ class Compression
             return var;
         }
     }
-
-    /**
-     * Returns value of an assigned variable (aka. unit) that was removed from the formula
-     * and is therefore in the trail of the compression.
-     *
-     * If the variable is not a unit, l_Undef will be returned.
-     */
-    inline lbool value(const Var& var) const
-    {
-        assert(var < trail.size() && "Variable must not be greater than current mapping");
-
-        return trail[var];
-    }
-
-    /**
-     * @return number of variables in the original uncompressed formula
-     */
-    inline uint32_t nvars() const { return mapping.size(); }
-
-    /**
-     * @return number of variables after compression
-     */
-    inline uint32_t postvars() const { return forward.size(); }
-
-    /**
-     * Returns the number of variables reduced by compression
-     * between the */
-    inline uint32_t diff() const { return nvars() - postvars(); }
 
 };
 

@@ -142,12 +142,16 @@ class Preprocessor
      */
     void dumpFormula(std::vector<int>& outputFormula);
 
-    /** return the literal, to which the specified literal is mapped to
-     * @param l literal in the external world representation
-     * @return the new literal, or Riss::lit_Undef if the literal is not present any more, or lit_Error, if the information is not present
+    /**
+     * return the literal, to which the specified literal is mapped to
+     *
+     * @param lit literal in the external world representation
+     * @return the new literal or lit_Undef if the literal is not present any more
+     *         or lit_Error, if the information is not present
      */
-    int giveNewLit(const int& l) const;
-    Riss::Lit giveNewLit(const Riss::Lit& l) const;
+    Riss::Lit importLit(const Riss::Lit &lit) const;
+
+    int importLit(const int &lit) const;
 
   protected:
     //

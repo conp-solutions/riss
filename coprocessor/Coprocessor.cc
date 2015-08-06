@@ -1182,18 +1182,24 @@ void Preprocessor::dumpFormula(std::vector< int >& outputFormula)
     }
 }
 
-int Preprocessor::giveNewLit(const int& l) const
+int Preprocessor::importLit(const int &l) const
 {
     // conversion to inner representation, check move value, return value
     const Lit lit = l > 0 ? mkLit(l - 1, false) : mkLit(-l - 1, true);
-    const Lit nl = dense.giveNewLit(lit);
-    return nl == lit_Error ? 0 : (sign(nl) ? (-var(nl) - 1) : (var(nl) + 1));
+    const Lit compressed = solver->compression.importLit(lit);
+
+    if (compressed == lit_Error) {
+        return 0;
+    } else if (sign(compressed)) {
+        return -var(compressed) - 1;
+    } else {
+        return var(compressed) + 1;
+    }
 }
 
-Lit Preprocessor::giveNewLit(const Lit& l) const
+Lit Preprocessor::importLit(const Lit &lit) const
 {
-    const Lit nl = dense.giveNewLit(l);
-    return nl;
+    return solver->compression.importLit(lit);
 }
 
 
@@ -1223,9 +1229,8 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
     // for the most recent changes that have not reached a dense.compress yet
     if (config.opt_dense) {
-        dense.adoptUndoStack(); // necessary here!
-        // order is important!
-        dense.decompress(model);   // if model has not been compressed before, nothing has to be done!
+        // if model has not been compressed before, nothing has to be done!
+        dense.decompress(model);
     }
 
     if (config.opt_verbose > 0) { cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl; }

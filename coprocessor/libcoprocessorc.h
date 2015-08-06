@@ -78,7 +78,7 @@ extern "C" {
     extern void CPresetOutput(void* preprocessor);
 
     /** freeze the given variable, so that it is not altered semantically
-     * Note: the variable might still be pushed, so that it is necessary to call giveNewLit()
+     * Note: the variable might still be pushed, so that it is necessary to call importLit()
      */
     extern void CPfreezeVariable(void* preprocessor, int variable);
 

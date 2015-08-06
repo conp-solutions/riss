@@ -74,7 +74,7 @@ class PSolver
     Coprocessor::CP3Config& getPPConfig(const int solverID);
 
     /** set global pp config */
-    void setGlobalSimplifierConfig(const string& _config) { defaultSimplifierConfig = _config; }
+    void setGlobalSimplifierConfig(const std::string& _config) { defaultSimplifierConfig = _config; }
 
     //
     // solve the formula in parallel, including communication and all that

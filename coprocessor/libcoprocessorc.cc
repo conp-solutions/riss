@@ -198,7 +198,7 @@ extern "C" {
     CPgetReplaceLiteral(void* preprocessor, int oldLit)
     {
         libcp3* cp3 = (libcp3*) preprocessor;
-        int ret = cp3->cp3->giveNewLit(oldLit);
+        int ret = cp3->cp3->importLit(oldLit);
         return ret == 0 ? oldLit : ret; // if there is no replacement, return the literal itself
     }
 
