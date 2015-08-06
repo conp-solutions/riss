@@ -1120,7 +1120,7 @@ Master::solveInstance(void* data)
 
     if (ret == 10) {
         if (tData.nodeToSolve != 0) {
-            fprintf(stderr, "============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
+            fprintf(stderr, "c ============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
                     tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
         }
         if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::sat); }

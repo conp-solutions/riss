@@ -14,6 +14,7 @@ static BoolOption opt_analyze      ("BACKWARD-CHECK", "bvw-analyze", "use confli
 static BoolOption opt_dependencies ("BACKWARD-CHECK", "bvw-trace",   "trace and store clause dependencies (memory expensive)", false);
 static BoolOption opt_preUnit      ("BACKWARD-CHECK", "bvw-unit",    "re-use conseqeunces of active unit clauses", true);
 static BoolOption opt_oldestReason ("BACKWARD-CHECK", "bvw-oreason", "try to mark clauses that are at the beginning of the proof", false);
+static BoolOption opt_preferFormula("BACKWARD-CHECK", "bvw-pformula", "try to mark clauses that are at the beginning of the proof", false);
 
 BackwardVerificationWorker::BackwardVerificationWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< ProofClauseData >& outer_fullProof, vec< ProofClauseLabel >& outer_label, vec< vec<int64_t> >& outer_dependencies, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
 :
@@ -216,7 +217,9 @@ void BackwardVerificationWorker::enableProofItem( const ProofClauseData& proofIt
     }
     
   } else {
-    if( label[ proofItem.getID() ].isMarked() ) {
+    if( label[ proofItem.getID() ].isMarked() 
+      || (opt_preferFormula && proofItem.getID() < formulaClauses) // the clause is in the formula, and hence should be used directly 
+    ) {
       if( ! proofItemProperties[ proofItem.getID() ].isMoved() ) proofItemProperties[ proofItem.getID() ].moved(); // make sure the clause is marked as moved
       attachClauseMarked( proofItem );
     }
@@ -327,7 +330,7 @@ void BackwardVerificationWorker::attachClauseMarked(const ProofClauseData& cData
   markedWatches[~c[0]].push( cData );
   markedWatches[~c[1]].push( cData );
   assert( proofItemProperties[ cData.getID() ].isMoved() && "has to be set as moved" );
-  assert( label[ cData.getID() ].isMarked() && "has to be verified" );
+  assert( ( label[ cData.getID() ].isMarked() || cData.getID() < formulaClauses ) && "has to be verified or member of formula" );
 }
 
 void BackwardVerificationWorker::attachClauseNonMarked(const ProofClauseData& cData)
@@ -821,6 +824,14 @@ int64_t BackwardVerificationWorker::propagateMarked(const int64_t currentID, boo
                 // Copy the remaining watches:
                 while (i < end)
                     *j++ = *i++;
+		
+		
+		// handle formula clauses, if we put them into the marked list without marking them
+		if( opt_preferFormula && ! label[ w.getID() ].isMarked() ) {
+		  assert( w.getID() < formulaClauses && "applies only for clauses of the formual" );
+		  markToBeVerified( w.getID() );            // mark the unit clause - TODO: handle for parallel version: returns true, if this worker set the mark
+		}
+		
             } else {
 	      if(value(first) == l_True  ) {  // the newly watched literal is satisfied
 		if( opt_oldestReason // look for the oldest reason
@@ -1044,7 +1055,7 @@ int64_t BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(cons
 	      {
 		continue; } // keep the element, continue is same as goto NextClause;
 	    }
-		
+		markToBeVerified( w.getID() );            // mark the unit clause - TODO: handle for parallel version: returns true, if this worker set the mark
             const Lit false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;

@@ -993,7 +993,7 @@ void CNFClassifier::recursiveWeightHeuristic_code(const int maxClauseSize, vecto
 
     uint64_t globalSteps = 0;
     if (verb > 0) {
-        cerr << "c calculate RWH with cls max size " << maxClauseSize << " and gamma " << gamma << endl;
+        DOUT( cerr << "c calculate RWH with cls max size " << maxClauseSize << " and gamma " << gamma << endl; );
     }
 
     for (int iter = 1; iter <= 3; iter ++) {
@@ -1065,7 +1065,7 @@ void CNFClassifier::recursiveWeightHeuristic_code(const int maxClauseSize, vecto
 
     time = cpuTime() - time;
     if (verb > 0) {
-        cerr << "c computing all RWH features took " << time << " cpu seconds and " << globalSteps << " global steps"  << endl;
+        DOUT( cerr << "c computing all RWH features took " << time << " cpu seconds and " << globalSteps << " global steps"  << endl; );
     }
 }
 

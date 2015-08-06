@@ -62,7 +62,7 @@ static void parse_DIMACS_main(B& in, Solver& S, bool isProof = false)
                 clauses = parseInt(in);
                 S.reserveVars(vars); // reserve space for the variables, so that there is less fragmentation
             } else {
-                printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
+                printf("c PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
             }
         } else if (*in == 'c' || *in == 'p') {
             skipLine(in);
@@ -75,10 +75,10 @@ static void parse_DIMACS_main(B& in, Solver& S, bool isProof = false)
     }
 
     if (vars != S.nVars()) {
-        fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
+        fprintf(stderr, "c WARNING! DIMACS header mismatch: wrong number of variables.\n");
     }
     if (cnt  != clauses) {
-        fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
+        fprintf(stderr, "c WARNING! DIMACS header mismatch: wrong number of clauses.\n");
     }
 }
 
