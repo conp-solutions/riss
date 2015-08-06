@@ -28,6 +28,7 @@ set(LIB_SOURCES
     core/CoreConfig.cc
     core/Solver.cc
     simp/SimpSolver.cc
+    utils/Compression.cc
     utils/Options.cc
     utils/Statistics-mt.cc
     utils/System.cc

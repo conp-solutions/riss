@@ -43,9 +43,24 @@ class Compression
     };
 
     /**
+     * Writes the compression map to a file, so that it can be loaded
+     * later.
+     *
+     * If the verbose flag is present, some additional debug information will
+     * be written in comments to the map file.
+     */
+    bool serialize(const std::string &filename, bool verbose = false) const;
+
+    /**
+     * Read the compression map from a file that where previously saved and parses its content
+     * as the current mapping.
+     */
+    bool deserialize(const std::string &filename, bool verbose = false);
+
+    /**
      * @return true, if compression is active and variable renaming was performed
      */
-    inline bool isAvailable() const { return mapping.size() == 0; }
+    inline bool isAvailable() const { return mapping.size() > 0; }
 
     /**
      * Clear all mappings
@@ -63,53 +78,10 @@ class Compression
     /**
      * Use the passed mapping as the new mapping. The current trail and forward mapping will be adjusted
      */
-    void update(std::vector<Riss::Var>& _mapping, std::vector<lbool>& _trail)
-    {
-        // initialize mapping
-        if (!isAvailable()) {
-            // simply copying the content of the mappings
-            mapping = _mapping;
-            trail = _trail;
-        }
-        // update current mapping
-        else {
-
-            assert(_mapping.size() <= forward.size() && "New mapping must be equal or smaller than current one");
-            assert(_trail.size() <= trail.size() && "New trail must not be greater than orignal formula");
-
-            // update mapping and trail at once
-            for (Var var = 0; var < _mapping.size(); ++var) {
-                const Var from = forward[var];  // old variable name translated into name in the original formula
-                const Var to   = _mapping[var]; // new variable name in the compressed formula
-
-                mapping[from] = to; // update mapping
-
-                // update trail if the variable is a unit (will be removed in the compressed formula)
-                if (to == UNIT) {
-                    trail[from] = _trail[var];
-                }
-            }
-
-            // update forward mapping
-            // reduce size of the forward table
-            forward.resize(_mapping.size());
-
-            // "to" is the variable in the compressed formula and "from" the name in the original formula
-            for (Var from = 0, to = 0; from < mapping.size(); ++from) {
-                // we found a variable in the old formula that is not a unit in the compressed
-                // store the inverse direction in the forward map (to -> from) and increment
-                // the "to" variable to write the next non-unit mapping to the next position
-                if (mapping[from] != UNIT) {
-                    assert(to < forward.size() && "Compressed variable name must not be larger than forward mapping");
-
-                    forward[to++] = from;
-                }
-            }
-        }
-    }
+    void update(std::vector<Riss::Var>& _mapping, std::vector<lbool>& _trail);
 
     /**
-     * Returns a literal from outside and import it into the compressed formula. This means that eventually
+     * Takes a literal from outside and import it into the compressed formula. This means that eventually
      * a smaller number will be returned. If the literal is a unit in the compressed clause and was therefore
      * removed, lit_Undef will be returned.
      *
@@ -120,10 +92,10 @@ class Compression
      */
     inline Lit importLit(const Lit& lit) const
     {
-        assert(var(lit) <= mapping.size() && "Variable must not be larger than current mapping");
-        
         if (isAvailable()) {
-           Var compressed = mapping[var(lit)];
+            assert(var(lit) < mapping.size() && "Variable must not be larger than current mapping");
+
+            const Var compressed = mapping[var(lit)];
         
            // if the variable is unit, it is removed in the compressed formula. Therefore
            // we return undefined
@@ -147,10 +119,10 @@ class Compression
     {
         // @see import for literals above for comments
 
-        assert(var <= mapping.size() && "Variable must not be larger than current mapping");
-
         if (isAvailable()) {
-            Var compressed = mapping[var];
+            assert(var < mapping.size() && "Variable must not be larger than current mapping");
+            
+            const Var compressed = mapping[var];
 
             if (compressed == UNIT) {
                 return var_Undef;
@@ -164,7 +136,7 @@ class Compression
 
     /**
      * Export a literal from the compressed formula to the outside environment. The literal will
-     * be translated to the name / value from the original uncompressed formula.
+     * be translated to the name / value in the original uncompressed formula.
      *
      * As in the import methods, the passed argument will be returned as a default value if no
      * compression is available (identity map).
@@ -173,15 +145,9 @@ class Compression
      */
     inline Lit exportLit(const Lit& lit) const
     {
-        assert(var(lit) <= forward.size() && "Variable must not be larger than current mapping");
-
         if (isAvailable()) {
-            const Var original = forward[var(lit)];
-
-            // variable was removed by compression, but is requested for export
-            assert(original != NOT_MAPPED && "Variable is not in compression map. "
-                                             "Do you forget to update compressed variables?");
-
+            assert(var(lit) < forward.size() && "Variable must not be larger than current mapping. "
+                                                "Did you forget to update the compression?");
             return mkLit(forward[var(lit)], sign(lit));
         }
         // no compression available, nothing to do! :)
@@ -197,17 +163,27 @@ class Compression
     {
         // @see export for literals above for comments
 
-        assert(var <= forward.size() && "Variable must not be larger than current mapping");
-
         if (isAvailable()) {
-            const Var original = forward[var];
+            assert(var < forward.size() && "Variable must not be larger than current mapping. "
+                                           "Did you forget to update the compression?");
 
-            assert(original != NOT_MAPPED && "Variable is not in compression map. "
-                                             "Do you forget to update compressed variables?");
             return forward[var];
         } else {
             return var;
         }
+    }
+
+    /**
+     * Returns value of an assigned variable (aka. unit) that was removed from the formula
+     * and is therefore in the trail of the compression.
+     *
+     * If the variable is not a unit, l_Undef will be returned.
+     */
+    inline lbool value(const Var& var) const
+    {
+        assert(var < trail.size() && "Variable must not be greater than current mapping");
+
+        return trail[var];
     }
 
     /**

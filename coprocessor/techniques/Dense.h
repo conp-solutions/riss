@@ -25,31 +25,32 @@ class Dense : public Technique<Dense>
     Riss::Compression& compression;
 
   public:
-    Dense(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
+    Dense(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller,
+          CoprocessorData& _data, Propagation& _propagation);
 
-
-    /** compress the formula - if necessary, output a new whiteFile
-     * calls adoptUndoStack before it actually modifies the formula
+    /**
+     * Compress the formula - if necessary, output a new whiteFile
      */
-    void compress(const char *newWhiteFile = 0);
+    void compress(const char* newWhiteFile = nullptr);
 
-    /** decompress the most recent additions of the extend model std::vector,
-     *  does not touch lit_Undefs */
-    void adoptUndoStack();
-
-    /** undo variable mapping, so that model is a model for the original formula
-     * adoptUndoStack should be called before this method!
+    /**
+     * Undo variable mapping, so that passed model is a model for the original formula
      */
     void decompress(Riss::vec< Riss::lbool >& model);
 
     /** inherited from @see Technique */
     void printStatistics(std::ostream& stream);
 
-    /** write dense information to file, so that it can be loaded afterwards again */
-    bool writeUndoInfo(const std::string& filename);
+    /**
+     * Writes the compression mapping to file, so that it can be loaded afterwards again
+     */
+    bool writeCompressionMap(const std::string &filename);
 
-    /** read dense information from file */
-    bool readUndoInfo(const std::string& filename);
+    /**
+     * Loads compression mapping from file that where previously exported with
+     * writeCompressionMap
+     */
+    bool readCompressionMap(const std::string &filename);
 
     /** return the new variable for the old variable */
     Riss::Lit giveNewLit(const Riss::Lit& l) const ;
@@ -60,8 +61,27 @@ class Dense : public Technique<Dense>
    */
   private:
 
+    std::vector<uint32_t>    count;   // temporary counter for literal occurences in the formula
     std::vector<Riss::Var>   mapping; // temporary mapping that is used in the compress method
     std::vector<Riss::lbool> trail;   // temporary mapping of assigned literals (units)
+
+    void compressClauses(Riss::vec<Riss::CRef>& clauses);
+
+    inline void printTrail() const
+    {
+        for (uint32_t i = 0 ; i < data.getTrail().size(); ++i) {
+            std::cerr << " " << data.getTrail()[i];
+        }
+        std::cerr << std::endl;
+    }
+
+    inline void printModel(const Riss::vec<Riss::lbool>& model) const
+    {
+        for (int i = 0 ; i < model.size(); ++i) {
+            std::cerr << (model[i] == l_True ? i + 1 : -i - 1) << " ";
+        }
+        std::cerr << std::endl;
+    }
 
     /**
      * Count literal occurings in the given clauses and store the number of occurences in the
@@ -80,7 +100,7 @@ class Dense : public Technique<Dense>
                     DOUT(if (config.dense_debug_out && l_Undef != data.value(l)) {
                         std:: cerr << "c DENSE found assigned literal " << l << " in clause ["
                                    << data.getClauses()[i] << "] : " << clause << " learned?: "
-                                   << clause.learnt() << endl;
+                                   << clause.learnt() << std::endl;
                     });
 
                     assert(l_Undef == data.value(l) && "there cannot be assigned literals");

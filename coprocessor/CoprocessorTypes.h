@@ -172,7 +172,7 @@ class CoprocessorData
     void didCompress()
     {
         if (lastCompressUndoLits != -1 &&  // if there has been a  compression,
-                decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
+            decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
             std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
             exit(14);
         }
