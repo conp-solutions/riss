@@ -7,6 +7,18 @@
 # first parameter of the script is the name of the tarball/directory
 version=$1
 
+if [ "$version" == "" ]
+then
+	echo "ABORT: no version specified"
+	exit 1
+fi
+
+# run cmake, to create necessary version files
+mkdir tmp_$$
+cd tmp_$$
+cmake -DQUIET=ON -DCMAKE_BUILD_TYPE=Release -DSTATIC_BINARIES=ON -DCLASSIFIER=ON ..
+cd ..
+rm -r tmp_$$
 
 # copy everything into a temporary directory
 wd=`pwd`
