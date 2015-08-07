@@ -33,7 +33,8 @@ pcasso_505: .FORCE
 	cd $(DIR)/build; cmake -DQUIET=ON -DCMAKE_BUILD_TYPE=Release -DSTATIC_BINARIES=ON -DCLASSIFIER=ON ..
 	cd $(DIR)/build; make libpca-static
 	@# patches are different depending on installed libraries, hence copy the fixed file
-	
+	cp $(DIR)/patches/patched-armadillo-config.hpp $(DIR)/armadillo/armadillo_bits/config.hpp
+	@# continue with the build process
 	cd $(DIR)/build; make pcasso
 	@#
 	@# copy call-scripts and binary

@@ -23,6 +23,9 @@ cp -r $wd/scripts/patches .
 cp $wd/scripts/{pcasso_505.sh,pcasso_505-blackbox.sh} ..
 cp $wd/scripts/makefile-pcasso ../makefile
 
+echo "this dir: "
+ls *
+
 
 # call cmake to build/update the version files
 tmp=tmp$$
