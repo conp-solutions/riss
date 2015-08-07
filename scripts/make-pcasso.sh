@@ -19,8 +19,12 @@ mkdir $version
 cd $version 
 # copy necessary content here
 cp -r $wd/{riss,cmake,coprocessor,classifier,proofcheck,pfolio,libpca,pcasso,CMakeLists.txt,license.txt,README.md} .
+cp -r $wd/scripts/patches .
 cp $wd/scripts/{pcasso_505.sh,pcasso_505-blackbox.sh} ..
 cp $wd/scripts/makefile-pcasso ../makefile
+
+echo "this dir: "
+ls *
 
 
 # call cmake to build/update the version files
