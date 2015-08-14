@@ -2927,7 +2927,7 @@ void Solver::refineFinalConflict()
     // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again
     assumptions.clear();
     for (int i = 0 ; i < conflict.size(); ++ i) { assumptions.push(~conflict[i]); }    // assumptions are reversed now
-    // call the search routine once more, now with the modified assertions
+    // call the search routine once more, now with the modified assumptions
     lbool res = search(1);
 
     // move assumptions back

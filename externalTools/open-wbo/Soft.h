@@ -35,7 +35,7 @@ class Soft
 {
 
   public:
-    Soft(vec<Lit>& soft, int w, Lit assump, vec<Lit>& relax)
+    Soft(vec<Lit>& soft, int64_t w, Lit assump, vec<Lit>& relax)
     {
         soft.copyTo(clause);
         weight = w;
@@ -51,7 +51,7 @@ class Soft
     }
 
     vec<Lit> clause;   // Soft clause
-    int weight;        // Weight of the soft clause
+    int64_t weight;    // Weight of the soft clause
     Lit assumptionVar; // Assumption variable used for retrieving the core
     // Relaxation variables that will be added to the soft clause
     vec<Lit> relaxationVars;
