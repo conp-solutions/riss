@@ -1876,6 +1876,8 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0) { // top level conflict - stop!
                 return l_False;
             }
+            
+#warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
             trailQueue.push(trail.size());
             if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > searchconfiguration.R * trailQueue.getavg()) {
@@ -1983,7 +1985,7 @@ lbool Solver::search(int nof_conflicts)
                         analyzeFinal(~p, conflict);
                         return l_False;
                     } else {
-                        DOUT(if (config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl;);
+                        DOUT(if (config.opt_printDecisions > 0) cerr << "c use assumption as next decision : " << p << endl;);
                         next = p;
                         break;
                     }
@@ -2921,15 +2923,28 @@ void Solver::refineFinalConflict()
     if (assumptions.size() == 0 || conflict.size() < 2) { return; }   // nothing to be done
     assumptions.moveTo(refineAssumptions);                        // memorize original assumptions
 
+//      cerr << "c conflict " << conflict << " at level " << decisionLevel() << endl;
+//      cerr << "c trail: " << trail << endl;
+//      cerr << "c ================================" << endl;
+//      cerr << endl << endl << endl;
+    
     cancelUntil(0);    // make sure we are on level 0 again
     assert(decisionLevel() == 0 && "run this routine only after the trail has been cleared already");
 
+    const int conflictSize = conflict.size();
+    
     // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again
     assumptions.clear();
     for (int i = 0 ; i < conflict.size(); ++ i) { assumptions.push(~conflict[i]); }    // assumptions are reversed now
     // call the search routine once more, now with the modified assumptions
-    lbool res = search(1);
+    lbool res = search(INT32_MAX);
 
+//     // for debugging purposes, have a special exit
+//     if( conflictSize > conflict.size() + 1 && conflict.size() > 1) exit (42);
+    
+//     cerr << "c refined conflict: " << conflict << endl;
+//     cerr << "c trail: " << trail << endl;
+    
     // move assumptions back
     refineAssumptions.moveTo(assumptions);
 

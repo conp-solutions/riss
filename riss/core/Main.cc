@@ -124,6 +124,8 @@ int main(int argc, char** argv)
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
     BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false );
 
+    IntOption    opt_assumeFirst("MAIN", "assumeFirst", "Assume the first X positive literals for search.", 0, IntRange(0, INT32_MAX));
+    
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
@@ -351,6 +353,12 @@ int main(int argc, char** argv)
         vec<Lit> dummy;
         // tell solver about the number of conflicts it is allowed to use (for the current iteration)
         if (opt_maxConflicts != -1) { S->setConfBudget(opt_maxConflicts); }
+        // assume first literals of the formula
+        if( opt_assumeFirst > 0 ) {
+	  const int maxV = opt_assumeFirst > S->nVars() ? S->nVars() : opt_assumeFirst;
+	  for( int i = 0 ; i < maxV; ++i ) dummy.push( mkLit(i,false) );
+	}
+        // solve the formula (with the possible created assumptions)
         lbool ret = S->solveLimited(dummy);
         S->budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!

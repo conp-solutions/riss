@@ -13,7 +13,7 @@ top=$(awk '/p wcnf/ {print $5}' $file);
 echo "top value: $top"
 
 # sum all soft clauses (clauses with a weight greater equal top are ignored)
-sum=$(awk -v top=$top '{ if ( $1 >= top ) {sum+=$1}; } END {print sum}' $file)
+sum=$(awk -v top=$top '{ if ( $1 < top ) {sum+=$1}; } END {print sum}' $file)
 
 echo "sum value: $sum"
 
