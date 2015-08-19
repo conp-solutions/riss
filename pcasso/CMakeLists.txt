@@ -17,6 +17,7 @@ set(LIB_SOURCES
     SolverPriss.cc
     shared_pool.cc
     vsidsSplitting.cc
+    PcassoComConfig.cc
     ${VERSION_CC})
 
 add_library(pcasso-lib-static STATIC ${LIB_SOURCES})
@@ -40,13 +41,34 @@ git_signature(PROJECT_NAME pcasso
 # 
 add_executable(pcasso Main.cc)
 
-set_target_properties(pcasso PROPERTIES
-                             COMPILE_FLAGS "-DPCASSO")
-
-if(STATIC_BINARIES)
-  target_link_libraries(pcasso pcasso-lib-static riss-pcasso-lib-static pfolio-lib-static coprocessor-lib-static)
+if(CLASSIFIER)
+  set_target_properties(pcasso PROPERTIES COMPILE_FLAGS "-DPCASSO -DCLASSIFIER")
 else()
-  target_link_libraries(pcasso pcasso-lib-shared riss-pcasso-lib-shared pfolio-lib-shared coprocessor-lib-shared)
+  set_target_properties(pcasso PROPERTIES COMPILE_FLAGS "-DPCASSO")
+endif()
+
+# 
+# Note:
+#   pcasso uses a specific preprocessor flag. All used libraries has
+#   to be build with this flag, except they are completly independent
+#   of the solver toolchain (e.g. libpca)
+# 
+if(STATIC_BINARIES)
+  target_link_libraries(pcasso pcasso-lib-static
+                               riss-pcasso-lib-static
+                               pfolio-pcasso-lib-static
+                               coprocessor-pcasso-lib-static)
+  if(CLASSIFIER)
+    target_link_libraries(pcasso classifier-pcasso-lib-static libpca-static)
+  endif()
+else()
+  target_link_libraries(pcasso pcasso-lib-shared
+                               riss-pcasso-lib-shared
+                               pfolio-pcasso-lib-shared
+                               coprocessor-pcasso-lib-shared)
+  if(CLASSIFIER)
+    target_link_libraries(pcasso classifier-pcasso-lib-shared libpca-shared)
+  endif()
 endif()
 
 # 

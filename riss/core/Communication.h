@@ -35,6 +35,18 @@ enum WaitState {
  */
 class ClauseRingBuffer
 {
+public:
+  
+    /** author ID that can be used for special sharing, received by all receivers (there should not be a thread with this ID) */
+    const int specialAuthor () { return 1073741823; /* 2^30 - 1 */ }
+    
+    /** to be used to receive only (do not use for sending) */
+    const int allReceivAuthor () { return 1073741822; /* 2^30 - 2 */ }
+  
+    /** author ID that can be used for special sharing (there should not be a thread with this ID) */
+    const int maxRegularAuthor () { return 1073741821; /* 2^30 - 3 */ }
+  
+private:
     /** item for the pool, remembers the sender so that own clauses are not received again, the type (and the dependencies)
      */
     struct poolItem {
@@ -45,7 +57,7 @@ class ClauseRingBuffer
         #ifdef PCASSO
         int dependencyLevel;        /** store depth in the partition tree where this share-element depends on */
         #endif
-        poolItem() : author(~(0)), multiunits(0), equivalence(0)     /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
+        poolItem() : author(1073741823), multiunits(0), equivalence(0)     /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
             #ifdef PCASSO
             , dependencyLevel(0)
             #endif
@@ -365,6 +377,10 @@ class CommunicationData
     ClauseRingBuffer clauseBuffer;  /** buffer that stores the shared clauses */
     ClauseRingBuffer specialBuffer; /** buffer for multiunits and equivalences (should not be missed, and not overwritten too regularly) */
 
+    // enable communication between global psolver and pcasso in pcasso
+    ClauseRingBuffer* extraClauseBuffer;  /** buffer that should be filled by add clause as well (author will be Ringbuffer::externAuthor) */
+    ClauseRingBuffer* extraSpecialBuffer; /** buffer that should be filled by add clause as well (author will be Ringbuffer::externAuthor) */
+    
     Lock dataLock;               /** lock that protects the access to the task data structures */
     SleepLock masterLock;        /** lock that enables the master thread to sleep during waiting for child threads */
 
@@ -375,7 +391,9 @@ class CommunicationData
     /** @param buffersize sets up a buffer with the given number of elements, and another buffer with quarter the number of elements */
     CommunicationData(const int buffersize) :
         clauseBuffer(buffersize),
-        specialBuffer(buffersize / 4)
+        specialBuffer(buffersize / 4),
+        extraClauseBuffer(nullptr),
+        extraSpecialBuffer(nullptr)
     {
     }
 
@@ -393,6 +411,21 @@ class CommunicationData
      */
     ClauseRingBuffer& getSpecialBuffer() { return specialBuffer; }
 
+    /** return a reference to the ringbuffer
+     */
+    ClauseRingBuffer* getExtraBuffer() { return extraClauseBuffer; }
+
+    /** return a reference to the ringbuffer
+     */
+    ClauseRingBuffer* getExtraSpecialBuffer() { return extraSpecialBuffer; }
+    
+    /** set pointers to extra buffers */
+    void setExternBuffers(ClauseRingBuffer* externClauseBuffer, ClauseRingBuffer* externSpecialBuffer ) {
+      extraClauseBuffer  = externClauseBuffer;
+      extraSpecialBuffer = externSpecialBuffer;
+    }
+    
+    
     /** clears the std::vector of units to send
      * should be called by the master thread only!
      */
@@ -421,6 +454,75 @@ class CommunicationData
             fillMe.push(sendUnits[i]);
         }
     }
+};
+
+/** during receive, also receive from parent tree receivers */
+class TreeReceiver {
+  TreeReceiver* parent;
+  CommunicationData* data;
+  
+  unsigned lastSeenIndex;         // position of the last clause that has been incorporated
+  unsigned lastSeenSpecialIndex;  // position of the last clause that has been incorporated
+  
+public:
+  TreeReceiver() : 
+    parent(nullptr)
+  , data(nullptr)
+  , lastSeenIndex(0)
+  , lastSeenSpecialIndex(0)
+  {}
+  
+  /** calls delete to its parent */
+  ~TreeReceiver() {
+    if ( parent != nullptr ) delete parent;
+    parent = nullptr;
+  }
+  
+  void setParent( TreeReceiver* outerParent ) { parent = outerParent; }
+  
+  void setData( CommunicationData* outerData ) { data = outerData; }
+  
+  bool hasParent() const { return parent != nullptr ; }
+  
+  TreeReceiver* getParent() { return parent ; }
+  
+  /** return pointer to data object (e.g. to initialize incarnations of PSolver */
+  CommunicationData* getData() { return data; }
+  
+    /** receive clauses from current data, as well as from parents data recursively
+     * follow recursion, even if there is no data element in the middle 
+     * copy all clauses into the clauses std::vector that have been received since the last call to this method
+     * note: only an approximation, can happen that ringbuffer overflows!
+     * note: should be called by the worker solver only!
+     * @param ca clause allocator, to avoid unnecessary copies
+     * @param clauses vector to new clause references of received clauses
+     * @param receivedUnits vector of received units
+     * @param receivedEquivalences vector of received equivalence classes, classes are separated by lit_Undef
+     * @param receiveData object that can tell per variable whether receiving is ok, get set dependency value per variable (for Pcasso, clauses have their value stored already)
+     */
+    template <typename T>
+    #ifdef PCASSO
+    void receiveClauses(Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<int>& receivedUnitsDependencies, vec<Lit>& receivedEquivalences, vec<int>& receivedEquivalencesDependencies, T& receiveData)
+    #else
+    void receiveClauses(Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses, vec<Lit>& receivedUnits, vec<Lit>& receivedEquivalences, T& receiveData)
+    #endif
+    {
+        // receive from special buffer first
+        #ifdef PCASSO
+	if( data != nullptr ) {
+	  lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(data->getSpecialBuffer().allReceivAuthor(), lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	  lastSeenIndex        = data->getBuffer().receiveClauses(data->getBuffer().allReceivAuthor(), lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	}
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive from parent, if activated
+        #else
+	if( data != nullptr ) {
+	  lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(data->getSpecialBuffer().allReceivAuthor(), lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	  lastSeenIndex        = data->getBuffer().receiveClauses(data->getSpecialBuffer().allReceivAuthor(), lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	}
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+        #endif
+    }
+  
 };
 
 /** provide the major communication between thread and master!
@@ -472,11 +574,13 @@ class Communicator
 
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
-
-
     // methods
   public:
 
+    TreeReceiver* parent; // handle to communcation of parent node
+    
+    int hardwareCore; // core on which this thread should be pinned (if -1, do not use pinning)
+    
     vec<Lit> assumptions;
 
     // seet default values, ownLock is set to initial sleep
@@ -495,6 +599,11 @@ class Communicator
         , lastSeenSpecialIndex(0)
         , doSend(true)              // should this thread send clauses
         , doReceive(true)
+	
+	, parent( nullptr )
+	
+	, hardwareCore(-1) // so far, do not use a core
+	
         , protectAssumptions(false) // should the size limit check also consider assumed variables?
         , sendSize(10)    // initial value, also minimum limit (smaller clauses can be shared if LBD is also accepted)
         , sendLbd(5)      // initial value, also minimum limit (smaller clauses can be shared if size is also accepted)
@@ -533,6 +642,9 @@ class Communicator
     ~Communicator()
     {
         if (ownLock != 0) { delete ownLock; }
+        ownLock = 0;
+        if( parent  != nullptr ) delete parent;
+	parent = nullptr;
     }
 
     void setSolver(Riss::Solver* s)
@@ -547,13 +659,18 @@ class Communicator
         assert(proofMaster == 0 && "will not overwrite handle to another proof master");
         proofMaster = pm;
     }
-
+    
     /** a parallel proof is constructed, if there is a proof master */
     bool generateProof() const { return proofMaster != 0; }
 
     /** forward the API of the proof master to the solver (or other callers) */
     ProofMaster* getPM() { return proofMaster ; }
-
+    
+    /** set object to receive clauses from, this object will be deleted during destruction of the called object*/
+    void setParentReceiver( TreeReceiver* receiver ) {
+      parent = receiver;
+    }
+    
     State getState() const
     {
         return state;
@@ -638,7 +755,7 @@ class Communicator
     {
         // FIXME to be adapted to the actual tree
 #warning USE TREE INFORMATION HERE!
-        assert(false && "this method should do something useful");
+//         assert(false && "this method should do something useful");
         return INT32_MAX; // return highest possible value
     };
 
@@ -658,12 +775,31 @@ class Communicator
     #endif
     {
         #ifdef PCASSO
-        assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
-        if (!multiUnits && !equivalences) { data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel); }     // usual buffer
-        else { data->getSpecialBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences); } // special buffer
+#warning enable assertion again later
+//        assert(!multiUnits && "remove this assertion when method makes sure that all units have the same dependency");   // either set the highest vor all, or sort and add multiple items
+        if (!multiUnits && !equivalences) { 
+	  data->getBuffer().addClause(id, clause, toSendSize, dependencyLevel);     // usual buffer
+	  if( data->getExtraBuffer() != nullptr ) {
+	    data->getExtraBuffer()->addClause(data->getExtraBuffer()->specialAuthor(), clause, toSendSize, dependencyLevel);     // usual special buffer
+	  }
+	} else {
+	  data->getSpecialBuffer().addClause(id, clause, toSendSize, dependencyLevel, multiUnits, equivalences);  // special buffer
+	  if( data->getExtraSpecialBuffer() != nullptr ) {
+	    data->getExtraSpecialBuffer()->addClause(data->getExtraSpecialBuffer()->specialAuthor(), clause, toSendSize, dependencyLevel, multiUnits, equivalences);  // special buffer
+	  }
+	} 
         #else
-        if (!multiUnits && !equivalences) { data->getBuffer().addClause(id, clause, toSendSize); }     // usual buffer
-        else { data->getSpecialBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences); } // special buffer
+        if (!multiUnits && !equivalences) { 
+	  data->getBuffer().addClause(id, clause, toSendSize); // usual buffer
+	  if( data->getExtraBuffer() != nullptr ) {
+	    data->getExtraBuffer()->addClause(data->getExtraBuffer()->specialAuthor(), clause, toSendSize);     // usual special buffer
+	  }
+	} else { 
+	  data->getSpecialBuffer().addClause(id, clause, toSendSize, multiUnits, equivalences);  // special buffer
+	  if( data->getExtraSpecialBuffer() != nullptr ) {
+	    data->getExtraSpecialBuffer()->addClause(data->getExtraSpecialBuffer()->specialAuthor(), clause, toSendSize, multiUnits, equivalences);  // special buffer
+	  }
+	} 
         #endif
     }
 
@@ -686,11 +822,15 @@ class Communicator
         if (!doReceive) { return; }
         // receive from special buffer first
         #ifdef PCASSO
-        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
         lastSeenIndex        = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);
+	
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedUnitsDependencies, receivedEquivalences, receivedEquivalencesDependencies, receiveData);  // receive from parent, if activated
         #else
-        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+        lastSeenSpecialIndex = data->getSpecialBuffer().receiveClauses(id, lastSeenSpecialIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
         lastSeenIndex        = data->getBuffer().receiveClauses(id, lastSeenIndex, ca, clauses, receivedUnits, receivedEquivalences, receiveData);
+	
+	if( parent != nullptr ) parent->receiveClauses(ca, clauses, receivedUnits, receivedEquivalences, receiveData); // receive from parent, if activated
         #endif
     }
 
@@ -710,6 +850,10 @@ class Communicator
     }
 
     bool variableProtection() const { return protectAssumptions; }
+    
+    
+    /** return whether this solver works on the original formula (independently, maybe later with communication)*/
+    bool independent() const { return solver->independent(); }
 
   public:       // this probably is not a good idea, but ah well ...
 

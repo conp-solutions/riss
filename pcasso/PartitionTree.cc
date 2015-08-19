@@ -38,6 +38,7 @@ TreeNode::TreeNode()
       solvesMe(-1),
       myID(runningID++),
       childs(0),
+      sharingPool(nullptr),
       lv_pool(0),
       solveTime(0),
       level(0),
@@ -57,6 +58,7 @@ TreeNode::TreeNode(const vector< vector<Lit>* >& localConstraints, TreeNode* par
       solvesMe(-1),
       myID(runningID++),
       childs(0),
+      sharingPool(nullptr),
       lv_pool(0),
       solveTime(0),
       level(0),
@@ -111,6 +113,11 @@ TreeNode::~TreeNode()
     if (this->lv_pool != 0) {
         delete this->lv_pool; // The destructor should be called
         this->lv_pool = 0;
+    }
+    
+    if( sharingPool != nullptr ) {
+      delete sharingPool;
+      sharingPool = nullptr;
     }
 
 }

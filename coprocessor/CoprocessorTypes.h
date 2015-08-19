@@ -1177,16 +1177,16 @@ inline void CoprocessorData::correctCounters()
 inline void CoprocessorData::garbageCollect(std::vector<Riss::CRef> ** updateVectors, int size)
 {
     if (debugging) {
-        std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
+         std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
         return;
     }
     Riss::ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
     // correct add / remove would be nicer
 
-    std::cerr << "c garbage collection ... " << std::endl;
+    DOUT( std::cerr << "c garbage collection ... " << std::endl; );
     relocAll(to, updateVectors);
-    std::cerr << "c Garbage collection: " << ca.size()*Riss::ClauseAllocator::Unit_Size
-              << " bytes => " << to.size()*Riss::ClauseAllocator::Unit_Size <<  " bytes " << std::endl;
+    DOUT( std::cerr << "c Garbage collection: " << ca.size()*Riss::ClauseAllocator::Unit_Size
+              << " bytes => " << to.size()*Riss::ClauseAllocator::Unit_Size <<  " bytes " << std::endl; );
 
     to.moveTo(ca);
 }
@@ -1312,6 +1312,18 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
         }
         learnts.shrink_(i - j);
     }
+    
+    // handle all clause pointers from OTFSS
+    int keptClauses = 0;
+    for (int i = 0 ; i < solver->otfss.info.size(); ++ i) {
+      if (!ca[solver->otfss.info[i].cr].can_be_deleted()) { // keep only relevant clauses (checks mark() != 0 )
+        ca.reloc(solver->otfss.info[i].cr, to);
+        if (!to[ solver->otfss.info[i].cr ].mark()) {
+            solver->otfss.info[keptClauses++] = solver->otfss.info[i]; // keep the clause only if its not marked!
+        }
+      }
+    }
+    solver->otfss.info.shrink_(solver->otfss.info.size() - keptClauses);
 }
 
 /** Mark all variables that occure together with _x_.

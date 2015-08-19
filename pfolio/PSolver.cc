@@ -28,23 +28,33 @@ static void* runWorkerSolver(void* data);
 
 PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int externalThreads)
     :
-    privateConfig(externalConfig == 0 ? new PfolioConfig(configName) : externalConfig)
+      privateConfig(externalConfig == 0 ? ( configName == 0 ? new PfolioConfig("") : new PfolioConfig(configName)) : externalConfig)
     , deleteConfig(externalConfig == 0)
     , pfolioConfig(* privateConfig)
     , initialized(false)
+    , simplified(false)
+    , killed(false)
     , threads(pfolioConfig.threads)
+    , winningSolver( -1 )
     , globalSimplifierConfig(0)
     , globalSimplifier(0)
     , data(0)
     , threadIDs(0)
     , proofMaster(0)
     , opc(0)
-    , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == nullptr ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
+    , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == 0 ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
     , verbosity(0)
     , verbEveryConflicts(0)
+    , externBuffer(0)
+    , externSpecialBuffer(0)
+    , originalFormula(nullptr)
+    , externalData(nullptr)
+    , externalParent(nullptr)
 {
-    if (externalThreads != -1) { threads = externalThreads; }  // set number of threads from constructor, overwrite command line
+ 
+    // set number of threads from constructor, overwrite command line, have at least one thread to allocate all structures
+    if (externalThreads != -1) { threads = externalThreads > 0 ? externalThreads : 1; }
 
     // setup the default configuration for all the solvers!
     configs   = new CoreConfig        [ threads ];
@@ -59,6 +69,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     // set global coprocessor configuratoin
     if ((const char*)pfolioConfig.opt_ppconfig != nullptr) {
         defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
+ 	DOUT( cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl; );
     }
 
     // set preprocessor, if there is one selected
@@ -68,6 +79,14 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
         communicators[i] = 0;
     }
 
+    // initialize pinning to hardware cores
+    hardwareCores.clear();
+    cpu_set_t mask;
+    sched_getaffinity(0, sizeof(cpu_set_t), &mask);
+    for (int i = 0; i < sizeof(cpu_set_t) << 3; ++i) // add all available cores to the system
+        if (CPU_ISSET(i, &mask)) { hardwareCores.push_back(i); }
+    if( hardwareCores.size() > threads ) hardwareCores.resize( threads ); // use only the first required available cores!
+    
     // set preset configs here
     createThreadConfigs();
 
@@ -80,6 +99,26 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     solvers.push(new Solver(&configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
+
+void PSolver::setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* getSpecialBuffer)
+{
+   // simply set buffers
+   externBuffer = getBuffer;
+   externSpecialBuffer = getSpecialBuffer;
+   
+   // if we already ran (or are currently running), store pointers forward
+   if( data != 0 ) {
+     data->setExternBuffers(externBuffer, externSpecialBuffer);
+   }
+}
+
+
+void PSolver::setExternalCommunication(Communicator* com)
+{
+  externalData   = com->data;
+  externalParent = com->parent;
+}
+
 
 void PSolver::parseConfigurations(const string& combinedConfigurations)
 {
@@ -118,7 +157,7 @@ PSolver::~PSolver()
 
     sleep(0.2);
 
-    if (globalSimplifier != 0) { delete globalSimplifier; }
+    if (globalSimplifier != 0)       { delete globalSimplifier; }
     if (globalSimplifierConfig != 0) { delete globalSimplifierConfig; }
 
     for (int i = 0 ; i < solvers.size(); ++ i) {
@@ -131,7 +170,8 @@ PSolver::~PSolver()
     solvers.clear(true);
 
     if (threadIDs != 0) { delete [] threadIDs; threadIDs = 0; }
-    if (data != 0) { delete data; data = 0; }
+    if (data != 0 && data != externalData ) { delete data; } // only delete, if we created this object
+    data = 0;
 
     if (deleteConfig) { delete privateConfig; }
 }
@@ -156,6 +196,10 @@ int PSolver::nClauses() const
     return solvers[0]->nClauses();
 }
 
+Clause& PSolver::GetClause( int index ) const {
+    return solvers[0]->ca[ solvers[0]->clauses[index] ];
+}
+
 int PSolver::nTotLits() const
 {
     return solvers[0]->nTotLits();
@@ -175,6 +219,23 @@ bool PSolver::simplify()
 {
     return solvers[0]->simplify();
 }
+
+int PSolver::getNumberOfTopLevelUnits()
+{
+  assert( winningSolver <= threads && "" );
+  const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
+  if( s->trail_lim.size() == 0 ) s->trail.size();
+  else s->trail_lim[0];
+}
+
+Lit PSolver::trailGet(int index)
+{
+  assert( winningSolver <= threads && "" );
+  const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
+  assert( index < s->trail.size() && "elements in trail should be available" );
+  return s->trail[index];
+}
+
 
 void PSolver::interrupt()
 {
@@ -212,56 +273,80 @@ bool PSolver::addClause_(vec< Lit >& ps)
     return ret;
 }
 
-lbool PSolver::solveLimited(const vec< Lit >& assumps)
+lbool PSolver::simplifyFormula()
 {
-//   // for now, simply let the first solver solve the formula!
-//   lbool ret = solvers[0]->solveLimited( assumps );
-//
-//   int winningSolver = 0;
-//   if( ret == l_True ) {
-//     model.clear();
-//     model.capacity( solvers[winningSolver]->model.size() );
-//     for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) model.push(solvers[winningSolver]->model[i]);
-//   } else if ( ret == l_False ) {
-//     conflict.clear();
-//     conflict.capacity( solvers[winningSolver]->conflict.size() );
-//     for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) conflict.push(solvers[winningSolver]->conflict[i]);
-//   } else {
-//
-//   }
-//
-//   return ret;
-
-    int winningSolver = 0;
+    DOUT( cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl; );
+    if( winningSolver != -1 ) return l_Undef; // simplify only, if there is no winning solver already
     lbool ret = l_Undef;
     /*
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration!
      */
-    if (!initialized && defaultSimplifierConfig.size() != 0) {
+    if (!simplified && defaultSimplifierConfig.size() != 0) {
+	simplified = true;
         assert(globalSimplifierConfig == 0 && globalSimplifier == 0 && "so far we did not setup global solver and simplifier");
 
         globalSimplifierConfig = new Coprocessor::CP3Config(defaultSimplifierConfig.c_str());
         globalSimplifier = new Coprocessor::Preprocessor(solvers[0] , *globalSimplifierConfig, threads); // use simplifier with the given number of threads
 
 
-	Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
-	
-	ret = solvers[0]->solve_(Solver::SolveCallType::simplificationOnly); // solve until preprocessing
-	
-	solvers[0]->swapPreprocessor(internalPreprocessor); // ignore return value, as we still know this pointer
+        Coprocessor::Preprocessor* internalPreprocessor = solvers[0]->swapPreprocessor(globalSimplifier); // tell solver about global solver
 
-	if (verbosity > 0) { cerr << "c solver0 with " << solvers[0]->nVars() << " variables, and " << solvers[0]->clauses.size() << " clauses" << endl; }
+        ret = solvers[0]->solve_(Solver::SolveCallType::simplificationOnly); // solve until preprocessing
+
+        solvers[0]->swapPreprocessor(internalPreprocessor); // ignore return value, as we still know this pointer
+
+        if (verbosity > 0) { cerr << "c solver0 with " << solvers[0]->nVars() << " variables, and " << solvers[0]->clauses.size() << " clauses" << endl; }
         // solved by simplification?
         if (ret == l_False) { return ret; }
         else if (ret == l_True) {
             winningSolver = 0;
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-            if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
-            if( ret == l_True && verbosity > 0) cerr << "c solved formula with simplification" << endl;
+	    extendModel(model);
+            if (ret == l_True && verbosity > 0) { cerr << "c solved formula with simplification" << endl; }
             return ret;
         }
+    }
+    return ret; // we do not know the state, if we should not run simplification
+}
+
+void PSolver::extendModel( Riss::vec< Riss::lbool >& externalModel ) {
+  if (globalSimplifier != 0) { globalSimplifier->extendModel(externalModel); }
+}
+
+lbool PSolver::solveLimited(const vec< Lit >& assumps)
+{
+
+    winningSolver = -1;
+    lbool ret = l_Undef;
+    
+    if( !initialized ) {  // check whether some solver wants to work on the original formula
+      bool keepOriginal = false;
+      for (int i = 1; i < threads; ++ i) { // iterate over threads, as we do not have solvers at the moment
+	if( configs[i].opt_useOriginal ) { // a configuration that wants to work on the original formula should not share anything
+	  keepOriginal = keepOriginal || configs[i].opt_useOriginal;
+	}
+      }
+      if( keepOriginal ) {
+	assert( originalFormula == nullptr && "set this only once" );
+	originalFormula = new OriginalFormula(solvers[0]->trail, solvers[0]->clauses, solvers[0]->ca, solvers[0]->nVars(),
+	    solvers[0]->activity, solvers[0]->order_heap, solvers[0]->varFlags, solvers[0]->vardata); // memorize current state for initialization
+      }
+    }
+    
+    
+    /*
+     * preprocess the formula with the preprocessor of the first solver
+     * but only in the very first iteration (there is a simplified-flag that is set accordingly)
+     */
+    ret = simplifyFormula();
+    if( ret != l_Undef ) {
+      if( originalFormula != nullptr ) {
+	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
+	  originalFormula = nullptr;
+      }
+      return ret; // simplification resulted in UNSAT or SAT already
     }
 
     if (! initialized) {  // distribute the formula, if this is the first call to this method!
@@ -270,7 +355,11 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         * setup the communication system for the solvers, including the number of commonly known variables
         */
         if (initializeThreads()) {
-            cerr << "c initialization of " << threads << " threads: failed" << endl;
+            DOUT( cerr << "c initialization of " << threads << " threads: failed" << endl; );
+	    if( originalFormula != nullptr ) {
+	      delete originalFormula ;   // free resources again, as we initialized all incarnations now
+	      originalFormula = nullptr;
+	    }
             return l_Undef;
         } else {
             if (verbosity > 0) { cerr << "c initialization of " << threads << " threads: succeeded" << endl; }
@@ -281,20 +370,26 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
          * copy the formula from the first solver to all the other solvers
          */
 
+	/// if the first solver was not initialized due to simplification, set it up correctly before copying to the other incarnations
+	if( !simplified ) solvers[0]->solve_(Solver::SolveCallType::initializeOnly);
+	
         for (int i = 1; i < solvers.size(); ++ i) {
+	  
+	  if( ! configs[i].opt_useOriginal ) {
+	  
             solvers[i]->reserveVars(solvers[0]->nVars());
             while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
             communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
 
-	    // pseudo clone solver incarnations
+            // pseudo clone solver incarnations
             solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
             solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
             solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
             solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
-	    solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
-	    solvers[0]->order_heap.copyOrderTo( solvers[i]->order_heap ); // rebuild order heap (use configuration of other heap, but use own acticities)
-	    solvers[0]->varFlags.copyTo( solvers[i]->varFlags );
-	    solvers[0]->vardata.copyTo( solvers[i]->vardata );
+            solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
+            solvers[0]->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
+            solvers[0]->varFlags.copyTo(solvers[i]->varFlags);
+            solvers[0]->vardata.copyTo(solvers[i]->vardata);
 
             // attach all clauses
             for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
@@ -303,9 +398,35 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
                 solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
             }
-	    solvers[i]->solve_( Solver::SolveCallType::initializeOnly ); // let solve initialize itself
-            if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
-            solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
+            
+            assert(! configs[i].opt_useOriginal && "run initializeOnly only if we are working with the simplified formula already" );
+            solvers[i]->solve_(Solver::SolveCallType::initializeOnly);   // let solve initialize itself, if it does not want to perform the full solving process on its own
+	  } else { // initialize based on original formula
+	    
+	    communicators[i]->setDoSend(false);     // disable sending hard   // TODO might be disabled once sharing and simplification works nicely together
+	    communicators[i]->setDoReceive(false);  // disable receiving hard // TODO might be disabled once sharing and simplification works nicely together
+	    
+	    assert( originalFormula != nullptr && "had to be collected before" );
+	    solvers[i]->reserveVars(originalFormula->nVars);
+            while (solvers[i]->nVars() < originalFormula->nVars) { solvers[i]->newVar(); }
+            communicators[i]->setFormulaVariables(originalFormula->nVars);   // tell which variables can be shared
+	    
+            solvers[i]->addUnitClauses(originalFormula->trail);   // copy all the unit clauses, adds to the proof
+            originalFormula->ca.copyTo(solvers[i]->ca);             // have information about clauses
+            originalFormula->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
+	    originalFormula->activity.copyTo(solvers[i]->activity); // copy activity
+            originalFormula->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
+            originalFormula->varFlags.copyTo(solvers[i]->varFlags);
+            originalFormula->vardata.copyTo(solvers[i]->vardata);
+	    
+            // attach all clauses
+            for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
+                solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+            }
+	  }
+	  
+          if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
+          solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
         }
 
         // copy the formula of the solver 0 number of thread times
@@ -324,6 +445,12 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
 
         initialized = true;
+	
+	if( originalFormula != nullptr ) {
+	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
+	  originalFormula = nullptr;
+	}
+	
     } else {
         // already initialized -- simply print the summary
         for (int i = 0; i < solvers.size(); ++ i) {
@@ -382,7 +509,11 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (ret == l_True) {
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-            if (globalSimplifier != 0) { globalSimplifier->extendModel(model); }
+	    
+	    // only extend model, if not independently solved
+	    if( ! configs[winningSolver].opt_useOriginal ) {
+	      extendModel(model);
+	    }
 
             if (false && verbosity > 2) {
                 cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;
@@ -417,7 +548,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                                         <<  "  \t|\t" << communicators[i]->nrReceivedMultiUnits
                                         << endl;
         }
-        if (verbosity > 0) { cerr << "attempts:" << endl; }
+        if (verbosity > 0) { cerr << "c attempts:" << endl; }
         if (verbosity > 0) { cerr << "c thread  SCls\t|\tS-EE\t|\tS-U\t|\tRec\t" << endl; }
         for (int i = 0 ; i < threads; ++ i) {
             if (verbosity > 0) cerr << "c " << i << " : " << communicators[i]->nrSendCattempt
@@ -426,7 +557,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                                         <<  "  \t|\t" << communicators[i]->nrReceiveAttempts
                                         << endl;
         }
-        if (verbosity > 0) { cerr << "search data:" << endl; }
+        if (verbosity > 0) { cerr << "c search data:" << endl; }
         for (int i = 0 ; i < threads; ++ i) {
             if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
@@ -444,19 +575,19 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 void PSolver::createThreadConfigs()
 {
     const char* Configs[] = {
+        "STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll", 
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ""-revMin -init-act=4 -actStart=2048 -refRec",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ",
+        "-no-usePP -revMin -init-act=3 -actStart=2048 -longConflict -refRec ",
+        "Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegsv -no-dense -up -refRec ",
         "",         // 0
         "PLAINBIASSERTING", // 1
         "LLA",      // 2
         "AUIP",     // 3
         "SUHD",     // 4
         "OTFSS",        // 5
-        "SUHLE",        // 6
-        "LHBR",     // 7
-        "HACKTWO",      // 8
-        "NOTRUST",      // 9
-        "DECLEARN",     // 10
         "PLAINBIASSERTING", // 11
-        "LBD",      // 12
         "FASTRESTART",  // 13
         "AGILREJECT",   // 14
         "LIGHT",        // 15
@@ -465,6 +596,8 @@ void PSolver::createThreadConfigs()
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", // 48 - 63
     };
 
+
+    
     if (defaultConfig.size() > 0) {
         if (verbosity > 1) { cerr << "c setup pfolio with config " << defaultConfig << endl; }
     }
@@ -476,13 +609,12 @@ void PSolver::createThreadConfigs()
     if (defaultConfig.size() == 0) {
         for (int t = 0 ; t < threads; ++ t) {
             if (incarnationConfigs[t].size() == 0) {  // assign preset, if no cmdline was specified
-	      configs[t].setPreset(Configs[t]);
-	      ppconfigs[t].setPreset(Configs[t]);
-	    }   
-            else { 
-	      configs[t].setPreset(incarnationConfigs[t]);
-	      ppconfigs[t].setPreset(incarnationConfigs[t]);
-	    }                          // otherwise, use commandline configuration
+                configs[t].setPreset(Configs[t]);
+                ppconfigs[t].setPreset(Configs[t]);
+            } else {
+                configs[t].setPreset(incarnationConfigs[t]);
+                ppconfigs[t].setPreset(incarnationConfigs[t]);
+            }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "BMC") {
         // thread 1 runs with empty (default) configurations
@@ -525,15 +657,15 @@ void PSolver::createThreadConfigs()
 
         if (threads > 0) {
             ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive");
-            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1 -verb=1");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=1");
         }
         if (threads > 1) {
             ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
             configs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1");
         }
         if (threads > 2) {
-            ppconfigs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec ");
-            configs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec -shareTime=1");
+            ppconfigs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec -shareTime=1");
         }
         if (threads > 3) {
             ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
@@ -552,15 +684,311 @@ void PSolver::createThreadConfigs()
             configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2");
         }
         if (threads > 7) {
-            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec ");
-            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2");
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "beta") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[2].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uev -no-dense -up -refRec -shareTime=1 -sendAll");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec  -shareTime=0 -dynLimits");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    }  else if (defaultConfig == "gamma") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -keepWorst=0.01");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll -rnd-freq=0.01");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("Riss427:plain_XOR:plain_PRB:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+            configs[2].setPreset("Riss427:plain_XOR:plain_PRB:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll -rnd-freq=0.05");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits -lbd-core-th=5 -var-decay-b=0.8 -var-decay-e=0.99  -rnd-freq=0.01");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("AUIP:LLA:SUHD:-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec -shareTime=0 -dynLimits");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "delta") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -keepWorst=0.01");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[1].setPreset("-revMin -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll -rnd-freq=0.01 -init-pol=6 -init-act=4 -biAsserting -minSizeMinimizingClause=0 -no-revMin -rmf");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("Riss427:plain_XOR:plain_PRB:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+            configs[2].setPreset("Riss427:plain_XOR:plain_PRB:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll -init-pol=3 -init-act=6 -lbdIgnL0 -otfss -otfssL");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll -rnd-freq=0.05 -init-pol=4 -init-act=5");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits -lbd-core-th=5 -var-decay-b=0.8 -var-decay-e=0.99  -rnd-freq=0.01 -init-pol=5");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("AUIP:LLA:SUHD:-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec -shareTime=0 -dynLimits -biAsserting");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "epsilon") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -keepWorst=0.01");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+            configs[1].setPreset("STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uespgxv -no-dense -up -refRec -shareTime=1 -sendAll -init-pol=3 -init-act=6 -lbdIgnL0 -otfss -otfssL");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[2].setPreset("-revMin -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll -rnd-freq=0.01 -init-pol=6 -init-act=4 -biAsserting -minSizeMinimizingClause=0 -no-revMin -rmf");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll -rnd-freq=0.05 -init-pol=4 -init-act=5");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits -lbd-core-th=5 -var-decay-b=0.8 -var-decay-e=0.99  -rnd-freq=0.01 -init-pol=5");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("AUIP:LLA:SUHD:-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec -shareTime=0 -dynLimits -biAsserting");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegsv -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    }  else if (defaultConfig == "pcassoworker") {
+        if (threads > 0) {
+            ppconfigs[0].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01");
+            configs[0].setPreset("-revMin -init-act=3 -actStart=2048 -shareTime=0 -dynLimits"); // sends all
+        }
+        if (threads > 1) {
+            ppconfigs[1].setPreset("STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll");
+            configs[1].setPreset("STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uespgxv -no-dense -up -refRec -shareTime=1 -sendAll -init-pol=3 -init-act=6 -lbdIgnL0 -otfss -otfssL");
+        }
+        if (threads > 2) {
+            ppconfigs[2].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec");
+            configs[2].setPreset("-revMin -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec -shareTime=1 -sendAll -rnd-freq=0.01 -init-pol=6 -init-act=4 -biAsserting -minSizeMinimizingClause=0 -no-revMin -rmf");
+        }
+        if (threads > 3) {
+            ppconfigs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ");
+            configs[3].setPreset("-revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec -shareTime=1 -sendAll -rnd-freq=0.05 -init-pol=4 -init-act=5");
+        }
+        if (threads > 4) {
+            ppconfigs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec ");
+            configs[4].setPreset("-revMin -init-act=4 -actStart=2048 -refRec -shareTime=2 -dynLimits -lbd-core-th=5 -var-decay-b=0.8 -var-decay-e=0.99  -rnd-freq=0.01 -init-pol=5");
+        }
+        if (threads > 5) {
+            ppconfigs[5].setPreset("-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ");
+            configs[5].setPreset("AUIP:LLA:SUHD:-revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec -shareTime=0 -dynLimits -biAsserting");
+        }
+        if (threads > 6) {
+            ppconfigs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec ");
+            configs[6].setPreset("-revMin -init-act=3 -actStart=2048 -longConflict -refRec  -shareTime=2 -sendAll");
+        }
+        if (threads > 7) {
+            ppconfigs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegsv -no-dense -up -refRec ");
+            configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
+        }
+        for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "best3") {
+	if (threads > 0) {
+            ppconfigs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits");
+            configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+	if (threads > 1) {
+            ppconfigs[1].setPreset("CircuitFuzz:-independent");
+              configs[1].setPreset("CircuitFuzz:-independent");
+        }
+	if (threads > 2) {
+            ppconfigs[2].setPreset("EDACC1:-independent");
+              configs[2].setPreset("EDACC1:-independent");
+        }
+        for (int t = 3 ; t < threads; ++ t) {  // set configurations for remaining (beyond 3)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-3]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "best4") {
+	if (threads > 0) {
+            ppconfigs[0].setPreset("OldRealTime.data2");
+            configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+	if (threads > 1) {
+            ppconfigs[1].setPreset("CircuitFuzz:-independent");
+              configs[1].setPreset("CircuitFuzz:-independent");
+        }
+	if (threads > 2) {
+            ppconfigs[2].setPreset("EDACC1:-independent");
+              configs[2].setPreset("EDACC1:-independent");
+        }
+	if (threads > 3) {
+            ppconfigs[3].setPreset("LABS:-independent");
+              configs[3].setPreset("LABS:-independent");
+        }
+	for (int t = 4 ; t < threads; ++ t) {  // set configurations for remaining (beyond 4)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-4]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } else if (defaultConfig == "best6") {
+	if (threads > 0) {
+            ppconfigs[0].setPreset("OldRealTime.data2");
+            configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
+        }
+	if (threads > 1) {
+            ppconfigs[1].setPreset("CircuitFuzz:-independent");
+              configs[1].setPreset("CircuitFuzz:-independent");
+        }
+	if (threads > 2) {
+            ppconfigs[2].setPreset("EDACC1:-independent");
+              configs[2].setPreset("EDACC1:-independent");
+        }
+	if (threads > 3) {
+            ppconfigs[3].setPreset("LABS:-independent");
+              configs[3].setPreset("LABS:-independent");
+        }
+	if (threads > 4) {
+            ppconfigs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP");
+              configs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP"); // same pp as above, hence share clauses, but do not receive!
+        }
+	if (threads > 5) {
+            ppconfigs[5].setPreset("GI:-independent");
+              configs[5].setPreset("GI:-independent");
+        }
+	for (int t = 6 ; t < threads; ++ t) {  // set configurations for remaining (beyond 6)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-6]); }   // assign preset, if no cmdline was specified
+            else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
+        }
+    } 
+      
+    
+    /*
+    *
+    * Configurations that are added here might also be added as preset to PfolioConfig.cc
+    *
+    */
+
+
+
+    // add extra commands, even if a preset is used
+    if( pfolioConfig.addExtraSetup ) { 
+      // assign options from the commandline additionally to already set uptions
+      for (int t = 0 ; t < threads; ++ t) {
+        if (incarnationConfigs.size() > t && incarnationConfigs[t].size() > 0) {
+          configs[t].setPreset(incarnationConfigs[t]);
+          ppconfigs[t].setPreset(incarnationConfigs[t]);
+	}
+      }
+    }
+
+    // assign common setup prefix
+    if ((const char*)pfolioConfig.opt_allIncPresets != 0) {
+        for (int t = 0 ; t < threads; ++ t) {
+            configs[t].setPreset(string(pfolioConfig.opt_allIncPresets));
+            ppconfigs[t].setPreset(string(pfolioConfig.opt_allIncPresets));
         }
     }
 }
+
+void PSolver::overwriteAsIndependent(const string& preferredSequentialConfig, int thread)
+{
+  assert( thread > 0 && thread < threads && "worker must exist" );
+  
+  // remove parsed values
+  configs[thread].reset();
+  ppconfigs[thread].reset();
+  
+  // set preset
+  configs[thread].setPreset( preferredSequentialConfig );
+  ppconfigs[thread].setPreset( preferredSequentialConfig );
+  // tell system that this configuration is independent
+  configs[thread].opt_useOriginal = true;
+}
+
 
 void PSolver::addInputClause_(vec< Lit >& ps)
 {
@@ -578,8 +1006,17 @@ bool PSolver::initializeThreads()
     // get space for thread ids
     threadIDs = new pthread_t [threads];
 
-    data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
+    
+    if( externalData != nullptr ) {
+      data = externalData;  // use the external data 
+    } else {
+      data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
+    }
 
+    // communicate with external data pool, if there are links present
+    if( externBuffer != 0 || externSpecialBuffer != 0) {
+      data->setExternBuffers(externBuffer, externSpecialBuffer);
+    }
 
     // the portfolio should print proofs
     if (drupProofFile != 0) {
@@ -598,6 +1035,11 @@ bool PSolver::initializeThreads()
             solvers.push(new Solver(& configs[i]));      // solver 0 should exist already!
         }
 
+        if( hardwareCores.size() > 0 ) { // if cores are available
+	  int coreID = i % hardwareCores.size();
+	  communicators[i]->hardwareCore = coreID;
+	}
+        
         // setup parameters for communication system
         communicators[i]->protectAssumptions = pfolioConfig.opt_protectAssumptions;
         communicators[i]->sendSize = pfolioConfig.opt_sendSize;
@@ -622,6 +1064,22 @@ bool PSolver::initializeThreads()
 
             }
         }
+        
+        // forward tree parents (which will be deleted when this communicator is deleted)
+        if( externalParent != nullptr ) {
+	  TreeReceiver* p = externalParent;     // working pointer for the existing hierarchy
+	  TreeReceiver *r = new TreeReceiver(); // pointer for the copy of the hierarchy
+	  r->setData( p->getData() );           // link first level
+	  communicators[i]->setParentReceiver( r ); // tell communicator
+	  
+	  while( p->hasParent() ) {
+	    p = p->getParent();                    // move one level upwards
+	    TreeReceiver* n = new TreeReceiver();  // create new receiver
+	    n->setData( p->getData() );            // link data
+	    r->setParent( n );                     // store parent
+	    r = n;                                 // follow one level up
+	  }
+	}
 
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);
@@ -722,8 +1180,13 @@ void PSolver::waitFor(const WaitState waitState)
 void PSolver::kill()
 {
     if (!initialized) { return; }  // child threads have never been created - no need to kill them
-
+    if( killed ) return; // killed already
+    killed = true;
     if (verbosity > 0) { cerr << "c MASTER kills all child threads ..." << endl; }
+    
+    // tell each incarnation that it should stop now
+    interrupt();
+    
     // set all threads to working (they'll have a look for new work on their own)
     for (unsigned i = 0 ; i < threads; ++ i) {
         communicators[i]->ownLock->lock();
@@ -745,7 +1208,8 @@ void PSolver::kill()
     for (unsigned i = 0 ; i < threads; ++ i) {
         int* status = 0;
         int err = 0;
-        err = pthread_join(threadIDs[i], (void**)&status);
+	pthread_cancel(threadIDs[i]); // terminate thread
+        err = pthread_join(threadIDs[i], (void**)&status); // wait for terminated thread
         if (err != 0) { cerr << "c joining a thread resulted in a failure with status " << *status << endl; }
     }
     if (verbosity > 1) { cerr << "c finished killing" << endl; }
@@ -762,9 +1226,19 @@ void* runWorkerSolver(void* data)
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
 
     Communicator& info = * ((Communicator*)data);
 
+    if (info.hardwareCore >= 0) {  // pin this thread to the specified core, if greater equal to zero
+	cpu_set_t mask;
+	CPU_ZERO(&mask); 
+	CPU_SET(info.hardwareCore, &mask);
+	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+	}
+    }
+    
     if (verbose) { cerr << "c started thread with id " << info.getID() << endl; }
     // initially, wait until master provides work!
     info.ownLock->lock();
@@ -786,7 +1260,14 @@ void* runWorkerSolver(void* data)
 
         // do work
         lbool result l_Undef;
-        result = info.getSolver()->solveLimited(assumptions,Solver::SolveCallType::afterSimplification);
+        if (!info.getSolver()->okay()) { result = l_False; }
+        else { 
+	  if( info.independent() ) {
+	    result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::full);  // as we are working on the original formula, have the change to initialize amd simplify
+	  } else {
+	    result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification); // we work on a simplified formula, do not simplify/initialize again
+	  }
+	}
 
         info.setReturnValue(result);
         if (verbose) cerr << "c [THREAD] " << info.getID() << " result " <<

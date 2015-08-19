@@ -1,0 +1,45 @@
+#-----------------------------------------------------------------------#
+#- GLOBAL DEFS ---------------------------------------------------------#
+#-----------------------------------------------------------------------#
+
+# Keep this as generic as possible.
+NAME=pcasso
+VERSION=505
+
+
+DIR=$(NAME)_$(VERSION)
+
+
+#-----------------------------------------------------------------------#
+#- REQUIRED TOP RULES --------------------------------------------------#
+#-----------------------------------------------------------------------#
+
+all: pcasso_505
+
+clean:
+	rm -f  pcasso_505*.sh
+	rm -rf $(DIR)
+
+
+#-----------------------------------------------------------------------#
+#- INVISIBLE INTERNAL SUB RULES ----------------------------------------#
+#-----------------------------------------------------------------------#
+
+pcasso_505: .FORCE
+	@#
+	@# configure and build solver
+	@#
+	mkdir -p $(DIR)/build
+	cd $(DIR)/build; cmake -DQUIET=ON -DCMAKE_BUILD_TYPE=Release -DSTATIC_BINARIES=ON -DCLASSIFIER=ON ..
+	cd $(DIR)/build; make libpca-static
+	@# patches are different depending on installed libraries, hence copy the fixed file
+	cp $(DIR)/patches/patched-armadillo-config.hpp $(DIR)/armadillo/armadillo_bits/config.hpp
+	@# continue with the build process
+	cd $(DIR)/build; make pcasso
+	@#
+	@# copy call-scripts and binary
+	@#
+	cp $(DIR)/build/bin/pcasso .
+
+.FORCE:
+.PHONY: all clean

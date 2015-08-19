@@ -124,7 +124,7 @@ void MaxSAT::setInitialTime(double initial)
 void MaxSAT::copySolver(MaxSAT *solver)
 {
 
-    while (nVars() >= solver->nVars()) {
+    while (nVars() > solver->nVars()) {
         solver->newVar();
     }
 

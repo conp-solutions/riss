@@ -51,7 +51,7 @@ namespace Riss
 
 
 Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreConfig& _config
-    privateConfig(externalConfig == 0 ? new CoreConfig(configName) : externalConfig)
+    privateConfig(externalConfig == 0 ? new CoreConfig(configName == 0 ? "" : configName) : externalConfig)
     , deleteConfig(externalConfig == 0)
     , config(* privateConfig)
     // DRUP output file
@@ -73,6 +73,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
     , curRestart(1)
 
+
+    
     , ok(true)
     , cla_inc(1)
     , var_inc(1)
@@ -90,6 +92,15 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , progress_estimate(0)
     , remove_satisfied(true)
 
+    // removal setup
+    , max_learnts( config.opt_min_learnts_lim )
+    , learntsize_factor( config.opt_learnt_size_factor )
+    , learntsize_inc( config.opt_learntsize_inc )
+    , learntsize_adjust_start_confl( config.opt_learntsize_adjust_start_confl )
+    , learntsize_adjust_inc( config.opt_learntsize_adjust_inc )
+    , learntsize_adjust_confl( config.opt_learntsize_adjust_start_confl )
+    , learntsize_adjust_cnt( config.opt_learntsize_adjust_start_confl )
+    
     , preprocessCalls(0)
     , inprocessCalls(0)
 
@@ -224,7 +235,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , communication(0)
     , sharingTimePoint(config.sharingType)
 {
-
+  
     // Parameters (user settable):
     //
     searchconfiguration.K = config.opt_K;
@@ -258,16 +269,22 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     searchconfiguration.restarts_type = config.opt_restarts_type;
 
     // communication
-    communicationClient.receiveEE      = config.opt_receiveEquivalences;
-    communicationClient.refineReceived = config.opt_refineReceivedClauses;
-    communicationClient.resendRefined  = config.opt_resendRefinedClauses;
-    communicationClient.doReceive      = config.opt_receiveData;
+    communicationClient.receiveEE        = config.opt_receiveEquivalences;
+    communicationClient.refineReceived   = config.opt_refineReceivedClauses;
+    communicationClient.resendRefined    = config.opt_resendRefinedClauses;
+    communicationClient.doReceive        = config.opt_receiveData;
+    communicationClient.sendAll          = config.opt_sendAll;
+    communicationClient.useDynamicLimits = config.opt_dynLimit;
+    communicationClient.keepLonger       = config.opt_keepLonger;
+    communicationClient.lbdFactor        = config.opt_recLBDfactor;
 
     MYFLAG = 0;
     hstry[0] = lit_Undef; hstry[1] = lit_Undef; hstry[2] = lit_Undef; hstry[3] = lit_Undef; hstry[4] = lit_Undef; hstry[5] = lit_Undef;
 
     if (onlineDratChecker != 0) { onlineDratChecker->setVerbosity(config.opt_checkProofOnline); }
 
+//     cerr << "c sizes: solver: " << sizeof(Solver) << " comm: " << sizeof(Communicator) << endl;
+    
     if ((const char*)config.search_schedule != 0) {
         configScheduler.initConfigs(searchconfiguration, string(config.search_schedule), config.sscheduleGrowFactor, config.scheduleDefaultConflicts, config.scheduleConflicts);    // setup configuration
     }
@@ -581,6 +598,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
         const Lit p = learned_clause[0]; // this literal cannot be removed!
         const uint32_t cs = learned_clause.size(); // store the size of the initial clause
         Lit Splus  [cs];      // store sorted literals of the clause
+        DOUT( if (config.opt_learn_debug) cerr << "c minimize with UHLE: " << learned_clause << endl; );
         for (uint32_t ci = 0 ; ci  < cs; ++ ci) { Splus [ci] = learned_clause[ci]; }
 
         {
@@ -605,7 +623,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
             const Lit l = Splus[ pp - 1];
             const uint32_t fin = big->getStop(l);
             if (fin > finished) {
-                for (int i = 0 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned clause
+                for (int i = 1 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned claus, do not remove the asserting literal!
                     if (learned_clause[i] == l) {
                         learned_clause[i] = learned_clause[ learned_clause.size() - 1]; learned_clause.pop();
                     }
@@ -644,7 +662,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
             const Lit l = Sminus[ pn ];
             const uint32_t fin = big->getStop(l);
             if (fin < finished) {   // remove the complementary literal from the clause!
-                for (int i = 0 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned clause
+                for (int i = 1 ; i < learned_clause.size(); ++ i) {   // remove the literal l from the current learned clause, do not remove the asserting literal
                     if (learned_clause[i] == ~l) {
                         learned_clause[i] = learned_clause[ learned_clause.size() - 1]; learned_clause.pop();
                     }
@@ -657,7 +675,11 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
         // do some stats!
         searchUHLEs ++;
         searchUHLElits += (cs - learned_clause.size());
-        if (cs != learned_clause.size()) { return true; }   // some literals have been removed
+        if (cs != learned_clause.size()) { 
+	  DOUT( if (config.opt_learn_debug) cerr << "c UHLE result: " << learned_clause << endl; )
+	  // some literals have been removed
+	  return true; 
+	}   
         else { return false; } // no literals have been removed
     } else { return false; }// no literals have been removed
 }
@@ -1854,6 +1876,8 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0) { // top level conflict - stop!
                 return l_False;
             }
+            
+#warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
             trailQueue.push(trail.size());
             if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > searchconfiguration.R * trailQueue.getavg()) {
@@ -1894,6 +1918,14 @@ lbool Solver::search(int nof_conflicts)
             claDecayActivity();
 
             conflictsSinceLastRestart ++;
+	    
+	    if( config.opt_reduceType == 1 ) {
+	      if (--learntsize_adjust_cnt == 0){
+		  learntsize_adjust_confl *= learntsize_adjust_inc;
+		  learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
+		  max_learnts             *= learntsize_inc;
+	      }
+	    }
 
         } else { // there has not been a conflict
             if (restartSearch(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
@@ -1953,7 +1985,7 @@ lbool Solver::search(int nof_conflicts)
                         analyzeFinal(~p, conflict);
                         return l_False;
                     } else {
-                        DOUT(if (config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl;);
+                        DOUT(if (config.opt_printDecisions > 0) cerr << "c use assumption as next decision : " << p << endl;);
                         next = p;
                         break;
                     }
@@ -2003,7 +2035,9 @@ lbool Solver::search(int nof_conflicts)
 
 void Solver::clauseRemoval()
 {
-    if (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) { // perform only if learnt clauses are present
+    if(  ( config.opt_reduceType == 1 && (learnts.size()-nAssigns() >= max_learnts) )                                // minisat style removal
+      || (config.opt_reduceType == 0 && (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) ) )  // glucose style removal
+    { // perform only if learnt clauses are present
         curRestart = (conflicts / nbclausesbeforereduce) + 1;
         reduceDB();
         nbclausesbeforereduce += searchconfiguration.incReduceDB;
@@ -2632,11 +2666,22 @@ lbool Solver::initSolve(int solves)
 void Solver::applyConfiguration()
 {
     lbdQueue.clear();
+    assert(searchconfiguration.sizeLBDQueue > 0 && "thera have to be some elements (at least one)");
     lbdQueue.initSize(searchconfiguration.sizeLBDQueue);
 
     trailQueue.clear();
+    assert(searchconfiguration.sizeTrailQueue > 0 && "thera have to be some elements (at least one)");
     trailQueue.initSize(searchconfiguration.sizeTrailQueue);
 
+    if( config.opt_reduceType == 1 ) { // minisat style removal?
+      max_learnts = nClauses() * learntsize_factor;
+      if (max_learnts < config.opt_min_learnts_lim)
+	  max_learnts = config.opt_min_learnts_lim;
+
+      learntsize_adjust_confl   = learntsize_adjust_start_confl;
+      learntsize_adjust_cnt     = (int)learntsize_adjust_confl; 
+    }
+    
     nbclausesbeforereduce = searchconfiguration.firstReduceDB;
     sumLBD = 0;
 }
@@ -2686,38 +2731,36 @@ void Solver::dumpAndExit(const char* filename)
 lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
-    cerr << "c call solve with preprocessCall: " << preprocessCall << endl;
-    if( preprocessCall != SolveCallType::afterSimplification ) {
-      
-      // print formula of the call?
-      if ((const char*)config.printOnSolveTo != 0) {
-	  dumpAndExit((const char*)config.printOnSolveTo);
-      }
-      totalTime.start();
-      startedSolving = true;
-      model.clear();
-      conflict.clear();
-      if (!ok) { return l_False; }
-      applyConfiguration();
-      solves++;
+    
+    if (preprocessCall != afterSimplification) {
 
-      lbool initValue = initSolve(solves);
-      if (initValue != l_Undef)  { return initValue; }
-      
+        // print formula of the call?
+        if ((const char*)config.printOnSolveTo != 0) {
+            dumpAndExit((const char*)config.printOnSolveTo);
+        }
+        totalTime.start();
+        startedSolving = true;
+        model.clear();
+        conflict.clear();
+        if (!ok) { return l_False; }
+        applyConfiguration();
+        solves++;
 
+        lbool initValue = initSolve(solves);
+        if (initValue != l_Undef)  { return initValue; }
 
-      printHeader();
+        printHeader();
 
-      if( preprocessCall == SolveCallType::initializeOnly ) return status;
-      
-      // preprocess
-      if (status == l_Undef) {   // TODO: freeze variables of assumptions!
-	  status = preprocess();
-	  if (config.ppOnly || preprocessCall == SolveCallType::simplificationOnly ) { return status; } // stop also if preprocessing should be done only
-      }
+        if (preprocessCall == initializeOnly) { return status; }
+
+        // preprocess
+        if (status == l_Undef) {   // TODO: freeze variables of assumptions!
+            status = preprocess();
+            if (config.ppOnly || preprocessCall == simplificationOnly) { return status; }  // stop also if preprocessing should be done only
+        }
 
     }
-    
+
     if (verbosity >= 1) {
         printf("c | solve clauses: %12d  solve variables: %12d                                            |\n", nClauses(), nVars());
         printf("c =========================================================================================================\n");
@@ -2880,15 +2923,28 @@ void Solver::refineFinalConflict()
     if (assumptions.size() == 0 || conflict.size() < 2) { return; }   // nothing to be done
     assumptions.moveTo(refineAssumptions);                        // memorize original assumptions
 
+//      cerr << "c conflict " << conflict << " at level " << decisionLevel() << endl;
+//      cerr << "c trail: " << trail << endl;
+//      cerr << "c ================================" << endl;
+//      cerr << endl << endl << endl;
+    
     cancelUntil(0);    // make sure we are on level 0 again
     assert(decisionLevel() == 0 && "run this routine only after the trail has been cleared already");
 
+    const int conflictSize = conflict.size();
+    
     // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again
     assumptions.clear();
     for (int i = 0 ; i < conflict.size(); ++ i) { assumptions.push(~conflict[i]); }    // assumptions are reversed now
-    // call the search routine once more, now with the modified assertions
-    lbool res = search(1);
+    // call the search routine once more, now with the modified assumptions
+    lbool res = search(INT32_MAX);
 
+//     // for debugging purposes, have a special exit
+//     if( conflictSize > conflict.size() + 1 && conflict.size() > 1) exit (42);
+    
+//     cerr << "c refined conflict: " << conflict << endl;
+//     cerr << "c trail: " << trail << endl;
+    
     // move assumptions back
     refineAssumptions.moveTo(assumptions);
 
@@ -3022,9 +3078,9 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     int keptClauses = 0;
     for (int i = 0; i < learnts.size(); i++) {
-        ca.reloc(learnts[i], to);
-        if (!to[ learnts[i]].mark()) {
-            learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
+	if (!ca[ learnts[i] ].mark()) { // reloc only if not marked already
+	  ca.reloc(learnts[i], to);
+          learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
         }
     }
     learnts.shrink_(learnts.size() - keptClauses);
@@ -3033,19 +3089,19 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     keptClauses = 0;
     for (int i = 0; i < clauses.size(); i++) {
-        ca.reloc(clauses[i], to);
-        if (!to[ clauses[i]].mark()) {
-            clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
+	if (!ca[ clauses[i]].mark()) { // reloc only if not marked already
+	  ca.reloc(clauses[i], to);
+          clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
         }
     }
     clauses.shrink_(clauses.size() - keptClauses);
     // handle all clause pointers from OTFSS
     keptClauses = 0;
     for (int i = 0 ; i < otfss.info.size(); ++ i) {
+      if (!ca[otfss.info[i].cr].mark()) { // keep only relevant clauses (checks mark() != 0 )
         ca.reloc(otfss.info[i].cr, to);
-        if (!to[ otfss.info[i].cr ].mark()) {
-            otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
-        }
+        otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
+      }
     }
     otfss.info.shrink_(otfss.info.size() - keptClauses);
 }
@@ -3085,7 +3141,7 @@ void Solver::buildReduct()
             clauses[ keptClauses++ ] = clauses [j];
         }
     }
-    cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl;
+    DOUT (if (verbosity>2) cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl; );
     clauses.shrink_(clauses.size() - keptClauses);
 
 }
@@ -3996,29 +4052,29 @@ Coprocessor::Preprocessor* Solver::swapPreprocessor(Coprocessor::Preprocessor* n
 
 void Solver::printFullSolverState()
 {
-  cerr << "c FULL SOLVER STATE" << endl;
-  cerr << "c [SOLVER-STATE] trail: " << trail << endl;
-  cerr << "c [SOLVER-STATE] decisionLevel: " << decisionLevel() << endl;
-  cerr << "c [SOLVER-STATE] conflicts: " << conflicts << endl;
-  for( int i = 0 ; i < clauses.size(); ++ i ) {
-    cerr << "c [SOLVER-STATE] clause(" << i << ")@" << clauses[i] << ": " << ca[clauses[i]] << endl;  
-  }
-  for( int i = 0 ; i < learnts.size(); ++ i ) {
-    cerr << "c [SOLVER-STATE] learnt(" << i << ")@" << learnts[i] << ": " << ca[learnts[i]] << endl;  
-  }
-  cerr << "c [SOLVER-STATE] activities: " << activity << endl;
-  for( Var v = 0 ; v < nVars(); ++v ) {
-    for( int p = 0 ; p < 2; ++p) {
-      const Lit l = mkLit(v,p==1);
-      cerr << "c [SOLVER-STATE] watch list(" << l << "): ";
-      for( int i = 0 ; i < watches[l].size(); ++i ) {
-	cerr << " " << watches[l][i].cref();
-	if( watches[l][i].isBinary()  ) cerr << "b" ;
-      }
-      cerr << endl;
+    cerr << "c FULL SOLVER STATE" << endl;
+    cerr << "c [SOLVER-STATE] trail: " << trail << endl;
+    cerr << "c [SOLVER-STATE] decisionLevel: " << decisionLevel() << endl;
+    cerr << "c [SOLVER-STATE] conflicts: " << conflicts << endl;
+    for (int i = 0 ; i < clauses.size(); ++ i) {
+        cerr << "c [SOLVER-STATE] clause(" << i << ")@" << clauses[i] << ": " << ca[clauses[i]] << endl;
     }
-  }
-  cerr << "c [SOLVER-STATE] decision heap: " << order_heap << endl;
+    for (int i = 0 ; i < learnts.size(); ++ i) {
+        cerr << "c [SOLVER-STATE] learnt(" << i << ")@" << learnts[i] << ": " << ca[learnts[i]] << endl;
+    }
+    cerr << "c [SOLVER-STATE] activities: " << activity << endl;
+    for (Var v = 0 ; v < nVars(); ++v) {
+        for (int p = 0 ; p < 2; ++p) {
+            const Lit l = mkLit(v, p == 1);
+            cerr << "c [SOLVER-STATE] watch list(" << l << "): ";
+            for (int i = 0 ; i < watches[l].size(); ++i) {
+                cerr << " " << watches[l][i].cref();
+                if (watches[l][i].isBinary()) { cerr << "b" ; }
+            }
+            cerr << endl;
+        }
+    }
+    cerr << "c [SOLVER-STATE] decision heap: " << order_heap << endl;
 }
 
 
@@ -4062,6 +4118,7 @@ lbool Solver::preprocess()
         preprocessTime.start();
         status = coprocessor->preprocess();
         preprocessTime.stop();
+	otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
     }
     if (verbosity >= 1) { printf("c =========================================================================================================\n"); }
     return status;
@@ -4081,6 +4138,7 @@ lbool Solver::inprocess(lbool status)
                 inprocessTime.start();
                 status = coprocessor->inprocess();
                 inprocessTime.stop();
+		otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
                 if (big != 0) {
                     big->recreate(ca, nVars(), clauses, learnts);   // build a new BIG that is valid on the "new" formula!
                     big->removeDuplicateEdges(nVars());
@@ -4183,8 +4241,8 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
     // parallel portfolio: send the learned clause!
-    if (sharingTimePoint == 0 || learnt_clause.size() < 3) { 
-      updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel); 
+    if (sharingTimePoint == 0 || learnt_clause.size() < 3) {
+        updateSleep(&learnt_clause, learnt_clause.size(), dependencyLevel);
     }  // shorter clauses are shared immediately!
 
     if (learnt_clause.size() == 1) {
@@ -4231,7 +4289,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         ca[cr].setLBD(nblevels);
         if (nblevels <= 2) { nbDL2++; } // stats
         if (ca[cr].size() == 2) { nbBin++; } // stats
-        if (learnt_clause.size() < 3 ) {ca[cr].setUsedInAnalyze(); ca[cr].setPropagated(); } // this clause has been shared before, do not share it once more
+        if (learnt_clause.size() < 3) {ca[cr].setUsedInAnalyze(); ca[cr].setPropagated(); }  // this clause has been shared before, do not share it once more
         #ifdef CLS_EXTRA_INFO
 #warning  turn into Pcasso?
         ca[cr].setExtraInformation(extraInfo);
@@ -4307,7 +4365,10 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 data.tmpPropagateLits.push(other);
                 DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << other << endl;);
                 data.otfssUnits ++; data.otfssClss++;
-                c.setLocked(); // tell the clause it must go, will be satisfied after unit propagation anyways
+		// tell proof about reduced clause
+		addCommentToProof("shrink to unit due to otfss");
+		addUnitToProof(other);
+		// clause will be removed later, when check for satisfied clauses is performed
             }
         } else if (c.size() == 3) {
             if (c[0] == removeLit || c[1] == removeLit || c[2] == removeLit) { // literal must not be in the clause anymore, because clause was in list multiple times
@@ -4318,6 +4379,11 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 assert(c.size() == 2 && "clause has to be binary now");
                 attachClause(data.info[i].cr);   // added as binary watch again
                 data.otfssBinaries ++; data.otfssClss++;
+		// tell proof about reduced clause
+		addCommentToProof("shrink ternary to binary due to otfss");
+		addToProof(c);
+		addToProof(c, true, removeLit);
+		// remove clause, enqueue unit clause if necessary
                 c.mark(1); // mark clause, so that its not processed twice, is undone afterwards again
                 assert((value(c[0]) != l_False || value(c[1]) != l_False) && "otherwise the clause would have been found before");
                 if (value(c[0]) == l_False) {
@@ -4335,6 +4401,11 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                     data.otfssClss++;
                     c[j] = c[ c.size() - 1 ]; // move last literal forward
                     c.pop();                  // remove the literal
+		    // tell proof about reduced clause
+		    addCommentToProof("shrink clause due to otfss");
+		    addToProof(c);
+		    addToProof(c, true, removeLit);
+		    // handle new clause
                     c.mark(1);                // mark clause, so that its not processed twice, is undone afterwards again
                     if (j < 2) {              // the literal was a watched literal
                         assert((value(removeLit) == l_True || value(c[ 1 - j ]) != l_False) && "the two watched literals of the clause should be free (true of undef");
@@ -4389,13 +4460,17 @@ bool Solver::processOtfss(Solver::OTFSS& data)
     // enqueue all found unit clauses, propagate afterwards (all new clauses are present already)
     for (int i = 0 ; i < data.tmpPropagateLits.size() ; ++ i) {
         const Lit& propLit = data.tmpPropagateLits[i];
-        if (value(propLit) == l_False) { return true; }
-        else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
+        if (value(propLit) == l_False) { 
+	  data.clearQueues(); // make sure that after processing otfss all data is removed. 
+	  return true; 
+	} else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
     }
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after enqueue: " << trail << endl;);
     bool failed = propagate() != CRef_Undef;
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after propagate: " << trail << endl;);
     if (failed) { ok = false; }
+    
+    data.clearQueues(); // make sure that after processing otfss all data is removed. 
     return failed;
 }
 

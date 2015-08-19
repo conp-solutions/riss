@@ -91,6 +91,7 @@ do
   	echo "reject new bug with $thiscls clauses"
   	continue
   fi
+  
  	bestcls=$thiscls # store better clause count!
  	echo "set bestcls to $bestcls"
   red=red-$seed.cnf

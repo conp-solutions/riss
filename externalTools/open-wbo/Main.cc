@@ -351,6 +351,7 @@ int main(int argc, char **argv)
         }
 
         if ((const char*)opt_pre_config == 0) {
+	    printf("c parse directly to MaxSAT solver\n");
             parse_DIMACS(in, S);
         } else {
             // setup maxsat preprocessor

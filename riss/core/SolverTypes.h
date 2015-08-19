@@ -225,9 +225,6 @@ class Clause
             , shared(0)
             , shCleanDelay(0)
             #endif
-            #ifdef CLS_EXTRA_INFO
-            , extra_info(0)
-            #endif
         {}
 
         ClauseHeader(volatile ClauseHeader& rhs)
@@ -250,9 +247,6 @@ class Clause
             shared = rhs.shared;
             shCleanDelay = rhs.shCleanDelay;
             #endif
-            #ifdef CLS_EXTRA_INFO
-            extra_info = rhs.extra_info;
-            #endif
         }
 
         ClauseHeader& operator = (volatile ClauseHeader& rhs)
@@ -274,9 +268,6 @@ class Clause
             pt_level = rhs.pt_level;
             shared = rhs.shared;
             shCleanDelay = rhs.shCleanDelay;
-            #endif
-            #ifdef CLS_EXTRA_INFO
-            extra_info = rhs.extra_info;
             #endif
             return *this;
         }
@@ -553,7 +544,7 @@ class Clause
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level)
     {
-        assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
+        // TODO FIXME debug this check before using upward sharing again: assert(_pt_level >= header.pt_level && "cannot decrease level of an existing clause");
         header.pt_level = _pt_level;
     }
 
@@ -664,7 +655,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::moveTo(to);
     }
 
-    void copyTo(ClauseAllocator& to)
+    void copyTo(ClauseAllocator& to) const 
     {
         to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::copyTo(to);
@@ -689,7 +680,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         bool use_extra = learnt | extra_clause_field;
-
+	
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(psSize, use_extra));
         new(lea(cid)) Clause(ps, psSize, use_extra, learnt);
 
@@ -740,25 +731,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].header.has_extra = to.extra_clause_field;
         }
 
-        // Copy extra data-fields:
-        // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
-        to[cr].mark(c.mark());
-
-
-
         if (to[cr].learnt())        {
             to[cr].activity() = c.activity();
             to[cr].setLBD(c.lbd());
             to[cr].setCanBeDel(c.canBeDel());
-            #ifdef PCASSO
-            to[cr].header.shCleanDelay = c.getShCleanDelay();
-            to[cr].header.shared = c.isShared() ? 1 : 0;
-            #endif
         } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
-        #ifdef PCASSO
-        to[cr].header.pt_level = c.getPTLevel();
-        #endif
-
     }
 
     // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3
@@ -886,6 +863,9 @@ class OccLists
         dirty  .clear(free);
         dirties.clear(free);
     }
+
+    /** clear dirties -- careful use, use only after clearing all watch lists */
+    void clearDirties() { dirties.clear(); }
 
     int size() const { return occs.size(); }
 };

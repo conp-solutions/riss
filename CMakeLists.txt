@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 
 project("riss-toolbox")
 
@@ -34,20 +34,25 @@ endfunction()
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.0.2")
+version("5.0.6")
 
+option(DRATPROOF       "Produce DRAFT-proofs (disabled by default)" OFF)
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
+option(CLASSIFIER      "Use classifier in riss and pcasso" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
+option(QUIET           "Disable all #warnings" OFF)
 
 # Print option settings
 message(STATUS "Build type ${CMAKE_BUILD_TYPE}")
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "aiger-tools ${AIGER-TOOLS}")
+message(STATUS "classifier ${CLASSIFIER}")
 message(STATUS "Verbose warnings ${WARNINGS}")
+message(STATUS "Quiet ${QUIET}")
 
 # Output directory definitions
 # 
@@ -76,23 +81,37 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")  # strip shared libs
 endif()
 
+# proofs
+message("-- DRAT proofs ${DRATPROOF}")
+if(DRATPROOF)
+    add_definitions(" -DDRATPROOF")
+endif()
 
-# Dependencies:
+# 
+# Dependencies
 #
-find_package(Git)
 include_directories(${PROJECT_SOURCE_DIR})
+
+find_package(Git)
 include(GitSignature)
 
 # Compile flags:
 # 
-add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g")
+add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g -DNDBG")
 
-if(CMAKE_COMPILER_IS_GNUCXX AND WARNINGS)
-  message(STATUS "enable verbose compiler warnings")
-  add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
-                  "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
-                  "-Wno-parentheses")
+if(CMAKE_COMPILER_IS_GNUCXX)
+  if(WARNINGS)
+    message(STATUS "enable verbose compiler warnings")
+    add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
+                    "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
+                    "-Wno-parentheses")
+   endif()
+   if(QUIET)
+      message(STATUS "disable #warnings")
+     add_definitions("-Wno-cpp")
+   endif()
 endif()
+
 
 # Sub-Projects:
 # 
@@ -103,6 +122,7 @@ endif()
 add_component(riss/)
 add_component(risslibcheck/)
 add_component(classifier/)
+add_component(libpca/)
 add_component(coprocessor/)
 add_component(externalTools/)
 add_component(mprocessor/)

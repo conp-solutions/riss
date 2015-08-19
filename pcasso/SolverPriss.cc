@@ -8,7 +8,8 @@ namespace Pcasso
 SolverPriss::SolverPriss(PfolioConfig *config, int threadsToUse) :
     solver(config, 0, threadsToUse), // setup solver with given configuration, no extra default name, and the given number of threads
     coreConfig(config),
-    curPTLevel(0)
+    curPTLevel(0),
+    unsatPTLevel(0)
 {
 }
 
@@ -58,17 +59,26 @@ void SolverPriss::setupForPortfolio(const int nodeLevel)
 }
 
 // forwarded methods to Riss
+#warning TO BE IMPLEMENTED
 inline int      SolverPriss::nVars() const               { return solver.nVars(); }
 inline bool     SolverPriss::okay() const                { return true; } // FIXME: solver.okay(); }
 inline void     SolverPriss::interrupt()                 { solver.interrupt(); }
 inline lbool    SolverPriss::solveLimited(const Riss::vec<Riss::Lit>& assumps) { return solver.solveLimited(assumps); }
 inline void     SolverPriss::setConfBudget(int64_t x)    { solver.setConfBudget(x); }
+inline void     SolverPriss::setPolarity(Var var, bool polarity)  { }//solver.setPolarity(var,polarity); }
+inline bool     SolverPriss::getPolarity(Var var)         { return false; } //solver.getPolarity(var); }
+inline void     SolverPriss::setActivity(Var var, double activity) { } //solver.varSetActivity(var, activity); }
+inline double   SolverPriss::getActivity(Var var)         { return 0; } //solver.varGetActivity(var); }
+inline void     SolverPriss::reserveVars(Riss::Var var)  { solver.reserveVars(var); }
 
 inline void     SolverPriss::setVerbosity(int verbosity) { solver.verbosity = verbosity; }
 inline uint64_t SolverPriss::getStarts()                 { return 0; } // FIXME: solver.starts; }
 inline uint64_t SolverPriss::getDecisions()              { return 0; } // FIXME: solver.decisions; }
 inline uint64_t SolverPriss::getConflicts()              { return 0; } // FIXME: solver.conflicts; }
 inline void     SolverPriss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
-inline Lit      SolverPriss::trailGet(const unsigned int index) { Lit l; return l; } // FIXME: solver.trail[index]; }
+inline Lit      SolverPriss::trailGet(const unsigned int index) { Lit l = lit_Undef; return l; } // FIXME: solver.trail[index]; }
 inline unsigned int SolverPriss::getNumberOfTopLevelUnits() const    { return 0; } // FIXME: solver.trail.size(); }
+inline void     SolverPriss::setCommunication(Riss::Communicator& com)   { 
+  solver.setExternalCommunication(&com); // its a two way interface 
+}
 } // namespace Pcasso

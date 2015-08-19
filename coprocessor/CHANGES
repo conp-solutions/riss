@@ -1,0 +1,5 @@
+# ChangeLog for riss
+
+## v5.0.3
+
+ * fix XOR routine, add modified XORs to list of newly added variables

@@ -13,6 +13,7 @@
 #include <math.h>
 
 #include "riss/mtl/Sort.h"
+#include "knn.h"
 
 using namespace Riss;
 using namespace std;
@@ -58,7 +59,7 @@ CNFClassifier::CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVa
     ca(_ca), clauses(_clauses), nVars(_nVars)
 {
     quantilesCount = 4;
-    precision = 4;
+    precision = 10;
     dumpingPlots = false;
     computingResolutionGraph = true;
     computingClausesGraph = true;
@@ -79,6 +80,30 @@ CNFClassifier::~CNFClassifier()
 {
 
 }
+string CNFClassifier::getConfig(Solver& S)
+//string CNFClassifier::getConfig ( Riss::Solver& S, std::string dbName)
+{
+#warning MIGHT BE DONE OUTSIDE OF THIS METHOD
+    S.verbosity = 0;
+
+    // here convert the found unit clauses of the solver back as real clauses!
+    if (S.trail.size() > 0) {
+        S.buildReduct();
+        vec<Lit> ps; ps.push(lit_Undef);
+        for (int j = 0; j < S.trail.size(); ++j) {
+            const Lit l = S.trail[j];
+            ps[0] = l;
+            CRef cr = S.ca.alloc(ps, false);
+            S.clauses.push(cr);
+        }
+    }
+
+    vector<double> features; // temporary storage
+    extractFeatures(features); // also print the formula name!!
+
+    return computeKNN(1, features);
+}
+
 
 std::vector<std::string> CNFClassifier::featureNames()
 {
@@ -968,7 +993,7 @@ void CNFClassifier::recursiveWeightHeuristic_code(const int maxClauseSize, vecto
 
     uint64_t globalSteps = 0;
     if (verb > 0) {
-        cerr << "c calculate RWH with cls max size " << maxClauseSize << " and gamma " << gamma << endl;
+        DOUT( cerr << "c calculate RWH with cls max size " << maxClauseSize << " and gamma " << gamma << endl; );
     }
 
     for (int iter = 1; iter <= 3; iter ++) {
@@ -1040,7 +1065,7 @@ void CNFClassifier::recursiveWeightHeuristic_code(const int maxClauseSize, vecto
 
     time = cpuTime() - time;
     if (verb > 0) {
-        cerr << "c computing all RWH features took " << time << " cpu seconds and " << globalSteps << " global steps"  << endl;
+        DOUT( cerr << "c computing all RWH features took " << time << " cpu seconds and " << globalSteps << " global steps"  << endl; );
     }
 }
 
