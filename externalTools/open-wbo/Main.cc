@@ -45,6 +45,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "algorithms/Alg_MSU3.h"
 #include "algorithms/Alg_WMSU3.h"
 
+#include "utils/version.h" // include the file that defines the solver version
+
 #define VER1_(x) #x
 #define VER_(x) VER1_(x)
 #define SATVER VER_(SOLVERNAME)
@@ -152,6 +154,7 @@ void loadFromMprocessorToMaxsat(MaxSAT* S)
 int main(int argc, char **argv)
 {
     printf("c Optiriss, Norbert Manthey, integrated the SAT Solver Riss into OpenWBO\n");
+    printf("c This version uses riss %s  %.13s \n", solverVersion, gitSHA1);
     printf("c Optiriss is heavily based on:\n");
   
     printf("c\nc \tOpen-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",

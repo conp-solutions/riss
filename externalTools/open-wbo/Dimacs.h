@@ -48,6 +48,14 @@ template <class B> static int64_t parseWeight(B& in)
     while (*in >= '0' && *in <= '9') {
         val = val * 10 + (*in - '0'), ++in;
     }
+    
+    // exclude 64 bit weights
+    if (val > INT32_MAX) {
+      printf("c Error: Parser does not support weights larger than 2^32.\n");
+      printf("s UNKNOWN\n");
+      exit(_UNKNOWN_);
+    }
+    
     return val;
 }
 

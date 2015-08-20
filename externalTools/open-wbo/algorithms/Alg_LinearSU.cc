@@ -96,8 +96,8 @@ void LinearSU::bmoSearch()
       {
         // If current weight is the same as the minimum weight, then we are in
         // the last lexicographical function.
-	saveModel(solver->model);
-        printf("o %" PRIu64 "\n", newCost + lbCost);
+	saveModel(solver->model, newCost + lbCost);
+	printBound( newCost + lbCost );
         ubCost = newCost + lbCost;
       }
       else
@@ -263,9 +263,8 @@ void LinearSU::normalSearch()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      saveModel(solver->model);
-      printf("o %" PRIu64 "\n", newCost);
-
+      saveModel(solver->model, newCost);
+      printBound( newCost );
 
       if (newCost == 0)
       {

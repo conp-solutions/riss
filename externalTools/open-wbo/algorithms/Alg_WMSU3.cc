@@ -90,8 +90,8 @@ void WMSU3::WMSU3_iterative()
       uint64_t newCost = computeCostModel(solver->model);
       if (newCost < ubCost || nbSatisfiable == 1)
       {
-        saveModel(solver->model);
-	printf("o %" PRIu64 "\n", newCost);
+        saveModel(solver->model, newCost);
+	printBound( newCost );
         ubCost = newCost;
       }
 
@@ -237,8 +237,8 @@ void WMSU3::WMSU3_none()
       uint64_t newCost = computeCostModel(solver->model);
       if (newCost < ubCost || nbSatisfiable == 1)
       {
-	saveModel(solver->model);
-        printf("o %" PRIu64 "\n", newCost);
+	saveModel(solver->model, newCost);
+	printBound( newCost );
         ubCost = newCost;
       }
 
@@ -413,8 +413,8 @@ void WMSU3::WMSU3_iterative_bmo()
       uint64_t newCost = computeCostModel(solver->model);
       if (newCost < ubCost || nbSatisfiable == 1)
       {
-	saveModel(solver->model);
-        printf("o %" PRIu64 "\n", newCost);
+	saveModel(solver->model, newCost);
+	printBound( newCost );
         ubCost = newCost;
       }
 
@@ -658,8 +658,8 @@ void WMSU3::WMSU3_none_bmo()
       uint64_t newCost = computeCostModel(solver->model);
       if (newCost < ubCost || nbSatisfiable == 1)
       {
-        saveModel(solver->model);
-	printf("o %" PRIu64 "\n", newCost);
+        saveModel(solver->model, newCost);
+	printBound( newCost );
         ubCost = newCost;
       }
 
