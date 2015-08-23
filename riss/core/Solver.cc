@@ -38,7 +38,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "coprocessor/Coprocessor.h"
 #include "coprocessor/CoprocessorTypes.h"
 // to be able to read var files
-#include "coprocessor/VarFileParser.h"
+#include "riss/utils/VarFileParser.h"
+
+#include "riss/core/EnumerateMaster.h"
 
 using namespace Coprocessor;
 using namespace std;
@@ -234,6 +236,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     // communication to other solvers that might be run in parallel
     , communication(0)
     , sharingTimePoint(config.sharingType)
+    
+    , enumerationClient( this )
 {
   
     // Parameters (user settable):
@@ -1997,9 +2001,10 @@ lbool Solver::search(int nof_conflicts)
                     next = pickBranchLit();
 
                     if (next == lit_Undef) {
-                        if (verbosity > 1) { fprintf(stderr, "c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel()); }
-                        // Model found:
-                        return l_True;
+                        EnumerationClient::EnumerateState res = enumerationClient.processCurrentModel( next );
+			if (res == EnumerationClient::oneModel ) return l_True;
+			else if( res == EnumerationClient::goOn ) goto SolverNextSearchIteration;
+			else return l_Undef; 
                     }
                 }
 
@@ -2029,9 +2034,169 @@ lbool Solver::search(int nof_conflicts)
             DOUT(if (config.opt_printDecisions > 0) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel()););
             uncheckedEnqueue(next);
         }
+SolverNextSearchIteration:;
     }
     return l_Undef;
 }
+
+Solver::EnumerationClient::EnumerateState 
+Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
+{
+  if( master == 0 ) return oneModel; // we do not perform enumeration
+  
+  // allowed to reduce the blocked clause?
+  EnumerateMaster::MinimizeType mtype = master->minimizeBlocked();
+  if( mtype != EnumerateMaster::MinimizeType::NONE ) solver->initReverseMinimitaion(); // initialize reverse minimization
+  
+  int maxLevel = 0, max2Level = 0;
+  // create blocking clause if allowed
+  if( ! master->usesProjection() )  {
+    // negate all decision variables
+    createDecisionClause( blockingClause, maxLevel, max2Level );
+    // the best (shortest) blocking clause is now stored in the vector blocking clause
+  } else {
+    // count all models by adding the negated decision clause
+    // negate all variables from the projection
+    createBlockingProjectionClause(blockingClause, maxLevel, max2Level);
+  }
+  
+  // dummies for minimization
+  unsigned int lbd = 0; unsigned dependencyLevel = 0;
+  
+  // minimize blocking clause
+  if( mtype == EnumerateMaster::MinimizeType::ALSOFROMBLOCKED ) { // minimized blocking clause we just created
+    blockingClause.copyTo( minimizedClause );
+    solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
+    if( minimizedClause.size() < blockingClause.size() ) { 
+	minimizedClause.moveTo( blockingClause ); // if the new clause is better, keep the new clause as blocking clause
+	// TODO collect statistics
+	maxLevel = -1; max2Level = -1;
+    }
+  }
+  
+  // if projection is not active, we are furthermore allowed to try to come up with a shorter blocking clause starting from the full model
+  if( ! master->usesProjection() ) {
+    if( mtype == EnumerateMaster::MinimizeType::ONLYFROMFULL || mtype == EnumerateMaster::MinimizeType::ALSOFROMBLOCKED ) {
+      solver->trail.copyTo( minimizedClause );
+      for( int i = 0 ; i < minimizedClause.size(); ++ i ) minimizedClause[i] = ~minimizedClause[i]; // first, create a full blocking clause
+      solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
+      if( minimizedClause.size() < blockingClause.size() ) { 
+	minimizedClause.moveTo( blockingClause ); // if the new clause is better, keep the new clause as blocking clause
+	// TODO collect statistics
+	maxLevel = -1; max2Level = -1;
+      }
+    }
+  }
+  
+  master->addModel( solver->trail, & blockingClause, &solver->trail );
+  
+  // add blocking clause to this solver without disturbing its search too much
+  bool moreModelsPossible = integrateClause( blockingClause, maxLevel, max2Level );
+  if( !moreModelsPossible ) {
+    master->notifyReachedAllModels();
+    return stop;
+  }
+  
+  bool enoughModel = master->foundEnoughModels();
+  return enoughModel ? stop : goOn;
+}
+
+bool Solver::EnumerationClient::enoughModels() const
+{
+  // true, if there is no master, or if there is a master and all models have been found
+  return master == 0 || master->foundEnoughModels();
+}
+
+
+Solver::EnumerationClient::~EnumerationClient(){
+  
+  // delete master only in sequential setup
+  if( master != 0 && ! master->isShared() ) {
+    delete master;
+    master = 0;
+  }
+}
+
+bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel, int max2Level)
+{
+  if( maxLevel < 0 || max2Level < 0 ) {
+    maxLevel = 0; max2Level = 0;
+    for( int i = 0 ; i < clause.size(); ++ i ) {
+      int varLevel = solver->level( var(clause[i]) );
+      if( varLevel > maxLevel ) { max2Level = maxLevel; maxLevel = varLevel; }
+      else if (varLevel > max2Level ) { max2Level = varLevel; }
+    }
+  }
+  // modify clause so that the first two literals are l_Undef (after backjumping)
+  int tmp = 0 ;
+  for( int i = 0 ; i< clause.size(); ++ i ) {
+    if( solver->level(var(clause[i])) >= max2Level ) {
+      Lit tmpL = clause[i];
+      clause[i] = clause[tmp];
+      clause[tmp] = tmpL;
+      tmp ++;
+    }
+  }
+  bool succesful = true;
+  // can clause be used for unit propagation on some level?
+  if( max2Level > 1 && clause.size() > 2 ) {
+    // create clause
+    CRef cr = solver->ca.alloc(clause, false);
+    solver->clauses.push(cr);			
+    solver->cancelUntil(max2Level - 1);
+    assert( solver->value( clause[0] ) == l_Undef && solver->value(clause[1]) == l_Undef && "first two literals have to be undefined" );
+    solver->attachClause( cr );
+  } else { // restart and add clause (should be unary/conflict on level 0)
+    solver->cancelUntil(0); // todo: can we get rid of the restart?
+    succesful = solver->addClause_( clause ); // might have problems with the current model here
+  }
+  return succesful;
+}
+
+
+void Solver::setEnumnerationMaster(EnumerateMaster* master)
+{
+  enumerationClient.setMaster( master );
+}
+
+
+void Solver::initReverseMinimitaion()
+{
+  if (! reverseMinimization.enabled) {  // enable reverseMinimization to be able to use it
+    reverseMinimization.enabled = true;
+    reverseMinimization.assigns.growTo(nVars() + 1, l_Undef); // grow assignment
+    reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
+  }
+}
+
+void Solver::EnumerationClient::createDecisionClause(vec< Lit >& clause, int& maxLevel , int& max2Level )
+{
+  clause.clear();
+  assert( maxLevel == 0 && max2Level == 0 && "levels should be initialized correctly" );    
+  for( int i = 0 ; i <solver->trail_lim.size(); ++ i ) {
+    const Lit l = ~ solver->trail[ solver->trail_lim[i] ];
+    const int varLevel = solver->level( var(l) );
+    if( varLevel > maxLevel ) { max2Level = maxLevel; maxLevel = varLevel; }
+    else if (varLevel > max2Level ) { max2Level = varLevel; }
+    clause.push( l );  
+  }
+}
+
+void Solver::EnumerationClient::createBlockingProjectionClause(vec< Lit >& clause, int& maxLevel, int& max2Level)
+{
+  clause.clear();
+  assert( maxLevel == 0 && max2Level == 0 && "levels should be initialized correctly" );
+  assert( master != nullptr && "can use this only if master is present" );
+  for( int i = 0 ; i < master->projectionSize(); ++ i ) {
+    if( solver->value( master->projectionVariable(i) ) == l_Undef ) continue;
+    const Lit l = mkLit( master->projectionVariable(i), solver->value( master->projectionVariable(i) ) == l_True ? true : false );
+    const int varLevel = solver->level( var(l) );
+    if( varLevel > maxLevel ) { max2Level = maxLevel; maxLevel = varLevel; }
+    else if (varLevel > max2Level ) { max2Level = varLevel; }
+    clause.push( l );  
+  }
+}
+
 
 void Solver::clauseRemoval()
 {
@@ -2606,7 +2771,7 @@ lbool Solver::initSolve(int solves)
     // parse for variable polarities from file!
     if (solves == 1 && config.polFile) {   // read polarities from file, initialize phase polarities with this value!
         string filename = string(config.polFile);
-        Coprocessor::VarFileParser vfp(filename);
+        Riss::VarFileParser vfp(filename);
         vector<int> polLits;
         vfp.extract(polLits);
         for (int i = 0 ; i < polLits.size(); ++ i) {
@@ -2623,7 +2788,7 @@ lbool Solver::initSolve(int solves)
     // parse for activities from file!
     if (solves == 1 && config.actFile) {   // set initial activities
         string filename = string(config.actFile);
-        Coprocessor::VarFileParser vfp(filename);
+        Riss::VarFileParser vfp(filename);
         vector<int> actVars;
         vfp.extract(actVars);
 
@@ -2824,6 +2989,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
         status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
         if (!withinBudget()) { break; }
+        if( enumerationClient.enoughModels() ) break; // stop if we found all the models we need
 
         // increment restart counters based on restart type
         curr_restarts++;

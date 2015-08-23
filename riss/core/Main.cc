@@ -40,6 +40,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "coprocessor/Coprocessor.h"
 #include "classifier/CNFClassifier.h"
 
+#include "riss/core/EnumerateMaster.h"
+
 using namespace Riss;
 using namespace std;
 
@@ -129,6 +131,8 @@ int main(int argc, char** argv)
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
+    Int64Option  opt_enumeration("MODEL ENUMERATION", "models", "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
+    
     try {
 
         //
@@ -358,9 +362,22 @@ int main(int argc, char** argv)
 	  const int maxV = opt_assumeFirst > S->nVars() ? S->nVars() : opt_assumeFirst;
 	  for( int i = 0 ; i < maxV; ++i ) dummy.push( mkLit(i,false) );
 	}
+	
+	Riss::EnumerateMaster* master = nullptr;
+	if( opt_enumeration != -1 ) {
+	  master = new Riss::EnumerateMaster( S->nVars() );
+	  master->setMaxModels(opt_enumeration);
+	  S->setEnumnerationMaster( master );
+	}
+	
         // solve the formula (with the possible created assumptions)
         lbool ret = S->solveLimited(dummy);
         S->budgetOff(); // remove budget again!
+	
+	if( master != nullptr ) {
+	  master->writeStreamToFile("",true);
+	}
+	
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
             if (res != nullptr) { fclose(res); res = nullptr; }
