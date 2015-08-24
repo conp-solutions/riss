@@ -16,7 +16,6 @@ EnumerateMaster::EnumerateMaster(int _nVars)
  , coprocessor(nullptr) 
  , nVars( _nVars )
  , useProjection(false)
- , numberOfModels(0)
  , maximalModels(1)
  , mType( ALSOFROMBLOCKED )
 {

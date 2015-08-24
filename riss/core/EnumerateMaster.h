@@ -54,7 +54,6 @@ private:
   int nVars;                       // number of variables in formula
   bool useProjection;              // whether projection is active
   vector<int> projectionVariables; // all variables in the projection
-  int64_t numberOfModels;         // number of models that have been found so far
   int64_t maximalModels;          // number of models that should be found
   MinimizeType mType;             // minimization that is allowed for the model
   bool printEagerly;              // print model already when found, or later
@@ -64,6 +63,8 @@ private:
   vec< vec<Riss::Lit>* > blockingClauses; // stores all blocking clauses, if shared flag is set (in same order as models are stored)
   vec< vec<lbool>* > fullModels;          // stores all currently found full models (if projection is used)
   
+  // to be used in parallel setup
+  vec< lbool > thisModel; 
  
   /** write literals of the given set to the fileMemory stream*/
   void writeModelToStream( ostream& outputStream, const Riss::vec< Riss::lbool >& truthValues );  // write the current "disallow-clause" as model into the stream
@@ -75,8 +76,8 @@ private:
   void unlock() { if(enumerateParallel) ownLock.unlock(); };
 
   
-  /** add model to storage, return hash of the model */
-  uint64_t storeModel( const Riss::vec< Riss::Lit >& model );
+  /** add model to storage */
+  void storeModel( const Riss::vec< Riss::Lit >& model );
   
   /** add full model to storage */
   void storeFullModel( const Riss::vec< Riss::Lit >& model );
@@ -96,12 +97,12 @@ public:
   void initEnumerateModels();
   
   /** set the object shared (for parallel enumeration)*/
-  void setShared() { assert( numberOfModels == 0 && "cannot set shared after first models have been found already" ); enumerateParallel = true; }
+  void setShared() { assert( models.size() == 0 && "cannot set shared after first models have been found already" ); enumerateParallel = true; }
   
   bool isShared() const { return enumerateParallel; }
 
   /** return number of found models (so far), not synchronized */
-  int64_t foundModels() const { return numberOfModels; }
+  int64_t foundModels() const { return models.size(); }
   
   /** set number of models to be found ( 0 ^= INT64_MAX )*/
   void setMaxModels( const int64_t m ) { lock(); maximalModels = (m == 0 ? INT64_MAX : m) ; unlock(); }
@@ -161,12 +162,12 @@ inline
 void EnumerateMaster::notifyReachedAllModels()
 {
   lock();
-  maximalModels = numberOfModels;
+  maximalModels = models.size();
   unlock();  
 }
 
 inline 
-uint64_t EnumerateMaster::storeModel(const vec< Lit >& model)
+void EnumerateMaster::storeModel(const vec< Lit >& model)
 {
     // get space for the model
     const int maxVar = model.size() < nVars ? nVars : model.size();
@@ -198,19 +199,15 @@ void EnumerateMaster::storeFullModel(const vec< Lit >& fullModel)
 inline 
 void EnumerateMaster::storeBlockingClause(vec< Lit >& clause)
 {
-  assert( false && "not yet implemented" );
+  assert( false && "not yet implemented -- also implement receiving new models once in a while!" );
 }
 
 inline 
 bool EnumerateMaster::addModel(vec< Lit >& model, vec< Lit >* blockingClause, vec< Lit >* fullModel)
 {
-  lock() ; 
-  
   // if we do not have a string stream yet, get one
   
   if(!enumerateParallel) {
-    numberOfModels ++;
-    
     storeModel(model);
     
     // do not add blocking clause, as we are running sequentially
@@ -222,15 +219,51 @@ bool EnumerateMaster::addModel(vec< Lit >& model, vec< Lit >* blockingClause, ve
     if( printEagerly ) {
       printSingleModel( cout, *models.last() );
     }
-    
-    unlock();
     return true;
   } else {
-    assert( false && "not yet implemented" );
+    lock() ; 
     
-    numberOfModels ++; // if everything worked, increment number of models
+    // check whether model is already present
+    uint64_t currentHash = 0;
+    const int maxVar = model.size() < nVars ? nVars : model.size();
+    thisModel.clear();
+    thisModel.growTo( maxVar, l_Undef );
+    for( int i = 0 ; i < model.size(); ++ i ) {
+      currentHash += sign(model[i]) ? var(model[i]) << 32 : var(model[i]); // separate positive and negative literals, sum everything up
+      thisModel[var( model[i] )] = sign( model[i] ) ? l_False : l_True;    // add this model
+    }
+    
+    assert( models.size() == modelHashes.size() && "number of models and hashes has to be the same" );
+    bool foundModel = false;
+    for( int i = 0 ; i < modelHashes.size(); ++ i ) {
+      if( modelHashes[i] != currentHash ) { continue; } // bloom filter, quickly check whether two models are not the same
+      bool different = false;
+      for( int j = 0 ; j < maxVar; ++ j ) {
+	if( thisModel[j] != (*models[i])[j] ) { different = true; break; }
+      }
+      if( ! different ) { foundModel = true; break; }
+    }
+    
+    if( !foundModel ) {
+      
+      // store new model (converted it already)
+      Riss::vec<Riss::lbool>* newModel = new Riss::vec<Riss::lbool>( maxVar, l_Undef );
+      thisModel.copyTo( *newModel );
+      models.push( newModel );
+      modelHashes.push( currentHash );
+      
+      storeBlockingClause(*blockingClause);
+      
+      // store full model, if requested and we use projection 
+      if( usesProjection() && fullModel != nullptr && fullModelsFileName != "" ) {
+	storeFullModel( *fullModel );
+      }
+      
+      assert( models.size() == modelHashes.size() && models.size() >= fullModels.size() && "the numbers have to be the same, there cannot be more full models" );
+    }
     unlock();
-    exit(13);
+    
+    return !foundModel; // return whether the current model has been new
   }
 }
 
@@ -238,7 +271,7 @@ inline
 bool EnumerateMaster::foundEnoughModels() {
   bool result = false;
   lock();
-  result = (numberOfModels >= maximalModels );
+  result = (models.size() >= maximalModels );
   unlock();
   return result;
 }
