@@ -229,7 +229,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , searchUHLElits(0)
 
     // preprocessor
-    , coprocessor(0)
+    , coprocessor(nullptr)
     , useCoprocessorPP(config.opt_usePPpp)
     , useCoprocessorIP(config.opt_usePPip)
 
@@ -2049,6 +2049,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
   if( mtype != EnumerateMaster::MinimizeType::NONE ) solver->initReverseMinimitaion(); // initialize reverse minimization
   
   int maxLevel = 0, max2Level = 0;
+  int modelSize = solver->trail.size();
   // create blocking clause if allowed
   if( ! master->usesProjection() )  {
     // negate all decision variables
@@ -2058,6 +2059,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
     // count all models by adding the negated decision clause
     // negate all variables from the projection
     createBlockingProjectionClause(blockingClause, maxLevel, max2Level);
+    modelSize = blockingClause.size(); 
   }
   
   // dummies for minimization
@@ -2068,7 +2070,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
     blockingClause.copyTo( minimizedClause );
     solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
     if( minimizedClause.size() < blockingClause.size() ) { 
-	minimizedClause.moveTo( blockingClause ); // if the new clause is better, keep the new clause as blocking clause
+	minimizedClause.swap( blockingClause ); // if the new clause is better, keep the new clause as blocking clause, in minimizedClause we store the current projection (if we use projection)
 	// TODO collect statistics
 	maxLevel = -1; max2Level = -1;
     }
@@ -2086,17 +2088,24 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
 	maxLevel = -1; max2Level = -1;
       }
     }
+    // tell master about model, blocking clause, and the ful model
+    master->addModel( solver->trail, & blockingClause, &solver->trail );
+  } else {
+    if( modelSize == blockingClause.size() ) { // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
+      blockingClause.copyTo( minimizedClause );
+    }
+    // the model has the opposite values as the blocking clause
+    for( int i = 0 ; i < minimizedClause.size(); ++i ) minimizedClause[i] = ~ minimizedClause[i]; 
+    master->addModel( minimizedClause, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
   }
-  
-  master->addModel( solver->trail, & blockingClause, &solver->trail );
-  
+
   // add blocking clause to this solver without disturbing its search too much
   bool moreModelsPossible = integrateClause( blockingClause, maxLevel, max2Level );
   if( !moreModelsPossible ) {
     master->notifyReachedAllModels();
     return stop;
   }
-  
+
   bool enoughModel = master->foundEnoughModels();
   return enoughModel ? stop : goOn;
 }
@@ -4215,6 +4224,17 @@ Coprocessor::Preprocessor* Solver::swapPreprocessor(Coprocessor::Preprocessor* n
     coprocessor = newPreprocessor;
     return oldPreprocessor;
 }
+
+Preprocessor* Solver::getPreprocessor() const
+{
+  return coprocessor;
+}
+
+void Solver::extendModel(vec< lbool >& model)
+{
+  if (coprocessor != 0) { coprocessor->extendModel(model); }
+}
+
 
 void Solver::printFullSolverState()
 {

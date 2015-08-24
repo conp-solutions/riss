@@ -131,7 +131,13 @@ int main(int argc, char** argv)
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
-    Int64Option  opt_enumeration("MODEL ENUMERATION", "models", "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
+    Int64Option  opt_enumeration    ("MODEL ENUMERATION", "models",     "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
+    IntOption    opt_enuMinimize    ("MODEL ENUMERATION", "modelMini",  "minimize blocking clause (0=no,1=from full,2=also from blocking)\n", 2, IntRange(0, 2));
+    BoolOption   opt_enumPrintOFT   ("MODEL ENUMERATION", "enuOnline" , "print model as soon as it has been found", true );
+    StringOption opt_projectinoFile ("MODEL ENUMERATION", "modelScope", "file that store enumeration projection\n", 0 );
+    StringOption opt_modelFile      ("MODEL ENUMERATION", "modelsFile", "file to store models to\n", 0 );
+    StringOption opt_fullModelFile  ("MODEL ENUMERATION", "fullModels", "file to store full models to\n", 0 );
+    StringOption opt_DNFfile        ("MODEL ENUMERATION", "dnf-file",   "file to store (reduced) DNF\n",  0 );
     
     try {
 
@@ -149,7 +155,7 @@ int main(int argc, char** argv)
         if (0 != (const char*)opt_tuneFile) {
             FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
             fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
-            ::printOptions(pcsFile, opt_tuneLevel);
+            // ::printOptions(pcsFile, opt_tuneLevel); // do not print options of main method!
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
             coreConfig->printOptions(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
@@ -363,19 +369,36 @@ int main(int argc, char** argv)
 	  for( int i = 0 ; i < maxV; ++i ) dummy.push( mkLit(i,false) );
 	}
 	
-	Riss::EnumerateMaster* master = nullptr;
+	Riss::EnumerateMaster* modelMaster = nullptr;
 	if( opt_enumeration != -1 ) {
-	  master = new Riss::EnumerateMaster( S->nVars() );
-	  master->setMaxModels(opt_enumeration);
-	  S->setEnumnerationMaster( master );
+	  modelMaster = new Riss::EnumerateMaster( S->nVars() );
+	  modelMaster->setMaxModels(opt_enumeration);
+	  modelMaster->setModelMinimization( (int) opt_enuMinimize );
+	  
+	  if( S->getPreprocessor() != nullptr )  modelMaster->setPreprocessor ( S->getPreprocessor() ) ;
+	  if( (const char*) opt_projectinoFile != 0 ) modelMaster->setProjectionFile( (const char*) opt_projectinoFile );
+	  modelMaster->initEnumerateModels(); // for this method, coprocessor and projection have to be known already!
+	  modelMaster->setPrintEagerly( opt_enumPrintOFT );
+
+	  if( (const char*) opt_modelFile != 0 )      modelMaster->setModelFile(      (const char*) opt_modelFile );
+	  if( (const char*) opt_fullModelFile != 0 )  modelMaster->setFullModelFile(  (const char*) opt_fullModelFile );
+	  if( (const char*) opt_DNFfile != 0 )        modelMaster->setDNFfile(        (const char*) opt_DNFfile );
+
+	  S->setEnumnerationMaster( modelMaster ); // finally, tell the solver about the enumeration master
 	}
 	
         // solve the formula (with the possible created assumptions)
         lbool ret = S->solveLimited(dummy);
         S->budgetOff(); // remove budget again!
 	
-	if( master != nullptr ) {
-	  master->writeStreamToFile("",true);
+	if( modelMaster != nullptr ) { // handle model enumeration
+	  if (S->verbosity > 0) { printf("c found models: %lld\n", modelMaster->foundModels() ); }
+	  if( modelMaster->foundModels() > 0 ) {
+	    modelMaster->writeStreamToFile("",true); // for now, print all models to stderr is fine
+	    printf("s SATISFIABLE\n");
+	    if (res != nullptr) { fclose(res); res = nullptr; } // TODO: write result into output file!
+	    exit(30);
+	  }
 	}
 	
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!

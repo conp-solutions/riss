@@ -1203,14 +1203,25 @@ class Solver
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
+    
     /** replace the current instance of coprocessor with the new one
         @return pointer to the old coprocessor
      */
     Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
 
+    /** return the pointer to the currently used preprocessor
+        @return pointer to coprocessor
+     */
+    Coprocessor::Preprocessor* getPreprocessor() const ;
+    
     bool useCoprocessorPP;
     bool useCoprocessorIP;
 
+    /** extend a given model (in case a preprocessor is present ) */
+    void extendModel(Riss::vec<Riss::lbool>& model);
+    
+    // if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { coprocessor->extendModel(model); }
+    
     /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
     void setExtendedResolution(bool enabled) { doAddVariablesViaER = enabled; }
 
@@ -1568,7 +1579,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     
     // sort literal in the clause
     sort(learned_clause, TrailPosition_Gt(vardata));
-    assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
+    assert((force || communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
 
     reverseMinimization.attempts ++;
 
@@ -1712,9 +1723,9 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     if (keptLits < learned_clause.size()) {
         reverseMinimization.succesfulReverseMinimizations ++;
         reverseMinimization.revMincutOffLiterals += (learned_clause.size() - keptLits);
-        assert((communicationClient.refineReceived || learned_clause.size() == 0 || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
+        assert((force || communicationClient.refineReceived || learned_clause.size() == 0 || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
         learned_clause.shrink(learned_clause.size() - keptLits);
-        assert((communicationClient.refineReceived || learned_clause.size() == 0 || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
+        assert((force || communicationClient.refineReceived || learned_clause.size() == 0 || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
         return true;
     }
     return false; // clause was not changed, LBD should not be recomputed

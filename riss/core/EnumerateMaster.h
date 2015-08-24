@@ -17,6 +17,12 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include <iostream>
 #include <sstream>
 
+/** forward declaration, so that formula simplification can be used later on */
+namespace Coprocessor
+{
+  class Preprocessor;
+}
+
 namespace Riss {
 
 /** class that controls enumerating models (with or without projection)
@@ -24,33 +30,6 @@ namespace Riss {
  */
 class EnumerateMaster 
 {
-  SleepLock ownLock;	   // lock for shared access
-  bool enumerateParallel;            // use shared access
-  
-  
-  string projectionFileName; // name of the file with the projection variables
-  
-  int nVars;                // number of variables in formula
-  bool useProjection;       // whether projection is active
-  string outputFileName;    // name of the file to write the result to
-  vec<char> isInProjection; // check for each variable, whether the variable is in the projection
-  vector<int> projectionVariables; // all variables in the projection
-  int64_t models;
-  int64_t maximalModels;        // number of models that should be found
-  
-  std::stringstream* fileMemory;  // stream to buffer projection into
-
-  /** set up all the data structures necessary for model enumeration */
-  void initEnumerateModels();
-  
-  /** write literals of the given set to the fileMemory stream*/
-  void writeModelToStream( vec<Lit>& literalSet, bool doNotInvers = true );  // write the current "disallow-clause" as model into the stream
-
-  /** lock, if object has been set shared before */
-  void lock() { if ( enumerateParallel ) ownLock.lock(); };
-  
-  /** unlock, if object has been set shared before */
-  void unlock() { if(enumerateParallel) ownLock.unlock(); };
   
 public:
   
@@ -60,28 +39,79 @@ public:
     ALSOFROMBLOCKED = 2
   };
   
-  EnumerateMaster(int _nVars, string _projectionFileName = "");
+private:
+  
+  SleepLock ownLock;	   // lock for shared access
+  bool enumerateParallel;  // use shared access
+  
+  Coprocessor::Preprocessor* coprocessor; // pointer to formula simplification tool, that might be used for model extension
+  
+  string projectionFileName; // name of the file with the projection variables
+  string outputFileName;     // name of the file to write the found models to
+  string DNFfileName;        // name of the file to write the DNF to
+  string fullModelsFileName; // name of the file to write the full models to
+
+  int nVars;                       // number of variables in formula
+  bool useProjection;              // whether projection is active
+  vector<int> projectionVariables; // all variables in the projection
+  int64_t numberOfModels;         // number of models that have been found so far
+  int64_t maximalModels;          // number of models that should be found
+  MinimizeType mType;             // minimization that is allowed for the model
+  bool printEagerly;              // print model already when found, or later
+  
+  vec< vec<lbool>* > models;              // stores all currently found models (wrt projection, if activated)
+  vec< uint64_t > modelHashes;            // store hashes for models for faster comparison 
+  vec< vec<Riss::Lit>* > blockingClauses; // stores all blocking clauses, if shared flag is set (in same order as models are stored)
+  vec< vec<lbool>* > fullModels;          // stores all currently found full models (if projection is used)
+  
+ 
+  /** write literals of the given set to the fileMemory stream*/
+  void writeModelToStream( ostream& outputStream, const Riss::vec< Riss::lbool >& truthValues );  // write the current "disallow-clause" as model into the stream
+
+  /** lock, if object has been set shared before */
+  void lock() { if ( enumerateParallel ) ownLock.lock(); };
+  
+  /** unlock, if object has been set shared before */
+  void unlock() { if(enumerateParallel) ownLock.unlock(); };
+
+  
+  /** add model to storage, return hash of the model */
+  uint64_t storeModel( const Riss::vec< Riss::Lit >& model );
+  
+  /** add full model to storage */
+  void storeFullModel( const Riss::vec< Riss::Lit >& model );
+  
+  /** add blocking clause to storage*/
+  void storeBlockingClause( Riss::vec< Riss::Lit >& clause );
+  
+public:
+  
+  /** set up the enumeration master for the given number of variables */
+  EnumerateMaster(int _nVars);
+  
+
+  /** set up all the data structures necessary for model enumeration 
+   * Note: projection file name, and pointer to coprocessor should be set already!
+   */
+  void initEnumerateModels();
   
   /** set the object shared (for parallel enumeration)*/
-  void setShared() { assert( models == 0 && "cannot set shared after first models have been found already" ); enumerateParallel = true; }
+  void setShared() { assert( numberOfModels == 0 && "cannot set shared after first models have been found already" ); enumerateParallel = true; }
   
   bool isShared() const { return enumerateParallel; }
 
   /** return number of found models (so far), not synchronized */
-  int foundModels() const { return models; }
+  int64_t foundModels() const { return numberOfModels; }
   
   /** set number of models to be found ( 0 ^= INT64_MAX )*/
-  void setMaxModels( const int64_t m ) { lock(); maximalModels = m == 0 ? INT64_MAX : m ; unlock(); }
+  void setMaxModels( const int64_t m ) { lock(); maximalModels = (m == 0 ? INT64_MAX : m) ; unlock(); }
   
   /** tell master the client found UNSAT during adding model blocking clauses*/
   void notifyReachedAllModels() ;
   
-  /** write fileMemory stream to the output file */
+  /** write full models to the output file */
   void writeStreamToFile(string filename = "", bool toerr = false);
-  
-  /** return whether the specified variable is used in the projection, not synchronized read access*/
-  bool varInProjection(const Var& v) const;
-  
+    
   /** indicate whether enumeration is based on projection */
   bool usesProjection() const { return useProjection ; }
   
@@ -94,6 +124,11 @@ public:
   */
   bool addModel( Riss::vec< Riss::Lit >& model, Riss::vec< Riss::Lit >* blockingClause  = nullptr, Riss::vec< Riss::Lit >* fullModel = nullptr);
   
+  /** print a given model, and futhermore already extend the model if simplifications have been used 
+   * NOTE: might change the model
+   */
+  void printSingleModel( ostream& outputStream, Riss::vec< Riss::lbool >& truthValues );
+  
   /** tell whether enough models have been found */
   bool foundEnoughModels();
   
@@ -103,28 +138,70 @@ public:
   Var projectionVariable( int index ) const;
   
   /** return the minimization of the blocking clause, that is allowed */
-  MinimizeType minimizeBlocked();
+  MinimizeType minimizeBlocked() const;
+  
+  
+  void setModelMinimization(int minimizationType);
+  
+  void setModelFile( string filename );
+  
+  void setFullModelFile( string filename );
+  
+  void setDNFfile( string filename );
+  
+  void setProjectionFile( string filename );
+  
+  void setPreprocessor(Coprocessor::Preprocessor* preprocessor);
+  
+  void setPrintEagerly(bool p);
+  
 };
 
-EnumerateMaster::EnumerateMaster(int _nVars, string _projectionFileName) 
- : 
-   enumerateParallel(false)
- , models(0)
- , maximalModels(1)
-{
-  nVars = _nVars;
-  projectionFileName = _projectionFileName;
-  if( projectionFileName != "" ) useProjection = true;
-  initEnumerateModels();
-}
-
+inline 
 void EnumerateMaster::notifyReachedAllModels()
 {
   lock();
-  maximalModels = models;
+  maximalModels = numberOfModels;
   unlock();  
 }
 
+inline 
+uint64_t EnumerateMaster::storeModel(const vec< Lit >& model)
+{
+    // get space for the model
+    const int maxVar = model.size() < nVars ? nVars : model.size();
+    Riss::vec<Riss::lbool>* newModel = new Riss::vec<Riss::lbool>( maxVar, l_Undef );
+    // set all values of the model
+    for (int i = 0; i < model.size(); i++) { 
+      Var v = var( model[i] );
+      (*newModel)[v] = sign( model[i] ) ? l_False : l_True;
+    }
+    // store new model
+    models.push( newModel );
+}
+
+inline 
+void EnumerateMaster::storeFullModel(const vec< Lit >& fullModel)
+{
+      // get space for the model
+      assert( fullModel.size() >= nVars && "a full model should have at least as many variables as have been present in the formula" );
+      Riss::vec<Riss::lbool>* newFullModel = new Riss::vec<Riss::lbool>( fullModel.size(), l_Undef );
+      // set all values of the model
+      for (int i = 0; i < fullModel.size(); i++) { 
+	Var v = var( fullModel[i] );
+	(*newFullModel)[v] = sign( fullModel[i] ) ? l_False : l_True;
+      } 
+      // store new full model
+      fullModels.push( newFullModel );
+}
+
+inline 
+void EnumerateMaster::storeBlockingClause(vec< Lit >& clause)
+{
+  assert( false && "not yet implemented" );
+}
+
+inline 
 bool EnumerateMaster::addModel(vec< Lit >& model, vec< Lit >* blockingClause, vec< Lit >* fullModel)
 {
   lock() ; 
@@ -132,99 +209,62 @@ bool EnumerateMaster::addModel(vec< Lit >& model, vec< Lit >* blockingClause, ve
   // if we do not have a string stream yet, get one
   
   if(!enumerateParallel) {
-    if( fileMemory == 0 ) fileMemory = new stringstream; 
-    writeModelToStream( model, false );
+    numberOfModels ++;
+    
+    storeModel(model);
+    
+    // do not add blocking clause, as we are running sequentially
+    // store full model, if requested and we use projection 
+    if( usesProjection() && fullModel != nullptr && fullModelsFileName != "" ) {
+      storeFullModel( *fullModel );
+    }
+    
+    if( printEagerly ) {
+      printSingleModel( cout, *models.last() );
+    }
+    
     unlock();
     return true;
   } else {
     assert( false && "not yet implemented" );
+    
+    numberOfModels ++; // if everything worked, increment number of models
     unlock();
     exit(13);
   }
 }
 
+inline 
 bool EnumerateMaster::foundEnoughModels() {
   bool result = false;
   lock();
-  result = (models >= maximalModels );
+  result = (numberOfModels >= maximalModels );
   unlock();
   return result;
 }
 
-
-bool EnumerateMaster::varInProjection(const Var& v) const
-{
-  if( !usesProjection() ) return false; // does not use projection
-  if (v > nVars ) return false;         // variable is larger than variables when initializing the object
-  return isInProjection[ v ] == 1;      // return indicator for given variable
-}
-
-void EnumerateMaster::initEnumerateModels()
-{
-    if( true ) { // do model counting
-      if( isInProjection.size() == 0 && projectionFileName != "") {
-	// read in projection variables
-        projectionVariables.clear();
-        VarFileParser parse ( (string)projectionFileName );  // open file for parsing
-        int max = parse.extract(projectionVariables);
-	max = max >= nVars ? max : nVars;
-	isInProjection.clear();
-	isInProjection.growTo( max+1, 0 );
-	for( int i = 0 ; i < projectionVariables.size(); ++i ) {
-	  assert( projectionVariables[i] > 0 && "should not parse literals, but only variables" );
-	  projectionVariables [i] --;                    // minisat representation!
-	  isInProjection[ projectionVariables [i] ] = 1; // set to 1
-	}
-	useProjection = true;
-      } else {
-	isInProjection.clear();
-	isInProjection.growTo( nVars+1, 0 );
-	useProjection = false;
-      }
-    }
-}
-
-void EnumerateMaster::writeModelToStream( Riss::vec< Riss::Lit >& literalSet, bool doNotInvers )
-{
-  if( fileMemory == 0 ) return;
-  for( int i = 0 ; i < literalSet.size(); ++ i ) {
-    const Lit l = ~literalSet[i];
-    if( doNotInvers ) (*fileMemory ) << (sign(l) ? "" : "-") <<  var(l)+1 << " ";
-    else (*fileMemory ) << (sign(l) ? "-" : "") <<  var(l)+1 << " ";
-  }
-  (*fileMemory ) << "0" << endl;
-}
-
-void EnumerateMaster::writeStreamToFile(string filename, bool toerr)
-{
-  if(fileMemory == nullptr || ( outputFileName == "" && filename == "" && !toerr) ) return;
-  lock();
-  if( outputFileName != "" || filename != "" ) {
-    std::ofstream file( filename == "" ? outputFileName.c_str() : filename.c_str() );
-    file << fileMemory->str();
-    file.close();
-  }
-  if( toerr ) std::cerr << fileMemory->str();
-  unlock();
-}
-
+inline 
 int EnumerateMaster::projectionSize() const
 {
   return projectionVariables.size();
 }
 
+inline 
 Var EnumerateMaster::projectionVariable(int index) const
 {
   assert( index >= 0 && projectionVariables.size() > index && "stay in bounds" );
   return projectionVariables[ index ];
 }
 
-EnumerateMaster::MinimizeType EnumerateMaster::minimizeBlocked()
+inline 
+EnumerateMaster::MinimizeType EnumerateMaster::minimizeBlocked() const 
 {
-  return ALSOFROMBLOCKED;
+  return mType;
 }
+
 
 
 }
 
 #endif
+
