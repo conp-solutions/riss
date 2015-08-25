@@ -2089,19 +2089,22 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
       }
     }
     // tell master about model, blocking clause, and the ful model
-    master->addModel( solver->trail, & blockingClause, &solver->trail );
+    bool newModel = master->addModel( solver->trail, & blockingClause, &solver->trail );
+    foundModels = newModel ? foundModels + 1 : foundModels;
   } else {
     if( modelSize == blockingClause.size() ) { // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
       blockingClause.copyTo( minimizedClause );
     }
     // the model has the opposite values as the blocking clause
     for( int i = 0 ; i < minimizedClause.size(); ++i ) minimizedClause[i] = ~ minimizedClause[i]; 
-    master->addModel( minimizedClause, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
+    bool newModel = master->addModel( minimizedClause, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
+    foundModels = newModel ? foundModels + 1 : foundModels;
   }
 
   // add blocking clause to this solver without disturbing its search too much
   bool moreModelsPossible = integrateClause( blockingClause, maxLevel, max2Level );
   if( !moreModelsPossible ) {
+    cerr << "c stop after client found all models" << endl;
     master->notifyReachedAllModels();
     return stop;
   }
@@ -2109,6 +2112,12 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
   bool enoughModel = master->foundEnoughModels();
   return enoughModel ? stop : goOn;
 }
+
+uint64_t Solver::EnumerationClient::getModels() const
+{
+  return foundModels;
+}
+
 
 bool Solver::EnumerationClient::enoughModels() const
 {
@@ -2165,6 +2174,7 @@ bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel
 
 void Solver::setEnumnerationMaster(EnumerateMaster* master)
 {
+  cerr << "c set enumeration master in solver (" << __FILE__ << "@" << __LINE__ << ")" << endl;
   enumerationClient.setMaster( master );
 }
 

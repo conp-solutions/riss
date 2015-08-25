@@ -1388,6 +1388,9 @@ class Solver
       vec<Lit> blockingClause;  // storage for the blocking clause
       vec<Lit> minimizedClause; // storage for the minimize blocking clause 
       
+      uint64_t foundModels;   // number of models found by this client
+      uint64_t blockedModels; // number of models that have been received from the master already
+      
     public:
       
       enum EnumerateState {
@@ -1396,7 +1399,7 @@ class Solver
 	oneModel = 2,
       };
       
-      EnumerationClient( Solver* _solver ) : master(nullptr), solver( _solver ) {}
+      EnumerationClient( Solver* _solver ) : master(nullptr), solver( _solver ), foundModels(0), blockedModels(0) {}
       
       ~EnumerationClient();
       
@@ -1405,6 +1408,9 @@ class Solver
       
       /** check whether all models have been encountered already */
       bool enoughModels() const ;
+      
+      /** return the number of models that have been found by this thread */
+      uint64_t getModels() const ;
       
       /** process the current model of the solver where the client is embedded
        @return goOn, if the search for a model should be continued, stop, if the search should be interrupted, and oneModel, if no enumeration is used 

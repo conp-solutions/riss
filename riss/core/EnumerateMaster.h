@@ -90,6 +90,9 @@ public:
   /** set up the enumeration master for the given number of variables */
   EnumerateMaster(int _nVars);
   
+  /** free resources again */
+  ~EnumerateMaster();
+  
 
   /** set up all the data structures necessary for model enumeration 
    * Note: projection file name, and pointer to coprocessor should be set already!
@@ -199,7 +202,11 @@ void EnumerateMaster::storeFullModel(const vec< Lit >& fullModel)
 inline 
 void EnumerateMaster::storeBlockingClause(vec< Lit >& clause)
 {
-  assert( false && "not yet implemented -- also implement receiving new models once in a while!" );
+  vec< Lit >* newClause = new vec< Lit >(clause.size());
+  clause.copyTo( *newClause );
+  blockingClauses.push( newClause );
+  
+  assert( blockingClauses.size() == models.size() && "should have the same amount of entries (add model first!)" );
 }
 
 inline 
@@ -229,7 +236,7 @@ bool EnumerateMaster::addModel(vec< Lit >& model, vec< Lit >* blockingClause, ve
     thisModel.clear();
     thisModel.growTo( maxVar, l_Undef );
     for( int i = 0 ; i < model.size(); ++ i ) {
-      currentHash += sign(model[i]) ? var(model[i]) << 32 : var(model[i]); // separate positive and negative literals, sum everything up
+      currentHash += sign(model[i]) ? ((uint64_t)var(model[i])) << 32ull : var(model[i]); // separate positive and negative literals, sum everything up
       thisModel[var( model[i] )] = sign( model[i] ) ? l_False : l_True;    // add this model
     }
     
@@ -260,6 +267,10 @@ bool EnumerateMaster::addModel(vec< Lit >& model, vec< Lit >* blockingClause, ve
       }
       
       assert( models.size() == modelHashes.size() && models.size() >= fullModels.size() && "the numbers have to be the same, there cannot be more full models" );
+      
+      if( printEagerly ) {
+	printSingleModel( cout, *models.last() );
+      }
     }
     unlock();
     

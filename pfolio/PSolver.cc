@@ -358,6 +358,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 	if( modelMaster != nullptr ) {
 	  if( globalSimplifier != nullptr )  modelMaster->setPreprocessor ( globalSimplifier ) ;
 	  modelMaster->initEnumerateModels(); // for this method, coprocessor and projection have to be known already!
+	  solvers[0]->setEnumnerationMaster( modelMaster );
 	}
       
         /* setup all solvers
@@ -573,6 +574,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
                                         <<  "  units: " << (communicators[i]->getSolver()->trail_lim.size() == 0 ? communicators[i]->getSolver()->trail.size() : communicators[i]->getSolver()->trail_lim[0])
+					<<  "  models: " << communicators[i]->getSolver()->enumerationClient.getModels()
                                         << endl;
         }
     }
@@ -954,7 +956,12 @@ void PSolver::createThreadConfigs()
             if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-6]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
+    }  else if (defaultConfig == "ENU") {
+	for (int t = 1 ; t < threads; ++ t) {  // set configurations for remaining (beyond 3)
+            configs[t].setPreset("-shareTime=1 -dynLimits -rnd-freq=0.01");
+        }
     } 
+    
       
     
     /*

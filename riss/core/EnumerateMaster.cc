@@ -21,6 +21,15 @@ EnumerateMaster::EnumerateMaster(int _nVars)
 {
 }
 
+EnumerateMaster::~EnumerateMaster()
+{
+  for( int i = 0 ; i < models.size(); ++ i ) delete models[i];
+  for( int i = 0 ; i < blockingClauses.size(); ++ i ) delete blockingClauses[i];
+  for( int i = 0 ; i < fullModels.size(); ++ i ) delete fullModels[i];
+  
+}
+
+
 void EnumerateMaster::initEnumerateModels()
 {
       if( projectionFileName != "") {
