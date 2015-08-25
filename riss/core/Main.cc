@@ -394,7 +394,7 @@ int main(int argc, char** argv)
 	if( modelMaster != nullptr ) { // handle model enumeration
 	  if (S->verbosity > 0) { printf("c found models: %lld\n", modelMaster->foundModels() ); }
 	  if( modelMaster->foundModels() > 0 ) {
-	    modelMaster->writeStreamToFile("",true); // for now, print all models to stderr is fine
+	    modelMaster->writeStreamToFile("",false); // for now, print all models to stderr is fine
 	    printf("s SATISFIABLE\n");
 	    if (res != nullptr) { fclose(res); res = nullptr; } // TODO: write result into output file!
 	    exit(30);

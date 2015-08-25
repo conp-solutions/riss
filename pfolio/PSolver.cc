@@ -575,6 +575,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
                                         <<  "  units: " << (communicators[i]->getSolver()->trail_lim.size() == 0 ? communicators[i]->getSolver()->trail.size() : communicators[i]->getSolver()->trail_lim[0])
 					<<  "  models: " << communicators[i]->getSolver()->enumerationClient.getModels()
+					<<  "  dup-models: " << communicators[i]->getSolver()->enumerationClient.getDupModels()
                                         << endl;
         }
     }

@@ -123,6 +123,9 @@ int main(int argc, char** argv)
     Int64Option  opt_enumeration    ("MODEL ENUMERATION", "models",     "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
     IntOption    opt_enuMinimize    ("MODEL ENUMERATION", "modelMini",  "minimize blocking clause (0=no,1=from full,2=also from blocking)\n", 2, IntRange(0, 2));
     BoolOption   opt_enumPrintOFT   ("MODEL ENUMERATION", "enuOnline" , "print model as soon as it has been found", true );
+    Int64Option  opt_enumerationRec ("MODEL ENUMERATION", "modelsRec",  "check every X decisions for new models\n", 512, Int64Range(1, INT64_MAX));
+    IntOption    opt_recMinimize    ("MODEL ENUMERATION", "modelRMin",  "how to receive models(0=not,1=plain,2=mini full, 3=mini blocked)\n", 3, IntRange(0, 3));
+    
     StringOption opt_projectionFile ("MODEL ENUMERATION", "modelScope", "file that store enumeration projection\n", 0 );
     StringOption opt_modelFile      ("MODEL ENUMERATION", "modelsFile", "file to store models to\n", 0 );
     StringOption opt_fullModelFile  ("MODEL ENUMERATION", "fullModels", "file to store full models to\n", 0 );
@@ -256,8 +259,12 @@ int main(int argc, char** argv)
 	  modelMaster->setMaxModels(opt_enumeration);
 	  modelMaster->setModelMinimization( (int) opt_enuMinimize );
 	  modelMaster->setShared(); // we are solving in parallel, hence, tell the enumeration object to synchronize with locks and to avoid duplicates eagerly!
-	  
 	  modelMaster->setPrintEagerly( opt_enumPrintOFT );
+	  
+	  modelMaster->setMinimizeReceived( opt_recMinimize == 0 ? 0 : opt_recMinimize - 1 );
+	  modelMaster->setCheckEvery( opt_enumerationRec );
+	  modelMaster->setReceiveModels( opt_recMinimize != 0 );
+	  
 	  if( (const char*) opt_projectionFile != 0 ) modelMaster->setProjectionFile( (const char*) opt_projectionFile );
 	  if( (const char*) opt_modelFile != 0 )      modelMaster->setModelFile(      (const char*) opt_modelFile );
 	  if( (const char*) opt_fullModelFile != 0 )  modelMaster->setFullModelFile(  (const char*) opt_fullModelFile );
@@ -276,7 +283,7 @@ int main(int argc, char** argv)
 	if( modelMaster != nullptr ) { // handle model enumeration
 	  if (S.verbosity > 0) { printf("c found models: %lld\n", modelMaster->foundModels() ); }
 	  if( modelMaster->foundModels() > 0 ) {
-	    modelMaster->writeStreamToFile("",true); // for now, print all models to stderr is fine
+	    modelMaster->writeStreamToFile("",false); // for now, print all models to stderr is fine
 	    printf("s SATISFIABLE\n");
 	    if (res != nullptr) { fclose(res); res = nullptr; } // TODO: write result into output file!
 	    exit(30);

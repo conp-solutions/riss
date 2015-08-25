@@ -1934,6 +1934,9 @@ lbool Solver::search(int nof_conflicts)
         } else { // there has not been a conflict
             if (restartSearch(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
 
+            // check for new models, continue with propagation if new clauses have been added 
+	    if( enumerationClient. receiveModelBlockingClauses() ) continue;
+            
             // Handle Simplification Here!
             //
             // Simplify the set of problem clauses - but do not do it each iteration!
@@ -2039,14 +2042,59 @@ SolverNextSearchIteration:;
     return l_Undef;
 }
 
+/** receive blocking clauses from enumeration master and add them to the formula of the current solver
+ * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+ @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
+ */
+bool Solver::EnumerationClient::receiveModelBlockingClauses()
+{
+  if( master == nullptr ) return false; // nothing to be done 
+  if( solver->decisions < lastReceiveDecisions + receiveEveryDecisions ) return false;
+  if( !master->hasMoreModels(blockedModels) ) return false; // nothing to be received by master 
+
+  // set number of decisions when receiving models
+  lastReceiveDecisions = solver->decisions;
+  int oldDecisionLevel = solver->decisionLevel();
+  while( master->hasMoreModels(blockedModels) ) {
+    master->reveiveModel(blockedModels, solver->model, blockingClause);
+    blockedModels ++; // saw one more model
+    
+    if( minimizeReceived != NONE ) {
+      // allowed to reduce the blocked clause?
+      solver->initReverseMinimitaion(); // initialize reverse minimization
+      // dummies for minimization
+      unsigned int lbd = 0; unsigned dependencyLevel = 0;
+      
+      blockingClause.copyTo( minimizedClause );
+      if( minimizeReceived == ALSOFROMBLOCKED ) {
+	solver->reverseLearntClause(minimizedClause, lbd, dependencyLevel, true);
+      }
+      blockingClause.clear();
+      for( int i = 0 ; i < solver->model.size(); ++ i ) {
+	blockingClause.push( mkLit( i , solver->model[i] == l_False ) );
+      }
+      solver->reverseLearntClause(blockingClause, lbd, dependencyLevel, true);
+      // use the shorter clause!
+      if( minimizedClause.size() < blockingClause.size() ) minimizedClause.copyTo( blockingClause );
+    }
+    
+    // integrate the clause, with no previous knowledge
+    int maxLevel = -1, max2Level = -1;
+    integrateClause( blockingClause, maxLevel, max2Level );
+  }
+  
+  // if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+  return oldDecisionLevel != solver->decisionLevel();
+}
+
+
 Solver::EnumerationClient::EnumerateState 
 Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
 {
   if( master == 0 ) return oneModel; // we do not perform enumeration
   
   // allowed to reduce the blocked clause?
-  EnumerateMaster::MinimizeType mtype = master->minimizeBlocked();
-  if( mtype != EnumerateMaster::MinimizeType::NONE ) solver->initReverseMinimitaion(); // initialize reverse minimization
+  if( mtype != EnumerationClient::MinimizeType::NONE ) solver->initReverseMinimitaion(); // initialize reverse minimization
   
   int maxLevel = 0, max2Level = 0;
   int modelSize = solver->trail.size();
@@ -2066,7 +2114,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
   unsigned int lbd = 0; unsigned dependencyLevel = 0;
   
   // minimize blocking clause
-  if( mtype == EnumerateMaster::MinimizeType::ALSOFROMBLOCKED ) { // minimized blocking clause we just created
+  if( mtype == EnumerationClient::MinimizeType::ALSOFROMBLOCKED ) { // minimized blocking clause we just created
     blockingClause.copyTo( minimizedClause );
     solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
     if( minimizedClause.size() < blockingClause.size() ) { 
@@ -2078,7 +2126,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
   
   // if projection is not active, we are furthermore allowed to try to come up with a shorter blocking clause starting from the full model
   if( ! master->usesProjection() ) {
-    if( mtype == EnumerateMaster::MinimizeType::ONLYFROMFULL || mtype == EnumerateMaster::MinimizeType::ALSOFROMBLOCKED ) {
+    if( mtype == EnumerationClient::MinimizeType::ONLYFROMFULL || mtype == EnumerationClient::MinimizeType::ALSOFROMBLOCKED ) {
       solver->trail.copyTo( minimizedClause );
       for( int i = 0 ; i < minimizedClause.size(); ++ i ) minimizedClause[i] = ~minimizedClause[i]; // first, create a full blocking clause
       solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
@@ -2088,17 +2136,21 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
 	maxLevel = -1; max2Level = -1;
       }
     }
-    // tell master about model, blocking clause, and the ful model
-    bool newModel = master->addModel( solver->trail, & blockingClause, &solver->trail );
-    foundModels = newModel ? foundModels + 1 : foundModels;
+    // tell master about model, blocking clause, and the full model
+    uint64_t modelhash = convertModel( solver->nVars(), solver->trail, solver->model ); // convert in client, such that the master must not perform the conversion in the critical section!
+    bool newModel = master->addModel( solver->model, modelhash, & blockingClause, &solver->trail );
+    if( newModel ) foundModels ++; 
+    else duplicateModels ++;
   } else {
     if( modelSize == blockingClause.size() ) { // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
       blockingClause.copyTo( minimizedClause );
     }
     // the model has the opposite values as the blocking clause
     for( int i = 0 ; i < minimizedClause.size(); ++i ) minimizedClause[i] = ~ minimizedClause[i]; 
-    bool newModel = master->addModel( minimizedClause, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
-    foundModels = newModel ? foundModels + 1 : foundModels;
+    uint64_t modelhash = convertModel( solver->nVars(), minimizedClause, solver->model ); // convert in client, such that the master must not perform the conversion in the critical section!
+    bool newModel = master->addModel( solver->model, modelhash, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
+    if( newModel ) foundModels ++; 
+    else duplicateModels ++;
   }
 
   // add blocking clause to this solver without disturbing its search too much
@@ -2113,9 +2165,42 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
   return enoughModel ? stop : goOn;
 }
 
+Solver::EnumerationClient::EnumerationClient(Solver* _solver)
+:   master(nullptr)
+  , solver( _solver )
+  , blockedModels(0) 
+  , lastReceiveDecisions(0)
+  , mtype ( ALSOFROMBLOCKED )
+  , minimizeReceived(ALSOFROMBLOCKED)
+  , foundModels(0)
+  , duplicateModels(0)
+  , receiveEveryDecisions(512)
+{
+}
+
+uint64_t Solver::EnumerationClient::convertModel(uint32_t nVars, vec< Lit >& trail, vec< lbool >& model)
+{
+    // check whether model is already present
+  uint64_t currentHash = 0;
+  const int maxVar = trail.size() < nVars ? nVars : trail.size();
+  model.clear();
+  model.growTo( maxVar, l_Undef );
+  for( int i = 0 ; i < trail.size(); ++ i ) {
+    currentHash += sign(trail[i]) ? ((uint64_t)var(trail[i])) << 32ull : var(trail[i]); // separate positive and negative literals, sum everything up
+    model[var( trail[i] )] = sign( trail[i] ) ? l_False : l_True;    // add this model
+  }
+  return currentHash;
+}
+
+
 uint64_t Solver::EnumerationClient::getModels() const
 {
   return foundModels;
+}
+
+uint64_t Solver::EnumerationClient::getDupModels() const
+{
+  return duplicateModels;
 }
 
 
@@ -2174,8 +2259,25 @@ bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel
 
 void Solver::setEnumnerationMaster(EnumerateMaster* master)
 {
-  cerr << "c set enumeration master in solver (" << __FILE__ << "@" << __LINE__ << ")" << endl;
   enumerationClient.setMaster( master );
+  
+  switch( master->minimizeBlocked() ) {
+    case 0: enumerationClient.mtype = EnumerationClient::NONE ; break;
+    case 1: enumerationClient.mtype = EnumerationClient::ONLYFROMFULL ; break;
+    case 2: enumerationClient.mtype = EnumerationClient::ALSOFROMBLOCKED ; break;
+    default: 
+      assert( false && "this case is not handled here" );
+      break;
+  }
+  switch( master->minimizeReceived() ) {
+    case 0: enumerationClient.minimizeReceived = EnumerationClient::NONE ; break;
+    case 1: enumerationClient.minimizeReceived = EnumerationClient::ONLYFROMFULL ; break;
+    case 2: enumerationClient.minimizeReceived = EnumerationClient::ALSOFROMBLOCKED ; break;
+    default: 
+      assert( false && "this case is not handled here" );
+      break;
+  }
+  enumerationClient.receiveEveryDecisions = master->checkNewModelsEvery();
 }
 
 

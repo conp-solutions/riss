@@ -1367,6 +1367,15 @@ class Solver
 
 // [BEGIN] modifications for model enumerating solver
     class EnumerationClient {
+    public:
+      enum MinimizeType {
+	NONE = 0,
+	ONLYFROMFULL = 1,
+	ALSOFROMBLOCKED = 2
+      };
+
+    private:
+      
       EnumerateMaster* master;
       
       Solver* solver; // handle to the solver class
@@ -1385,11 +1394,19 @@ class Solver
        */
       bool integrateClause( vec<Lit>& clause, int maxLevel, int max2Level );
       
+      /** convert model into truth value representation
+       @param nVars present variables in solver 
+       @param trail list of literals that have been satisfied (taken as input)
+       @param model truth value representation of trail
+       @return hash that represents the model
+       */
+      uint64_t convertModel( uint32_t nVars, vec< Lit >& trail, vec< lbool >& model );
+      
       vec<Lit> blockingClause;  // storage for the blocking clause
       vec<Lit> minimizedClause; // storage for the minimize blocking clause 
       
-      uint64_t foundModels;   // number of models found by this client
       uint64_t blockedModels; // number of models that have been received from the master already
+      uint64_t lastReceiveDecisions;  // number of decisions when receiving the last blocking clause
       
     public:
       
@@ -1399,7 +1416,13 @@ class Solver
 	oneModel = 2,
       };
       
-      EnumerationClient( Solver* _solver ) : master(nullptr), solver( _solver ), foundModels(0), blockedModels(0) {}
+      MinimizeType mtype;            // minimization type before submitting blocking clause = master->minimizeBlocked();
+      MinimizeType minimizeReceived; // apply reverse minimization after receiving blocking clause (0=none, 1=only from full, 2=ALSOFROMBLOCKED
+      uint64_t foundModels;   // number of models found by this client
+      uint64_t duplicateModels;   // number of models found by this client
+      uint64_t receiveEveryDecisions; // try to receive new blocking clauses for models every X decisions
+      
+      EnumerationClient( Solver* _solver ); 
       
       ~EnumerationClient();
       
@@ -1412,10 +1435,19 @@ class Solver
       /** return the number of models that have been found by this thread */
       uint64_t getModels() const ;
       
+      /** return the number of models that have been found too late (already submitted by another thread) */
+      uint64_t getDupModels() const ;
+      
       /** process the current model of the solver where the client is embedded
        @return goOn, if the search for a model should be continued, stop, if the search should be interrupted, and oneModel, if no enumeration is used 
       */
       EnumerateState processCurrentModel(Lit& nextDecision);
+      
+      /** receive blocking clauses from enumeration master and add them to the formula of the current solver
+      * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+      @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
+      */
+      bool receiveModelBlockingClauses();
     } enumerationClient;
     
     void setEnumnerationMaster( EnumerateMaster* master );
@@ -1697,7 +1729,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
         if (i == learned_clause.size()) { break; }
 
         const Lit l = learned_clause[i];
-        assert( (level(var(l)) != 0 || reverseMinimization.value(l) == l_False) && "there should not be any relevant literal of the top level in the clause");
+        assert( (force || level(var(l)) != 0 || reverseMinimization.value(l) == l_False) && "there should not be any relevant literal of the top level in the clause");
 // DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
         if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
             learned_clause[keptLits++ ] = l; // keep literal

@@ -17,7 +17,11 @@ EnumerateMaster::EnumerateMaster(int _nVars)
  , nVars( _nVars )
  , useProjection(false)
  , maximalModels(1)
- , mType( ALSOFROMBLOCKED )
+ , mType( 2 )
+ , successfulBloom(0)
+ , shareBlockingClauses(true)
+ , minimizeReceivedBlockingClauses(2)
+ , checkForModelsEveryX(512)
 {
 }
 
@@ -52,14 +56,17 @@ void EnumerateMaster::initEnumerateModels()
 
 void EnumerateMaster::setModelMinimization(int minimizationType)
 {
-  switch( minimizationType ) {
-    case 0: mType = NONE ; break;
-    case 1: mType = ONLYFROMFULL ; break;
-    case 2: mType = ALSOFROMBLOCKED ; break;
-    default: 
-      assert( false && "this case is not handled here" );
-      break;
-  }
+  mType = minimizationType;
+}
+
+void EnumerateMaster::setCheckEvery(uint64_t checkEvery)
+{
+  checkForModelsEveryX = checkEvery;
+}
+
+void EnumerateMaster::setMinimizeReceived(int mini)
+{
+  minimizeReceivedBlockingClauses = mini;
 }
 
 
@@ -147,3 +154,9 @@ void EnumerateMaster::setPrintEagerly(bool p)
 {
   printEagerly = p;
 }
+
+void EnumerateMaster::setReceiveModels(bool r)
+{
+  shareBlockingClauses = r;
+}
+
