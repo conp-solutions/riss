@@ -780,7 +780,7 @@ Lit Solver::pickBranchLit()
             rnd_decisions++;
         }
     }
-
+    
     // Activity based decision:
     while (next == var_Undef || value(next) != l_Undef || ! varFlags[next].decision)
         if (order_heap.empty()) {
@@ -2800,15 +2800,16 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
     rerInitRewriteInfo();
 
-    int type1restarts = 0, type2restarts = 0; // have extra counters for the restart types, could also be global
+    int type1restarts = 0, type2restarts = 0, type3restarts = 0; // have extra counters for the restart types, could also be global
     //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
     while (status == l_Undef) {
 
         if (configScheduler.checkAndChangeSearchConfig(conflicts, searchconfiguration)) { applyConfiguration(); }  // if a new configuratoin was selected, update structures
 
-        double rest_base = 0;
-        if (searchconfiguration.restarts_type != 0) { // set current restart limit
-            rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, type1restarts) : pow(config.opt_restart_inc, type2restarts);
+        double rest_base = 0; // initially 0, as we want to use glucose restarts
+        if (searchconfiguration.restarts_type != 0) { // set current restart limit -- the value is multiplied with the parameter "opt_restart_first" below
+            rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, type1restarts) : 
+                        ( searchconfiguration.restarts_type == 2 ? pow(config.opt_restart_inc, type2restarts) : 1  );
         }
 
         // re-shuffle BIG, if a sufficient number of restarts is reached
@@ -2829,6 +2830,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         curr_restarts++;
         type1restarts = searchconfiguration.restarts_type == 1 ? type1restarts + 1 : type1restarts;
         type2restarts = searchconfiguration.restarts_type == 2 ? type2restarts + 1 : type2restarts;
+	type3restarts = searchconfiguration.restarts_type == 3 ? type3restarts + 1 : type3restarts;
 
         status = inprocess(status);
     }

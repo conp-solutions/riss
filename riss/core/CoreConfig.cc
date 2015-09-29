@@ -91,7 +91,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_init_pol                (_init, "init-pol",              "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 6),                       optionListPtr),
 
     opt_restart_level           (_cr,  "rlevel",                 "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2),                     optionListPtr),
-    opt_restarts_type           (_cr,  "rtype",                  "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2),                                              optionListPtr),
+    opt_restarts_type           (_cr,  "rtype",                  "Choose type of restart (0=dynamic,1=luby,2=geometric,3=static)", 0, IntRange(0, 3),                                     optionListPtr),
     opt_restart_first           (_cr,  "rfirst",                 "The base restart interval", 100, IntRange(1, INT32_MAX),                                                                optionListPtr, &opt_restarts_type),
     opt_restart_inc             (_cr,  "rinc",                   "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false),                                           optionListPtr, &opt_restarts_type),
     opt_inc_restart_level       (_cr,  "irlevel",                "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX),                  optionListPtr, &opt_restarts_type),
