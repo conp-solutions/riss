@@ -782,7 +782,7 @@ class Solver
     void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
   public:
-    bool checkProof(); // if online checker is used, return whether the current proof is valid
+    lbool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
     #else // have empty dummy functions
     bool outputsProof() const { return false; }
@@ -791,7 +791,7 @@ class Solver
     void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
   public:
-    bool checkProof() const { return true; } // if online checker is used, return whether the current proof is valid
+    lbool checkProof() const { return l_Undef; } // if online checker is used, return whether the current proof is valid
   protected:
     #endif
 
@@ -1841,12 +1841,12 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
 }
 
 inline
-bool Solver::checkProof()
+lbool Solver::checkProof()
 {
     if (onlineDratChecker != 0) {
-        return onlineDratChecker->addClause(lit_Undef);
+        return onlineDratChecker->addClause(lit_Undef) ? l_True : l_False;
     } else {
-        return true; // here, we simply do not know
+        return l_Undef; // here, we simply do not know
     }
 }
 

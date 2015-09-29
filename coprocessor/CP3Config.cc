@@ -47,6 +47,7 @@ const char* _cat_twosat   = "COPROCESSOR - TWOSAT";
 const char* _cat_uhd      = "COPROCESSOR - UNHIDE";
 const char* _cat_xor      = "COPROCESSOR - XOR";
 const char* _cat_rat      = "COPROCESSOR - RAT Elimination";
+const char* _cat_hbr      = "COPROCESSOR - Hyper Binary Resolution";
 
 CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     :
@@ -102,6 +103,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_simplify       (_cat2, "simplify",      "Apply easy simplifications to the formula", true,                             optionListPtr, &opt_enabled),
     opt_symm           (_cat2, "symm",          "Do local symmetry breaking", false,                                           optionListPtr, &opt_enabled),
     opt_FM             (_cat2, "fm",            "Use the Fourier Motzkin transformation", false,                               optionListPtr, &opt_enabled),
+    opt_hbr            (_cat2, "hbr",           "Use hyper binary resolution", false,                                          optionListPtr, &opt_enabled),
 
     opt_ptechs         (_cat2, "cp3_ptechs",    "techniques for preprocessing", 0,                                             optionListPtr, &opt_enabled),
     opt_itechs         (_cat2, "cp3_itechs",    "techniques for inprocessing",  0,                                             optionListPtr, &opt_inprocess),
@@ -179,7 +181,11 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_rew_cls         (_cat, "cp3_rew_cls",     "clause limit to enable REW",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
     opt_rew_lits        (_cat, "cp3_rew_lits",    "total literal limit to enable REW",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
 
+    opt_hbr_vars        (_cat, "cp3_hbr_vars",    "variable limit to enable HBR",                INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
+    opt_hbr_cls         (_cat, "cp3_hbr_cls",     "clause limit to enable HBR",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
+    opt_hbr_lits        (_cat, "cp3_hbr_lits",    "total literal limit to enable HBR",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
 
+    
 
     #ifndef NDEBUG
     opt_debug (_cat, "cp3-debug", "do more debugging", false,                                                                            optionListPtr, &opt_enabled),
@@ -275,6 +281,17 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bce_debug           (_cat_bce, "bce-debug",    "output debug info during BCE", false,                                                               optionListPtr, &opt_bce),
     #endif
 
+    //
+    // HBR
+    //
+    hbrLimit                (_cat_hbr, "hbr-limit",    "number of pairwise clause comparisons before interrupting HBR", 100000000, IntRange(0, INT32_MAX),  optionListPtr, &opt_hbr),
+    opt_hbr_maxCsize        (_cat_hbr, "hbr-csize",   "max. clause size to be considered for HBR", 3, IntRange(3, INT32_MAX),                              optionListPtr, &opt_hbr),
+    opt_hbrInpStepInc       (_cat_hbr, "hbr-incInp",   "number of steps given to HBR for another inprocessign round", 10000, IntRange(0, INT32_MAX),        optionListPtr, &opt_hbr),
+    opt_hbr_verbose         (_cat_hbr, "hbr-verbose",  "be verbose during HBR", 0, IntRange(0, 3),                                                          optionListPtr, &opt_hbr),
+    #ifndef NDEBUG
+    opt_hbr_debug           (_cat_hbr, "hbr-debug",    "output debug info during HBR", false,                                                               optionListPtr, &opt_hbr),
+    #endif
+    
     //
     // Literal Addition
     //

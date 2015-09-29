@@ -57,6 +57,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , bce(config, solver->ca, controller, data, propagation)
     , la(config, solver->ca, controller, data, propagation)
     , entailedRedundant(config, solver->ca, controller, data)
+    , hbr(config, solver->ca, controller, data, propagation)
     , sls(config, data, solver->ca, controller)
     , twoSAT(config, solver->ca, controller, data)
     , shuffleVariable(-1)
@@ -414,6 +415,19 @@ lbool Preprocessor::performSimplification()
             });
         }
 
+        if( ! data.ok() ) break; // stop here already
+
+        if (config.opt_hbr) {
+            if (config.opt_verbose > 0) { cerr << "c hbr ..." << endl; }
+            if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
+            if (status == l_Undef) { hbr.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); rate.printStatistics(cerr); }
+
+            data.checkGarbage(); // perform garbage collection
+
+            DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
+        }
+        
         //
         // end of simplification iteration
         //
@@ -554,6 +568,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_la) { la.printStatistics(cerr); }
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
+        if (config.opt_hbr) { hbr.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
         if (config.opt_rew) { rew.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
@@ -833,6 +848,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
             change = rate.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c RATE changed formula: " << change << endl; }
         }
+        
+        // HBR "H"
+        else if (execute == 'H' && config.opt_hbr && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c HBR" << endl; }
+            hbr.process();
+            change = rate.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c HBR changed formula: " << change << endl; }
+        }        
 
         // hte "h"
         else if (execute == 'h' && config.opt_hte && status == l_Undef && data.ok()) {

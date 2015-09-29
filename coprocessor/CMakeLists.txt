@@ -22,6 +22,7 @@ set(LIB_SOURCES
     Experimental.cc
     FourierMotzkin.cc
     HiddenTautologyElimination.cc
+    hbr.cc
     LiteralAddition.cc
     OutputFormula.cc
     Probing.cc

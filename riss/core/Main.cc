@@ -333,8 +333,8 @@ int main(int argc, char** argv)
             }
             // add the empty clause to the proof, close proof file
             if (S->proofFile != nullptr) {
-                bool validProof = S->checkProof(); // check the proof that is generated inside the solver
-//                 DOUT( if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; } ); // TODO FIXME this is not implemented right now (online checked is not activated by default)
+                lbool validProof = S->checkProof(); // check the proof that is generated inside the solver
+		if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ") ) << endl; }
                 fprintf(S->proofFile, "0\n"), fclose(S->proofFile);
             }
             if (S->verbosity > 0) {
@@ -395,8 +395,8 @@ int main(int argc, char** argv)
         // put empty clause on proof
         if (ret == l_False && S->proofFile != nullptr) {
 #ifdef DRATPROOF
-            bool validProof = S->checkProof(); // check the proof that is generated inside the solver
-            if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
+            lbool validProof = S->checkProof(); // check the proof that is generated inside the solver
+            if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ") ) << endl; }
 #endif
             fprintf(S->proofFile, "0\n");
         }

@@ -32,6 +32,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Entailed.h"
 #include "coprocessor/Dense.h"
 #include "coprocessor/Symmetry.h"
+#include "coprocessor/hbr.h"
 
 #include "coprocessor/sls.h"
 #include "coprocessor/TwoSAT.h"
@@ -171,6 +172,7 @@ class Preprocessor
     BlockedClauseElimination bce;
     LiteralAddition la;
     EntailedRedundant entailedRedundant;
+    HyperBinaryResolution hbr;
 
     Sls sls;
     TwoSatSolver twoSAT;

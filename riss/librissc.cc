@@ -77,10 +77,23 @@ extern "C" {
     }
 
     /** initialize a solver instance, and return a pointer to the maintain structure
+    */
+    void*
+    riss_init()
+    {
+        libriss* riss = new libriss;
+        riss->solverconfig = new Riss::CoreConfig("");
+        riss->cp3config = new Coprocessor::CP3Config("");
+        riss->solver = new Riss::Solver(riss->solverconfig) ;
+        riss->solver->setPreprocessor(riss->cp3config);
+        return riss;
+    }
+
+    /** initialize a solver instance, and return a pointer to the maintain structure
     * @param presetConfig name of a configuration that should be used
     */
     void*
-    riss_init(const char* presetConfig)
+    riss_init_configured(const char* presetConfig)
     {
         libriss* riss = new libriss;
         riss->solverconfig = new Riss::CoreConfig(presetConfig == 0 ? "" : presetConfig);
@@ -101,14 +114,14 @@ extern "C" {
 
     /** free the resources of the solver, set the pointer to 0 afterwards */
     void
-    riss_destroy(void*& riss)
+    riss_destroy(void** riss)
     {
-        libriss* solver = (libriss*) riss;
+        libriss* solver = (libriss*) *riss;
         delete solver->solver;
         delete solver->cp3config;
         delete solver->solverconfig;
         delete solver;
-        riss = 0;
+        *riss = 0;
     }
 
     /** add a new variables in the solver
@@ -121,7 +134,7 @@ extern "C" {
     }
 
     /** add a literal to the solver, if lit == 0, end the clause and actually add it */
-    int riss_add(void* riss, const int& lit)
+    int riss_add(void* riss, const int lit)
     {
         libriss* solver = (libriss*) riss;
         solver->lastResult = l_Undef; // set state of the solver to l_Undef
@@ -142,7 +155,7 @@ extern "C" {
 
     /** add the given literal to the assumptions for the next solver call */
     void
-    riss_assume(void* riss, const int& lit)
+    riss_assume(void* riss, const int lit)
     {
         libriss* solver = (libriss*) riss;
         solver->lastResult = l_Undef; // set state of the solver to l_Undef
@@ -151,7 +164,7 @@ extern "C" {
 
 
     /** add a variable as prefered search decision (will be decided in this order before deciding other variables) */
-    void riss_add_prefered_decision(void* riss, const int& variable)
+    void riss_add_prefered_decision(void* riss, const int variable)
     {
         libriss* solver = (libriss*) riss;
         solver->solver->addPreferred(variable - 1);
@@ -186,6 +199,15 @@ extern "C" {
     }
 
 
+    /** solve the formula that is currently present (riss_add) under the specified assumptions since the last call
+     * Note: clears the assumptions after the solver run finished
+     * add the nOfConflicts limit -1 (infinite)
+     * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
+     */
+    int
+    riss_sat(void* riss) {
+    	return riss_sat_limited(riss, -1);
+    }
 
     /** solve the formula that is currently present (riss_add) under the specified assumptions since the last call
      * Note: clears the assumptions after the solver run finished
@@ -193,7 +215,7 @@ extern "C" {
      * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
      */
     int
-    riss_sat(void* riss, const int64_t& nOfConflicts)
+    riss_sat_limited(void* riss, const int64_t nOfConflicts)
     {
         libriss* solver = (libriss*) riss;
         if (nOfConflicts == -1) { solver->solver->budgetOff(); }
@@ -212,7 +234,7 @@ extern "C" {
 
     /** return the polarity of a literal in the model of the last solver run (if the result was sat) */
     int
-    riss_deref(const void* riss, const int& lit)
+    riss_deref(const void* riss, const int lit)
     {
         const Var v = lit > 0 ? lit - 1 : -lit - 1;
         libriss* solver = (libriss*) riss;
@@ -246,7 +268,7 @@ extern "C" {
     /** return the literals of the conflict clause at the specified position
      *  @return a literal of the conflict clause
      */
-    int riss_conflict_lit(const void* riss, const int& position)
+    int riss_conflict_lit(const void* riss, const int position)
     {
         libriss* solver = (libriss*) riss;
         assert(position >= 0 && position < solver->solver->conflict.size() && "can only access existing positions");
