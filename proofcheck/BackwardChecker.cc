@@ -18,6 +18,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include <sstream>
 
 using namespace Riss;
+using namespace std;
 
 static IntOption  opt_splitLoad      ("BACKWARD-CHECK", "splitLoad",          "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
 static IntOption  opt_verbose        ("BACKWARD-CHECK", "bwc-verbose",        "verbosity level of the checker", 0, IntRange(0, 8));
@@ -34,7 +35,6 @@ static BoolOption opt_loadbalancing  ("BACKWARD-CHECK", "bwc-balance",        "r
 static StringOption opt_coreFile   ("BACKWARD-CHECK", "cores",  "Write unsatisfiable sub formula into this file",0);
 static StringOption opt_proofFile  ("BACKWARD-CHECK", "lemmas", "Write relevant part of proof in this file",0);
 
-using namespace Riss;
 
 BackwardChecker::BackwardChecker(bool opt_drat, int opt_threads, bool opt_fullRAT)
 :

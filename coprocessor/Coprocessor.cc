@@ -48,8 +48,8 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
     , probing(config, solver->ca, controller, data, propagation, ee, *solver)
     , rate(config, solver->ca, controller, data, *solver, propagation)
-    , res(config, solver->ca, controller, data, propagation)
-    , rew(config, solver->ca, controller, data, subsumption)
+    , resolving(config, solver->ca, controller, data, propagation)
+    , rewriter(config, solver->ca, controller, data, subsumption)
     , fourierMotzkin(config, solver->ca, controller, data, propagation, *solver)
     , dense(config, solver->ca, controller, data, propagation)
     , symmetry(config, solver->ca, controller, data, *solver)
@@ -1052,7 +1052,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_bva) { bva.printStatistics(cerr); }
         if (config.opt_probe) { probing.printStatistics(cerr); }
         if (config.opt_unhide) { unhiding.printStatistics(cerr); }
-        if (config.opt_ternResolve || config.opt_addRedBins) { res.printStatistics(cerr); }
+        if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
         if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
@@ -1061,7 +1061,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
-        if (config.opt_rew) { rew.printStatistics(cerr); }
+        if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
         if (config.opt_dense) { dense.printStatistics(cerr); }
         if (config.opt_symm) { symmetry.printStatistics(cerr); }

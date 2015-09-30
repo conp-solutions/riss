@@ -374,38 +374,38 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
   int64_t confl = -1; // initially, there is no conflict
 
   if( verbose > 2 ) {
-    if( c != 0 ) cerr << endl << endl << "c [S-BW-CHK] check AT for clause " << *c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" << endl;
-    else cerr << "c [S-BW-CHK] check AT for no clause" << endl;
+    if( c != 0 )  std::cerr <<  std::endl <<  std::endl << "c [S-BW-CHK] check AT for clause " << *c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" <<  std::endl;
+    else  std::cerr << "c [S-BW-CHK] check AT for no clause" <<  std::endl;
   }
   
   if( rerunPrePropagation ) {
-    if( verbose > 2 ) cerr << "c perform prePropgation. with clear: " << clearUnitTrail << endl;
+    if( verbose > 2 )  std::cerr << "c perform prePropgation. with clear: " << clearUnitTrail <<  std::endl;
     confl = prePropagateUnits( currentID, clearUnitTrail );
-    if( verbose > 2 ) cerr << "c ran prepropagation and created a unit trail with " << unitTrailSize << " literals from " << activeUnits << " active unit clauses and resulting conflict: " << confl << endl;
+    if( verbose > 2 )  std::cerr << "c ran prepropagation and created a unit trail with " << unitTrailSize << " literals from " << activeUnits << " active unit clauses and resulting conflict: " << confl <<  std::endl;
     
     if( confl != -1 ) { 
-      if( verbose > 4 ) cerr << "c preunit trail: " << trail << endl;
+      if( verbose > 4 )  std::cerr << "c preunit trail: " << trail <<  std::endl;
       // perform conflict analysis to mark the clauses that are responsible for the conflict
       if( confl != -1 && analyzeMark ) {
-	if( verbose > 2 ) cerr << "c [S-BW-CHK] call conflict analysis" << endl;
+	if( verbose > 2 )  std::cerr << "c [S-BW-CHK] call conflict analysis" <<  std::endl;
 	assert( label[ confl ].isMarked() && "conflict is already marked" );
 	analyzeAndMark( confl, currentID );
       }
       return confl != -1;
     }
   }
-  if( verbose > 4 ) cerr << "c preunit trail: " << trail << endl;
+  if( verbose > 4 )  std::cerr << "c preunit trail: " << trail <<  std::endl;
   
   if( !reuseClause && c != 0 ) {
     for( int i = 0 ; i < c->size(); ++ i ) { // enqueue all complements
       const Clause& clause = *c;
       if( value( ~clause[i] ) == l_False ) { 
-	if( verbose > 4 ) cerr << "c [S-BW-CHK] enqueing complementary literal failed due to already assigned literals for clause " << clause << endl;
-	if( verbose > 4 ) cerr << "c mark item " << reasonID[ var( clause[i] ) ] << endl;
+	if( verbose > 4 )  std::cerr << "c [S-BW-CHK] enqueing complementary literal failed due to already assigned literals for clause " << clause <<  std::endl;
+	if( verbose > 4 )  std::cerr << "c mark item " << reasonID[ var( clause[i] ) ] <<  std::endl;
 	markToBeVerified( reasonID[ var( clause[i] ) ] ); // mark the clause that causes the conflict!
 	confl = reasonID[ var( clause[i] ) ]; // memorize conflict
 	if( confl != -1 && analyzeMark ) {
-	  if( verbose > 2 ) cerr << "c [S-BW-CHK] call conflict analysis" << endl;
+	  if( verbose > 2 )  std::cerr << "c [S-BW-CHK] call conflict analysis" <<  std::endl;
 	  assert( label[ confl ].isMarked() && "conflict is already marked" );
 	  analyzeAndMark( confl, currentID );
 	}
@@ -417,15 +417,15 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
   
   for( int i = 0 ; i < extraLits.size() ; ++ i ) {
     if( value( ~extraLits[i] ) == l_False ) { 
-      if( verbose > 4 ) cerr << "c [S-BW-CHK] enqueing complementary literal failed due to already assigned literals for extraLits " << extraLits << endl;
+      if( verbose > 4 )  std::cerr << "c [S-BW-CHK] enqueing complementary literal failed due to already assigned literals for extraLits " << extraLits <<  std::endl;
       markToBeVerified( reasonID[ var( extraLits[i] ) ] ); // mark the clause that causes the conflict!
       confl = reasonID[ var( extraLits[i] ) ]; // memorize conflict
       if( confl != -1 && analyzeMark ) {
-	if( verbose > 2 ) cerr << "c [S-BW-CHK] call conflict analysis" << endl;
+	if( verbose > 2 )  std::cerr << "c [S-BW-CHK] call conflict analysis" <<  std::endl;
 	assert( label[ confl ].isMarked() && "conflict is already marked" );
 	analyzeAndMark( confl, currentID );
       }
-      if( verbose > 4 ) cerr << "c mark item " << reasonID[ var( extraLits[i] ) ] << endl;
+      if( verbose > 4 )  std::cerr << "c mark item " << reasonID[ var( extraLits[i] ) ] <<  std::endl;
       return true;                 // there is a conflict
     }
     else if( value( ~extraLits[i] ) == l_Undef ) uncheckedEnqueue( ~extraLits[i], -1 );   
@@ -434,9 +434,9 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
   do {
     
     if( verbose > 4 ) {
-      cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
-      cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
-      cerr << "c trail literals: " << trail << endl;
+       std::cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() <<  std::endl;
+       std::cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead <<  std::endl;
+       std::cerr << "c trail literals: " << trail <<  std::endl;
     }
     
     // propagate on all marked clauses we already collected
@@ -448,9 +448,9 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
     // end propagate on marked clauses
     
     if( verbose > 4 ) {
-      cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
-      cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
-      cerr << "c trail literals: " << trail << endl;
+       std::cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() <<  std::endl;
+       std::cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead <<  std::endl;
+       std::cerr << "c trail literals: " << trail <<  std::endl;
     }
     
     // if there is not yet a conflict, enqueue the first non-marked unit clause
@@ -461,17 +461,17 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
     
   } while ( nonMarkedQHead < trail.size() || nonMarkedUnithead < nonMarkedUnitClauses.size() || markedQhead < trail.size() ); // saw all clauses that might be interesting
 
-  if( verbose > 2 ) cerr << "c [S-BW-CHK] returned conflict reference: " << confl << endl;
+  if( verbose > 2 )  std::cerr << "c [S-BW-CHK] returned conflict reference: " << confl <<  std::endl;
   
   if( confl == -1 && verbose > 5 ) {
-    cerr << "c [S-BW-CHK] no conflict" << endl;
-    cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
-    cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl; 
+     std::cerr << "c [S-BW-CHK] no conflict" <<  std::endl;
+     std::cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() <<  std::endl;
+     std::cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead <<  std::endl; 
   }
   
   // perform conflict analysis to mark the clauses that are responsible for the conflict
   if( confl != -1 && analyzeMark ) {
-    if( verbose > 2 ) cerr << "c [S-BW-CHK] call conflict analysis" << endl;
+    if( verbose > 2 )  std::cerr << "c [S-BW-CHK] call conflict analysis" <<  std::endl;
     assert( label[ confl ].isMarked() && "conflict is already marked" );
     analyzeAndMark( confl, currentID );
   }
@@ -495,7 +495,7 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   const Lit firstLiteralComplement = ( c == 0 ) ? ~lits[0] : ~c->getExtraLiteral();
   const bool isUnitClause = lits.size() == 1;
   
-  if( verbose > 2 ) cerr << "c [S-BW-CHK] RAT check on firstLiteral: " << ~firstLiteralComplement << " with ID " << currentID << endl;
+  if( verbose > 2 )  std::cerr << "c [S-BW-CHK] RAT check on firstLiteral: " << ~firstLiteralComplement << " with ID " << currentID <<  std::endl;
   
   assert( !fullDrat && "full DRAT checking is not supported yet" );
   
@@ -530,14 +530,14 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
       // mark used clause to be verified as well
       markToBeVerified( item.getID() );
       
-      if( verbose > 4 ) cerr << "c [S-BW-CHK] resolve with clause with ID " << item.getID() << endl;
+      if( verbose > 4 )  std::cerr << "c [S-BW-CHK] resolve with clause with ID " << item.getID() <<  std::endl;
       
       fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
       // build resolvent wrt the current assignment
       resolventLits.clear();
       const Clause& d = ca[ item.getRef() ];
       
-      if( verbose > 6 ) cerr << "c [S-BW-CHK] consider clause with " << item.getID() << " for resolution: " << d << endl;
+      if( verbose > 6 )  std::cerr << "c [S-BW-CHK] consider clause with " << item.getID() << " for resolution: " << d <<  std::endl;
       
       // the current assignment is build as follows: J = ~c P, where P are the literals that follow from ~c wrt F
       // the resolvent from c and d is ~c,~d (without the common literal firstLiteralComplement)
@@ -556,21 +556,21 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
 	}
       }
       if( resolventIsAT ) {
-	if( verbose > 5 ) cerr << "c [S-BW-CHK] resolvent is a tautology" << endl;
+	if( verbose > 5 )  std::cerr << "c [S-BW-CHK] resolvent is a tautology" <<  std::endl;
 	continue; // the AT check of the resolvent would succeed
       }
       
       // check AT of the resolvent - by reusing the literals that have been used in the AT check for c
-      if( c != 0 ) cerr << "c perform RAT check for clause " << *c << " with resolvent lits " << resolventLits << " and trail: " << trail << endl;
+      if( c != 0 )  std::cerr << "c perform RAT check for clause " << *c << " with resolvent lits " << resolventLits << " and trail: " << trail <<  std::endl;
       if( ! checkSingleClauseAT(currentID, c, resolventLits, true ) ) {  
 	succeeds = false;
-	if( verbose > 5 ) cerr << "c [S-BW-CHK] AT of resolvent failed" << endl;
+	if( verbose > 5 )  std::cerr << "c [S-BW-CHK] AT of resolvent failed" <<  std::endl;
 	break;
       }
       removeBehind( beforeTrailSize );
     } else {
       // implicitely remove the current element
-      if( verbose > 6 ) cerr << "c [S-BW-CHK] remove element with ID " << item.getID() << " from list" << endl;
+      if( verbose > 6 )  std::cerr << "c [S-BW-CHK] remove element with ID " << item.getID() << " from list" <<  std::endl;
     }
   }
   
@@ -581,7 +581,7 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   }
   fullWatch[ firstLiteralComplement ].shrink_( fullWatch[ firstLiteralComplement ].size() - keptFullWatchEntries ); // remove invalid elements
   
-  if( verbose > 6 ) cerr << "c [S-BW-CHK] RAT check succeeds: " << succeeds << endl;
+  if( verbose > 6 )  std::cerr << "c [S-BW-CHK] RAT check succeeds: " << succeeds <<  std::endl;
   
   return succeeds;
 }

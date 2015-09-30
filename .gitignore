@@ -6,6 +6,9 @@
 *.a
 depend.mk
 
+# Git merge files
+*.orig
+
 # Automatically generated version file containing the 
 # version number and the SHA hash of the current commit.
 version.cc
