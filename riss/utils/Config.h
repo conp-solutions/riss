@@ -355,6 +355,9 @@ bool Config::addPreset(const std::string& optionSet)
      *  End Options for Riss427
      */
 
+    else if (optionSet == "emaRestarts") { // sets up the parameters to follow the setup of the EMA-14 configuration of the POS 2015 paper by Biere and Fröhlich
+        parseOptions(" -rType=0 -r-dyn-ema -K=0.87 -R=1.4 -r-ema-lfast=0.03125 -r-ema-lslow=0.000061035156 -r-ema-tslow=0.000244140625", false);
+    }
 
 
     else if (optionSet == "FOCUS") {

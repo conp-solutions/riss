@@ -64,6 +64,9 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     ,posInAllClauses(true)
     ,negInAllClauses(true)
 
+    , type1restarts(0)
+    , type2restarts(0)
+    , type3restarts(0)
     
     , random_var_freq(config.opt_random_var_freq)
     , random_seed(config.opt_random_seed)
@@ -240,7 +243,11 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , communication(0)
     , sharingTimePoint(config.sharingType)
 {
-  
+    // EMA for dynamic restart schedules
+    slow_interpretationSizes.reinit( config.opt_restart_ema_trailslow );            // collect all conflict levels
+    slow_LBDs.reinit(config.opt_restart_ema_lbdslow);   // collect all clause LBDs
+    recent_LBD.reinit( config.opt_restart_ema_lbdfast );
+    
     // Parameters (user settable):
     //
     searchconfiguration.K = config.opt_K;
@@ -1857,7 +1864,7 @@ lbool Solver::search(int nof_conflicts)
     int         conflictC = 0;
     vec<Lit>    learnt_clause;
     unsigned int nblevels;
-    bool blocked = false;
+    bool blockNextRestart = false;
     starts++;
     int proofTopLevels = 0;
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
@@ -1897,11 +1904,20 @@ lbool Solver::search(int nof_conflicts)
             
 #warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
-            trailQueue.push(trail.size());
-            if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > searchconfiguration.R * trailQueue.getavg()) {
+            trailQueue.push(trail.size()); // tell queue about current conflict level
+	    // block restart based on the current level?
+            if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first  
+	      && searchconfiguration.restarts_type == 0                        // block only with dynamic restarts
+	      && lbdQueue.isvalid()                                            // block only, if we did not already block 'recently'
+	    ) {
+	      if(  (!config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * trailQueue.getavg() )       // glucose like: compare to value of trailQueue
+		|| ( config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * recent_LBD.getValue() )     // EMA: compare to value of slowly evolving trail size EMA
+		
+	      ) {
                 lbdQueue.fastclear();
                 nbstopsrestarts++;
-                if (!blocked) {lastblockatrestart = starts; nbstopsrestartssame++; blocked = true;}
+                if (!blockNextRestart) {lastblockatrestart = starts; nbstopsrestartssame++; blockNextRestart = true;}
+	      }
             }
 
             l1conflicts = (decisionLevel() != 1 ? l1conflicts : l1conflicts + 1);
@@ -2070,11 +2086,15 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
         if (searchconfiguration.restarts_type == 0) {
             // Our dynamic restart, see the SAT09 competition compagnion paper
             if (
-                (lbdQueue.isvalid() && ((lbdQueue.getavg()*searchconfiguration.K) > (sumLBD / (conflicts > 0 ? conflicts : 1))))
-                || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound) // if thre have been too many conflicts
+                ( lbdQueue.isvalid() 
+		  && ( (!config.opt_restarts_dyn_ema && (lbdQueue.getavg()     * searchconfiguration.K) > (sumLBD / (conflicts > 0 ? conflicts : 1))) // use glucose structures
+		    || ( config.opt_restarts_dyn_ema && (recent_LBD.getValue() * searchconfiguration.K > slow_LBDs.getValue() ) )                     // or use EMA of LBDs
+		  )
+		)
+                || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound) // if there have been too many conflicts
             ) {
 
-                {
+
                     // increase current limit, if this has been the reason for the restart!!
                     if ((config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound)) {
                         intervalRestart++; conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc;
@@ -2099,7 +2119,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
                     }
                     cancelUntil(partialLevel);
                     return true;
-                }
+
             }
         } else { // usual static luby or geometric restarts
             if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
@@ -2570,8 +2590,18 @@ lbool Solver::initSolve(int solves)
         nbstopsrestartssame = 0; lastblockatrestart = 0;
         las = 0; failedLAs = 0; maxBound = 0; maxLaNumber = config.opt_laBound;
         topLevelsSinceLastLa = 0; untilLa = config.opt_laEvery;
-        curr_restarts = 0; // reset restarts
-
+        
+	curr_restarts = 0; // reset restarts
+        type1restarts = 0;
+	type2restarts = 0;
+	type3restarts = 0;
+        
+        // reset restart heuristic information for dynamic restarts
+        slow_interpretationSizes.reset();
+	slow_LBDs.reset();
+	recent_LBD.reset();
+	lbdQueue.fastclear();
+        
         configScheduler.reset(searchconfiguration);
     }
 
@@ -2818,7 +2848,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
     rerInitRewriteInfo();
 
-    int type1restarts = 0, type2restarts = 0, type3restarts = 0; // have extra counters for the restart types, could also be global
+    
     //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
     while (status == l_Undef) {
 
@@ -4217,7 +4247,11 @@ void Solver::updateDecayAndVMTF()
 lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
 {
     assert(decisionLevel() == 0 && "found units, have to jump to level 0!");
+    // update info for restart
     lbdQueue.push(1); sumLBD += 1; // unit clause has one level
+    slow_LBDs.update(1); 
+    recent_LBD.update(1);
+    
     for (int i = 0 ; i < learnt_clause.size(); ++ i) {   // add all units to current state
         if (value(learnt_clause[i]) == l_Undef) { uncheckedEnqueue(learnt_clause[i]); }
         else if (value(learnt_clause[i]) == l_False) { return l_False; }  // otherwise, we have a top level conflict here!
@@ -4254,6 +4288,8 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 
     lbdQueue.push(nblevels);
     sumLBD += nblevels;
+    slow_LBDs.update(nblevels); 
+    recent_LBD.update(nblevels);
     // write learned clause to DRUP!
     addCommentToProof("learnt clause");
     addToProof(learnt_clause);

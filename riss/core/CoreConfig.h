@@ -93,7 +93,12 @@ class CoreConfig : public Config
 
     IntOption opt_restart_level;
     IntOption opt_restarts_type;
+    BoolOption opt_restarts_dyn_ema;
+    DoubleOption opt_restart_ema_lbdfast;
+    DoubleOption opt_restart_ema_lbdslow;
+    DoubleOption opt_restart_ema_trailslow;
     IntOption opt_restart_first;
+    IntOption opt_restart_min_noBlock;
     DoubleOption opt_restart_inc;
     IntOption opt_inc_restart_level;
 

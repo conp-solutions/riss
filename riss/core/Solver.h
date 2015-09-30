@@ -258,10 +258,15 @@ class Solver
       int64_t steps;        // number of added elements
       bool initialized;    // indicate whether using actual alpha is ok now
     public:
-      EMA ( double _alpha ) : value(0), alpha( _alpha ) , steps(0), initialized(false) {}
+      EMA ( double _alpha = 0 ) : value(0), alpha( _alpha ) , steps(0), initialized(false) {}
       
-      void reset() { value = 0; alpha = 0 ; steps = 0; initialized = false;}
+      /** assign a new value for alpha, reset series */
+      void reinit( double _alpha ) { value = 0; alpha = 0 ; steps = 0; initialized = false;}
       
+      /** reset all values, keep alpha */
+      void reset() { value = 0; steps = 0; initialized = false; }
+      
+      /** add next value to series */
       void update(double g_i) { 
 	++ steps;
 	if( !initialized ) {
@@ -278,9 +283,11 @@ class Solver
       double getValue() const { return value; }
     };
     
-#warning to be implemented: have two EMA's, one slow S and one fast F: alpha_S = 2^-X (X around 14), alpha_F = 2^-5, trigger restart if (steps > 50 && F > 1.15 S -> existing parameters!); block restarts alpha_F = 2^-12, block if (F_block > 1.4 S)
-
+    EMA slow_interpretationSizes; // collect all conflict levels
+    EMA slow_LBDs;                // collect all clause LBDs
+    EMA recent_LBD;               // collect all LBDs, slow moving average
     
+    int type1restarts, type2restarts, type3restarts; // have extra counters for the restart types
     
     // Object that controls configuration of search, might be changed during search
     class SearchConfiguration
