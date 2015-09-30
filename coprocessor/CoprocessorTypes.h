@@ -765,6 +765,7 @@ inline void CoprocessorData::addClause(const Riss::CRef& cr, bool check)
 {
     const Riss::Clause& c = ca[cr];
     if (c.can_be_deleted()) { return; }
+    bool somePosInClause = false, somNegInClause = false;
     for (int l = 0; l < c.size(); ++l) {
         // std::cerr << "c add clause " << cr << " to list for " << c[l] << std::endl;
         if (check) {
@@ -776,7 +777,10 @@ inline void CoprocessorData::addClause(const Riss::CRef& cr, bool check)
         }
         occs[Riss::toInt(c[l])].push_back(cr);
         lit_occurrence_count[Riss::toInt(c[l])] += 1;
+	somePosInClause = somePosInClause || !sign(c[l]);
+	somNegInClause  = somNegInClause  || sign(c[l]);
     }
+    if( c.size() > 1 ) solver->updatePosNeg(somePosInClause, somNegInClause); // tell solver whether we can still use the polarity information, only for large clauses
     numberOfCls ++;
 }
 

@@ -60,6 +60,11 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     // setup search configuration as code to fill struct
     , verbosity(config.opt_verb)
     , verbEveryConflicts(100000)
+    
+    ,posInAllClauses(true)
+    ,negInAllClauses(true)
+
+    
     , random_var_freq(config.opt_random_var_freq)
     , random_seed(config.opt_random_seed)
     , rnd_pol(random_var_freq > 0)               // if there is a random variable frequency, allow random decisions
@@ -389,12 +394,16 @@ bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
         }
     }
 
+    bool somePositive = false;
+    bool someNegative = false;
     if (!config.opt_hpushUnit) {   // do not analyzes clauses for being satisfied or simplified
         for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
             if (value(ps[i]) == l_True || ps[i] == ~p) { // noRedundancyCheck breaks the second property, which is ok, as it also not fails
                 return true;
             } else if (value(ps[i]) != l_False && ps[i] != p) {
                 ps[j++] = p = ps[i]; // assigning p is not relevant for noRedundancyCheck
+                somePositive = somePositive || !sign(p);
+		someNegative = someNegative || sign(p);
             }
         ps.shrink_(i - j);
     }
@@ -422,6 +431,10 @@ bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
         attachClause(cr);
+	assert( ps.size() > 1 && "this should not be a unit clause" );
+	// to feed polarity heuristic
+	posInAllClauses = posInAllClauses && somePositive; // memorize for the whole formula
+	negInAllClauses = negInAllClauses && someNegative;
     }
 
     return true;
@@ -790,8 +803,13 @@ Lit Solver::pickBranchLit()
             next = order_heap.removeMin();
         }
 
-    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : varFlags[next].polarity);
-    return returnLit;
+    // first path is usually chosen, one if
+    if( next != var_Undef && !posInAllClauses && !negInAllClauses ) {
+      return mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : varFlags[next].polarity);
+    } else {
+      return next == var_Undef ? lit_Undef : 
+             ( posInAllClauses ? mkLit(next, false ) : mkLit(next, true ) );
+    }
 }
 
 
@@ -2861,6 +2879,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
                overheadC, overheadW);
         printf("c PP-Timing(cpu,wall, in s): preprocessing( %d ): %.2lf %.2lf ,inprocessing (%d ): %.2lf %.2lf\n",
                preprocessCalls, preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessCalls, inprocessTime.getCpuTime(), inprocessTime.getWallClockTime());
+	printf("c Trivial Polarity: True: %d  False: %d\n", (int)posInAllClauses , (int) negInAllClauses);
         printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt, learntUnit);
         printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits);
         printf("c otfss: %d (l1: %d ),cls: %d ,units: %d ,binaries: %d, eagerCandidates: %d\n", otfss.otfsss, otfss.otfsssL1, otfss.otfssClss, otfss.otfssUnits, otfss.otfssBinaries, otfss.revealedClause);

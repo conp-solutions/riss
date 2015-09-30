@@ -244,9 +244,45 @@ class Solver
     int       verbosity;
     int       verbEveryConflicts;
 
-    // Object that controls configuration of search, might be changed during search
+    // check the polarity of all clauses
+    bool posInAllClauses; // indicate that there is a positive literal in all added clauses (after reducing units)
+    bool negInAllClauses; // indicate that there is a negative literal in all added clauses (after reducing units)
+    void updatePosNeg( bool somePosInClause, bool somNegInClause ); /// if a clause is added in another way, the flags can be updated with this method accordingly
+    
+    /** class to calculate exponential moving averages
+     * Series to control restarts, along "Evaluating CDCL Restart Schemes" by Biere and Fröhlich, POS 2015
+     * Note: uses initialization, as described in the paper ( first alphas will be 2^{-step}, until 2^{-step} < alpha )
+     * */
+    class EMA {
+      double value, alpha; // value, and update value of series
+      int64_t steps;        // number of added elements
+      bool initialized;    // indicate whether using actual alpha is ok now
+    public:
+      EMA ( double _alpha ) : value(0), alpha( _alpha ) , steps(0), initialized(false) {}
+      
+      void reset() { value = 0; alpha = 0 ; steps = 0; initialized = false;}
+      
+      void update(double g_i) { 
+	++ steps;
+	if( !initialized ) {
+	  double compareAlpha = pow(2, - steps );  
+	  if( compareAlpha <= alpha ) { initialized = true; compareAlpha = alpha; } // set initiliazed to true, so that we do not have to do this calculation any more
+	  value = compareAlpha * g_i + ( 1 - compareAlpha ) * value; // exponential update
+	} else {
+	  value = alpha * g_i + ( 1 - alpha ) * value; // exponential update
+	}
+      }
+      
+      int64_t getSteps() const { return steps; }
+      
+      double getValue() const { return value; }
+    };
+    
+#warning to be implemented: have two EMA's, one slow S and one fast F: alpha_S = 2^-X (X around 14), alpha_F = 2^-5, trigger restart if (steps > 50 && F > 1.15 S -> existing parameters!); block restarts alpha_F = 2^-12, block if (F_block > 1.4 S)
 
-    // Constants For restarts
+    
+    
+    // Object that controls configuration of search, might be changed during search
     class SearchConfiguration
     {
       public:
@@ -1861,7 +1897,16 @@ void Solver::addInputClause_(vec< Lit >& ps)
         onlineDratChecker->addParsedclause(ps);
     }
     #endif
+
 }
+
+inline
+void Solver::updatePosNeg(bool somePosInClause, bool somNegInClause)
+{
+  posInAllClauses = posInAllClauses && somePosInClause; // memorize for the whole formula
+  negInAllClauses = negInAllClauses && somNegInClause;
+}
+
 
 };
 
