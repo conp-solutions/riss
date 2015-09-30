@@ -285,7 +285,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // HBR
     //
     hbrLimit                (_cat_hbr, "hbr-limit",    "number of pairwise clause comparisons before interrupting HBR", 100000000, IntRange(0, INT32_MAX),  optionListPtr, &opt_hbr),
-    opt_hbr_maxCsize        (_cat_hbr, "hbr-csize",   "max. clause size to be considered for HBR", 3, IntRange(3, INT32_MAX),                              optionListPtr, &opt_hbr),
+    opt_hbr_maxCsize        (_cat_hbr, "hbr-csize",    "max. clause size to be considered for HBR", 3, IntRange(3, INT32_MAX),                              optionListPtr, &opt_hbr),
+    opt_hbr_addBinaries     (_cat_hbr, "hbr-addBin",   "when add binary clauses (0=always,1=1st iteration,2=never", 0, IntRange(0, 2),                      optionListPtr, &opt_hbr),
     opt_hbrInpStepInc       (_cat_hbr, "hbr-incInp",   "number of steps given to HBR for another inprocessign round", 10000, IntRange(0, INT32_MAX),        optionListPtr, &opt_hbr),
     opt_hbr_verbose         (_cat_hbr, "hbr-verbose",  "be verbose during HBR", 0, IntRange(0, 3),                                                          optionListPtr, &opt_hbr),
     #ifndef NDEBUG

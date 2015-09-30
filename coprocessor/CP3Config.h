@@ -289,6 +289,7 @@ class CP3Config : public Riss::Config
 //
     Riss::IntOption hbrLimit;
     Riss::IntOption opt_hbr_maxCsize;   // min size = 3
+    Riss::IntOption opt_hbr_addBinaries; // add new binary clauses (always, only in first iteration, never)
     Riss::IntOption opt_hbrInpStepInc; // add to limit for inprocessing
     Riss::IntOption opt_hbr_verbose; // output operation steps
     #ifndef NDEBUG

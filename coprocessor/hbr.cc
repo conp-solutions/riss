@@ -48,7 +48,9 @@ bool HyperBinaryResolution::hyperBinaryResolution() {
   MarkArray useThisRound; // memorize all literals that have already been tested as candidates for the current clause
   useThisRound.create(2 * data.nVars());
   
+  int iteration = 0;
   do {
+    iteration ++;
     addedClauses = false;
     toBeAdded.clear();
     
@@ -171,9 +173,13 @@ bool HyperBinaryResolution::hyperBinaryResolution() {
 	      data.addCommentToProof("implied unit as result of multi-HBR"); // tell unsat proof about new clause
 	      data.addUnitToProof( l );                      // add clause to proof
 	    } else { // we found one candidate where it works
-	      DOUT(  if (config.opt_hbr_debug) cerr << "c HBR HBR by " << l << " from " << x << endl;  ); 
-	      addHBR( l, otherLit );
-	      hbrSteps++;
+	      
+	      // limit adding the binary clause based on the given parameter
+	      if( config.opt_hbr_addBinaries == 0 || (iteration == 1 && config.opt_hbr_addBinaries) ) {
+		DOUT(  if (config.opt_hbr_debug) cerr << "c HBR HBR by " << l << " from " << x << endl;  ); 
+		addHBR( l, otherLit );
+		hbrSteps++;
+	      }
 	    }
 	  }
 	}
