@@ -1,0 +1,37 @@
+--- config.hpp-original	2015-08-04 16:18:18.956362742 +0200
++++ config.hpp	2015-08-04 16:18:37.944363193 +0200
+@@ -9,14 +9,14 @@
+ 
+ 
+ #if !defined(ARMA_USE_LAPACK)
+-#define ARMA_USE_LAPACK
++// #define ARMA_USE_LAPACK
+ //// Comment out the above line if you don't have LAPACK or a high-speed replacement for LAPACK,
+ //// such as Intel MKL, AMD ACML, or the Accelerate framework.
+ //// LAPACK is required for matrix decompositions (eg. SVD) and matrix inverse.
+ #endif
+ 
+ #if !defined(ARMA_USE_BLAS)
+-#define ARMA_USE_BLAS
++// #define ARMA_USE_BLAS
+ //// Comment out the above line if you don't have BLAS or a high-speed replacement for BLAS,
+ //// such as OpenBLAS, GotoBLAS, Intel MKL, AMD ACML, or the Accelerate framework.
+ //// BLAS is used for matrix multiplication.
+@@ -24,7 +24,7 @@
+ #endif
+ 
+ #if !defined(ARMA_USE_ARPACK)
+-#define ARMA_USE_ARPACK
++// #define ARMA_USE_ARPACK
+ //// Uncomment the above line if you have ARPACK or a high-speed replacement for ARPACK.
+ //// ARPACK is required for eigendecompositions of sparse matrices, eg. eigs_sym(), svds() 
+ #endif
+@@ -43,7 +43,7 @@
+ //// Make sure the directory has a trailing /
+ #endif
+ 
+-#define ARMA_USE_WRAPPER
++// #define ARMA_USE_WRAPPER
+ //// Comment out the above line if you're getting linking errors when compiling your programs,
+ //// or if you prefer to directly link with LAPACK, BLAS + etc instead of the Armadillo runtime library.
+ //// You will then need to link your programs directly with -llapack -lblas instead of -larmadillo

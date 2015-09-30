@@ -67,6 +67,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_unlimited     (_cat, "cp3_limited",     "Limits for preprocessing techniques", true,                                                       optionListPtr, &opt_enabled),
     opt_randomized    (_cat, "cp3_randomized",  "Steps withing preprocessing techniques are executed in random order", false,                      optionListPtr, &opt_enabled),
     opt_inprocessInt  (_cat, "cp3_inp_cons",    "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX),                  optionListPtr, &opt_inprocess),
+    opt_inpIntInc     (_cat, "cp3_iinp_cons",   "Increase inprocessing interval in each iteration", 0, IntRange(0, INT32_MAX),                 optionListPtr, &opt_inprocess),
     opt_simplifyRounds(_cat, "cp3_iters",       "simplification rounds in preprocessing", 1, IntRange(0, INT32_MAX),                               optionListPtr, &opt_enabled),
 
     opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
@@ -325,6 +326,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #ifndef NDEBUG
     dense_debug_out        (_cat_dense, "cp3_dense_debug", "print debug output to screen", 0, IntRange(0, 2) ,                                optionListPtr, &opt_dense),
     #endif
+    opt_dense_inprocess    (_cat_dense, "dense_inp",       "use dense during inprocessing", false,                                            optionListPtr, &opt_dense),
     opt_dense_fragmentation(_cat_dense, "cp3_dense_frag",  "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100), optionListPtr, &opt_dense),
     opt_dense_keep_assigned(_cat_dense, "cp3_keep_set",    "keep already assigned literals", false,                                           optionListPtr, &opt_dense),
 
@@ -592,7 +594,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_uhd_UHLE      (_cat_uhd, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3),                                                  optionListPtr, &opt_unhide),
     opt_uhd_UHTE      (_cat_uhd, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true,                                                              optionListPtr, &opt_unhide),
     opt_uhd_NoShuffle (_cat_uhd, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false,                                                          optionListPtr, &opt_unhide),
-    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination (buggy)", false,                                                            optionListPtr, &opt_unhide),
+    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination", false,                                                            optionListPtr, &opt_unhide),
     opt_uhd_TestDbl   (_cat_uhd, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false,                                                                     optionListPtr, &opt_unhide),
     opt_uhd_probe     (_cat_uhd, "cp3_uhdProbe",     "Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)", 0, IntRange(0, 4), optionListPtr, &opt_unhide),
     opt_uhd_fullProbe (_cat_uhd, "cp3_uhdPrSize",    "Enable unhide probing for larger clauses, size <= given parameter", 2, IntRange(2, INT32_MAX),                 optionListPtr, &opt_uhd_probe),
@@ -617,6 +619,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_xor_encodeSize     (_cat_xor, "xorEncSize",   "size of xors that are encoded back (<=2 ^= none)", 2, IntRange(2, INT32_MAX),                    optionListPtr, &opt_xor),
     opt_xor_checkNewSubsume(_cat_xor, "xorEncSubs",   "perform subsumption checks with newly added XOR clauses", false,                                 optionListPtr, &opt_xor),
     opt_xor_addAsLearnt    (_cat_xor, "xorEncL",      "add clause to encode XOR as learnt clause", false,                                               optionListPtr, &opt_xor),
+    opt_xor_setPolarity    (_cat_xor, "xorSetPol",    "set default polarities based on XOR elimination order and UP(-1=neg,1=pos)", 0, IntRange(-1, 1), optionListPtr, &opt_xor),
+    opt_xor_addOnNewlyAdded(_cat_xor, "xorAddNew",    "add simplified XORs to list of variables that have been added during add", false,                optionListPtr, &opt_xor),
 
     #ifndef NDEBUG
     opt_xor_debug          (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5),                                            optionListPtr, &opt_xor),

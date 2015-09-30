@@ -54,11 +54,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
     #define USEABLE_BITS 63
 #endif
 
-//
-// if PCASSO is compiled, use virtual methods
-//
-
-//
 // forward declarations
 //
 namespace Coprocessor
@@ -79,7 +74,7 @@ class BIG;
 #ifdef PCASSO
 namespace Pcasso
 {
-class PcassoClient;
+class SolverRiss;
 }
 #endif
 
@@ -113,7 +108,7 @@ class Solver
     friend class Riss::IncSolver; // for bmc
 
     #ifdef PCASSO
-    friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
+    friend class Pcasso::SolverRiss; // SolverRiss is allowed to access all the solver data structures
     #endif
 
     CoreConfig* privateConfig; // do be able to construct object without modifying configuration
@@ -123,10 +118,10 @@ class Solver
 
     /** part of the solve method that is executed */
     enum SolveCallType {
-      full = 0,
-      simplificationOnly = 1,
-      afterSimplification = 2,
-      initializeOnly = 3,
+        full = 0,
+        simplificationOnly = 1,
+        afterSimplification = 2,
+        initializeOnly = 3,
     };
     // Constructor/Destructor:
     //
@@ -137,6 +132,9 @@ class Solver
     /// tell the solver to delete the configuration it just received
     void setDeleteConfig() { deleteConfig = true; }
 
+    /** indicate whether this incarnation is working on the original formula in pfolio*/
+    bool independent() const { return privateConfig->opt_useOriginal; }
+    
     // Problem specification:
     //
 
@@ -161,7 +159,7 @@ class Solver
     //
     bool    simplify();                             /// Removes already satisfied clauses.
     bool    solve(const vec<Lit>& assumps);         /// Search for a model that respects a given set of assumptions.
-    lbool   solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall = SolveCallType::full);  /// Search for a model that respects a given set of assumptions (With resource constraints).
+    lbool   solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall = full);  /// Search for a model that respects a given set of assumptions (With resource constraints).
     bool    solve();                                /// Search without assumptions.
     bool    solve(Lit p);                           /// Search for a model that respects a single assumption.
     bool    solve(Lit p, Lit q);                    /// Search for a model that respects two assumptions.
@@ -253,6 +251,34 @@ class Solver
     class SearchConfiguration
     {
       public:
+
+        SearchConfiguration() :
+            K(0.8)
+            , R(1.4)
+            , sizeLBDQueue(50)
+            , sizeTrailQueue(5000)
+            , firstReduceDB(4000)
+            , incReduceDB(300)
+            , specialIncReduceDB(1000)
+            , lbLBDFrozenClause(30)
+            , lbSizeMinimizingClause(30)
+            , lbLBDMinimizingClause(6)
+            , uhle_minimizing_size(0)
+            , uhle_minimizing_lbd(6)
+            , use_reverse_minimization(false)
+            , lbSizeReverseClause(12)
+            , lbLBDReverseClause(6)
+            , var_decay(0.95)
+            , var_decay_start(0.95)
+            , var_decay_end(0.95)
+            , var_decay_inc(0.01)
+            , var_decay_distance(5000)
+            , clause_decay(0.999)
+            , ccmin_mode(2)
+            , phase_saving(2)
+            , restarts_type(0)
+        {}
+
         double    K;
         double    R;
         double    sizeLBDQueue;
@@ -321,7 +347,7 @@ class Solver
     long curRestart;
     // Helper structures:
     //
-
+  public:
     struct VarData {
         CRef reason; int level;
         Lit dom;
@@ -329,14 +355,22 @@ class Solver
         #ifdef PCASSO
         unsigned dependencyLevel;
         #endif
+	VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
+	#ifdef PCASSO
+         , dependencyLevel(0)
+        #endif
+	{}
+	VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+	#ifdef PCASSO
+         , dependencyLevel(0)
+        #endif
+	{}
     };
+
+  protected:
     static inline VarData mkVarData(CRef cr, int l)
     {
-        VarData d = {cr, l, lit_Undef, -1
-                     #ifdef PCASSO
-                     , 0
-                     #endif
-                    };
+        VarData d(cr, l, lit_Undef, -1);
         return d;
     }
 
@@ -359,7 +393,7 @@ class Solver
     double              cla_inc;          // Amount to bump next clause with.
   public:
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
-  protected: 
+  protected:
     double              var_inc;          // Amount to bump next variable with.
   public: // TODO FIXME undo after debugging!
     OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
@@ -547,7 +581,7 @@ class Solver
 
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
-    
+
 
     // vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
@@ -591,9 +625,14 @@ class Solver
 
 //     vec<int> trailPos;          /// store the position where the variable is located in the trail exactly (for hack)
 
-    double              max_learnts;
-    double              learntsize_adjust_confl;
-    int                 learntsize_adjust_cnt;
+    // minisat style removal
+    double max_learnts;
+    double learntsize_factor;
+    double learntsize_inc;
+    double learntsize_adjust_start_confl;
+    double learntsize_adjust_inc;
+    double learntsize_adjust_confl;
+    int    learntsize_adjust_cnt;
 
     Clock totalTime, propagationTime, analysisTime, preprocessTime, inprocessTime, extResTime, reduceDBTime, icsTime; // times for methods during search
     int preprocessCalls, inprocessCalls;    // stats
@@ -624,17 +663,17 @@ class Solver
 
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
 
-public:
-    /** Main solve method (assumptions given in 'assumptions') 
+  public:
+    /** Main solve method (assumptions given in 'assumptions')
      * @param preprocessCall control how to perform initialization and preprocessing
      *        0 usual behavior
      *        1 perform until preprocessing
      *        2 leave out everything above preprocessing
      * @return status of the formula
      */
-    lbool    solve_(const SolveCallType preprocessCall = SolveCallType::full);                                           
+    lbool    solve_(const SolveCallType preprocessCall = full);
 
-protected:
+  protected:
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
   public:
@@ -872,7 +911,8 @@ protected:
     int learnedDecisionClauses;
 
     /** all info neede to perform lazy on the fly self subsumption */
-    struct OTFSS {
+    class OTFSS {
+    public:
         int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause, removedSat; // otfss stats
 
         /** store for each clause which literal can be removed */
@@ -888,6 +928,8 @@ protected:
         vec<Lit> tmpPropagateLits;  // literals that should be propagated after otfss
         OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0), removedSat(0) {}
 
+        /** to be used to keep a state clean, e.g. after preprocessing/inprocessing */
+	void clearQueues() { info.clear(); tmpPropagateLits.clear(); } 
     } otfss;
 
     /** run over the stored clauses and remove the indicated literal
@@ -1158,7 +1200,7 @@ protected:
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
-    /** replace the current instance of coprocessor with the new one 
+    /** replace the current instance of coprocessor with the new one
         @return pointer to the old coprocessor
      */
     Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
@@ -1272,11 +1314,16 @@ protected:
         bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
         bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
         bool useDynamicLimits;                     /// update sharing limits dynamically
+        bool sendAll;                              /// ignore sharing limits
+        bool receiveAll;                           /// ignore limits for reception
+        bool keepLonger;                           /// keep added clauses for at least one removal
+
+        double lbdFactor;                          /// how to construct the LBD for a received clause (0 = set LBD of clause to 0, positive: relative to size of clause [0-1], negative: relative to average lbd/size ratio)
 
         CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false),
             refineReceived(false), resendRefined(false), doReceive(true), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
-            sendIncModel(false), sendDecModel(false), useDynamicLimits(true) {}
+            sendIncModel(false), sendDecModel(false), useDynamicLimits(false), sendAll(false), receiveAll(false), keepLonger(false), lbdFactor(0) {}
     } communicationClient;
 
     class VariableInformation
@@ -1303,13 +1350,6 @@ protected:
     };
 
 // [END] modifications for parallel assumption based solver
-
-// Modifications for Pcasso
-    #ifdef PCASSO
-    Pcasso::PcassoClient* pcassoClient;
-
-    #endif
-// END modifications for Pcasso
 
 
 };
@@ -1429,12 +1469,12 @@ inline bool     Solver::withinBudget() const
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
 // pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or
 // all calls to solve must return an 'lbool'. I'm not yet sure which I prefer.
-inline bool     Solver::solve()                    { budgetOff(); assumptions.clear(); return solve_() == l_True; }
-inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_() == l_True; }
-inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_() == l_True; }
-inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
-inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
-inline lbool    Solver::solveLimited(const Riss::vec< Riss::Lit >& assumps, const SolveCallType preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
+inline bool     Solver::solve()                    { budgetOff(); assumptions.clear(); return solve_(full) == l_True; }
+inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_(full) == l_True; }
+inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_(full) == l_True; }
+inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_(full) == l_True; }
+inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_(full) == l_True; }
+inline lbool    Solver::solveLimited(const Riss::vec< Riss::Lit >& assumps, const Solver::SolveCallType preprocessCall) { assumps.copyTo(assumptions); return solve_(preprocessCall); }
 inline void     Solver::setRandomSeed(double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay()      const   { return ok; }
 

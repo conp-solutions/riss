@@ -37,7 +37,7 @@ Copyright (c) 2013-2015, Norbert Manthey, All rights reserved.
     #define l_Undef 2
 #endif
 
-/** 
+/**
  * The internal variable representation of Riss ranges from 0 to n-1. However, this interface assumes that all
  * passed variables range between 1 and n. All conversions are made within the Riss-library implementation.
  */

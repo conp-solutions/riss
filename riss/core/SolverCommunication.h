@@ -44,10 +44,10 @@ void Solver::setCommunication(Communicator* comm)
     communicationClient.sendRatio = communication->sendRatio;
     communicationClient.sendIncModel = communication->sendIncModel; // allow sending with variables where the number of models potentially increased
     communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
-    communicationClient.useDynamicLimits = communication->useDynamicLimits;
+    communicationClient.useDynamicLimits = communicationClient.useDynamicLimits || communication->useDynamicLimits; // one of the two overwrites the other
     communicationClient.receiveEE = communication->receiveEqiuvalences;
-    
-    assert( communication->nrSendCls == 0 && "cannot send clauses before initialization" );
+
+    assert(communication->nrSendCls == 0 && "cannot send clauses before initialization");
 }
 
 inline
@@ -85,6 +85,10 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
     } else {
         CRef cr = ca.alloc(ps, true);
         if (bump) { ca[cr].activity() += cla_inc; }   // same as in claBumpActivity
+        if (communicationClient.keepLonger) { ca[cr].resetCanBeDel(); }  // keep this clause for at least one removal round
+        ca[cr].setLBD(communicationClient.lbdFactor > 0 ?
+                      (double)ca[cr].size() * communicationClient.lbdFactor
+                      : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD / (double)sumLearnedClauseSize) * (double)ca[cr].size()); // set LBD for received clause based on heuristics (TODO: also consider level cache)
         learnts.push(cr);
         attachClause(cr);
     }
@@ -210,7 +214,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
 
     toSendSize = keep; // set to number of elements that can be shared
 
-    if (!multiUnits && !equivalences) {  // check sharing limits, if its not units, and no equivalences
+    if (!multiUnits && !equivalences && !communicationClient.sendAll) {   // check sharing limits, if its not units, and no equivalences
         // calculated size of the send clause
         int s = 0;
         if (communication->variableProtection()) {   // check whether there are protected literals inside the clause!
@@ -282,8 +286,8 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
             const Lit& unit = communicationClient.receivedUnits[i];
             if (value(unit) == l_False) { // we found a conflict
                 #ifdef PCASSO
-                assert(false && "take care to set the unsatPTlevel correctly!");
-#warning take care to set the unsatPTlevel correctly!
+//                 assert(false && "take care to set the unsatPTlevel correctly!");
+#warning take care to set the unsatPTlevel correctly! for upward sharing!
                 #endif
                 return 1;
             } else if (value(unit) == l_Undef) {
@@ -345,7 +349,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 //                     std::cerr << "c shared variable " << var(c[j]) << "[" << j << "] is greater than " << nVars() << std::endl;
                     assert(false && "received variables have to be smaller than maximum!");
                 }
-//                 std::cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << std::endl;
+//                 cerr << "c look at literal " << c[j] << " sat: " << (value(c[j]) == l_True) << " unsat: " << (value(c[j]) == l_False) << endl;
                 if (value(c[j]) == l_True) { c.mark(1); break; }     // this clause is already satisfied -> remove it! (we are on level 0!)
                 else if (value(c[j]) == l_False) { c[j] = c[ c.size() - 1 ]; --j; c.shrink(1); }     // this literal is mapped to false -> remove it! repeat check for this position
                 else {
@@ -361,7 +365,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
                 if (c.size() > 1 && communicationClient.refineReceived) {
                     if (! reverseMinimization.enabled) {  // enable reverseMinimization to be able to use it
-                        std::cerr << "c initialize reverseMinimization during receiving" << std::endl;
+                        // DOUT(std::cerr << "c initialize reverseMinimization during receiving" << std::endl;);
                         reverseMinimization.enabled = true;
                         reverseMinimization.assigns.growTo(nVars() + 1, l_Undef); // grow assignment
                         reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
@@ -389,10 +393,10 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                     });
                     shrinkedClause = reverseLearntClause(c, lbd, dependency);
                     #endif
-//            std::cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << std::endl;
+                    // std::cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << std::endl;
                     communication->vivifiedLiterals += beforeSize - c.size();
                     if (shrinkedClause && communicationClient.resendRefined) {  // re-share clause (should be performed only by one thread per group
-//          std::cerr << "c recend received clause(" << i << "): " << c << std::endl;
+                        // std::cerr << "c recend received clause(" << i << "): " << c << std::endl;
                         #ifdef PCASSO
                         updateSleep(&(c), c.size(), dependency);
                         #else
@@ -419,6 +423,12 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                     if (communication->doBumpClauseActivity) {
                         ca[communicationClient.receiveClauses[i]].activity() += cla_inc;    // increase activity of clause
                     }
+
+                    if (communicationClient.keepLonger) { ca[communicationClient.receiveClauses[i]].resetCanBeDel(); }  // keep this clause for at least one removal round
+                    ca[communicationClient.receiveClauses[i]].setLBD(communicationClient.lbdFactor > 0 ?
+                            (double)ca[communicationClient.receiveClauses[i]].size() * communicationClient.lbdFactor
+                            : - communicationClient.lbdFactor * ((double)sumLearnedClauseLBD / (double)sumLearnedClauseSize) * (double)ca[communicationClient.receiveClauses[i]].size()); // set LBD for received clause based on heuristics (TODO: also consider level cache)
+
                     attachClause(communicationClient.receiveClauses[i]);
                 }
             }

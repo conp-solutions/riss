@@ -14,6 +14,13 @@ Circuit::Circuit(CP3Config& _config, ClauseAllocator& _ca)
     : config(_config), ca(_ca), big(0)
 {}
 
+Circuit::~Circuit()
+{
+  if( big != 0 ) delete big;
+  big = 0;
+}
+
+
 void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
 {
     // create BIG

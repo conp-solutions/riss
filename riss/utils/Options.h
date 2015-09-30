@@ -110,6 +110,8 @@ class Option
 
     virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
 
+    virtual void reset() = 0;
+    
     int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
     {
         if (dependOnNonDefaultOf == 0) { return 0; }
@@ -199,6 +201,8 @@ class DoubleOption : public Option
         s << "-" << name << "=" << value;
     }
 
+    virtual void reset() { value = defaultValue; }
+    
     virtual bool parse(const char* str)
     {
         const char* span = str;
@@ -300,6 +304,8 @@ class IntOption : public Option
     {
         s << "-" << name << "=" << value;
     }
+    
+    virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
     {
@@ -420,6 +426,8 @@ class Int64Option : public Option
     {
         s << "-" << name << "=" << value;
     }
+    
+    virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
     {
@@ -523,21 +531,40 @@ class Int64Option : public Option
 
 class StringOption : public Option
 {
-    const char* value;
+    std::string* value;
     const char* defaultValue;
   public:
     StringOption(const char* c, const char* n, const char* d, const char* def = nullptr, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
-        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def), defaultValue(def) {}
+        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def == nullptr ? nullptr : new std::string(def) ), defaultValue(def) {}
 
-    operator      const char*  (void) const     { return value; }
-    operator      const char*& (void)           { return value; }
-    StringOption& operator= (const char* x)  { value = x; return *this; }
+    ~StringOption() { if( value != nullptr) delete value; }
+        
+    operator      const char*  (void) const     { return value == nullptr ? nullptr : value->c_str(); }
+//     operator      const char*& (void)           { return value; }
+    StringOption& operator= (const char* x)  { 
+      if( value == nullptr ) value = new std::string(x); 
+      else *value = std::string(x);
+      return *this; 
+    }
 
-    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual bool hasDefaultValue() { 
+      if( value == nullptr ) return defaultValue == nullptr; 
+      else if( defaultValue== nullptr ) return value == nullptr; 
+      else return *value == std::string(defaultValue);
+    }
     virtual void printOptionCall(std::stringstream& s)
     {
-        if (value != 0) { s << "-" << name << "=" << value; }
+        if (value != nullptr) { s << "-" << name << "=" << *value; }
         else { s << "-" << name << "=\"\""; }
+    }
+    
+    virtual void reset() { 
+      if( defaultValue == nullptr ) { 
+	if( value != nullptr ) { delete value; value = nullptr; }
+      } else {	
+	if( value != nullptr ) { *value = std::string(defaultValue); }
+	else value = new std::string(defaultValue);
+      }
     }
 
     virtual bool parse(const char* str)
@@ -548,7 +575,8 @@ class StringOption : public Option
             return false;
         }
 
-        value = span;
+        if( value == nullptr ) value = new std::string(span); 
+	else *value = std::string(span);
         return true;
     }
 
@@ -584,7 +612,7 @@ class StringOption : public Option
 
     void giveRndValue(std::string& optionText)
     {
-        optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special std::strings, another way might be found...)
+        optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special strings, another way might be found...)
     }
 };
 
@@ -612,6 +640,8 @@ class BoolOption : public Option
         if (value) { s << "-" << name ; }
         else { s << "-no-" << name ; }
     }
+    
+    virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
     {

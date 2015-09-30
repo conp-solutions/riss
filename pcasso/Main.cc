@@ -38,11 +38,22 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <semaphore.h>
 #include <errno.h>
 
+#include "pcasso/version.h"
+
+// to classify formula
+#include "riss/core/Solver.h"
+#include "coprocessor/Coprocessor.h"
+
+#ifdef CLASSIFIER
+    #include "classifier/CNFClassifier.h"
+#endif
+
 using namespace Pcasso;
+using namespace Riss;
 
 //=================================================================================================
 
-
+/*
 void printStats(SplitterSolver& solver)
 {
     double cpu_time = cpuTime();
@@ -53,8 +64,9 @@ void printStats(SplitterSolver& solver)
     fprintf(stderr, "propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations / cpu_time);
     fprintf(stderr, "conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
     if (mem_used != 0) { fprintf(stderr, "Memory used           : %.2f MB\n", mem_used); }
-    fprintf(stderr, "cCPU time              : %g s\n", cpu_time);
+    fprintf(stderr, "c CPU time              : %g s\n", cpu_time);
 }
+*/
 
 
 static Master* master;
@@ -66,16 +78,17 @@ static Master* master;
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
 
-static void SIGINT_exit(int signum)
-{
-    fprintf(stderr, "\n"); fprintf(stderr, "*** INTERRUPTED ***\n");
-    master->shutdown();
-}
+
+// make sure hybrid solver is killed correctly, until then, do not use signals
+// static void SIGINT_exit(int signum)
+// {
+//     fprintf(stderr, "\n"); fprintf(stderr, "*** INTERRUPTED ***\n");
+//     master->killHybrid();
+// }
 //    if (solver->verbosity > 0){
 //       printStats(*solver);
 //       fprintf( stderr,"\n"); fprintf( stderr,"*** INTERRUPTED ***\n"); }
 //    _exit(1); }
-
 
 struct parameter {
     IntOption    verb;
@@ -97,9 +110,52 @@ struct shareStruct {
 };
 
 
-// declare
-void* solverMain(void* pointer);
+#ifdef CLASSIFIER
+/** method that returns a config that should be used based on a given CNF file */
+string findConfig( const string filename ) {
 
+// compilation  
+# warning link against libclassifier-pcasso!!!
+  
+    Solver S; // have a default solver object
+    
+    DOUT( cerr << "c find config for file " << filename.c_str() << endl; );
+    
+    gzFile in = gzopen(filename.c_str(), "rb");
+    if (in == nullptr) {
+        printf("c ERROR! Could not open file: %s\n", filename.c_str() ), exit(1);
+    }
+    parse_DIMACS(in, S);
+    gzclose(in);
+	  
+	  // default configuration, if parsed formula is too large
+	  string config = "505-O";
+
+	  DOUT( cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl; );
+	  if ( S.nClauses() < 4000000 || S.nVars() < 1900000 || S.nTotLits() < 12000000) {
+	    
+	    CNFClassifier* cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
+	    cnfclassifier->setVerb(0);
+	    cnfclassifier->setComputingClausesGraph(false);
+	    cnfclassifier->setComputingResolutionGraph(false);
+	    cnfclassifier->setComputingRwh(true);
+	    cnfclassifier->setComputeBinaryImplicationGraph(true);
+	    cnfclassifier->setComputeConstraints(true);
+	    cnfclassifier->setComputeXor(false);
+	    cnfclassifier->setQuantilesCount(4);
+	    cnfclassifier->setComputingVarGraph(false); 
+	    cnfclassifier->setAttrFileName(nullptr);
+	    cnfclassifier->setComputingDerivative(true);
+	    
+	    config = cnfclassifier->getConfig( S );
+	    // get new autoconfigured config
+	    
+	    delete cnfclassifier;
+	    
+	  }
+    return config;
+}
+#endif // CLASSIFIER
 
 int main(int argc, char** argv)
 {
@@ -115,11 +171,15 @@ int main(int argc, char** argv)
     // Extra options:
     //
 
-    IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+    IntOption    verb("MAIN", "verb",   "Verbosity level of running solvers (0=silent, 1=some, 2=more).", 0, IntRange(0, 2));
     BoolOption   pre("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
     StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+    BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
+    BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
+    BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false );
+    BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
 
     bool foundHelp = ::parseOptions(argc, argv, true);
     if (foundHelp) { exit(0); }   // stop after printing the help information
@@ -149,231 +209,119 @@ int main(int argc, char** argv)
         }
     }
 
+    fprintf(stderr, "c ===============================[ Pcasso  %13s ]=================================================\n", Pcasso::gitSHA1);
+    fprintf(stderr, "c | PCASSO - a Parallel, CooperAtive Sat SOlver                                                           |\n");
+    fprintf(stderr, "c |                                                                                                       |\n");
+    fprintf(stderr, "c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+    fprintf(stderr, "c | Contributors:                                                                                         |\n");
+    fprintf(stderr, "c |     Davide Lanti (clause sharing, extended conflict analysis)                                         |\n");
+    fprintf(stderr, "c |     Ahmed Irfan  (LA partitioning, information sharing      )                                         |\n");
+    fprintf(stderr, "c |     Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                    |\n");
+    fprintf(stderr, "c =========================================================================================================\n");
+
+    string autoConfig = "";
+    #ifdef CLASSIFIER
+    if (opt_autoconfig) {
+        if (argc == 1) {
+            fprintf(stderr, "c |  REJECT AUTOCONFIG WHEN READING FROM STDIN                                                            |\n");
+        } else {
+            autoConfig = findConfig( string(argv[1]) );
+	    fprintf(stderr, "c |  USE AUTOCONFIG: %20s                                                                 |\n", autoConfig.c_str() );
+        }
+    }
+    #endif    
+
     Master::Parameter p;
     p.pre = pre;
     p.verb = verb;
-    if (dimacs) {
-        p.dimacs = (const char*)dimacs;
-    } else {
-        p.dimacs = "";
-    }
 
-    Master m(p);
-    master = &m;
+    Master pcassoMaster(p, autoConfig); // tell pcasso about the automatically determined configuration
+    master = &pcassoMaster;
+    
+/*  // for now, handling signals is disabled  
     signal(SIGINT, SIGINT_exit);
-    signal(SIGXCPU, SIGINT_exit);
+    signal(SIGXCPU, SIGINT_exit);*/
 
-    return m.main(argc, argv);
-    /*
-
-        parameter p;
-
-
-        int threads = 2;
-        shareStruct shares[threads];
-
-
-        p.argc = argc;
-        p.argv = argv;
-
-        // first one that prints will set it to 1 -> no other can print its solution
-        int printedAlready = 0;
-        pthread_mutex_t mutex;
-        pthread_mutex_init(&mutex, nullptr);
-
-        sem_t sleepSem;
-        sem_init(&(sleepSem), 0, 0);
-
-        pthread_t threaddata [threads];
-        // Make threads Joinable for sure.
-        pthread_attr_t attr;
-        pthread_attr_init (&attr);
-        pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_JOINABLE);
-
-        int ret = 0;
-        for( int i = 0 ; i < threads ; ++i ){
-            shares[i].param=&p;
-            shares[i].printedAlready = &printedAlready;
-            shares[i].mutex = &mutex;
-            shares[i].wakeSem = &sleepSem;
-
-            int rc = pthread_create(&(threaddata[i]), &attr, solverMain, (void *)  &(shares[i]));
-            if (rc) {
-                fprintf( stderr,"ERROR; return code from pthread_create() is %d for thread %d\n",rc,i);
-            }
-        }
-
-        // wait for one of the parallel solvers to return a solution
-        sem_wait( &sleepSem );
-
-        for( int i = 0 ; i < threads ; ++i ){
-            int* status = 0;
-            int err = 0;
-            fprintf( stderr,"c try to join thread %d\n", i);
-            err = pthread_join(threaddata[i], (void**)&status);
-            if( err == EINVAL ) fprintf( stderr,"c tried to cancel wrong thread\n");
-            if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
-            fprintf( stderr,"c joined thread %d\n", i);
-            fprintf( stderr,"Solver %d returned value %d\n", i , shares[i].result );
-        }
-
-        pthread_mutex_destroy(&mutex);
-
-        for( int i = 0 ; i < threads ; ++i ){
-            if( shares[i].result!=0) return shares[i].result;
-        }
-        fprintf( stderr,"done\n");
-        return ret;
-        */
-
-}
-
-//=================================================================================================
-// Main:
-
-void* solverMain(void* pointer)
-{
-    #if 0
-    shareStruct* share = (shareStruct*) pointer;
-    parameter& p = *(share->param);
-
-    // enable canceling
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
-
-    try {
-
-        SimpSolver  S;
-        double      initial_time = cpuTime();
-
-        if (!p.pre) { S.eliminate(true); }
-
-        S.verbosity = p.verb;
-
-        solver = &S;
-        // Use signal handlers that forcibly quit until the solver will be able to respond to
-        // interrupts:
-        signal(SIGINT, SIGINT_exit);
-        signal(SIGXCPU, SIGINT_exit);
-
-
-
-        if (p.argc == 1) {
-            fprintf(stderr, "Reading from standard input... Use '--help' for help.\n");
-        }
-
-        gzFile in = (p.argc == 1) ? gzdopen(0, "rb") : gzopen(p.argv[1], "rb");
-        if (in == nullptr) {
-            fprintf(stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1);
-        }
-
-        if (S.verbosity > 0) {
-            fprintf(stderr, "============================[ Problem Statistics ]=============================\n");
-            fprintf(stderr, "|                                                                             |\n");
-        }
-
-        parse_DIMACS(in, S);
-        gzclose(in);
-
-
-        if (S.verbosity > 0) {
-            fprintf(stderr, "|  Number of variables:  %12d                                         |\n", S.nVars());
-            fprintf(stderr, "|  Number of clauses:    %12d                                         |\n", S.nClauses());
-        }
-
-        double parsed_time = cpuTime();
-        if (S.verbosity > 0) {
-            fprintf(stderr, "|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
-        }
-
-        // Change to signal-handlers that will only notify the solver and allow it to terminate
-        // voluntarily:
-        signal(SIGINT, SIGINT_interrupt);
-        signal(SIGXCPU, SIGINT_interrupt);
-
-        S.eliminate(true);
-        double simplified_time = cpuTime();
-        if (S.verbosity > 0) {
-            fprintf(stderr, "|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
-            fprintf(stderr, "|                                                                             |\n");
-        }
-
-        if (!S.okay()) {
-            // print? -> mutex!
-            pthread_mutex_lock(share->mutex);
-            if (*(share->printedAlready) == 0) {
-                *(share->printedAlready) = 1;
-                FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : nullptr;
-                if (res != nullptr) { ffprintf(stderr, res, "UNSAT\n"), fclose(res); }
-
-                if (S.verbosity > 0) {
-                    fprintf(stderr, "===============================================================================\n");
-                    fprintf(stderr, "Solved by simplification\n");
-                    printStats(S);
-                    fprintf(stderr, "\n");
-                }
-                fprintf(stderr, "UNSATISFIABLE\n");
-
-            }
-            pthread_mutex_unlock(share->mutex);
-            share->result = 20;
-            sem_post(share->wakeSem);
-            return 0;
-        }
-
-        if (p.dimacs) {
-            if (S.verbosity > 0) {
-                fprintf(stderr, "==============================[ Writing DIMACS ]===============================\n");
-            }
-            S.toDimacs((const char*)p.dimacs);
-            if (S.verbosity > 0) {
-                printStats(S);
-            }
-            exit(0);
-        }
-
-        vec<Lit> dummy;
-        lbool ret = S.solveLimited(dummy);
-
-        // do print only, if no other thread has already printed
-        pthread_mutex_lock(share->mutex);
-        if (*(share->printedAlready) == 0) {
-            *(share->printedAlready) = 1;
-            if (S.verbosity > 0) {
-                printStats(S);
-                fprintf(stderr, "\n");
-            }
-            fprintf(stderr, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
-
-            FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : nullptr;
-            if (res != nullptr) {
-                if (ret == l_True) {
-                    fprintf(res, "SAT\n");
-                    for (int i = 0; i < S.nVars(); i++)
-                        if (S.model[i] != l_Undef) {
-                            fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
-                        }
-                    fprintf(res, " 0\n");
-                } else if (ret == l_False) {
-                    fprintf(res, "UNSAT\n");
-                } else {
-                    fprintf(res, "INDET\n");
-                }
-                fclose(res);
-            }
-        }
-        pthread_mutex_unlock(share->mutex);
-
-        // let thread starter know about return value
-        share->result = (int)(ret == l_True ? 10 : ret == l_False ? 20 : 0);
-        sem_post(share->wakeSem);
-        return 0;
-
-    } catch (OutOfMemoryException&) {
-        fprintf(stderr, "===============================================================================\n");
-        fprintf(stderr, "INDETERMINATE\n");
-        sem_post(share->wakeSem);
-        exit(0);
+    if (argc == 1) {
+        printf("c Reading from standard input... Use '--help' for help.\n");
     }
-    #endif
-    return 0;
+    gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+    if (in == nullptr) {
+        printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+    }
+
+    parse_DIMACS(in, pcassoMaster.getGlobalSolver());
+    gzclose(in);
+
+    FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
+    if (!pcassoMaster.getGlobalSolver().simplify()) {
+            if (res != nullptr) {
+                if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
+                else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+            }
+            // add the empty clause to the proof, close proof file
+            // choose among output formats!
+            if (opt_modelStyle) { printf("UNSAT"); }
+            else { printf("s UNSATISFIABLE\n"); }
+            cout.flush(); cerr.flush();
+            exit(20);
+        }
+
+   vec<Lit> dummy;
+   lbool ret = pcassoMaster.solveLimited(dummy); // solve formula with master, and given assumptions
+
+       // check model of the formula
+        if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+            if (check_DIMACS(in, *(pcassoMaster.model))) {
+                printf("c verified model\n");
+            } else {
+                printf("c model invalid -- turn answer into UNKNOWN\n");
+                ret = l_Undef; // turn result into unknown, because the model is not correct
+            }
+        }
+
+        // print solution to screen
+        if (opt_modelStyle) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
+        else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
+
+        // put empty clause on proof
+        // if (ret == l_False && m.getDrupFile() != nullptr) { fprintf(m.getDrupFile(), "0\n"); }
+
+        // print solution into file
+        if (res != nullptr) {
+            if (ret == l_True) {
+                if (opt_modelStyle) { fprintf(res, "SAT\n"); }
+                else { fprintf(res, "s SATISFIABLE\nv "); }
+                for (int i = 0; i < pcassoMaster.model->size(); i++)
+                {
+                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (*(pcassoMaster.model)[i] == l_True) ? "" : "-", i + 1);
+                }
+                fprintf(res, " 0\n");
+            } else if (ret == l_False) {
+                if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
+                else { fprintf(res, "s UNSATISFIABLE\n"); }
+            } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
+            else { fprintf(res, "s UNKNOWN\n"); }
+            fclose(res);
+        }
+
+        // print model to screen
+        if (! opt_quiet && ret == l_True && res == nullptr) {
+            if (!opt_modelStyle) { printf("v "); }
+            for (int i = 0; i < pcassoMaster.model->size(); i++)
+            {
+                printf("%s%s%d", (i == 0) ? "" : " ", ( (*pcassoMaster.model)[i] == l_True) ? "" : "-", i + 1);
+            }
+            printf(" 0\n");
+        }
+
+        cout.flush(); cerr.flush();
+
+   #ifdef NDEBUG
+   exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
+   #else
+   return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+   #endif
+
 }
+

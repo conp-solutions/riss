@@ -39,6 +39,9 @@ XorReasoning::XorReasoning(CP3Config& _config, ClauseAllocator& _ca, ThreadContr
     , participatingXorVariables(0)
     , clauseRatio(0)
     , variableRatio(0)
+    , xorProps(0)
+    , clsProps(0)
+    , simDecisions(0)
 {
 
 }
@@ -69,7 +72,7 @@ bool XorReasoning::process()
     // perform gauss elimination
     DOUT(if (config.opt_xor_debug > 2) {
     for (int i = 0 ; i < xorList.size(); ++ i) {
-            cerr << "[" << i << "]: "
+            cerr << "c [" << i << "]: "
                  << " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
         }
     });
@@ -91,7 +94,8 @@ bool XorReasoning::process()
     data.ma.resize(2 * data.nVars());
     data.ma.nextStep();
 
-    vector<Var> toRemoveVars, tmpVars;
+    vector<Var> toRemoveVars, tmpVars, newlyAddedVariables;
+    xorOrder.clear(); // new removal
     // do elimination (BVE style)
     while (heap.size() > 0 && (data.unlimited() || xorLimit > xorSteps) && !data.isInterupted()) {
         // if propagate, propagate!
@@ -102,8 +106,18 @@ bool XorReasoning::process()
         const Var v = heap[0];
         assert(heap.inHeap(v) && "item from the heap has to be on the heap");
         heap.removeMin();
+        xorOrder.push(v);   // memorize that we used 'v' next
 
-        DOUT(if (config.opt_xor_debug > 4) cerr << "c check XORs for " << v + 1 << endl;);
+        DOUT(if (config.opt_xor_debug > 4) {
+        cerr << "c check XORs for " << v + 1 << endl;
+        cerr << "c full XOR list:" << endl;
+        for (int i = 0 ; i < xorList.size(); ++ i) {
+                cerr << "c [" << i << "]: "
+                     << " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
+            }
+            cerr << endl << endl;
+        }
+            );
 
         // there are no XORs
         if (occs[v].size() == 0) {
@@ -123,8 +137,10 @@ bool XorReasoning::process()
                     unitQueue.push_back(x.getUnitLit());
                 }
             }
-            DOUT(if (config.opt_xor_debug > 4) cerr << "c drop the XOR " << endl;);
-            if (config.opt_xor_dropPure) { dropXor(occs[v][0], x.vars, occs); }
+            if (config.opt_xor_dropPure) {
+                DOUT(if (config.opt_xor_debug > 4) cerr << "c drop the XOR " << endl;);
+                dropXor(occs[v][0], x.vars, occs);
+            }
             continue;
         }
 
@@ -166,8 +182,8 @@ bool XorReasoning::process()
             xorSteps ++;
             GaussXor& simpX = xorList[ occs[v][0] ]; // xor that is simplified
             DOUT(if (config.opt_xor_debug > 1) { cerr << "c change XOR " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; }  cerr << " == " << (simpX.k ? 1 : 0) << endl; });
-            toRemoveVars.clear(); tmpVars.clear();
-            simpX.add(selectedX, toRemoveVars, tmpVars);
+            toRemoveVars.clear(); tmpVars.clear(); newlyAddedVariables.clear();
+            simpX.add(selectedX, toRemoveVars, tmpVars, newlyAddedVariables);
             DOUT(if (config.opt_xor_debug > 1) {
             cerr << "c       into " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; }  cerr << " == " << (simpX.k ? 1 : 0) << endl;
                 cerr << "c and remove from "; for (int j = 0 ; j < toRemoveVars.size(); ++ j) { cerr << " " << toRemoveVars[j] + 1; }  cerr << " " << endl;
@@ -175,6 +191,13 @@ bool XorReasoning::process()
 
             // drop after all operations, so that refrences stay consistent!
             dropXor(occs[v][0], toRemoveVars, occs); // remvoe the simplified xor from all variables that are not part of it any longer!
+
+            if (config.opt_xor_addOnNewlyAdded) {
+                for (int j = 0 ; j < newlyAddedVariables.size(); ++ j) {
+                    occs[ newlyAddedVariables[j] ].push_back(occs[v][0]);
+                }
+            }
+
 
             if (simpX.unit()) {
                 if (!data.ma.isCurrentStep(toInt(simpX.getUnitLit()))) {
@@ -189,8 +212,11 @@ bool XorReasoning::process()
                 DOUT(if (config.opt_xor_debug > 2) cerr << "c eq lits: " << mkLit(simpX.vars[0], false) << " == " << mkLit(simpX.vars[1], simpX.k) << endl;);
             } else if (simpX.size() <= config.opt_xor_encodeSize) {  // if clauses for this XOR should be kept
                 // for now, encode full XOR
-                addXor(simpX);
+                addXorAsClauses(simpX);
             }
+
+
+
         }
 
         if (config.opt_xor_keepUsed) {
@@ -212,11 +238,107 @@ bool XorReasoning::process()
 
     ee.applyEquivalencesToFormula(data);
 
+
+    if (config.opt_xor_setPolarity != 0) {
+
+        data.ma.nextStep(); // have new "assignment"
+        unitQueue.clear();  // have new "assignment"
+        for (int i = 0 ; i < xorOrder.size(); ++ i) {
+            const Var& v = xorOrder[i];
+            if (data.value(mkLit(v)) != l_Undef) { continue; }    // this variable is set already
+            Lit l = mkLit(v, config.opt_xor_setPolarity < 0);   // set literal according to polarity
+            unitQueue.push_back(l);
+            DOUT(if (config.opt_xor_debug > 4) cerr << "c propagate: " << l << " as decision" << endl;);
+            data.ma.setCurrentStep(toInt(l));
+            simulatePropagate(unitQueue, data.ma, occs, xorList);
+            simDecisions ++;
+        }
+    }
+
 finishedGauss:;
+
+    DOUT(if (config.opt_xor_debug > 4) {
+    cerr << "c order of eliminations: ";
+    for (int i = 0 ; i < xorOrder.size(); ++ i) { cerr << " " << xorOrder[i] + 1; }
+        cerr << endl;
+    });
     reasonTime = cpuTime() - reasonTime;
 
     return false;
 }
+
+bool XorReasoning::simulatePropagate(vector< Lit >& unitQueue, MarkArray& ma, vector< vector< int > >& occs, vector< XorReasoning::GaussXor >& xorList, bool ignoreConflicts)
+{
+    while (unitQueue.size() > 0) {
+        const Lit p = unitQueue.back();
+        data.getSolver()->setPolarity(var(p), sign(p));
+        unitQueue.pop_back();
+
+        // propagate in all xors that contain var(p)
+        vector<int>& indexes = occs[ var(p) ];
+        for (int i = 0 ; i < indexes.size(); ++ i) {
+            GaussXor& x = xorList[indexes[i]];
+
+            bool k = x.k;
+            Lit undefLit = lit_Undef;
+            for (int j = 0 ; j < x.size(); ++ j) {
+                if (!data.ma.isCurrentStep(toInt(mkLit(x.vars[j], false))) && !data.ma.isCurrentStep(toInt(mkLit(x.vars[j], true)))) {
+                    undefLit = (undefLit == lit_Undef) ? mkLit(x.vars[j]) : lit_Error; // be able to track unit clauses
+                } else if (data.ma.isCurrentStep(toInt(mkLit(x.vars[j], false)))) {
+                    k = ! k; // count variables that have been set to true
+                } // else if( l ^= l_False) -> remove variable, is done silently
+            }
+
+            if ((undefLit == lit_Undef)) {   // this XOR is falsified
+                if (k && !ignoreConflicts) { return false; }
+            } else if (undefLit != lit_Error) {    // found a unit constraint, add the newly created unit
+                Lit l = k ? undefLit : ~undefLit ;
+                if (data.ma.isCurrentStep(toInt(~l))) {      // this case should not be possible
+                    if (!ignoreConflicts) { return false; }
+                } else if (!data.ma.isCurrentStep(toInt(l))) {
+                    data.ma.setCurrentStep(toInt(l));
+                    unitQueue.push_back(l);
+                    xorProps ++;
+                    DOUT(if (config.opt_xor_debug > 4) cerr << "c propagate: " << l << " on XOR" << endl;);
+                }
+            }
+        }
+
+        // propagate on clauses here
+        vector<CRef>& negative = data.list(~p);
+        for (int i = 0 ; i < negative.size(); ++i) {
+            Clause& c = ca[ negative[i] ];
+            //what if c can be deleted? -> continue
+            if (c.can_be_deleted()) { continue; }
+            // sorted propagation, no!
+
+            Lit undefLit = lit_Undef;
+            for (int j = 0; j < c.size(); ++ j) {
+                if (data.ma.isCurrentStep(toInt(c[j]))) { undefLit = lit_Error; break; }
+                else if (data.ma.isCurrentStep(toInt(~c[j]))) {
+                    continue; // do not look into
+                } else {
+                    if (undefLit == lit_Undef) { undefLit = c[j]; }
+                    else {
+                        undefLit = lit_Error;
+                        break;
+                    }
+                }
+            }
+
+            if (undefLit == lit_Undef) {   // its a conflict
+                if (!ignoreConflicts) { return false; }
+            } else if (undefLit != lit_Error) {  // its a unit
+                data.ma.setCurrentStep(toInt(undefLit));
+                unitQueue.push_back(undefLit);
+                clsProps++;
+                DOUT(if (config.opt_xor_debug > 4) cerr << "c propagate: " << undefLit << " on CLS" << endl;);
+            } // silently ignore the case that the clause is neither unit nor conflict
+        }
+    }
+    return true;
+}
+
 
 bool XorReasoning::propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< std::vector< int > >& occs, vector< XorReasoning::GaussXor >& xorList)
 {
@@ -627,7 +749,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
     // calculate ratio
     clauseRatio = data.getClauses().size() - ignoredRatioClauses == 0 ? 1 : (double)participatingXorClauses / (double)(data.getClauses().size() - ignoredRatioClauses);
     variableRatio = data.nVars() == 0 ? 1 : (double)backdoorVariables.size() / (double)data.nVars();
-    cerr << "c clauseRatio: " << clauseRatio << " variableRatio: " << variableRatio << endl;
+    DOUT( if (config.opt_xor_debug > 0) cerr << "c clauseRatio: " << clauseRatio << " variableRatio: " << variableRatio << endl; );
 
     DOUT(if (config.opt_xor_debug > 0) cerr << "c [XOR] found " << xors << " non-binary xors encoded with " << xorClauses << " clauses" << endl;);
     return didSomething;
@@ -638,7 +760,7 @@ void XorReasoning::checkReaddedSubsumption()
 
 }
 
-void XorReasoning::addXor(XorReasoning::GaussXor& simpX)
+void XorReasoning::addXorAsClauses(XorReasoning::GaussXor& simpX)
 {
     if (simpX.size() == 3) {
         Lit lits[3]; // k == 0: a + b + c == 0 -> clause: a \land b \to \neg c ^=  ( \neg a \lor \neg b \lor \neg c )
@@ -732,7 +854,11 @@ void XorReasoning::printStatistics(ostream& stream)
            << eqs << " eqs, "
            << endl
            << "c [STAT] XOR(4) " << participatingXorClauses << " participating, "
-           << clauseRatio << "ratio" << endl
+           << clauseRatio << " ratio, "
+           << simDecisions << " simDecisions, "
+           << xorProps << " xorProps, "
+           << clsProps << " clsProps, "
+           << endl
            ;
 }
 

@@ -45,7 +45,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     #endif
 
     opt_refineConflict          (_cm, "refConflict",             "refine conflict clause after solving with assumptions", true,        optionListPtr),
-    opt_refineConflictReverse   (_cm, "revRevC",                 "refine conflict clause after solving with assumptions", false,       optionListPtr),
+    opt_refineConflictReverse   (_cm, "revRevC",                 "reverse new conflict clause after reverse minimization", false,       optionListPtr),
 
     opt_K                       (_cr, "K",                       "The constant used to force restart",                         0.8,  DoubleRange(0, false, 1, false), optionListPtr),
     opt_R                       (_cr, "R",                       "The constant used to block restart",                         1.4,  DoubleRange(1, false, 5, false), optionListPtr),
@@ -64,8 +64,15 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_quick_reduce            (_cred, "quickRed",              "check only first two literals for being satisfied", false,                                                              optionListPtr),
     opt_keep_worst_ratio        (_cred, "keepWorst",             "keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true),  optionListPtr),
 
-    opt_biAsserting             (_cm, "biAsserting", "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false, optionListPtr),
-    opt_biAssiMaxEvery          (_cm, "biAsFreq", "The min nr. of clauses between two learned bi-asserting clauses", 0, IntRange(0, INT32_MAX), optionListPtr, &opt_biAsserting ),
+    opt_reduceType              (_cr, "remtype",                 "update LBD during (0=glucose,1=minisat),", 0, IntRange(0, 1),                                                           optionListPtr),
+    opt_learnt_size_factor      (_cr, "rem-lsf",                 "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
+    opt_learntsize_inc          (_cr, "rem-lsi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_learntsize_adjust_start_confl(_cr, "rem-asc",            "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
+    opt_learntsize_adjust_inc   (_cr, "rem-asi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_min_learnts_lim         (_cr, "rem-minlearnts",          "Minimum learnt clause limit", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
+    
+    opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
+    opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
     opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause",  "The min LBD required to minimize clause", 6, IntRange(0, INT32_MAX),                                                    optionListPtr),
 
@@ -104,7 +111,11 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
     opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
     opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
-
+    opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away", false,                                                              optionListPtr),
+    opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits", false,                                                                                     optionListPtr),
+    opt_keepLonger              ("CLAUSE SHARING", "keepLonger", "keep clauses for at least one remove round", false,                                                                     optionListPtr),
+    opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio", 0, DoubleRange(-10, true, 1, true), optionListPtr),
+    opt_useOriginal             ("CLAUSE SHARING", "independent",  "work on parsed formula (ignore global simplification, sharing currently unsound)", false,                               optionListPtr),
 
     opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
 

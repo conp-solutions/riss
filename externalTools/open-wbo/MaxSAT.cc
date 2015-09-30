@@ -124,7 +124,7 @@ void MaxSAT::setInitialTime(double initial)
 void MaxSAT::copySolver(MaxSAT *solver)
 {
 
-    while (nVars() >= solver->nVars()) {
+    while (nVars() > solver->nVars()) {
         solver->newVar();
     }
 
@@ -163,7 +163,7 @@ void MaxSAT::copySolver(MaxSAT *solver)
 
     solver->refineCores = refineCores;
     refineAssumptions.copyTo(solver->refineAssumptions);
-    if (nbInitialVariables != 0) { solver->saveModel(model); }
+    if (nbInitialVariables != 0) { solver->saveModel(model, ubCost); }
 }
 
 /************************************************************************************************
@@ -314,7 +314,7 @@ lbool MaxSAT::searchSATSolver(Solver *S, bool pre)
   |    * 'model' is updated to the current model.
   |
   |________________________________________________________________________________________________@*/
-void MaxSAT::saveModel(vec<lbool>& currentModel)
+void MaxSAT::saveModel(vec<lbool>& currentModel, int64_t calculatedCost)
 {
     assert(nbInitialVariables != 0);
     assert(currentModel.size() != 0);
@@ -330,7 +330,8 @@ void MaxSAT::saveModel(vec<lbool>& currentModel)
         model.push(currentModel[i]);
     }
 
-    if (printEachModel) {
+    // print model only if its below the top value
+    if (printEachModel && calculatedCost < hardWeight ) {
         printModel();    // print the model now (last model is printed twice)
     }
 }
@@ -535,6 +536,12 @@ void MaxSAT::print_Card_configuration(int encoding)
         printf("c UNKNOWN\n");
         break;
     }
+}
+
+void MaxSAT::printBound(int64_t bound)
+{
+  // print bound only, if its below the hard weight
+  if( bound < hardWeight ) printf("o %" PRIu64 "\n", bound);
 }
 
 // Prints the best satisfying model. Assumes that 'model' is not empty.

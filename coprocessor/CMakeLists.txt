@@ -45,12 +45,25 @@ add_library(coprocessor-lib-static STATIC ${LIB_SOURCES})
 add_library(coprocessor-lib-shared SHARED ${LIB_SOURCES})
 add_library(coprocessor-lib-object OBJECT ${LIB_SOURCES})
 
+# This extra libraries are build for pcasso, because pcasso needs some
+# extensions to the riss source code
+add_library(coprocessor-pcasso-lib-static STATIC ${LIB_SOURCES})
+add_library(coprocessor-pcasso-lib-shared SHARED ${LIB_SOURCES})
+
 set_target_properties(coprocessor-lib-static PROPERTIES
                                              OUTPUT_NAME "coprocessor")
 set_target_properties(coprocessor-lib-shared PROPERTIES
                                              OUTPUT_NAME "coprocessor" 
                                              VERSION ${VERSION}
                                              SOVERSION ${SOVERSION})
+set_target_properties(coprocessor-pcasso-lib-static PROPERTIES
+                                                    OUTPUT_NAME "coprocessor-pcasso"
+                                                    COMPILE_FLAGS "-DPCASSO")
+set_target_properties(coprocessor-pcasso-lib-shared PROPERTIES
+                                                    OUTPUT_NAME "coprocessor-pcasso" 
+                                                    VERSION ${VERSION}
+                                                    SOVERSION ${SOVERSION}
+                                                    COMPILE_FLAGS "-DPCASSO")
 
 target_link_libraries(coprocessor-lib-static riss-lib-static)
 
@@ -74,7 +87,7 @@ endif()
 # 
 # Installation
 # 
-install(TARGETS coprocessor-lib-static coprocessor-lib-shared coprocessor
+install(TARGETS coprocessor-lib-static coprocessor-lib-shared coprocessor-pcasso-lib-static coprocessor-pcasso-lib-shared coprocessor
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)

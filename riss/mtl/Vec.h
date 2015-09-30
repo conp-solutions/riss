@@ -71,6 +71,8 @@ class vec
     void     growTo(int size, const T& pad);
     void     clear(bool dealloc = false);
 
+    bool     empty() const { return size() == 0; }
+    
     // Stack interface:
     void     push(void)              { if (sz == cap) { capacity(sz + 1); }  new(&data[sz]) T(); sz++; }
     void     push(const T& elem)     { if (sz == cap) { capacity(sz + 1); }  data[sz++] = elem; }

@@ -54,8 +54,10 @@ class TreeNode
     enum state {sat = 1, unsat = 2, unknown = 3, retry = 4};
 
     // Davide> The pool
+#warning to be removed
     PcassoDavide::LevelPool* lv_pool;
     TreeNode* childs;
+    CommunicationData* sharingPool; /// ringbuffer to share learnt clauses and other information
 
   private:
     static unsigned int runningID;

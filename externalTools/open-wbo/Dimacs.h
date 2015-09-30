@@ -48,6 +48,14 @@ template <class B> static int64_t parseWeight(B& in)
     while (*in >= '0' && *in <= '9') {
         val = val * 10 + (*in - '0'), ++in;
     }
+    
+    // exclude 64 bit weights
+    if (val > INT32_MAX) {
+      printf("c Error: Parser does not support weights larger than 2^32.\n");
+      printf("s UNKNOWN\n");
+      exit(_UNKNOWN_);
+    }
+    
     return val;
 }
 
@@ -60,6 +68,12 @@ static int readClause(B& in, MaxSAT *S, vec<Lit>& lits)
     if (S->getProblemType() == _WEIGHTED_) { weight = parseWeight(in); }
     assert(weight > 0);
 
+    if (weight > INT32_MAX) {
+      printf("c Error: Parser does not support weights larger than 2^32.\n");
+      printf("s UNKNOWN\n");
+      exit(_UNKNOWN_);
+    }
+    
     for (;;) {
         parsed_lit = parseInt(in);
         if (parsed_lit == 0) { break; }
@@ -93,7 +107,16 @@ template <class B, class MaxSAT> static void parse_DIMACS_main(B& in, MaxSAT *S)
                 specifiedCls  = parseInt(in); // Clauses
                 S->setSpecs(specifiedVars, specifiedCls);   // added so that Mprocessor works
                 if (*in != '\r' && *in != '\n') {
-                    hardWeight = parseWeight(in);
+                    int64_t topWeight = parseWeight(in);
+		    
+		    if( topWeight > (uint64_t)INT32_MAX ) {
+		      fprintf(stderr,"c PARSE ERROR! found 64 bit top value, formula cannot be handled in this version - ABORT\n");
+		      printf("s UNKNOWN\n");
+		      exit(_UNKNOWN_);
+		    }
+		    fprintf(stderr,"c parsed top value: %lld\n", topWeight);
+		    
+		    hardWeight = topWeight;
                     S->setHardWeight(hardWeight);
                 }
             } else

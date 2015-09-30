@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 
 project("riss-toolbox")
 
@@ -23,25 +23,36 @@ function(version version_string)
   set(SOVERSION ${VERSION_MAJOR} PARENT_SCOPE)
 endfunction()
 
+# Adds a subdirectories but only if it exists
+function(add_component directory)
+  if(EXISTS ${CMAKE_SOURCE_DIR}/${directory})
+    add_subdirectory(${directory})
+  endif()
+endfunction()
 
 # Options:
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.0.2")
+version("5.0.6")
 
+option(DRATPROOF       "Produce DRAFT-proofs (disabled by default)" OFF)
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
+option(CLASSIFIER      "Use classifier in riss and pcasso" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
+option(QUIET           "Disable all #warnings" OFF)
 
 # Print option settings
 message(STATUS "Build type ${CMAKE_BUILD_TYPE}")
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "aiger-tools ${AIGER-TOOLS}")
+message(STATUS "classifier ${CLASSIFIER}")
 message(STATUS "Verbose warnings ${WARNINGS}")
+message(STATUS "Quiet ${QUIET}")
 
 # Output directory definitions
 # 
@@ -70,23 +81,37 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")  # strip shared libs
 endif()
 
+# proofs
+message("-- DRAT proofs ${DRATPROOF}")
+if(DRATPROOF)
+    add_definitions(" -DDRATPROOF")
+endif()
 
-# Dependencies:
+# 
+# Dependencies
 #
-find_package(Git)
 include_directories(${PROJECT_SOURCE_DIR})
+
+find_package(Git)
 include(GitSignature)
 
 # Compile flags:
 # 
-add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g")
+add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g -DNDBG")
 
-if(CMAKE_COMPILER_IS_GNUCXX AND WARNINGS)
-  message(STATUS "enable verbose compiler warnings")
-  add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
-                  "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
-                  "-Wno-parentheses")
+if(CMAKE_COMPILER_IS_GNUCXX)
+  if(WARNINGS)
+    message(STATUS "enable verbose compiler warnings")
+    add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
+                    "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
+                    "-Wno-parentheses")
+   endif()
+   if(QUIET)
+      message(STATUS "disable #warnings")
+     add_definitions("-Wno-cpp")
+   endif()
 endif()
+
 
 # Sub-Projects:
 # 
@@ -94,29 +119,30 @@ endif()
 # to include other components and a huge single top-level CMakeLists.txt would
 # be very harsh to manage. With the subdirs we got a much more modular approach.
 # 
-add_subdirectory(riss/)
-add_subdirectory(risslibcheck/)
-add_subdirectory(classifier/)
-add_subdirectory(coprocessor/)
-add_subdirectory(externalTools/)
-add_subdirectory(mprocessor/)
-add_subdirectory(pcasso/)
-add_subdirectory(pfolio/)
-add_subdirectory(proofcheck/)
-add_subdirectory(qprocessor/)
-add_subdirectory(test/)
-add_subdirectory(doc/)
-add_subdirectory(scripts/)
+add_component(riss/)
+add_component(risslibcheck/)
+add_component(classifier/)
+add_component(libpca/)
+add_component(coprocessor/)
+add_component(externalTools/)
+add_component(mprocessor/)
+add_component(pcasso/)
+add_component(pfolio/)
+add_component(proofcheck/)
+add_component(qprocessor/)
+add_component(test/)
+add_component(doc/)
+add_component(scripts/)
 
 if(SHIFTBMC)
-  add_subdirectory(shiftbmc/)
+  add_component(shiftbmc/)
 endif()
 
 # Subdirectories are not allowed to be included twice,
 # therefore we have two cases for the aiger-tools to
 # be imported.
 if(AIGER-TOOLS OR SHIFTBMC)
-  add_subdirectory(aiger/)
+  add_component(aiger/)
 endif()
 
 if(AIGER-TOOLS)
@@ -144,7 +170,7 @@ if(AIGER-TOOLS)
     LOG_BUILD 1
   )
   add_library(abc-lib-static STATIC IMPORTED)
-  set_property(TARGET abc-lib-static PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libabc${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set_property(TARGET abc-lib-static PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libabc.a)
   add_dependencies(abc-lib-static abc)
 
 endif()

@@ -278,12 +278,13 @@ class MaxSAT
 
     // Utils for model management
     //
-    void saveModel(vec<lbool>& currentModel); // Saves a Model.
+    void saveModel(vec< lbool >& currentModel, int64_t calculatedCost); // Saves a Model.
     // Compute the cost of a model.
     uint64_t computeCostModel(vec<lbool>& currentModel, int weight = INT32_MAX);
 
     // Utils for printing
     //
+    void printBound(int64_t bound);
     void printModel(); // Print the best satisfying model.
     void printStats(); // Print search statistics.
 

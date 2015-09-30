@@ -1,3 +1,4 @@
+
 /*****************************************************************************************[Main.cc]
  Glucose -- Copyright (c) 2009, Gilles Audemard, Laurent Simon
                 CRIL - Univ. Artois, France
@@ -37,6 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/core/Solver.h"
 
 #include "coprocessor/Coprocessor.h"
+#include "classifier/CNFClassifier.h"
 
 using namespace Riss;
 using namespace std;
@@ -111,7 +113,7 @@ int main(int argc, char** argv)
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, DRUP or DRAT)", "DRAT");
 
 
-    StringOption opt_config("MAIN", "config", "Use a preset configuration", 0);
+    StringOption opt_config("MAIN", "config", "Use a preset configuration", "505");
     IntOption    opt_maxConflicts("MAIN", "maxConflicts", "Limit the number of conflicts for the search.\n", -1, IntRange(-1, INT32_MAX));
     BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
     BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
@@ -120,7 +122,10 @@ int main(int argc, char** argv)
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
     BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
+    BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false );
 
+    IntOption    opt_assumeFirst("MAIN", "assumeFirst", "Assume the first X positive literals for search.", 0, IntRange(0, INT32_MAX));
+    
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
@@ -130,10 +135,10 @@ int main(int argc, char** argv)
         // here the solver starts with its actual work ...
         //
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
-        CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
-        Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
-        foundHelp = coreConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
-        foundHelp = cp3config.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        CoreConfig* coreConfig = new CoreConfig(string(opt_config == 0 ? "" : opt_config));
+        Coprocessor::CP3Config* cp3config = new Coprocessor::CP3Config(string(opt_config == 0 ? "" : opt_config));
+        foundHelp = coreConfig->parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        foundHelp = cp3config->parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
 
         // print pcs information into file
@@ -142,23 +147,23 @@ int main(int argc, char** argv)
             fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
             ::printOptions(pcsFile, opt_tuneLevel);
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
-            coreConfig.printOptions(pcsFile);
+            coreConfig->printOptions(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
-            cp3config.printOptions(pcsFile);
+            cp3config->printOptions(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
             fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
             ::printOptionsDependencies(pcsFile, opt_tuneLevel);
             fprintf(pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
-            coreConfig.printOptionsDependencies(pcsFile);
+            coreConfig->printOptionsDependencies(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
-            cp3config.printOptionsDependencies(pcsFile);
+            cp3config->printOptionsDependencies(pcsFile);
             exit(0);
         }
 
         if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
-            coreConfig.configCall(s);
-            cp3config.configCall(s);
+            coreConfig->configCall(s);
+            cp3config->configCall(s);
             configCall(argc, argv, s);
             cerr << "c tool-parameters: " << s.str() << endl;
             exit(0);
@@ -169,14 +174,13 @@ int main(int argc, char** argv)
             for (int i = 0 ; i < argc; ++i) { cerr << " " << argv[i]; }
             cerr << endl;
         }
-
-        Solver S(&coreConfig);
-        S.setPreprocessor(&cp3config); // tell solver about preprocessor
+        Solver* S = new Solver(coreConfig);
+        S->setPreprocessor(cp3config); // tell solver about preprocessor
 
         double initial_time = cpuTime();
 
-        S.verbosity = verb;
-        S.verbEveryConflicts = vv;
+        S->verbosity = verb;
+        S->verbEveryConflicts = vv;
 
         #if defined(__linux__)
         fpu_control_t oldcw, newcw;
@@ -184,7 +188,7 @@ int main(int argc, char** argv)
         if (verb > 0) { printf("c WARNING: for repeatability, setting FPU to use double precision\n"); }
         #endif
 
-        solver = &S;
+        solver = S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
         // interrupts:
         signal(SIGINT, SIGINT_exit);
@@ -226,30 +230,90 @@ int main(int argc, char** argv)
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         }
 
-        if (S.verbosity > 0) { // print only once!
+        if (S->verbosity > 0) { // print only once!
             printf("c ======================[ riss (core) %s  %.13s ]===============================================\n", solverVersion, gitSHA1);
             printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
             printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
             printf("c | Contributors:                                                                                         |\n");
             printf("c |      Kilian Gebhardt (BVE Implementation,parallel preprocessor)                                       |\n");
+	    printf("c |      Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                   |\n");
             printf("c ============================[ Problem Statistics ]=======================================================\n");
             printf("c |                                                                                                       |\n");
         }
 
+    #ifdef CLASSIFIER
+	if( opt_autoconfig ) { // do configuration based on integrated configuration database
+	  
+	  if( (argc == 1) ) {
+	    printf("c cannot autoconfig with formula on stdin\n");
+	    exit(0);
+	  }
+	  
+	  // TODO FIXME set string according to current database "automatically". 
+	  // Here, the best configuration for the "cut" formulas should be used. 
+	  // The below limits should also be set automatically. 
+	  string config = "505-O";
+	  
+	  parse_DIMACS(in, *S);
+	  
+	  if ( S->nClauses() < 4000000 || S->nVars() < 1900000 || S->nTotLits() < 12000000){
+	    
+	    //gzclose(in);
+	    
+	    CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
+	    cnfclassifier->setVerb(verb);
+	    cnfclassifier->setComputingClausesGraph(false);
+	    cnfclassifier->setComputingResolutionGraph(false);
+	    cnfclassifier->setComputingRwh(true);
+	    cnfclassifier->setComputeBinaryImplicationGraph(true);
+	    cnfclassifier->setComputeConstraints(true);
+	    cnfclassifier->setComputeXor(false);
+	    cnfclassifier->setQuantilesCount(4);
+	    cnfclassifier->setComputingVarGraph(false); 
+	    cnfclassifier->setAttrFileName(nullptr);
+	    cnfclassifier->setComputingDerivative(true);
+	    
+	    config = cnfclassifier->getConfig( *S );
+	    // get new autoconfigured config
+	    
+	    delete cnfclassifier;
+	    
+	  }
+	  
+	  delete S;
+	  delete coreConfig;
+	  delete cp3config; 
+
+	  // set up the new configuration
+	  coreConfig = new CoreConfig( config.c_str() );
+	  cp3config = new Coprocessor::CP3Config( config.c_str() ); // use new and pointer
+	  
+	  // reset the solver with the new configuration
+	  S = new Solver(coreConfig);
+	  S->setPreprocessor(cp3config); // tell solver about preprocessor       
+	  S->verbosity = verb;
+	  S->verbEveryConflicts = vv;
+	
+	  gzclose(in); // reopening the formula file. (old one refers to EOF)
+	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
+	  if (S->verbosity > 0) { printf("c |  Config: %12s                                                                                |\n", config.c_str() ); }
+	}
+    #endif // CLASSIFIER
 
         // open file for proof
-        S.proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+        S->proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S->proofFile != nullptr) { fprintf(S->proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
-        parse_DIMACS(in, S);
+   	parse_DIMACS(in, *S);
+	//printf("\n%d\n", S->nClauses());
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
         double parsed_time = cpuTime();
-        if (S.verbosity > 0) {
-            printf("c |  Number of variables:       %12d                                                              |\n", S.nVars());
-            printf("c |  Number of clauses:         %12d                                                              |\n", S.nClauses());
-            printf("c |  Number of total literals:  %12d                                                              |\n", S.nTotLits());
+        if (S->verbosity > 0) {
+            printf("c |  Number of variables:       %12d                                                              |\n", S->nVars());
+            printf("c |  Number of clauses:         %12d                                                              |\n", S->nClauses());
+            printf("c |  Number of total literals:  %12d                                                              |\n", S->nTotLits());
             printf("c |  Parse time:                %12.2f s                                                            |\n", parsed_time - initial_time);
             printf("c |                                                                                                       |\n");
         }
@@ -261,22 +325,22 @@ int main(int argc, char** argv)
         //signal(SIGINT, SIGINT_interrupt);
         //signal(SIGXCPU,SIGINT_interrupt);
 
-        if (!S.simplify()) {
+        if (!S->simplify()) {
             if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                 res = nullptr;
             }
             // add the empty clause to the proof, close proof file
-            if (S.proofFile != nullptr) {
-                bool validProof = S.checkProof(); // check the proof that is generated inside the solver
-                if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-                fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
+            if (S->proofFile != nullptr) {
+                bool validProof = S->checkProof(); // check the proof that is generated inside the solver
+//                 DOUT( if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; } ); // TODO FIXME this is not implemented right now (online checked is not activated by default)
+                fprintf(S->proofFile, "0\n"), fclose(S->proofFile);
             }
-            if (S.verbosity > 0) {
+            if (S->verbosity > 0) {
                 printf("c =========================================================================================================\n");
                 printf("c Solved by unit propagation\n");
-                printStats(S);
+                printStats(*S);
             }
 
             // choose among output formats!
@@ -288,28 +352,34 @@ int main(int argc, char** argv)
 
         vec<Lit> dummy;
         // tell solver about the number of conflicts it is allowed to use (for the current iteration)
-        if (opt_maxConflicts != -1) { S.setConfBudget(opt_maxConflicts); }
-        lbool ret = S.solveLimited(dummy);
-        S.budgetOff(); // remove budget again!
+        if (opt_maxConflicts != -1) { S->setConfBudget(opt_maxConflicts); }
+        // assume first literals of the formula
+        if( opt_assumeFirst > 0 ) {
+	  const int maxV = opt_assumeFirst > S->nVars() ? S->nVars() : opt_assumeFirst;
+	  for( int i = 0 ; i < maxV; ++i ) dummy.push( mkLit(i,false) );
+	}
+        // solve the formula (with the possible created assumptions)
+        lbool ret = S->solveLimited(dummy);
+        S->budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
             if (res != nullptr) { fclose(res); res = nullptr; }
-            if (S.proofFile != nullptr) {
-                fclose(S.proofFile);   // close the current file
-                S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
-                fclose(S.proofFile);   // close the file again
+            if (S->proofFile != nullptr) {
+                fclose(S->proofFile);   // close the current file
+                S->proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
+                fclose(S->proofFile);   // close the file again
             }
         }
 
         // print stats
-        if (S.verbosity > 0) {
-            printStats(S);
+        if (S->verbosity > 0) {
+            printStats(*S);
         }
 
         // check model of the formula
         if (ret == l_True && opt_checkModel && argc != 1) {  // check the model if the formla was given via a file!
             gzFile in = gzopen(argv[1], "rb"); // re-read file
-            if (check_DIMACS(in, S.model)) {
+            if (check_DIMACS(in, S->model)) {
                 printf("c verified model\n");
             } else {
                 printf("c model invalid -- turn answer into UNKNOWN\n");
@@ -323,10 +393,12 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.proofFile != nullptr) {
-            bool validProof = S.checkProof(); // check the proof that is generated inside the solver
+        if (ret == l_False && S->proofFile != nullptr) {
+#ifdef DRATPROOF
+            bool validProof = S->checkProof(); // check the proof that is generated inside the solver
             if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-            fprintf(S.proofFile, "0\n");
+#endif
+            fprintf(S->proofFile, "0\n");
         }
 
         // print solution into file
@@ -334,10 +406,10 @@ int main(int argc, char** argv)
             if (ret == l_True) {
                 if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
-                for (int i = 0; i < S.model.size(); i++)
-                    //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+                for (int i = 0; i < S->model.size(); i++)
+                    //  if (S->model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                 {
-                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S->model[i] == l_True) ? "" : "-", i + 1);
                 }
                 fprintf(res, " 0\n");
             } else if (ret == l_False) {
@@ -351,10 +423,10 @@ int main(int argc, char** argv)
         // print model to screen
         if (! opt_quiet && ret == l_True && res == nullptr) {
             if (!opt_modelStyle) { printf("v "); }
-            for (int i = 0; i < S.model.size(); i++)
-                //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+            for (int i = 0; i < S->model.size(); i++)
+                //  if (S->model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
             {
-                printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                printf("%s%s%d", (i == 0) ? "" : " ", (S->model[i] == l_True) ? "" : "-", i + 1);
             }
             printf(" 0\n");
         }

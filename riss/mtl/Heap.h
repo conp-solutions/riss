@@ -85,23 +85,26 @@ class Heap
     Comp getComparator()       const { return lt; }
 
     /** copies the state of this heap to the other heap */
-    void copyTo(Heap& copy) const { 
-      copy.lt = lt;
-      heap.copyTo( copy.heap );
-      indices.copyTo( copy.indices );
+    void copyTo(Heap& copy) const
+    {
+        copy.lt = lt;
+        heap.copyTo(copy.heap);
+        indices.copyTo(copy.indices);
     }
-    
+
     /** copies the state of this heap to the other heap, does not update the compare object */
-    void copyOrderTo(Heap& copy) const { 
-      heap.copyTo( copy.heap );
-      indices.copyTo( copy.indices );
+    void copyOrderTo(Heap& copy) const
+    {
+        heap.copyTo(copy.heap);
+        indices.copyTo(copy.indices);
     }
-    
+
     /** copy data, but use other compare object (might contain pointer to data) */
-    void reinitializeFrom(Heap& copy, Comp c) const { 
-      lt = c;
-      copy.heap.copyTo( heap );
-      copy.indices.copyTo( indices );
+    void reinitializeFrom(Heap& copy, Comp c) const
+    {
+        lt = c;
+        copy.heap.copyTo(heap);
+        copy.indices.copyTo(indices);
     }
 
     void decrease(int n) { assert(inHeap(n)); percolateUp(indices[n]); }

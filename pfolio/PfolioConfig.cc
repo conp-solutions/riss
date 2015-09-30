@@ -28,7 +28,9 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64), optionListPtr)
     , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
     , opt_incarnationSetups("PFOLIO - INIT", "pIncSetup", "incarnation configurations [N]confign[N+1]configN+1", 0, optionListPtr)
+    , addExtraSetup("PFOLIO - INIT", "addSetup", "add pIncSetup configuration to preset (indepdently of preset)", true, optionListPtr)
     , opt_ppconfig("PFOLIO - INIT", "ppconfig", "the configuration to be used for the simplifier", 0, optionListPtr)
+    , opt_allIncPresets("PFOLIO - INIT", "pAllSetup", "add to all incarnations (after other setups)", 0, optionListPtr)
 
     , opt_storageSize("PFOLIO - INIT", "storageSize", "Number of clauses in one ring buffer (0 => 4000 x threads)", 0, IntRange(0, INT32_MAX), optionListPtr)
 
@@ -50,6 +52,11 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_useDynamicLimits("SEND", "dynLimits", "update sharing limits dynamically", false, optionListPtr)
     , opt_sendEquivalences("SEND", "shareEE", "share equivalent literals", true, optionListPtr)
 
-{}
+{
+  if (defaultPreset.size() != 0) { 
+//     DOUT( std::cerr << "c set preset for pfolio: " << defaultPreset << std::endl;  );
+    setPreset(defaultPreset);
+  }    // set configuration options immediately
+}
 
 } // namespace Riss

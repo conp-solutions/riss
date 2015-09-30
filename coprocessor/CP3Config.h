@@ -50,6 +50,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_unlimited  ;
     Riss::BoolOption opt_randomized  ;
     Riss::IntOption  opt_inprocessInt;
+    Riss::IntOption  opt_inpIntInc;
     Riss::IntOption  opt_simplifyRounds;
 
     Riss::IntOption  opt_exit_pp     ;
@@ -331,6 +332,7 @@ class CP3Config : public Riss::Config
     #ifndef NDEBUG
     Riss::IntOption dense_debug_out;
     #endif
+    Riss::BoolOption opt_dense_inprocess;
     Riss::IntOption  opt_dense_fragmentation;
     Riss::BoolOption opt_dense_keep_assigned;
 
@@ -659,6 +661,8 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_xor_encodeSize;
     Riss::BoolOption opt_xor_checkNewSubsume;
     Riss::BoolOption opt_xor_addAsLearnt;
+    Riss::IntOption  opt_xor_setPolarity;
+    Riss::BoolOption opt_xor_addOnNewlyAdded;
 
     #ifndef NDEBUG
     Riss::IntOption  opt_xor_debug;
