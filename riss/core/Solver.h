@@ -261,14 +261,15 @@ class Solver
       EMA ( double _alpha = 0 ) : value(0), alpha( _alpha ) , steps(0), initialized(false) {}
       
       /** assign a new value for alpha, reset series */
-      void reinit( double _alpha ) { value = 0; alpha = 0 ; steps = 0; initialized = false;}
+      void reinit( double _alpha ) { value = 0; alpha = _alpha ; steps = 0; initialized = false;}
       
       /** reset all values, keep alpha */
-      void reset() { value = 0; steps = 0; initialized = false; }
+      void reset() { value = 0; steps = 0; initialized = false; assert( alpha != 0 && "should be initilized somehow" );}
       
       /** add next value to series */
       void update(double g_i) { 
 	++ steps;
+// 	cerr << "c update EMA with " << g_i << " at step " << steps << " with alpha=" << alpha << " from " << value;
 	if( !initialized ) {
 	  double compareAlpha = pow(2, - steps );  
 	  if( compareAlpha <= alpha ) { initialized = true; compareAlpha = alpha; } // set initiliazed to true, so that we do not have to do this calculation any more
@@ -276,6 +277,7 @@ class Solver
 	} else {
 	  value = alpha * g_i + ( 1 - alpha ) * value; // exponential update
 	}
+// 	cerr << " to " << value << endl;
       }
       
       int64_t getSteps() const { return steps; }

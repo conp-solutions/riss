@@ -1904,14 +1904,15 @@ lbool Solver::search(int nof_conflicts)
             
 #warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
-            trailQueue.push(trail.size()); // tell queue about current conflict level
-	    // block restart based on the current level?
+            trailQueue.push(trail.size());                  // tell queue about current size of the interpretation before the conflict
+	    slow_interpretationSizes.update(trail.size()); 
+	    // block restart based on the current interpretation size?
             if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first  
 	      && searchconfiguration.restarts_type == 0                        // block only with dynamic restarts
 	      && lbdQueue.isvalid()                                            // block only, if we did not already block 'recently'
 	    ) {
 	      if(  (!config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * trailQueue.getavg() )       // glucose like: compare to value of trailQueue
-		|| ( config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * recent_LBD.getValue() )     // EMA: compare to value of slowly evolving trail size EMA
+		|| ( config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * slow_interpretationSizes.getValue() )     // EMA: compare to value of slowly evolving trail size EMA
 		
 	      ) {
                 lbdQueue.fastclear();
@@ -2093,8 +2094,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 		)
                 || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound) // if there have been too many conflicts
             ) {
-
-
+      
                     // increase current limit, if this has been the reason for the restart!!
                     if ((config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound)) {
                         intervalRestart++; conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc;
