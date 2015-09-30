@@ -1122,7 +1122,7 @@ int64_t BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(cons
 			
 		} else {
 		  
-		  assert( value(first) == l_Undef & "invariant in propagation implementation" );
+		  assert( value(first) == l_Undef && "invariant in propagation implementation" );
 	      
 		  uncheckedEnqueue(first, w.getID() );
 		  nonMarkedQHead --; // in the next call we have to check this literal again // FIXME might result in checking the same list multiple times without any positive effect as the elements in the front are checked again and again
