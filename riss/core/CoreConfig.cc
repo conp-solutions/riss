@@ -20,6 +20,7 @@ namespace Riss
 
 static const char* _cat  = "CORE";
 static const char* _cr   = "CORE -- RESTART";
+static const char* _crsw   = "CORE -- RESTART SWITCHING";
 static const char* _cs   = "CORE -- SEARCH";
 static const char* _cred = "CORE -- REDUCE";
 static const char* _cm   = "CORE -- MINIMIZE";
@@ -64,12 +65,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_quick_reduce            (_cred, "quickRed",              "check only first two literals for being satisfied", false,                                                              optionListPtr),
     opt_keep_worst_ratio        (_cred, "keepWorst",             "keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true),  optionListPtr),
 
-    opt_reduceType              (_cr, "remtype",                 "update LBD during (0=glucose,1=minisat),", 0, IntRange(0, 1),                                                           optionListPtr),
-    opt_learnt_size_factor      (_cr, "rem-lsf",                 "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
-    opt_learntsize_inc          (_cr, "rem-lsi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
-    opt_learntsize_adjust_start_confl(_cr, "rem-asc",            "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
-    opt_learntsize_adjust_inc   (_cr, "rem-asi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
-    opt_min_learnts_lim         (_cr, "rem-minlearnts",          "Minimum learnt clause limit", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
+    opt_reduceType              (_cred, "remtype",                 "update LBD during (0=glucose,1=minisat),", 0, IntRange(0, 1),                                                           optionListPtr),
+    opt_learnt_size_factor      (_cred, "rem-lsf",                 "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
+    opt_learntsize_inc          (_cred, "rem-lsi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_learntsize_adjust_start_confl(_cred, "rem-asc",            "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
+    opt_learntsize_adjust_inc   (_cred, "rem-asi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_min_learnts_lim         (_cred, "rem-minlearnts",          "Minimum learnt clause limit", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
     
     opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
     opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),
@@ -91,7 +92,8 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_init_pol                (_init, "init-pol",              "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 6),                       optionListPtr),
 
     opt_restart_level           (_cr,     "rlevel",              "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2),                     optionListPtr),
-    opt_restarts_type           (_cr,      "rtype",              "Choose type of restart (0=dynamic,1=luby,2=geometric,3=static)", 0, IntRange(0, 3),                                     optionListPtr),
+    opt_restarts_type           (_cr,      "rtype",              "Choose type of restart (0=dynamic,1=luby,2=geometric,3=static,4=none)", 0, IntRange(0, 4),                              optionListPtr),
+    opt_allow_restart_blocking  (_cr,   "r-dyn-bl",              "Perform dynamic restarts blocking", true,                                                                               optionListPtr),
     opt_restarts_dyn_ema        (_cr,  "r-dyn-ema",              "Perform dynamic restarts based on EMA", false,                                                                          optionListPtr),
     opt_restart_ema_lbdfast     (_cr,"r-ema-lfast",              "Alpha for fast evolving EMA for interpretation size", 0.03125, DoubleRange(0, true, 1, true),                           optionListPtr, &opt_restarts_dyn_ema),
     opt_restart_ema_lbdslow     (_cr,"r-ema-lslow",              "Alpha for slow evolving EMA for interpretation size", 0.000061035156, DoubleRange(0, true, 1, true),                    optionListPtr, &opt_restarts_dyn_ema),
@@ -100,6 +102,11 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_restart_min_noBlock     (_cr, "r-min-noBlock",           "Do not allow restart blocking before this number of conflicts", 10000, IntRange(1, INT32_MAX),                          optionListPtr),
     opt_restart_inc             (_cr,       "rinc",              "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false),                                           optionListPtr, &opt_restarts_type),
     opt_inc_restart_level       (_cr,    "irlevel",              "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX),                  optionListPtr, &opt_restarts_type),
+    
+    opt_rswitch_isize           (_crsw,    "rsw-int",            "First interval for restart heuristic switching (>0 to activate)",   0, IntRange(0, INT32_MAX),                          optionListPtr), // restart type used when switching restart heuristics
+    opt_alternative_rtype       (_crsw,   "rsw-type",            "Type of restart for switching(1=luby,2=geometric,3=static,4=none)", 4, IntRange(1, 4),                                  optionListPtr, &opt_rswitch_isize), // restart type used when switching restart heuristics
+    opt_rswitch_interval_inc    (_crsw,   "rsw-iinc",            "Increase of the interval after finishing an interval", 1.1, DoubleRange(1, true, 10, true),                             optionListPtr, &opt_rswitch_isize),
+    opt_dynamic_rtype_ratio     (_crsw, "rsw-iratio",            "Percentage of dynamic restarts in switch intervals", 0.6666, DoubleRange(0, true, 1, true),                             optionListPtr, &opt_rswitch_isize),
 
     opt_garbage_frac            (_cat,   "gc-frac",              "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, 1, false), optionListPtr),
 

@@ -289,9 +289,65 @@ class Solver
     EMA slow_LBDs;                // collect all clause LBDs
     EMA recent_LBD;               // collect all LBDs, slow moving average
     
-    int type1restarts, type2restarts, type3restarts; // have extra counters for the restart types
+    /// collection of all the values that are useful to have a hybrid restart strategy (Paper by Oh at SAT conference 2015)
+    class RestartSwitchSchedule {
+    public:
+      int lubyRestarts, geometricRestarts, constantRestarts; // have extra counters for the restart types (luby, geometric, constant)
+    private:
+      int initial_restartScheduleSwitchInterval;       // initial size of the interval
+      int restartScheduleSwitchInterval;               // current size of the interval to switch between dynamic and static -1 == never
+      int restartScheduleSwitch_conflicts;             // next number of conflicts to switch the restart schedule -1 == never
+      int lastSwitch;                                  // number of conflicts when the last switch happened
+      bool performRestarts;                            // are we currently in a "noRestart" phase?
+      
+    public: 
+      RestartSwitchSchedule() 
+      : lubyRestarts(0), geometricRestarts(0), constantRestarts(0)
+        , initial_restartScheduleSwitchInterval(300), restartScheduleSwitchInterval(300) 
+        , restartScheduleSwitch_conflicts(0), lastSwitch(0)
+        , performRestarts(true)
+      {}
+      
+      void initialize( int firstIntervalSize ) { 
+	initial_restartScheduleSwitchInterval = firstIntervalSize; 
+	restartScheduleSwitchInterval = initial_restartScheduleSwitchInterval;
+	setupNextFullInterval( 0, 1, 0.666 ); // setup first interval with given size
+      }
+      
+      /** indicate whether the heuristic should be switched (at all) */
+      bool heuristicSwitching() const { return restartScheduleSwitch_conflicts > 0; }
+      
+      /** hit interval bound, has to take care of interval and schedule now */
+      bool reachedIntervalLimit( uint64_t searchConflicts ) { return searchConflicts >= restartScheduleSwitch_conflicts; }
+      
+      /** check whether the current interval limit is for the second half of the interval
+       * Note: useful to be checked after @reachedIntervalLimit returns true
+       * @return true, if full interval is 
+       */
+      bool finishedFullInterval() const { return restartScheduleSwitch_conflicts == lastSwitch + restartScheduleSwitchInterval; }
+      
+      /** setup all values for the next interval */
+      void setupNextFullInterval(uint64_t searchConflicts, double opt_rswitch_interval_inc, double opt_dynamic_rtype_ratio) {
+	lastSwitch = searchConflicts;
+	restartScheduleSwitchInterval = (double)restartScheduleSwitchInterval * opt_rswitch_interval_inc;
+	restartScheduleSwitch_conflicts = searchConflicts + (double)restartScheduleSwitchInterval * (opt_dynamic_rtype_ratio);
+      }
+      
+      /** set the limits to execute the second half of the schedule */
+      void setupSecondIntervalHalf () {
+	restartScheduleSwitch_conflicts = lastSwitch + restartScheduleSwitchInterval;
+      }
+      
+      void resetInterval() {
+	if( heuristicSwitching() ) {
+	  restartScheduleSwitchInterval = initial_restartScheduleSwitchInterval;
+	  setupNextFullInterval(0, 1, 1 ); // setup first interval with given size
+	}
+      }
+      
+    } restartSwitchSchedule;
     
-    // Object that controls configuration of search, might be changed during search
+    /// Object that controls configuration of search, might be changed during search
     class SearchConfiguration
     {
       public:
@@ -812,9 +868,10 @@ class Solver
     lbool handleLearntClause(Riss::vec< Riss::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, unsigned int& dependencyLevel);
 
     /** check whether a restart should be performed (return true, if restart)
+     * Furthermore takes care of the restart heuristic use, switches heuristics if necessary
      * @param nof_conflicts limit can be increased by the method, if an agility reject has been applied
      */
-    bool restartSearch(int& nof_conflicts, const int conflictC);
+    bool handleRestarts(int& nof_conflicts, const int conflictC);
 
     /** remove learned clauses during search */
     void clauseRemoval();

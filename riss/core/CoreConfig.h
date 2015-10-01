@@ -93,6 +93,7 @@ class CoreConfig : public Config
 
     IntOption opt_restart_level;
     IntOption opt_restarts_type;
+    BoolOption opt_allow_restart_blocking;
     BoolOption opt_restarts_dyn_ema;
     DoubleOption opt_restart_ema_lbdfast;
     DoubleOption opt_restart_ema_lbdslow;
@@ -101,6 +102,10 @@ class CoreConfig : public Config
     IntOption opt_restart_min_noBlock;
     DoubleOption opt_restart_inc;
     IntOption opt_inc_restart_level;
+    IntOption opt_rswitch_isize;      // initial size for restart switching
+    IntOption opt_alternative_rtype;  // restart type used when switching restart heuristics
+    DoubleOption opt_rswitch_interval_inc;
+    DoubleOption opt_dynamic_rtype_ratio;
 
     DoubleOption opt_garbage_frac;
 

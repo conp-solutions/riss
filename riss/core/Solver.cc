@@ -63,10 +63,6 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     
     ,posInAllClauses(true)
     ,negInAllClauses(true)
-
-    , type1restarts(0)
-    , type2restarts(0)
-    , type3restarts(0)
     
     , random_var_freq(config.opt_random_var_freq)
     , random_seed(config.opt_random_seed)
@@ -247,6 +243,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     slow_interpretationSizes.reinit( config.opt_restart_ema_trailslow );            // collect all conflict levels
     slow_LBDs.reinit(config.opt_restart_ema_lbdslow);   // collect all clause LBDs
     recent_LBD.reinit( config.opt_restart_ema_lbdfast );
+    
+    restartSwitchSchedule.initialize(config.opt_rswitch_isize);
     
     // Parameters (user settable):
     //
@@ -1908,12 +1906,12 @@ lbool Solver::search(int nof_conflicts)
 	    slow_interpretationSizes.update(trail.size()); 
 	    // block restart based on the current interpretation size?
             if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first  
+	      && config.opt_allow_restart_blocking                             // is blocking restarts ok?
 	      && searchconfiguration.restarts_type == 0                        // block only with dynamic restarts
 	      && lbdQueue.isvalid()                                            // block only, if we did not already block 'recently'
 	    ) {
 	      if(  (!config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * trailQueue.getavg() )       // glucose like: compare to value of trailQueue
 		|| ( config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * slow_interpretationSizes.getValue() )     // EMA: compare to value of slowly evolving trail size EMA
-		
 	      ) {
                 lbdQueue.fastclear();
                 nbstopsrestarts++;
@@ -1963,7 +1961,7 @@ lbool Solver::search(int nof_conflicts)
 	    }
 
         } else { // there has not been a conflict
-            if (restartSearch(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
+            if ( handleRestarts(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
 
             // Handle Simplification Here!
             //
@@ -2080,9 +2078,33 @@ void Solver::clauseRemoval()
 }
 
 
-bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
+bool Solver::handleRestarts(int& nof_conflicts, const int conflictC)
 {
-    {
+     // handle restart heuristic switching first
+     if( restartSwitchSchedule.heuristicSwitching() ) { // heuristic switching is enabled
+       cerr << "c switch restart heuristics" << endl;
+       if( restartSwitchSchedule.reachedIntervalLimit( conflicts ) ) { // we reached the limit
+	 // did we finish the whole intervale (currently using static schedules)
+	 if( restartSwitchSchedule.finishedFullInterval() ) {
+	   // setup new interval
+	   restartSwitchSchedule.setupNextFullInterval( conflicts, config.opt_rswitch_interval_inc, config.opt_dynamic_rtype_ratio );
+	   searchconfiguration.restarts_type = 0; // trigger dynamic restarts
+	   searchconfiguration.var_decay = 0.95;  // use var decay value of 0.95
+	   searchconfiguration.var_decay_end = 0.95;  // use var decay value of 0.95
+	 } else {
+	   // the rest of the interval is reserved for a static schedule
+	   restartSwitchSchedule.setupSecondIntervalHalf();
+	   searchconfiguration.restarts_type = config.opt_alternative_rtype; // activate alternative restart type 
+	   searchconfiguration.var_decay = 0.999;  // use var decay value of 0.999	
+	 }
+       }
+     }
+  
+     // we should never perform restarts due to the selected strategy
+     if( config.opt_restarts_type == 4 ) return false;
+  
+     // next decide about restart
+     {
         // dynamic glucose restarts
         if (searchconfiguration.restarts_type == 0) {
             // Our dynamic restart, see the SAT09 competition compagnion paper
@@ -2121,7 +2143,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
                     return true;
 
             }
-        } else { // usual static luby or geometric restarts
+        } else { // static restarts (luby, geometric, constant)
             if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
                 // do counter implication restart before partial restart
                 if (cir_bump_ratio != 0) {
@@ -2592,9 +2614,10 @@ lbool Solver::initSolve(int solves)
         topLevelsSinceLastLa = 0; untilLa = config.opt_laEvery;
         
 	curr_restarts = 0; // reset restarts
-        type1restarts = 0;
-	type2restarts = 0;
-	type3restarts = 0;
+        restartSwitchSchedule.lubyRestarts = 0;
+	restartSwitchSchedule.geometricRestarts = 0;
+	restartSwitchSchedule.constantRestarts = 0;
+	restartSwitchSchedule.resetInterval();
         
         // reset restart heuristic information for dynamic restarts
         slow_interpretationSizes.reset();
@@ -2856,8 +2879,8 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
         double rest_base = 0; // initially 0, as we want to use glucose restarts
         if (searchconfiguration.restarts_type != 0) { // set current restart limit -- the value is multiplied with the parameter "opt_restart_first" below
-            rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, type1restarts) : 
-                        ( searchconfiguration.restarts_type == 2 ? pow(config.opt_restart_inc, type2restarts) : 1  );
+            rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, restartSwitchSchedule.lubyRestarts) : 
+                        ( searchconfiguration.restarts_type == 2 ? pow(config.opt_restart_inc, restartSwitchSchedule.geometricRestarts) : 1  );
         }
 
         // re-shuffle BIG, if a sufficient number of restarts is reached
@@ -2876,9 +2899,9 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
         // increment restart counters based on restart type
         curr_restarts++;
-        type1restarts = searchconfiguration.restarts_type == 1 ? type1restarts + 1 : type1restarts;
-        type2restarts = searchconfiguration.restarts_type == 2 ? type2restarts + 1 : type2restarts;
-	type3restarts = searchconfiguration.restarts_type == 3 ? type3restarts + 1 : type3restarts;
+        restartSwitchSchedule.lubyRestarts = searchconfiguration.restarts_type == 1 ? restartSwitchSchedule.lubyRestarts + 1 : restartSwitchSchedule.lubyRestarts;
+        restartSwitchSchedule.geometricRestarts = searchconfiguration.restarts_type == 2 ? restartSwitchSchedule.geometricRestarts + 1 : restartSwitchSchedule.geometricRestarts;
+	restartSwitchSchedule.constantRestarts = searchconfiguration.restarts_type == 3 ? restartSwitchSchedule.constantRestarts + 1 : restartSwitchSchedule.constantRestarts;
 
         status = inprocess(status);
     }
