@@ -358,7 +358,9 @@ bool Config::addPreset(const std::string& optionSet)
     else if (optionSet == "emaRestarts") { // sets up the parameters to follow the setup of the EMA-14 configuration of the POS 2015 paper by Biere and Fröhlich
         parseOptions(" -rType=0 -r-dyn-ema -K=0.87 -R=1.4 -r-ema-lfast=0.03125 -r-ema-lslow=0.000061035156 -r-ema-tslow=0.000244140625", false);
     }
-
+    else if (optionSet == "comsps") { // sets up the parameters to follow the setup of the COminisatPS solver by Oh, SAT Race 2015, and SAT 2015 paper
+        parseOptions(" -remtype=2 -lbd-core-th=5 -act-based -maxlearnts=30000 -rsw-int=300", false);
+    }    
 
     else if (optionSet == "FOCUS") {
         parseOptions(" -var-decay-b=0.85 -var-decay-e=0.85", false);

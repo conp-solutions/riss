@@ -97,7 +97,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , remove_satisfied(true)
 
     // removal setup
-    , max_learnts( config.opt_min_learnts_lim )
+    , max_learnts( config.opt_max_learnts )
     , learntsize_factor( config.opt_learnt_size_factor )
     , learntsize_inc( config.opt_learntsize_inc )
     , learntsize_adjust_start_confl( config.opt_learntsize_adjust_start_confl )
@@ -883,7 +883,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 
         if (!foundFirstLearnedClause) {  // dynamic adoption only until first learned clause!
-            if (c.learnt()) {
+            if (c.learnt() ) {
                 if (config.opt_cls_act_bump_mode == 0) { claBumpActivity(c); }
                 else { clssToBump.push(confl); }
             }
@@ -1902,7 +1902,7 @@ lbool Solver::search(int nof_conflicts)
             
 #warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
-            trailQueue.push(trail.size());                  // tell queue about current size of the interpretation before the conflict
+            if( searchconfiguration.restarts_type == 0 ) trailQueue.push(trail.size());                  // tell queue about current size of the interpretation before the conflict
 	    slow_interpretationSizes.update(trail.size()); 
 	    // block restart based on the current interpretation size?
             if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first  
@@ -2069,11 +2069,12 @@ lbool Solver::search(int nof_conflicts)
 void Solver::clauseRemoval()
 {
     if(  ( config.opt_reduceType == 1 && (learnts.size()-nAssigns() >= max_learnts) )                                // minisat style removal
-      || (config.opt_reduceType == 0 && (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) ) )  // glucose style removal
-    { // perform only if learnt clauses are present
-        curRestart = (conflicts / nbclausesbeforereduce) + 1;
+      || ( config.opt_reduceType == 0 && (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) )  // glucose style removal
+      || ( config.opt_reduceType == 2 && learnts.size() >= max_learnts ) 
+    ) { // perform only if learnt clauses are present
+        curRestart = config.opt_reduceType == 0 ? (conflicts / nbclausesbeforereduce) + 1 : curRestart; // update only during dynamic restarts
         reduceDB();
-        nbclausesbeforereduce += searchconfiguration.incReduceDB;
+        nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
     }
 }
 
@@ -2082,7 +2083,6 @@ bool Solver::handleRestarts(int& nof_conflicts, const int conflictC)
 {
      // handle restart heuristic switching first
      if( restartSwitchSchedule.heuristicSwitching() ) { // heuristic switching is enabled
-       cerr << "c switch restart heuristics" << endl;
        if( restartSwitchSchedule.reachedIntervalLimit( conflicts ) ) { // we reached the limit
 	 // did we finish the whole intervale (currently using static schedules)
 	 if( restartSwitchSchedule.finishedFullInterval() ) {
@@ -2746,8 +2746,8 @@ void Solver::applyConfiguration()
 
     if( config.opt_reduceType == 1 ) { // minisat style removal?
       max_learnts = nClauses() * learntsize_factor;
-      if (max_learnts < config.opt_min_learnts_lim)
-	  max_learnts = config.opt_min_learnts_lim;
+      if (max_learnts < config.opt_max_learnts)
+	  max_learnts = config.opt_max_learnts;
 
       learntsize_adjust_confl   = learntsize_adjust_start_confl;
       learntsize_adjust_cnt     = (int)learntsize_adjust_confl; 
@@ -4271,9 +4271,12 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
 {
     assert(decisionLevel() == 0 && "found units, have to jump to level 0!");
     // update info for restart
-    lbdQueue.push(1); sumLBD += 1; // unit clause has one level
-    slow_LBDs.update(1); 
-    recent_LBD.update(1);
+    if( searchconfiguration.restarts_type == 0 ) {
+      lbdQueue.push(1); // unit clause has one level
+      slow_LBDs.update(1); 
+      recent_LBD.update(1);
+    }
+    sumLBD += 1;
     
     for (int i = 0 ; i < learnt_clause.size(); ++ i) {   // add all units to current state
         if (value(learnt_clause[i]) == l_Undef) { uncheckedEnqueue(learnt_clause[i]); }
@@ -4309,10 +4312,13 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         extResTime.stop();
     } else if (isBiAsserting) { resetRestrictedExtendedResolution(); }   // do not have two clauses in a row for rer, if one of them is bi-asserting!
 
-    lbdQueue.push(nblevels);
+    if( searchconfiguration.restarts_type == 0 ) { // update only for dynamic restarts
+      lbdQueue.push(nblevels);
+      slow_LBDs.update(nblevels); 
+      recent_LBD.update(nblevels);
+    }
+    
     sumLBD += nblevels;
-    slow_LBDs.update(nblevels); 
-    recent_LBD.update(nblevels);
     // write learned clause to DRUP!
     addCommentToProof("learnt clause");
     addToProof(learnt_clause);

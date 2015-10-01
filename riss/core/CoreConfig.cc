@@ -65,12 +65,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_quick_reduce            (_cred, "quickRed",              "check only first two literals for being satisfied", false,                                                              optionListPtr),
     opt_keep_worst_ratio        (_cred, "keepWorst",             "keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true),  optionListPtr),
 
-    opt_reduceType              (_cred, "remtype",                 "update LBD during (0=glucose,1=minisat),", 0, IntRange(0, 1),                                                           optionListPtr),
-    opt_learnt_size_factor      (_cred, "rem-lsf",                 "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
-    opt_learntsize_inc          (_cred, "rem-lsi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
-    opt_learntsize_adjust_start_confl(_cred, "rem-asc",            "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
-    opt_learntsize_adjust_inc   (_cred, "rem-asi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
-    opt_min_learnts_lim         (_cred, "rem-minlearnts",          "Minimum learnt clause limit", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
+    opt_reduceType              (_cred, "remtype",               "remove clauses (0=glucose/dynamic,1=minisat/geometric,2=fixed limit)", 0, IntRange(0, 2),                                                  optionListPtr),
+    opt_learnt_size_factor      (_cred, "rem-lsf",               "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
+    opt_learntsize_inc          (_cred, "rem-lsi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_learntsize_adjust_start_confl(_cred, "rem-asc",          "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
+    opt_learntsize_adjust_inc   (_cred, "rem-asi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_max_learnts             (_cred, "maxlearnts",            "number of learnt clauses to initialize geometric/static removal", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
     
     opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
     opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),

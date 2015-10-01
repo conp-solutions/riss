@@ -70,7 +70,7 @@ class CoreConfig : public Config
     DoubleOption  opt_learntsize_inc;
     IntOption     opt_learntsize_adjust_start_confl;
     DoubleOption  opt_learntsize_adjust_inc;
-    IntOption     opt_min_learnts_lim;
+    IntOption     opt_max_learnts;
     
     BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
     IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned

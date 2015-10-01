@@ -1496,7 +1496,7 @@ inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
     if ((c.activity() += cla_inc / inverseRatio) > 1e20) {
         // Rescale:
         for (int i = 0; i < learnts.size(); i++) {
-            ca[learnts[i]].activity() *= 1e-20;
+	  if( ca[learnts[i]].learnt() ) ca[learnts[i]].activity() *= 1e-20; // scale only if the clause is a learned clause
         }
         cla_inc *= 1e-20;
         DOUT(if (config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl;) ;
