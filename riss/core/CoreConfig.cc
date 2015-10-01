@@ -152,7 +152,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     // extra
     opt_act            (_init, "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3),          optionListPtr),
     opt_actStart       (_init, "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false),  optionListPtr),
-    pot_actDec         (_init, "actDec",     "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, 1, true), optionListPtr),
+    pot_actDec         (_init, "actDec",     "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, 10, true), optionListPtr),
     actFile            (_init, "actFile",    "increase activities of those variables", 0,                                       optionListPtr),
     opt_pol            (_init, "polMode",    "invert provided polarities", false,                                               optionListPtr),
     polFile            (_init, "polFile",    "use these polarities", 0,                                                         optionListPtr),

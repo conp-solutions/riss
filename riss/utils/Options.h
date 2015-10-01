@@ -250,14 +250,20 @@ class DoubleOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-
+        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
+        
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
         double badd = 0, esub = 0;
-        if (!range.begin_inclusive) { badd = 0.0001; }
-        if (!range.end_inclusive) { esub = 0.0001; }
+        if (!range.begin_inclusive) { badd = 0.000001; }
+        if (!range.end_inclusive) { esub = 0.000001; }
         // always logarithmic
-        fprintf(pcsFile, "%s  {%lf,%lf} [%lf]l   # %s\n", name, range.begin + badd, range.end - esub, defaultValue, description);
+        double endValue = range.end == HUGE_VAL ? ( defaultValue > 1000000.0 ? defaultValue : 1000000.0 ) : range.end;
+        if( range.begin + badd > 0 || range.end - esub < 0 ) {
+	  fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+	} else {
+	  fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+	}
     }
 
     virtual bool canPrintOppositeOfDefault() { return false; }
@@ -361,13 +367,20 @@ class IntOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        if (range.end - range.begin <= 16) {
-            fprintf(pcsFile, "%s  {%d,%d} [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+        if ( (range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX ) || (range.begin <= 0 && range.end >= 0) ) {
+	  if( range.end - range.begin <= 16 && range.end - range.begin > 0 ) { // print all values if the difference is really small
+	    fprintf(pcsFile, "%s  {%d", name, range.begin);
+	    for ( int i = range.begin + 1; i <= range.end; ++ i ) fprintf(pcsFile, ",%d",i);
+	    fprintf(pcsFile, "} [%d]i    # %s\n", defaultValue, description);
+	  } else {
+            fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+	  }
         } else {
-            fprintf(pcsFile, "%s  {%d,%d} [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+            fprintf(pcsFile, "%s  [%d,%d] [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
         }
     }
 
@@ -483,13 +496,23 @@ class Int64Option : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        if (range.end - range.begin <= 16) {
-            fprintf(pcsFile, "%s  {%ld,%ld} [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-        } else {
-            fprintf(pcsFile, "%s  {%ld,%ld} [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
+        
+        
+        if ( (range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX ) || (range.begin <= 0 && range.end >= 0) ) {
+	  if( range.end - range.begin <= 16 && range.end - range.begin > 0 ) { // print all values if the difference is really small
+	    fprintf(pcsFile, "%s  {%ld", name, range.begin);
+	    for ( int64_t i = range.begin + 1; i <= range.end; ++ i ) fprintf(pcsFile, ",%ld",i);
+	    fprintf(pcsFile, "} [%ld]i    # %s\n", defaultValue, description);
+	  } else {
+            fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+	  }
+        }
+	else {
+            fprintf(pcsFile, "%s  [%ld,%ld] [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
         }
     }
 
@@ -594,6 +617,7 @@ class StringOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
 
         // print only, if there is a default
         if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
@@ -681,6 +705,7 @@ class BoolOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
 
         fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
     }

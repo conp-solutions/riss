@@ -145,7 +145,7 @@ int main(int argc, char** argv)
         if (0 != (const char*)opt_tuneFile) {
             FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
             fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
-            ::printOptions(pcsFile, opt_tuneLevel);
+            // ::printOptions(pcsFile, opt_tuneLevel); // do not print the global options, as those are usually not relevant for tuning
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
             coreConfig->printOptions(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
@@ -157,6 +157,7 @@ int main(int argc, char** argv)
             coreConfig->printOptionsDependencies(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
             cp3config->printOptionsDependencies(pcsFile);
+	    fclose( pcsFile );
             exit(0);
         }
 
