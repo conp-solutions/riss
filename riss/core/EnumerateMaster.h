@@ -52,9 +52,16 @@ private:
   int mType;                       // minimization that is allowed for the model
   bool printEagerly;               // print model already when found, or later
   
+  struct SharedClause {                      // also store the author for each blocking clause!
+    vec<Riss::Lit>* clause;
+    int authorID;
+  };
+  
+  int nextClientID;                       // assign IDs to clients, such that duplicate blocking clauses for the same model can be avoided
+  
   vec< vec<lbool>* > models;              // stores all currently found models (wrt projection, if activated)
   vec< uint64_t > modelHashes;            // store hashes for models for faster comparison 
-  vec< vec<Riss::Lit>* > blockingClauses; // stores all blocking clauses, if shared flag is set (in same order as models are stored)
+  vec< SharedClause > blockingClauses;    // stores all blocking clauses, if shared flag is set (in same order as models are stored)
   vec< vec<lbool>* > fullModels;          // stores all currently found full models (if projection is used)
   int64_t successfulBloom;                // number of times the bloom filter rejected successfully
   
@@ -78,7 +85,7 @@ private:
   void storeFullModel( const Riss::vec< Riss::Lit >& model );
   
   /** add blocking clause to storage*/
-  void storeBlockingClause( Riss::vec< Riss::Lit >& clause );
+  void storeBlockingClause( int authorID, Riss::vec< Riss::Lit >& clause );
   
 public:
   
@@ -122,12 +129,17 @@ public:
    @return true, if this model has not been seen before, false if the model is present already (useful for parallel enumeration)
    Note: assumes that a solver blocks each model itself , so that no book-keeping is performed
   */
-  bool addModel( Riss::vec< Riss::lbool >& newmodel, uint64_t modelhash, Riss::vec< Riss::Lit >* blockingClause  = nullptr, Riss::vec< Riss::Lit >* fullModel = nullptr);
+  bool addModel( int authorID, Riss::vec< Riss::lbool >& newmodel, uint64_t modelhash, Riss::vec< Riss::Lit >* blockingClause = nullptr, Riss::vec< Riss::Lit >* fullModel = nullptr);
   
   /** print a given model, and futhermore already extend the model if simplifications have been used 
    * NOTE: might change the model
    */
   void printSingleModel( ostream& outputStream, Riss::vec< Riss::lbool >& truthValues );
+  
+  /** return an unique ID to the asking client 
+   * Note: should be called by clients only
+   */
+  int assignClientID();
   
   /** tell whether enough models have been found */
   bool foundEnoughModels();
@@ -143,8 +155,10 @@ public:
   /** return whether the master stores more models than the given number */
   bool hasMoreModels( uint64_t localModels ) const;
   
-  /** return whether the master stores more models than the given number */
-  bool reveiveModel( uint64_t modelIndex, vec<lbool>& receivedTruthValues, vec<Lit>& receivedBlockingClause );
+  /** return the model with the given index, if its not from the given author 
+   * @return true, if the model is not from the author (otherwise, no data is copied at all!)
+   */
+  bool reveiveModel( int authorID, uint64_t modelIndex, Riss::vec< Riss::lbool >& receivedTruthValues, Riss::vec< Riss::Lit >& receivedBlockingClause );
   
   /** return number of decisions after which thread should look for new models by other workers */
   uint64_t checkNewModelsEvery() const ;
@@ -171,8 +185,7 @@ public:
   void setPreprocessor(Coprocessor::Preprocessor* preprocessor);
   
   void setPrintEagerly(bool p);
- 
-};
+ };
 
 inline 
 void EnumerateMaster::notifyReachedAllModels()
@@ -198,17 +211,19 @@ void EnumerateMaster::storeFullModel(const vec< Lit >& fullModel)
 }
 
 inline 
-void EnumerateMaster::storeBlockingClause(vec< Lit >& clause)
+void EnumerateMaster::storeBlockingClause(int authorID, vec< Lit >& clause)
 {
-  vec< Lit >* newClause = new vec< Lit >(clause.size());
-  clause.copyTo( *newClause );
-  blockingClauses.push( newClause );
+  SharedClause sc;
+  sc.authorID = authorID;
+  sc.clause = new vec< Lit >(clause.size());
+  clause.copyTo( * (sc.clause) );
+  blockingClauses.push( sc );
   
   assert( blockingClauses.size() == models.size() && "should have the same amount of entries (add model first!)" );
 }
 
 inline 
-bool EnumerateMaster::addModel(vec< lbool >& newmodel, uint64_t modelhash, vec< Lit >* blockingClause, vec< Lit >* fullModel)
+bool EnumerateMaster::addModel(int authorID, vec< lbool >& newmodel, uint64_t modelhash, vec< Lit >* blockingClause, vec< Lit >* fullModel)
 {
   // if we do not have a string stream yet, get one
   bool newModel = false;
@@ -259,7 +274,7 @@ bool EnumerateMaster::addModel(vec< lbool >& newmodel, uint64_t modelhash, vec< 
       models.push( newModel );
       modelHashes.push( modelhash );
       
-      storeBlockingClause(*blockingClause);
+      storeBlockingClause(authorID, *blockingClause);
       
       // store full model, if requested and we use projection 
       if( usesProjection() && fullModel != nullptr && fullModelsFileName != "" ) {
@@ -289,6 +304,16 @@ bool EnumerateMaster::foundEnoughModels() {
 }
 
 inline 
+int EnumerateMaster::assignClientID()
+{
+  lock();
+  int returnValue = nextClientID ++;
+  unlock();
+  return returnValue;
+}
+
+
+inline 
 int EnumerateMaster::projectionSize() const
 {
   return projectionVariables.size();
@@ -315,17 +340,20 @@ bool EnumerateMaster::hasMoreModels(uint64_t localModels) const
 }
 
 inline
-bool EnumerateMaster::reveiveModel(uint64_t modelIndex, vec< lbool >& receivedTruthValues, vec< Lit >& receivedBlockingClause)
+bool EnumerateMaster::reveiveModel(int authorID, uint64_t modelIndex, vec< lbool >& receivedTruthValues, vec< Lit >& receivedBlockingClause)
 {
   assert( models.size() > modelIndex && "the requested model has to be present" );
-  assert( enumerateParallel && "this method should be called only in parallel setup" );
+  if ( !enumerateParallel ) return false; // tell that there is no blocking clause to be received (as we currently run in sequential mode)
   lock();
-//   cerr << "c reveive model " << modelIndex << endl;
-  assert( blockingClauses.size() > modelIndex && "the requested model has to be present" ); // might fail due to race condition
-  models[modelIndex]->copyTo( receivedTruthValues );
-  assert( models.size() == blockingClauses.size() && "number of stored elements has to be the same" );
-  blockingClauses[modelIndex]->copyTo( receivedBlockingClause );
+  const bool notFromSameAuthor = blockingClauses[ modelIndex ].authorID != authorID;
+  if( notFromSameAuthor ) {
+    assert( blockingClauses.size() > modelIndex && "the requested model has to be present" ); // might fail due to race condition
+    models[modelIndex]->copyTo( receivedTruthValues );
+    assert( models.size() == blockingClauses.size() && "number of stored elements has to be the same" );
+    blockingClauses[modelIndex].clause->copyTo( receivedBlockingClause );
+  }
   unlock();
+  return notFromSameAuthor;
 }
 
 inline
@@ -345,3 +373,5 @@ int EnumerateMaster::minimizeReceived() const
 
 #endif
 
+
+struct S;

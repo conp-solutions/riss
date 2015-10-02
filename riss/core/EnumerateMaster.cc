@@ -18,6 +18,7 @@ EnumerateMaster::EnumerateMaster(int _nVars)
  , useProjection(false)
  , maximalModels(1)
  , mType( 2 )
+ , nextClientID(0)
  , successfulBloom(0)
  , shareBlockingClauses(true)
  , minimizeReceivedBlockingClauses(2)
@@ -28,7 +29,7 @@ EnumerateMaster::EnumerateMaster(int _nVars)
 EnumerateMaster::~EnumerateMaster()
 {
   for( int i = 0 ; i < models.size(); ++ i ) delete models[i];
-  for( int i = 0 ; i < blockingClauses.size(); ++ i ) delete blockingClauses[i];
+  for( int i = 0 ; i < blockingClauses.size(); ++ i ) delete blockingClauses[i].clause;
   for( int i = 0 ; i < fullModels.size(); ++ i ) delete fullModels[i];
   
 }

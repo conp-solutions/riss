@@ -2075,6 +2075,13 @@ SolverNextSearchIteration:;
     return l_Undef;
 }
 
+void Solver::EnumerationClient::assignClientID()
+{
+  assert( master != 0 && "master has to exist to receive an ID" );
+  clientID = master->assignClientID();
+}
+
+
 /** receive blocking clauses from enumeration master and add them to the formula of the current solver
  * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
  @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
@@ -2085,12 +2092,18 @@ bool Solver::EnumerationClient::receiveModelBlockingClauses()
   if( solver->decisions < lastReceiveDecisions + receiveEveryDecisions ) return false;
   if( !master->hasMoreModels(blockedModels) ) return false; // nothing to be received by master 
 
+  // todo: make sure we do not receive the same blocking clause multiple times (the one of our own model)
+  
   // set number of decisions when receiving models
   lastReceiveDecisions = solver->decisions;
   int oldDecisionLevel = solver->decisionLevel();
   while( master->hasMoreModels(blockedModels) ) {
-    master->reveiveModel(blockedModels, solver->model, blockingClause);
-    blockedModels ++; // saw one more model
+    // models we have seen is the number we found plus the number of personally found models
+    if( !master->reveiveModel(clientID, blockedModels, solver->model, blockingClause) ) { 
+      blockedModels ++; // saw one more model - or at least asked for it
+      continue;
+    }
+    blockedModels ++; // saw one more model to block it
     
     if( minimizeReceived != NONE ) {
       // allowed to reduce the blocked clause?
@@ -2171,7 +2184,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
     }
     // tell master about model, blocking clause, and the full model
     uint64_t modelhash = convertModel( solver->nVars(), solver->trail, solver->model ); // convert in client, such that the master must not perform the conversion in the critical section!
-    bool newModel = master->addModel( solver->model, modelhash, & blockingClause, &solver->trail );
+    bool newModel = master->addModel( clientID, solver->model, modelhash, & blockingClause, &solver->trail );
     if( newModel ) foundModels ++; 
     else duplicateModels ++;
   } else {
@@ -2181,7 +2194,7 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
     // the model has the opposite values as the blocking clause
     for( int i = 0 ; i < minimizedClause.size(); ++i ) minimizedClause[i] = ~ minimizedClause[i]; 
     uint64_t modelhash = convertModel( solver->nVars(), minimizedClause, solver->model ); // convert in client, such that the master must not perform the conversion in the critical section!
-    bool newModel = master->addModel( solver->model, modelhash, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
+    bool newModel = master->addModel( clientID, solver->model, modelhash, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
     if( newModel ) foundModels ++; 
     else duplicateModels ++;
   }
@@ -2199,7 +2212,8 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
 }
 
 Solver::EnumerationClient::EnumerationClient(Solver* _solver)
-:   master(nullptr)
+:   clientID( -1 )
+  , master(nullptr)
   , solver( _solver )
   , blockedModels(0) 
   , lastReceiveDecisions(0)
@@ -2293,6 +2307,8 @@ bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel
 void Solver::setEnumnerationMaster(EnumerateMaster* master)
 {
   enumerationClient.setMaster( master );
+  
+  enumerationClient.assignClientID();
   
   switch( master->minimizeBlocked() ) {
     case 0: enumerationClient.mtype = EnumerationClient::NONE ; break;

@@ -1478,6 +1478,8 @@ class Solver
 
     private:
       
+      int clientID;
+      
       EnumerateMaster* master;
       
       Solver* solver; // handle to the solver class
@@ -1550,6 +1552,10 @@ class Solver
       @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
       */
       bool receiveModelBlockingClauses();
+      
+      /** assign a id from the master to the client */
+      void assignClientID();
+      
     } enumerationClient;
     
     void setEnumnerationMaster( EnumerateMaster* master );
