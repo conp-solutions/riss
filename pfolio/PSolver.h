@@ -18,6 +18,9 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 namespace Riss
 {
 
+/** forward declaration */
+class EnumerateMaster;
+  
 class PSolver
 {
 
@@ -45,6 +48,8 @@ class PSolver
     ProofMaster* proofMaster;     // in a portfolio setup, use the proof master for generating DRUP proofs
     OnlineProofChecker* opc;      // check the proof on the fly during its creation
 
+    EnumerateMaster* modelMaster; // object that controls parallel model enumeration
+    
     std::string defaultConfig;                     // name of the configuration that should be used
     std::string defaultSimplifierConfig;           // name of the configuration that should be used by the global simplification
     std::vector< std::string > incarnationConfigs; // strings of incarnation configurations
@@ -256,6 +261,9 @@ public:
      * note: afterwards, no other operations should be executed any more (for now)
      */
     void kill();
+    
+    /** tell pfolio solver about enumeration */
+    void setEnumnerationMaster(EnumerateMaster* modelMaster);
 
 };
 

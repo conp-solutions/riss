@@ -95,10 +95,20 @@ class vec
     void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */
-    void fitSize()
+    void fitSize();
+    
+    /** swap content of two vectors */
+    void swap(vec< T >& other)
     {
-        cap = sz;
-        data = (T*)::realloc(data, (cap) * sizeof(T));
+	T*  tmpdata = other.data;
+	const int tmpsz   = other.sz;
+	const int tmpcap  = other.cap;
+        other.data = data;
+	other.cap = cap;
+	other.sz = sz;
+        data = tmpdata;
+	sz   = tmpsz;
+	cap  = tmpcap;
     }
 };
 

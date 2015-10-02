@@ -20,7 +20,7 @@ Copyright (c) 2012 Norbert Manthey
 
 // using namespace std;
 
-namespace Coprocessor
+namespace Riss
 {
 
 /** parse files, that contain variables or variable ranges

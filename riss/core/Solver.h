@@ -89,6 +89,8 @@ class Communicator;
 class OnlineProofChecker;
 class IncSolver;
 
+class EnumerateMaster;
+
 //=================================================================================================
 // Solver -- the main class:
 
@@ -1119,11 +1121,15 @@ class Solver
     /** reduce the literals inside the clause by performing vivification in the opposite order the literals have been added to the trail
      * @param learned_clause pointer to the clause that should be minimized (can be vec<Lit> or Clause)
      * @param lbd current lbd value of the given clause
+     * @param forced apply minimization without looking at measure limits
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
     template <typename T>
-    bool reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel);
+    bool reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel, bool forced = false);
 
+    /** setup reverse minimizatoin, if not done already */
+    void initReverseMinimitaion();
+      
     /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
@@ -1299,14 +1305,25 @@ class Solver
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
+    
     /** replace the current instance of coprocessor with the new one
         @return pointer to the old coprocessor
      */
     Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
 
+    /** return the pointer to the currently used preprocessor
+        @return pointer to coprocessor
+     */
+    Coprocessor::Preprocessor* getPreprocessor() const ;
+    
     bool useCoprocessorPP;
     bool useCoprocessorIP;
 
+    /** extend a given model (in case a preprocessor is present ) */
+    void extendModel(Riss::vec<Riss::lbool>& model);
+    
+    // if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { coprocessor->extendModel(model); }
+    
     /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
     void setExtendedResolution(bool enabled) { doAddVariablesViaER = enabled; }
 
@@ -1450,7 +1467,92 @@ class Solver
 
 // [END] modifications for parallel assumption based solver
 
+// [BEGIN] modifications for model enumerating solver
+    class EnumerationClient {
+    public:
+      enum MinimizeType {
+	NONE = 0,
+	ONLYFROMFULL = 1,
+	ALSOFROMBLOCKED = 2
+      };
 
+    private:
+      
+      EnumerateMaster* master;
+      
+      Solver* solver; // handle to the solver class
+      
+      /** generate decision clause, and calculate the two highest levels in that clause */
+      void createDecisionClause( vec< Lit >& clause, int& maxLevel, int& max2Level);
+      
+      /** colllect all assigned projection variables and add them as complement literal to the clause*/
+      void createBlockingProjectionClause( vec< Lit >& clause, int& maxLevel, int& max2Level );
+      
+      /** try to add the given clause with as few changes as possible
+       @param clause literals of the clause, can be modified during the method
+       @param maxLevel maximum decision level in the clause (>= 0, otherwise, recomputed)
+       @param max2Level second highest decision level in the clause (>= 0, otherwise, recomputed)
+       @return true, if everything went fine, false, if no more model is possible
+       */
+      bool integrateClause( vec<Lit>& clause, int maxLevel, int max2Level );
+      
+      /** convert model into truth value representation
+       @param nVars present variables in solver 
+       @param trail list of literals that have been satisfied (taken as input)
+       @param model truth value representation of trail
+       @return hash that represents the model
+       */
+      uint64_t convertModel( uint32_t nVars, vec< Lit >& trail, vec< lbool >& model );
+      
+      vec<Lit> blockingClause;  // storage for the blocking clause
+      vec<Lit> minimizedClause; // storage for the minimize blocking clause 
+      
+      uint64_t blockedModels; // number of models that have been received from the master already
+      uint64_t lastReceiveDecisions;  // number of decisions when receiving the last blocking clause
+      
+    public:
+      
+      enum EnumerateState {
+	stop = 0,
+	goOn = 1,
+	oneModel = 2,
+      };
+      
+      MinimizeType mtype;            // minimization type before submitting blocking clause = master->minimizeBlocked();
+      MinimizeType minimizeReceived; // apply reverse minimization after receiving blocking clause (0=none, 1=only from full, 2=ALSOFROMBLOCKED
+      uint64_t foundModels;   // number of models found by this client
+      uint64_t duplicateModels;   // number of models found by this client
+      uint64_t receiveEveryDecisions; // try to receive new blocking clauses for models every X decisions
+      
+      EnumerationClient( Solver* _solver ); 
+      
+      ~EnumerationClient();
+      
+      /** tell client about master */
+      void setMaster( EnumerateMaster* m ) { assert( master == nullptr && "can set only one master" ); master = m; }
+      
+      /** check whether all models have been encountered already */
+      bool enoughModels() const ;
+      
+      /** return the number of models that have been found by this thread */
+      uint64_t getModels() const ;
+      
+      /** return the number of models that have been found too late (already submitted by another thread) */
+      uint64_t getDupModels() const ;
+      
+      /** process the current model of the solver where the client is embedded
+       @return goOn, if the search for a model should be continued, stop, if the search should be interrupted, and oneModel, if no enumeration is used 
+      */
+      EnumerateState processCurrentModel(Lit& nextDecision);
+      
+      /** receive blocking clauses from enumeration master and add them to the formula of the current solver
+      * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+      @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
+      */
+      bool receiveModelBlockingClauses();
+    } enumerationClient;
+    
+    void setEnumnerationMaster( EnumerateMaster* master );
 };
 
 
@@ -1606,16 +1708,18 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 
 
 template<typename T>
-inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned& dependencyLevel)
+inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned& dependencyLevel, bool force)
 {
     #ifdef PCASSO
 #warning implement dependencyLevel correctly!
     #endif
-    if (!reverseMinimization.enabled || lbd > searchconfiguration.lbLBDReverseClause) { return false; }
+    if (!reverseMinimization.enabled || (!force && lbd > searchconfiguration.lbLBDReverseClause) ) { return false; }
 
+    if( learned_clause.size() == 0 ) return false; // cannot shrink the empty clause
+    
     // sort literal in the clause
     sort(learned_clause, TrailPosition_Gt(vardata));
-    assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
+    assert((force || communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
 
     reverseMinimization.attempts ++;
 
@@ -1727,7 +1831,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
         if (i == learned_clause.size()) { break; }
 
         const Lit l = learned_clause[i];
-        assert(level(var(l)) != 0 && "there should not be any literal of the top level in the clause");
+        assert( (force || level(var(l)) != 0 || reverseMinimization.value(l) == l_False) && "there should not be any relevant literal of the top level in the clause");
 // DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
         if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
             learned_clause[keptLits++ ] = l; // keep literal
@@ -1759,9 +1863,9 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     if (keptLits < learned_clause.size()) {
         reverseMinimization.succesfulReverseMinimizations ++;
         reverseMinimization.revMincutOffLiterals += (learned_clause.size() - keptLits);
-        assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
+        assert((force || communicationClient.refineReceived || learned_clause.size() == 0 || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
         learned_clause.shrink(learned_clause.size() - keptLits);
-        assert((communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
+        assert((force || communicationClient.refineReceived || learned_clause.size() == 0 || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
         return true;
     }
     return false; // clause was not changed, LBD should not be recomputed

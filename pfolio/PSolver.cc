@@ -6,18 +6,13 @@ Copyright (c) 2014-2015,      Norbert Manthey, All rights reserved.
 #include "coprocessor/Coprocessor.h"
 #include <assert.h>
 
-
+#include "riss/core/EnumerateMaster.h" // for model enumeration
 
 using namespace Coprocessor;
 using namespace std;
 
 
 // pfolio todos
-#warning be able to disable output completely, use inc/decmodel flags
-#warning error shrink received clauses with reverseMinimization, share reduced clauses again (cite siert)
-#warning have another buffer for equivalences and multi-units, that should not be missed
-#warning set communicator settings incarnation specific, have a way to pass options from cmdline to each incarnation (have one long string as option, split that string)
-
 namespace Riss
 {
 
@@ -42,6 +37,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , threadIDs(0)
     , proofMaster(0)
     , opc(0)
+    , modelMaster(nullptr) 
     , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == 0 ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
     , verbosity(0)
@@ -99,6 +95,13 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     solvers.push(new Solver(&configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
+
+void PSolver::setEnumnerationMaster(EnumerateMaster* m)
+{
+  assert( modelMaster == nullptr && "cannot have multiple model masters" );
+  modelMaster = m;
+}
+
 
 void PSolver::setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* getSpecialBuffer)
 {
@@ -341,7 +344,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      * but only in the very first iteration (there is a simplified-flag that is set accordingly)
      */
     ret = simplifyFormula();
-    if( ret != l_Undef ) {
+    if( ret == l_False ) {
       if( originalFormula != nullptr ) {
 	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
 	  originalFormula = nullptr;
@@ -351,6 +354,13 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
     if (! initialized) {  // distribute the formula, if this is the first call to this method!
 
+        /** now we have a preprocessor, so that we can continue setting up the model master */
+	if( modelMaster != nullptr ) {
+	  if( globalSimplifier != nullptr )  modelMaster->setPreprocessor ( globalSimplifier ) ;
+	  modelMaster->initEnumerateModels(); // for this method, coprocessor and projection have to be known already!
+	  solvers[0]->setEnumnerationMaster( modelMaster );
+	}
+      
         /* setup all solvers
         * setup the communication system for the solvers, including the number of commonly known variables
         */
@@ -427,6 +437,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 	  
           if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
           solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
+	  
+	  if( modelMaster != nullptr ) solvers[i]->setEnumnerationMaster( modelMaster );
         }
 
         // copy the formula of the solver 0 number of thread times
@@ -562,6 +574,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
                                         <<  "  units: " << (communicators[i]->getSolver()->trail_lim.size() == 0 ? communicators[i]->getSolver()->trail.size() : communicators[i]->getSolver()->trail_lim[0])
+					<<  "  models: " << communicators[i]->getSolver()->enumerationClient.getModels()
+					<<  "  dup-models: " << communicators[i]->getSolver()->enumerationClient.getDupModels()
                                         << endl;
         }
     }
@@ -943,7 +957,12 @@ void PSolver::createThreadConfigs()
             if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-6]); }   // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
+    }  else if (defaultConfig == "ENU") {
+	for (int t = 1 ; t < threads; ++ t) {  // set configurations for remaining (beyond 3)
+            configs[t].setPreset("-shareTime=1 -dynLimits -rnd-freq=0.01");
+        }
     } 
+    
       
     
     /*

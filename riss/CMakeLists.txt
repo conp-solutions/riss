@@ -24,6 +24,7 @@ set(LIB_SOURCES
     ipasir.cc
     core/CoreConfig.cc
     core/Solver.cc
+    core/EnumerateMaster.cc
     simp/SimpSolver.cc
     utils/Options.cc
     utils/Statistics-mt.cc

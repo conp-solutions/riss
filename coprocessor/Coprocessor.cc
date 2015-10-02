@@ -5,7 +5,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Coprocessor.h"
 
 
-#include "coprocessor/VarFileParser.h"
+#include "riss/utils/VarFileParser.h"
 #include "coprocessor/Shuffler.h"
 #include "riss/mtl/Sort.h"
 

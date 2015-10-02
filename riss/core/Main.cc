@@ -40,6 +40,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "coprocessor/Coprocessor.h"
 #include "classifier/CNFClassifier.h"
 
+#include "riss/core/EnumerateMaster.h" // for model enumeration
+
 using namespace Riss;
 using namespace std;
 
@@ -128,6 +130,14 @@ int main(int argc, char** argv)
     
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
+ 
+    Int64Option  opt_enumeration    ("MODEL ENUMERATION", "models",     "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
+    IntOption    opt_enuMinimize    ("MODEL ENUMERATION", "modelMini",  "minimize blocking clause (0=no,1=from full,2=also from blocking)\n", 2, IntRange(0, 2));
+    BoolOption   opt_enumPrintOFT   ("MODEL ENUMERATION", "enuOnline" , "print model as soon as it has been found", true );
+    StringOption opt_projectionFile ("MODEL ENUMERATION", "modelScope", "file that store enumeration projection\n", 0 );
+    StringOption opt_modelFile      ("MODEL ENUMERATION", "modelsFile", "file to store models to\n", 0 );
+    StringOption opt_fullModelFile  ("MODEL ENUMERATION", "fullModels", "file to store full models to\n", 0 );
+    StringOption opt_DNFfile        ("MODEL ENUMERATION", "dnf-file",   "file to store (reduced) DNF\n",  0 );
 
     try {
 
@@ -157,7 +167,7 @@ int main(int argc, char** argv)
             coreConfig->printOptionsDependencies(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
             cp3config->printOptionsDependencies(pcsFile);
-	    fclose( pcsFile );
+	        fclose( pcsFile );
             exit(0);
         }
 
@@ -335,7 +345,7 @@ int main(int argc, char** argv)
             // add the empty clause to the proof, close proof file
             if (S->proofFile != nullptr) {
                 lbool validProof = S->checkProof(); // check the proof that is generated inside the solver
-		if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ") ) << endl; }
+                if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ") ) << endl; }
                 fprintf(S->proofFile, "0\n"), fclose(S->proofFile);
             }
             if (S->verbosity > 0) {
@@ -359,9 +369,39 @@ int main(int argc, char** argv)
 	  const int maxV = opt_assumeFirst > S->nVars() ? S->nVars() : opt_assumeFirst;
 	  for( int i = 0 ; i < maxV; ++i ) dummy.push( mkLit(i,false) );
 	}
+
+	Riss::EnumerateMaster* modelMaster = nullptr;
+	if( opt_enumeration != -1 ) {
+	  modelMaster = new Riss::EnumerateMaster( S->nVars() );
+	  modelMaster->setMaxModels(opt_enumeration);
+	  modelMaster->setModelMinimization( (int) opt_enuMinimize );
+	  
+	  if( S->getPreprocessor() != nullptr )  modelMaster->setPreprocessor ( S->getPreprocessor() ) ;
+	  if( (const char*) opt_projectionFile != 0 ) modelMaster->setProjectionFile( (const char*) opt_projectionFile );
+	  modelMaster->initEnumerateModels(); // for this method, coprocessor and projection have to be known already!
+	  modelMaster->setPrintEagerly( opt_enumPrintOFT );
+
+	  if( (const char*) opt_modelFile != 0 )      modelMaster->setModelFile(      (const char*) opt_modelFile );
+	  if( (const char*) opt_fullModelFile != 0 )  modelMaster->setFullModelFile(  (const char*) opt_fullModelFile );
+	  if( (const char*) opt_DNFfile != 0 )        modelMaster->setDNFfile(        (const char*) opt_DNFfile );
+
+	  S->setEnumnerationMaster( modelMaster ); // finally, tell the solver about the enumeration master
+	}
+
         // solve the formula (with the possible created assumptions)
         lbool ret = S->solveLimited(dummy);
         S->budgetOff(); // remove budget again!
+
+	if( modelMaster != nullptr ) { // handle model enumeration
+	  if (S->verbosity > 0) { printf("c found models: %lld\n", modelMaster->foundModels() ); }
+	  if( modelMaster->foundModels() > 0 ) {
+	    modelMaster->writeStreamToFile("",false); // for now, print all models to stderr is fine
+	    printf("s SATISFIABLE\n");
+	    if (res != nullptr) { fclose(res); res = nullptr; } // TODO: write result into output file!
+	    exit(30);
+	  }
+	}
+
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
             if (res != nullptr) { fclose(res); res = nullptr; }
