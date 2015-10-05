@@ -110,7 +110,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 
     // use 2sat and sls only for high versions!
 
-    opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX), optionListPtr, &opt_enabled),
+    opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing", 0, IntRange(0, 64), optionListPtr, &opt_enabled),
     opt_sls         (_cat2,       "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false,       optionListPtr, &opt_enabled),
     opt_sls_phase   (_cat_sls,    "sls-phase",     "Use current interpretation of SLS as phase", false,                                        optionListPtr, &opt_sls),
     opt_sls_flips   (_cat_sls,    "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX),                      optionListPtr, &opt_sls),
@@ -613,14 +613,14 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_uhd_UHLE      (_cat_uhd, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3),                                                  optionListPtr, &opt_unhide),
     opt_uhd_UHTE      (_cat_uhd, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true,                                                              optionListPtr, &opt_unhide),
     opt_uhd_NoShuffle (_cat_uhd, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false,                                                          optionListPtr, &opt_unhide),
-    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination", false,                                                            optionListPtr, &opt_unhide),
+    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination", false,                                                                    optionListPtr, &opt_unhide),
     opt_uhd_TestDbl   (_cat_uhd, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false,                                                                     optionListPtr, &opt_unhide),
     opt_uhd_probe     (_cat_uhd, "cp3_uhdProbe",     "Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)", 0, IntRange(0, 4), optionListPtr, &opt_unhide),
     opt_uhd_fullProbe (_cat_uhd, "cp3_uhdPrSize",    "Enable unhide probing for larger clauses, size <= given parameter", 2, IntRange(2, INT32_MAX),                 optionListPtr, &opt_uhd_probe),
     opt_uhd_probeEE   (_cat_uhd, "cp3_uhdPrEE",      "Find Equivalences during uhd probing (requ. uhdProbe > 1)", false,                                             optionListPtr, &opt_uhd_probe),
     opt_uhd_fullBorder(_cat_uhd, "cp3_uhdPrSiBo",    "Check larger clauses only in first and last iteration", true,                                                  optionListPtr, &opt_uhd_probe),
     #ifndef NDEBUG
-    opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 6),                                                                   optionListPtr, &opt_unhide),
+    opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "debug level of unhiding", 0, IntRange(0, 6),                                                                   optionListPtr, &opt_unhide),
     #endif
 
 

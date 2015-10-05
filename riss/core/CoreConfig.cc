@@ -50,8 +50,8 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
     opt_K                       (_cr, "K",                       "The constant used to force restart",                          0.8, DoubleRange(0, false, 1, false), optionListPtr),
     opt_R                       (_cr, "R",                       "The constant used to block restart",                          1.4, DoubleRange(1, false, 5, false), optionListPtr),
-    opt_size_lbd_queue          (_cr, "szLBDQueue",              "The size of moving average for LBD (restarts)",                50, IntRange(10, INT32_MAX),         optionListPtr),
-    opt_size_trail_queue        (_cr, "szTrailQueue",            "The size of moving average for trail (block restarts)",      5000, IntRange(10, INT32_MAX),         optionListPtr),
+    opt_size_lbd_queue          (_cr, "szLBDQueue",              "The size of moving average for LBD (restarts)",                50, IntRange(10, 100000),         optionListPtr),
+    opt_size_trail_queue        (_cr, "szTrailQueue",            "The size of moving average for trail (block restarts)",      5000, IntRange(10, 100000),         optionListPtr),
     opt_size_bounded_randomized (_cr, "sbr",                     "use removal with clause activity based on sbr (randomized)",   12, IntRange(0, INT32_MAX),          optionListPtr),
 
     opt_first_reduce_db         (_cred, "firstReduceDB",         "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX),                                      optionListPtr),

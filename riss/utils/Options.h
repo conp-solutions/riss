@@ -126,11 +126,18 @@ class Option
 
     virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
 
+    /// print the option (besides debug, can be overwritten by specific types, useful for strings)
+    virtual bool wouldPrintOption () const { return true; }
+    
     void printOptionsDependencies(FILE* pcsFile, int printLevel)
     {
-        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }  // do not print this option, as its dependency is too deep
         if (dependOnNonDefaultOf == 0) { return; } // no dependency
-        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }    // cannot express opposite value of dependency-parent
+        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }     // cannot express opposite value of dependency-parent
+        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0   ) return;                                          // do not print the parameter, if its is related to debug output
+        if( strstr(dependOnNonDefaultOf->name, "debug") != 0 || strstr(dependOnNonDefaultOf->description, "debug") != 0) return; // do not print the parameter, if its parent is related to debug output
+        if( !wouldPrintOption() ) return; // do not print this option
+        if( !dependOnNonDefaultOf->wouldPrintOption() ) return; // do not print parent option
 
         char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
         dependOnNonDefaultOf->getNonDefaultString(defaultAsString, 2047);
@@ -250,7 +257,7 @@ class DoubleOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
+        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
         
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
@@ -367,7 +374,7 @@ class IntOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
+        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
@@ -375,7 +382,7 @@ class IntOption : public Option
 	  if( range.end - range.begin <= 16 && range.end - range.begin > 0 ) { // print all values if the difference is really small
 	    fprintf(pcsFile, "%s  {%d", name, range.begin);
 	    for ( int i = range.begin + 1; i <= range.end; ++ i ) fprintf(pcsFile, ",%d",i);
-	    fprintf(pcsFile, "} [%d]i    # %s\n", defaultValue, description);
+	    fprintf(pcsFile, "} [%d]    # %s\n", defaultValue, description);
 	  } else {
             fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
 	  }
@@ -496,7 +503,7 @@ class Int64Option : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
+        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
@@ -506,7 +513,7 @@ class Int64Option : public Option
 	  if( range.end - range.begin <= 16 && range.end - range.begin > 0 ) { // print all values if the difference is really small
 	    fprintf(pcsFile, "%s  {%ld", name, range.begin);
 	    for ( int64_t i = range.begin + 1; i <= range.end; ++ i ) fprintf(pcsFile, ",%ld",i);
-	    fprintf(pcsFile, "} [%ld]i    # %s\n", defaultValue, description);
+	    fprintf(pcsFile, "} [%ld]    # %s\n", defaultValue, description);
 	  } else {
             fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
 	  }
@@ -617,10 +624,14 @@ class StringOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
+        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
 
         // print only, if there is a default
         if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
+    }
+    
+    bool wouldPrintOption () const {
+      return (defaultValue != 0);
     }
 
     virtual bool canPrintOppositeOfDefault() { return false; }
@@ -705,7 +716,7 @@ class BoolOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if(strstr(name, "debug") != 0) return; // do not print the parameter, if its related to debug output
+        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
 
         fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
     }
