@@ -215,8 +215,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // pick order of eliminations
     opt_bve_heap             (_cat_bve, "cp3_bve_heap",           "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 0, IntRange(0, 10), optionListPtr, &opt_bve),
     // increasing eliminations
-    opt_bve_grow             (_cat_bve, "bve_cgrow",              "number of additional clauses per elimination", 0, IntRange(-INT32_MAX, INT32_MAX),                                           optionListPtr, &opt_bve),
-    opt_bve_growTotal        (_cat_bve, "bve_cgrow_t",            "total number of additional clauses", INT32_MAX, IntRange(0, INT32_MAX),                                                      optionListPtr, &opt_bve),
+    opt_bve_grow             (_cat_bve, "bve_cgrow",              "number of additional clauses per elimination", 0, IntRange(-2000, 2000),                                           optionListPtr, &opt_bve),
+    opt_bve_growTotal        (_cat_bve, "bve_cgrow_t",            "total number of additional clauses", 1000, IntRange(0, 50000),                                                              optionListPtr, &opt_bve),
     opt_totalGrow            (_cat_bve, "bve_totalG",             "Keep track of total size of formula when allowing increasing eliminations", false,                                           optionListPtr, &opt_bve),
 
     opt_bve_bc               (_cat_bve, "bve_BCElim",             "Eliminate Blocked Clauses", false,                                                                                           optionListPtr, &opt_bve),
