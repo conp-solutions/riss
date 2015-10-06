@@ -1466,7 +1466,14 @@ class Solver
     };
 
 // [END] modifications for parallel assumption based solver
-
+    
+    /** store two pairs of literals */
+    struct LitPairPair {
+      LitPair p,q;
+    };
+    
+    vec<LitPairPair> decisionLiteralPairs; /// data to be used to select search decision literals
+    
 // [BEGIN] modifications for model enumerating solver
     class EnumerationClient {
     public:
@@ -1533,8 +1540,10 @@ class Solver
       /** tell client about master */
       void setMaster( EnumerateMaster* m ) { assert( master == nullptr && "can set only one master" ); master = m; }
       
-      /** check whether all models have been encountered already */
-      bool enoughModels() const ;
+      /** check whether all models have been encountered already 
+       * @param searchstatus status of the current search (l_True = currently found a model, l_Undef = currently found no model (intterup/restart) )
+       */
+      bool enoughModels(lbool searchstatus) const ;
       
       /** return the number of models that have been found by this thread */
       uint64_t getModels() const ;

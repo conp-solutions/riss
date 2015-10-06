@@ -18,6 +18,10 @@ using namespace Riss;
 namespace Coprocessor
 {
 
+//
+// to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description!
+//
+  
 // Disable astyle formatting
 // *INDENT-OFF*
 
@@ -68,17 +72,17 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_unlimited     (_cat, "cp3_limited",     "Limits for preprocessing techniques", true,                                                       optionListPtr, &opt_enabled),
     opt_randomized    (_cat, "cp3_randomized",  "Steps withing preprocessing techniques are executed in random order", false,                      optionListPtr, &opt_enabled),
     opt_inprocessInt  (_cat, "cp3_inp_cons",    "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX),                  optionListPtr, &opt_inprocess),
-    opt_inpIntInc     (_cat, "cp3_iinp_cons",   "Increase inprocessing interval in each iteration", 0, IntRange(0, INT32_MAX),                 optionListPtr, &opt_inprocess),
+    opt_inpIntInc     (_cat, "cp3_iinp_cons",   "Increase inprocessing interval in each iteration", 0, IntRange(0, INT32_MAX),                     optionListPtr, &opt_inprocess),
     opt_simplifyRounds(_cat, "cp3_iters",       "simplification rounds in preprocessing", 1, IntRange(0, INT32_MAX),                               optionListPtr, &opt_enabled),
 
-    opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
+    opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit) #NoAutoT", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
     opt_randInp       (_cat, "randInp",         "Randomize Inprocessing", true,                                                                    optionListPtr, &opt_inprocess),
     opt_inc_inp       (_cat, "inc-inp",         "increase technique limits per inprocess step", false,                                             optionListPtr, &opt_inprocess),
 
     opt_whiteList     (_cat2, "whiteList",      "variables whose set of solution is not touched", 0,                                               optionListPtr, &opt_enabled),
 
-    opt_printStats    (_cat, "cp3_stats",       "Print Technique Statistics", false,                                                               optionListPtr, &opt_enabled),
-    opt_verbose       (_cat, "cp3_verbose",     "Verbosity of preprocessor", 0, IntRange(0, 5),                                                    optionListPtr, &opt_enabled),
+    opt_printStats    (_cat, "cp3_stats",       "Print Technique Statistics #NoAutoT", false,                                                      optionListPtr, &opt_enabled),
+    opt_verbose       (_cat, "cp3_verbose",     "Verbosity of preprocessor #NoAutoT", 0, IntRange(0, 5),                                                    optionListPtr, &opt_enabled),
 
     // techniques
     opt_up             (_cat2, "up",            "Use Unit Propagation during preprocessing", false,                            optionListPtr, &opt_enabled),
@@ -110,7 +114,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 
     // use 2sat and sls only for high versions!
 
-    opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing", 0, IntRange(0, 64), optionListPtr, &opt_enabled),
+    opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing #NoAutoT", 0, IntRange(0, 64), optionListPtr, &opt_enabled),
     opt_sls         (_cat2,       "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false,       optionListPtr, &opt_enabled),
     opt_sls_phase   (_cat_sls,    "sls-phase",     "Use current interpretation of SLS as phase", false,                                        optionListPtr, &opt_sls),
     opt_sls_flips   (_cat_sls,    "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX),                      optionListPtr, &opt_sls),
@@ -198,7 +202,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // parameters BVE
     //
     opt_par_bve              (_cat_bve, "cp3_par_bve",            "Parallel BVE: 0 never, 1 heur., 2 always", 1, IntRange(0, 2),                                                                optionListPtr, &opt_bve),
-    opt_bve_verbose          (_cat_bve, "cp3_bve_verbose",        "Verbosity of preprocessor", 0, IntRange(0, 4),                                                                               optionListPtr, &opt_bve),
+    opt_bve_verbose          (_cat_bve, "cp3_bve_verbose",        "Verbosity of preprocessor #NoAutoT", 0, IntRange(0, 4),                                                                               optionListPtr, &opt_bve),
 
     opt_bve_limit            (_cat_bve, "cp3_bve_limit",          "perform at most this many clause derefferences", 25000000, IntRange(-1, INT32_MAX),                                          optionListPtr, &opt_bve),
     opt_learnt_growth        (_cat_bve, "cp3_bve_learnt_growth",  "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX),                         optionListPtr, &opt_bve),
@@ -219,7 +223,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     heap_updates             (_cat_bve, "bve_heap_updates",       "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0, 2), optionListPtr, &opt_bve),
     opt_bve_earlyAbort       (_cat_bve, "bve_early",              "Interupt anticipate eagerly", false,                                                                                         optionListPtr, &opt_bve),
     opt_bce_only             (_cat_bve, "bce_only",               "Only remove blocked clauses but do not resolve variables.", false,                                                           optionListPtr, &opt_bve),
-    opt_print_progress       (_cat_bve, "bve_progress",           "Print bve progress stats.", false,                                                                                           optionListPtr, &opt_bve),
+    opt_print_progress       (_cat_bve, "bve_progress",           "Print bve progress stats. #NoAutoT", false,                                                                                  optionListPtr, &opt_bve),
     opt_bveInpStepInc        (_cat_bve, "cp3_bve_inpInc",         "increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX),                                                     optionListPtr, &opt_bve),
 
 
@@ -276,7 +280,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bce_cla             (_cat_bce, "bce-cla",      "perform covered literal addition (CLA)", false,                                                     optionListPtr, &opt_bce),
     opt_bce_cle_conservative(_cat_bce, "bce-cle-cons", "conservative cle if taut. resolvents are present", false,                                           optionListPtr, &opt_bce_cle),
     opt_bceInpStepInc       (_cat_bce, "bce-incInp",   "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX),        optionListPtr, &opt_bce),
-    opt_bce_verbose         (_cat_bce, "bce-verbose",  "be verbose during BCE", 0, IntRange(0, 3),                                                          optionListPtr, &opt_bce),
+    opt_bce_verbose         (_cat_bce, "bce-verbose",  "be verbose during BCE #NoAutoT", 0, IntRange(0, 3),                                                          optionListPtr, &opt_bce),
     #ifndef NDEBUG
     opt_bce_debug           (_cat_bce, "bce-debug",    "output debug info during BCE", false,                                                               optionListPtr, &opt_bce),
     #endif
@@ -288,7 +292,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_hbr_maxCsize        (_cat_hbr, "hbr-csize",    "max. clause size to be considered for HBR", 3, IntRange(3, INT32_MAX),                              optionListPtr, &opt_hbr),
     opt_hbr_addBinaries     (_cat_hbr, "hbr-addBin",   "when add binary clauses (0=always,1=1st iteration,2=never", 0, IntRange(0, 2),                      optionListPtr, &opt_hbr),
     opt_hbrInpStepInc       (_cat_hbr, "hbr-incInp",   "number of steps given to HBR for another inprocessign round", 10000, IntRange(0, INT32_MAX),        optionListPtr, &opt_hbr),
-    opt_hbr_verbose         (_cat_hbr, "hbr-verbose",  "be verbose during HBR", 0, IntRange(0, 3),                                                          optionListPtr, &opt_hbr),
+    opt_hbr_verbose         (_cat_hbr, "hbr-verbose",  "be verbose during HBR #NoAutoT", 0, IntRange(0, 3),                                                          optionListPtr, &opt_hbr),
     #ifndef NDEBUG
     opt_hbr_debug           (_cat_hbr, "hbr-debug",    "output debug info during HBR", false,                                                               optionListPtr, &opt_hbr),
     #endif
@@ -563,7 +567,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_sub_inpStepInc     (_cat_sub, "cp3_sub_inpInc",   "increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX),                                                          optionListPtr, &opt_subsimp),
 
     opt_sub_par_strength   (_cat_sub, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0, 2),                                                             optionListPtr, &opt_subsimp),
-    opt_sub_lock_stats     (_cat_sub, "cp3_lock_stats",   "measure time waiting in spin locks", false,                                                                                        optionListPtr, &opt_subsimp),
+    opt_sub_lock_stats     (_cat_sub, "cp3_lock_stats",   "measure time waiting in spin locks #NoAutoT", false,                                                                               optionListPtr, &opt_subsimp),
     opt_sub_par_subs       (_cat_sub, "cp3_par_subs",     "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0, 2),                                                               optionListPtr, &opt_subsimp),
     opt_sub_par_subs_counts(_cat_sub, "par_subs_counts",  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0, 1),                                              optionListPtr, &opt_subsimp),
     opt_sub_chunk_size     (_cat_sub, "susi_chunk_size",  "Size of Par SuSi Chunks", 100000, IntRange(1, INT32_MAX),                                                                          optionListPtr, &opt_subsimp),
@@ -585,7 +589,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     sym_opt_iter           (_cat_sym, "sym-iter",    "number of symmetry approximation iterations", 3, IntRange(0, INT32_MAX) ,                                                        optionListPtr, &opt_symm),
     sym_opt_pairs          (_cat_sym, "sym-show",    "show symmetry pairs", false,                                                                                                     optionListPtr, &opt_symm),
     sym_opt_print          (_cat_sym, "sym-print",   "show the data for each variable", false,                                                                                         optionListPtr, &opt_symm),
-    sym_opt_exit           (_cat_sym, "sym-exit",    "exit after analysis", false,                                                                                                     optionListPtr, &opt_symm),
+    sym_opt_exit           (_cat_sym, "sym-exit",    "exit after analysis #NoAutoT", false,                                                                                            optionListPtr, &opt_symm),
     sym_opt_hprop          (_cat_sym, "sym-prop",    "try to generate symmetry breaking clauses with propagation", false,                                                              optionListPtr, &opt_symm),
     sym_opt_hpropF         (_cat_sym, "sym-propF",   "generate full clauses", false,                                                                                                   optionListPtr, &opt_symm),
     sym_opt_hpropA         (_cat_sym, "sym-propA",   "test all four casese instead of two", false,                                                                                     optionListPtr, &opt_symm),

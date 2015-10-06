@@ -348,6 +348,11 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     // space for replacement info
     eqInfo.replacedBy.push(mkLit(v, false));
 
+    if( config.opt_litPairDecisions > 0 ) {
+      decisionLiteralPairs.push ( LitPairPair() ); // add another pair per literal
+      decisionLiteralPairs.push ( LitPairPair() ); // add another pair per literal
+    }
+    
     return v;
 }
 
@@ -379,6 +384,8 @@ void Solver::reserveVars(Var v)
 
     for (Var w = eqInfo.replacedBy.size(); w <= v ; ++w) { eqInfo.replacedBy.push(mkLit(w, false)); }
 
+    if( config.opt_litPairDecisions > 0 ) decisionLiteralPairs.capacity(2 * v); // create sufficient capacity
+    
 }
 
 
@@ -444,6 +451,21 @@ bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
 	// to feed polarity heuristic
 	posInAllClauses = posInAllClauses && somePositive; // memorize for the whole formula
 	negInAllClauses = negInAllClauses && someNegative;
+	
+	if( config.opt_litPairDecisions > 0 && ps.size() > 2 ) { // collect literals only for larger clauses (not binary!)
+	  for( int i = 0 ; i < ps.size(); ++i ) {
+	    LitPairPair& lp = decisionLiteralPairs[ toInt( ps [i] ) ];
+	    if( lp.p.replaceWith != lit_Undef && lp.q.replaceWith != lit_Undef ) continue; // this literal already has enough literals stored
+	    if( lp.p.replaceWith == lit_Undef ) {
+	      lp.p.replaceWith = ps [(i + 1) % ps.size() ]; // store next two literals
+	      lp.p.otherMatch  = ps [(i + 2) % ps.size() ]; // store next two literals
+	    } else {
+	      assert( lp.q.replaceWith == lit_Undef && "this case is left over" );
+	      lp.q.replaceWith = ps [(i + 1) % ps.size() ]; // store next two literals
+	      lp.q.otherMatch  = ps [(i + 2) % ps.size() ]; // store next two literals
+	    }
+	  }
+	}
     }
 
     return true;
@@ -791,6 +813,34 @@ Lit Solver::pickBranchLit()
     }
     // NuSMV: PREF MOD END
 
+    // test simple version of BCD based decision heuristic 
+    if( config.opt_litPairDecisions > 0 && decisionLevel() > 0 ) {
+      assert( trail_lim.size() > 0 && "there has to be a decision already");
+      int refDecisionLevel = 0;
+      while ( refDecisionLevel < decisionLevel () ) { // as long as there are other reference decisions
+	assert( trail_lim[refDecisionLevel] < trail.size() && "decision literals have to be located in the trail" );
+	Lit decideDecision = trail [ trail_lim[refDecisionLevel] ] ;
+	DOUT(if (config.opt_printDecisions > 1) cerr << endl << "c reference decision: " << decideDecision << " @ " << refDecisionLevel << endl ;);
+	LitPairPair& lp = decisionLiteralPairs[ toInt( decideDecision ) ];
+	DOUT(if (config.opt_printDecisions > 1) { // print state of reference literal lists when picking the decision
+	    cerr << "c pairs/sat/undefs: " << lp.p.otherMatch << " " << (lp.p.otherMatch != lit_Undef ? value(lp.p.otherMatch) == l_True : false)           << " " << (lp.p.otherMatch != lit_Undef ? value(lp.p.otherMatch) == l_Undef : false)
+                                           << " " << lp.p.replaceWith << " " << (lp.p.replaceWith != lit_Undef ? value(lp.p.replaceWith) == l_True : false) << " " << (lp.p.replaceWith != lit_Undef ? value(lp.p.replaceWith) == l_Undef : false)
+					   << " -- "
+					   << lp.q.otherMatch  << " " << (lp.q.otherMatch != lit_Undef  ? value(lp.q.otherMatch)  == l_True : false)        << " " << (lp.q.otherMatch != lit_Undef  ? value(lp.q.otherMatch)  == l_Undef : false)
+                                           << " " << lp.q.replaceWith << " " << (lp.q.replaceWith != lit_Undef ? value(lp.q.replaceWith) == l_True : false) << " " << (lp.q.replaceWith != lit_Undef ? value(lp.q.replaceWith) == l_Undef : false)
+					   << endl;
+	  }
+	);
+	refDecisionLevel ++;
+	if( lp.p.otherMatch == lit_Undef || lp.q.otherMatch == lit_Undef ) continue; // there is no clause stored for the given literal
+	if( lp.q.otherMatch != lit_Undef && value( lp.q.otherMatch )  != l_True && value( lp.q.replaceWith ) == l_Undef ) { assert( lp.p.replaceWith != lit_Undef ); return  lp.q.replaceWith; } // return a free literal
+	if( lp.q.replaceWith != lit_Undef &&  value( lp.q.replaceWith ) != l_True && value( lp.q.otherMatch  ) == l_Undef ) { assert( lp.p.otherMatch != lit_Undef ); return lp.q.otherMatch; }
+	assert( lp.p.otherMatch != lit_Undef && lp.p.replaceWith != lit_Undef && "case left, both lits have to be set" );
+	if( value( lp.p.otherMatch )  != l_True && value( lp.p.replaceWith ) == l_Undef ) { assert( lp.p.replaceWith != lit_Undef ); return lp.p.replaceWith; }
+	if( value( lp.p.replaceWith ) != l_True && value( lp.p.otherMatch  ) == l_Undef ) { assert( lp.p.otherMatch!= lit_Undef ); return lp.p.otherMatch; }
+      }
+    }
+    
     // Random decision:
     if (
         // NuSMV: PREF MOD
@@ -1327,7 +1377,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uns
     // prefetch watch lists
     // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     __builtin_prefetch(& watches[p], 1, 0);   // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
-    DOUT(if (config.opt_printDecisions > 1) {cerr << "c uncheched enqueue " << p; if (from != CRef_Undef) { cerr << " because of [" << from << "] " <<  ca[from]; } cerr << endl;});
+    DOUT(if (config.opt_printDecisions > 1) {cerr << "c unchecked enqueue " << p; if (from != CRef_Undef) { cerr << " because of [" << from << "] " <<  ca[from]; } cerr << endl;});
 
     trail.push_(p);
 }
@@ -2035,12 +2085,25 @@ lbool Solver::search(int nof_conflicts)
                     // New variable decision:
                     decisions++;
                     next = pickBranchLit();
+		    
+		    DOUT( if( config.opt_printDecisions > 1 ) cerr << "c pickBranchLit selects literal " << next << endl; );
+		    
+		    if( next != lit_Undef ) assert( value(next) == l_Undef && "decision variable has to be undefined" );
 
                     if (next == lit_Undef) {
                         EnumerationClient::EnumerateState res = enumerationClient.processCurrentModel( next );
-			if (res == EnumerationClient::oneModel ) return l_True;
-			else if( res == EnumerationClient::goOn ) goto SolverNextSearchIteration;
-			else return l_Undef; 
+			if (res == EnumerationClient::oneModel ) {
+			  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted to return SAT in search method (oneModel)"<< endl; );
+			  return l_True;
+			}
+			else if( res == EnumerationClient::goOn ) {
+			  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted continue with search "<< endl; );
+			  goto SolverNextSearchIteration;
+			} else {
+			  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted and unhandled result "<< endl; );
+			  assert( false && "this case should not be reached" );
+			  return l_Undef; 
+			}
                     }
                 }
 
@@ -2072,6 +2135,8 @@ lbool Solver::search(int nof_conflicts)
         }
 SolverNextSearchIteration:;
     }
+    
+    assert( false && "this point should not be reached" );
     return l_Undef;
 }
 
@@ -2251,10 +2316,17 @@ uint64_t Solver::EnumerationClient::getDupModels() const
 }
 
 
-bool Solver::EnumerationClient::enoughModels() const
+bool Solver::EnumerationClient::enoughModels( lbool searchstatus ) const
 {
   // true, if there is no master, or if there is a master and all models have been found
-  return master == 0 || master->foundEnoughModels();
+  if( searchstatus == l_True ) {
+    return master == 0 || master->foundEnoughModels();
+  } else if ( searchstatus == l_Undef ) {
+    if ( master == 0 ) return false; // we did not find a model yet (in sequential search)
+    else {
+      return master->isShared() && master->foundEnoughModels();
+    }
+  }
 }
 
 
@@ -3197,8 +3269,15 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         }
 
         status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
-        if (!withinBudget()) { break; }
-        if( enumerationClient.enoughModels() ) break; // stop if we found all the models we need
+	DOUT( if( config.opt_learn_debug || config.opt_printDecisions > 1 ) cerr << "c search returned with status " << status << endl; );
+        if (!withinBudget()) { 
+	  DOUT( if( config.opt_learn_debug || config.opt_printDecisions > 1 ) cerr << "c interrupt solving due to budget with status" << status << endl; );
+	  break; 
+	}
+        if( enumerationClient.enoughModels(status) ) { // decide how to proceed based on the current status
+	  DOUT( if( config.opt_learn_debug || config.opt_printDecisions > 1 ) cerr << "c interrupt solving due to number of revealed models with status" << status << endl; );
+	  break; // stop if we found all the models we need
+	}
 
         // increment restart counters based on restart type
         curr_restarts++;
@@ -3288,6 +3367,9 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
     } else if (status == l_False && conflict.size() == 0) {
         ok = false;
     }
+
+    assert( status != l_Undef && "unknown should not happen here" );
+    
     cancelUntil(0);
 
     // cerr << "c finish solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts and status " << (status == l_Undef ? "UNKNOWN" : ( status == l_True ? "SAT" : "UNSAT" ) ) << endl;

@@ -1193,6 +1193,15 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l)
     return other;
 }
 
+/** print literals into a stream */
+inline std::ostream& operator<<(std::ostream& other, const lbool& l)
+{
+    if (l == l_True) { other << "l_True"; }
+    else if (l == l_False) { other << "l_False"; }
+    else other << "l_Undef";
+    return other;
+}
+
 /** print a clause into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Clause& c)
 {

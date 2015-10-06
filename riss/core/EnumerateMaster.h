@@ -104,6 +104,7 @@ public:
   /** set the object shared (for parallel enumeration)*/
   void setShared() { assert( models.size() == 0 && "cannot set shared after first models have been found already" ); enumerateParallel = true; }
   
+  /** do we search for models in a parallel setup ? */
   bool isShared() const { return enumerateParallel; }
 
   /** return number of found models (so far), not synchronized */

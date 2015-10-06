@@ -34,11 +34,11 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     //
     // all the options for the object
     //
-    opt_solve_stats  (_cat, "solve_stats", "print stats about solving process", false,                              optionListPtr),
+    opt_solve_stats  (_cat, "solve_stats", "print stats about solving process #NoAutoT", false,                     optionListPtr),
     opt_fast_rem     (_cat, "rmf", "use fast remove", false,                                                        optionListPtr),
 
-    nanosleep(_misc, "nanosleep", "For each conflict sleep this amount of nano seconds", 0, IntRange(0, INT32_MAX), optionListPtr),
-    ppOnly   (_misc, "ppOnly",    "interrupts search after preprocessing", false,                                   optionListPtr),
+    nanosleep(_misc, "nanosleep", "For each conflict sleep this amount of nano seconds #NoAutoT", 0, IntRange(0, INT32_MAX), optionListPtr),
+    ppOnly   (_misc, "ppOnly",    "interrupts search after preprocessing #NoAutoT", false,                                   optionListPtr),
 
     #ifndef NDEBUG
     opt_learn_debug          (_cat, "learn-debug", "print debug information during learning", false,                        optionListPtr),
@@ -52,8 +52,10 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_R                       (_cr, "R",                       "The constant used to block restart",                          1.4, DoubleRange(1, false, 5, false), optionListPtr),
     opt_size_lbd_queue          (_cr, "szLBDQueue",              "The size of moving average for LBD (restarts)",                50, IntRange(10, 100000),         optionListPtr),
     opt_size_trail_queue        (_cr, "szTrailQueue",            "The size of moving average for trail (block restarts)",      5000, IntRange(10, 100000),         optionListPtr),
-    opt_size_bounded_randomized (_cr, "sbr",                     "use removal with clause activity based on sbr (randomized)",   12, IntRange(0, INT32_MAX),          optionListPtr),
+    opt_size_bounded_randomized (_cr, "sbr",                     "use removal with clause activity based on sbr (randomized)",   12, IntRange(0, INT32_MAX),       optionListPtr),
 
+    opt_litPairDecisions        (_cr, "lpd",                     "decisions to be performed based on previous decisions (0=off)",   0, IntRange(0, INT32_MAX),     optionListPtr),
+    
     opt_first_reduce_db         (_cred, "firstReduceDB",         "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX),                                      optionListPtr),
     opt_inc_reduce_db           (_cred, "incReduceDB",           "Increment for reduce DB", 300, IntRange(0, INT32_MAX),                                                                  optionListPtr),
     opt_spec_inc_reduce_db      (_cred, "specialIncReduceDB",    "Special increment for reduce DB", 1000, IntRange(0, INT32_MAX),                                                         optionListPtr),
@@ -150,12 +152,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_long_conflict       ("REASON", "longConflict", "if a binary conflict is found, check for a longer one!", false, optionListPtr),
 
     // extra
-    opt_act            (_init, "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3),          optionListPtr),
-    opt_actStart       (_init, "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false),  optionListPtr),
+    opt_act            (_init, "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3),           optionListPtr),
+    opt_actStart       (_init, "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false),   optionListPtr),
     pot_actDec         (_init, "actDec",     "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, 10, true), optionListPtr),
-    actFile            (_init, "actFile",    "increase activities of those variables", 0,                                       optionListPtr),
-    opt_pol            (_init, "polMode",    "invert provided polarities", false,                                               optionListPtr),
-    polFile            (_init, "polFile",    "use these polarities", 0,                                                         optionListPtr),
+    actFile            (_init, "actFile",    "increase activities of those variables", 0,                                        optionListPtr),
+    opt_pol            (_init, "polMode",    "invert provided polarities #NoAutoT", false,                                       optionListPtr),
+    polFile            (_init, "polFile",    "use these polarities", 0,                                                          optionListPtr),
     #ifndef NDEBUG
     opt_printDecisions (_init, "printDec",   "1=print decisions, 2=print all enqueues, 3=show clauses", 0, IntRange(0, 3),      optionListPtr),
     #endif
@@ -163,7 +165,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_rMax   (_cr, "rMax",    "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX),            optionListPtr),
     opt_rMaxInc(_cr, "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &opt_rMax),
 
-    printOnSolveTo          ("DEBUG",    "printOnSolve",    "print formula present at call solve to given filename and exit", 0, optionListPtr),
+    printOnSolveTo          ("DEBUG",    "printOnSolve",    "print formula present at call solve to given filename and exit #NoAutoT", 0, optionListPtr),
 
     search_schedule         ("SCHEDULE", "sschedule",       "specify configs to be schedules", 0,                                                     optionListPtr),
     scheduleConflicts       ("SCHEDULE", "sscheConflicts",  "initial conflicts for schedule", 10000000, IntRange(1, INT32_MAX),                       optionListPtr, &search_schedule),
@@ -248,12 +250,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     uhle_minimizing_lbd         (_cm, "sUHLElbd",   "maximal LBD for UHLE for learnt clauses (0=off)", 6, IntRange(0, INT32_MAX),                optionListPtr, &opt_uhdProbe),
 
     // DRUP
-    opt_verboseProof    ("CORE -- PROOF", "verb-proof",      "also print comments into the proof, 2=print proof also to stderr", 0, IntRange(0, 2) ,                  optionListPtr),
-    opt_rupProofOnly    ("CORE -- PROOF", "rup-only",        "do not print delete lines into proof", false,                                                           optionListPtr),
-    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking)", 0, IntRange(0, 10), optionListPtr),
+    opt_verboseProof    ("CORE -- PROOF", "verb-proof",      "also print comments into the proof, 2=print proof also to stderr #NoAutoT", 0, IntRange(0, 2) ,                  optionListPtr),
+    opt_rupProofOnly    ("CORE -- PROOF", "rup-only",        "do not print delete lines into proof #NoAutoT", false,                                                           optionListPtr),
+    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking) #NoAutoT", 0, IntRange(0, 10), optionListPtr),
 
-    opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2),                                                             optionListPtr),
-    opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more).", 0, IntRange(0, 2),                                                  optionListPtr),
+    opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                             optionListPtr),
+    opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                  optionListPtr),
 
     opt_usePPpp(_misc, "usePP",         "use preprocessor for preprocessing", true,                                                                                   optionListPtr),
     opt_usePPip(_misc, "useIP",         "use preprocessor for inprocessing", true,                                                                                    optionListPtr),

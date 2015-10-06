@@ -51,13 +51,14 @@ extern void configCall(int argc, char** argv, std::stringstream& s);
 
 // print global options in PCS file format into the given File
 extern void printOptions(FILE* pcsFile, int printLevel = -1);
-// print option dependencies in PCS file format into the given File
+/// print option dependencies in PCS file format into the given File, add #NoAutoT to the description if an option should be excluded
 extern void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
 
-//==================================================================================================
-// Options is an abstract class that gives the interface for all types options:
-
-
+/**
+* Options is an abstract class that gives the interface for all types options:
+*
+* to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description!
+*/
 class Option
 {
   public:
@@ -127,7 +128,7 @@ class Option
     virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
 
     /// print the option (besides debug, can be overwritten by specific types, useful for strings)
-    virtual bool wouldPrintOption () const { return true; }
+    virtual bool wouldPrintOption () const { return description != 0 && 0 == strstr(description, "#NoAutoT" ); }
     
     void printOptionsDependencies(FILE* pcsFile, int printLevel)
     {
@@ -258,6 +259,7 @@ class DoubleOption : public Option
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
+        if ( ! wouldPrintOption() ) return; // do not print option?
         
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
@@ -375,6 +377,7 @@ class IntOption : public Option
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
+        if ( ! wouldPrintOption() ) return; // do not print option?
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
@@ -504,6 +507,7 @@ class Int64Option : public Option
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
+        if ( ! wouldPrintOption() ) return; // do not print option?
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
@@ -625,13 +629,15 @@ class StringOption : public Option
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
+        if ( ! wouldPrintOption() ) return; // do not print option?
 
         // print only, if there is a default
         if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
     }
     
     bool wouldPrintOption () const {
-      return (defaultValue != 0);
+      if( defaultValue == 0 ) return false; // print string option only, if it has a default value
+      return Option::wouldPrintOption();    // if the string has an default value, still check the global criterion
     }
 
     virtual bool canPrintOppositeOfDefault() { return false; }
@@ -717,6 +723,7 @@ class BoolOption : public Option
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
+        if ( ! wouldPrintOption() ) return; // do not print option?
 
         fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
     }

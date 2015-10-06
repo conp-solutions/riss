@@ -53,6 +53,7 @@ class CoreConfig : public Config
     IntOption opt_size_trail_queue;
     IntOption opt_size_bounded_randomized; // Revisiting the Learned Clauses Database Reduction Strategies paper by Jabbour et al
 
+    IntOption opt_litPairDecisions; // how many decisions should be made based on literals of clauses of already decided literals
 
     IntOption opt_first_reduce_db;
     IntOption opt_inc_reduce_db;
