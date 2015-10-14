@@ -110,6 +110,11 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
         DOUT(if (config.circ_debug_out) cerr << "c mark literal " << ~pos << endl;);
         // find all binary clauses for gate with positive output "pos"
         for (int i = 0 ; i < listSize; ++i) {
+	    if( data.ma.isCurrentStep(toInt(~list[i]) ) ) {
+	      DOUT(if (config.circ_debug_out) cerr << "c marked complementary literal of " << list[i] << " already! hence, imply literal " << ~pos << " as a unit" << endl;);
+	      data.enqueue( ~pos );
+	      data.lits.clear(); break;
+	    }
             data.ma.setCurrentStep(toInt(list[i]));
             data.lits.push_back(list[i]);
             DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);

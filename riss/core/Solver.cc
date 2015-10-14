@@ -422,6 +422,17 @@ bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
 		someNegative = someNegative || sign(p);
             }
         ps.shrink_(i - j);
+    } else { // delay units, but still remove tautologies!
+        for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
+	  if (ps[i] == ~p) { // noRedundancyCheck breaks the second property, which is ok, as it also not fails
+	    return true;
+	  } else if (ps[i] != p) {
+	    ps[j++] = p = ps[i]; // assigning p is not relevant for noRedundancyCheck
+	    somePositive = somePositive || !sign(p);
+	    someNegative = someNegative || sign(p);
+	  }
+	}
+        ps.shrink_(i - j);
     }
 
     // add to Proof that the clause has been changed
