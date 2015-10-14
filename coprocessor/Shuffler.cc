@@ -13,17 +13,21 @@ namespace Coprocessor
 VarShuffler::VarShuffler(CP3Config& _config)
     : config(_config)
     , variables(0)
-    , seed(0) {}
+    , seed(0)
+    , shuffledAlready(false) {}
 
 void VarShuffler::process(vec< Riss::CRef >& clauses, vec< Riss::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca)
 {
-    setSeed(config.opt_shuffle_seed);
+  if( shuffledAlready ) return ; // shuffle only once!
+  
+  setSeed(config.opt_shuffle_seed);
     setupShuffling(vars);
 
     shuffle(clauses, ca, config.opt_shuffle_order);
     shuffle(learnts, ca, config.opt_shuffle_order);
     shuffle(trail, config.opt_shuffle_order);
 
+    shuffledAlready = true; // memorize that we applied shuffling already
 }
 
 
@@ -115,6 +119,7 @@ void VarShuffler::shuffle(vec<CRef>& clauses, ClauseAllocator& ca, bool shuffleO
 
 void VarShuffler::shuffle(vec<Lit>& lits, bool shuffleOrder)
 {
+  
     for (int i = 0 ; i < lits.size(); ++ i) {
         const Lit l = lits[i];
         lits[i] =  sign(l) ? ~ replacedBy[ var(l) ] : replacedBy[var(l)] ;
@@ -134,6 +139,9 @@ void VarShuffler::shuffle(vec<Lit>& lits, bool shuffleOrder)
 
 void VarShuffler::unshuffle(vec<lbool>& model, uint32_t vars)
 {
+  
+  if(! shuffledAlready ) return ; // nothing to be unshuffled
+  
     vec<lbool> copy;
     model.copyTo(copy);
 

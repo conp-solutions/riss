@@ -111,7 +111,7 @@ bool BoundedVariableAddition::andBVA()
     MethodTimer processTimer(&andTime);
     doSort = true;
 
-    LitOrderHeapLt comp(data, config.opt_Abva_heap);
+    LitOrderHeapLt comp(data, config.opt_Abva_heap, false);
     Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
 
     // setup own structures
@@ -759,7 +759,7 @@ bool BoundedVariableAddition::xorBVAhalf()
     const int replacePairs = 3;
     const int smallestSize = 3;
 
-    LitOrderHeapLt comp(data, config.opt_Xbva_heap);
+    LitOrderHeapLt comp(data, config.opt_Xbva_heap, false);
     Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
 
     // data structures
@@ -965,7 +965,7 @@ bool BoundedVariableAddition::xorBVAfull()
     const int replacePairs = 5; // number of clauses to result in a reduction
     const int smallestSize = 3; // clause size
 
-    LitOrderHeapLt comp(data, config.opt_Xbva_heap);
+    LitOrderHeapLt comp(data, config.opt_Xbva_heap, false);
     Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
     // data structures
     bvaHeap.addNewElement(data.nVars() * 2); // keeps old values?! - drawback: cannot pre-filter
@@ -1345,7 +1345,7 @@ bool BoundedVariableAddition::iteBVAhalf()
 
     bool didSomething = false;;
 
-    LitOrderHeapLt comp(data, config.opt_Ibva_heap);
+    LitOrderHeapLt comp(data, config.opt_Ibva_heap, false);
     Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
     // data structures
     bvaHeap.addNewElement(data.nVars() * 2);
@@ -1566,7 +1566,7 @@ bool BoundedVariableAddition::iteBVAfull()
 
     // cerr << "c full ITE bva" << endl;
 
-    LitOrderHeapLt comp(data, config.opt_Ibva_heap);
+    LitOrderHeapLt comp(data, config.opt_Ibva_heap, false);
     Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
     // data structures
     bvaHeap.addNewElement(data.nVars() * 2);

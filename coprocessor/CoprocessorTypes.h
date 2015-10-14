@@ -565,7 +565,9 @@ struct LitOrderHeapLt {
         }
         return false;
     }
-    LitOrderHeapLt(CoprocessorData& _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
+    LitOrderHeapLt(CoprocessorData& _data, int _heapOption, bool allowRandom = true) : data(_data), heapOption(allowRandom ? _heapOption : (_heapOption > 1 ? _heapOption + 1 : _heapOption) ) {
+      assert( (allowRandom || heapOption != 2) && "only allow heap option 2 if random selection is allowed" );
+    }
 };
 
 inline CoprocessorData::CoprocessorData(Riss::ClauseAllocator& _ca, Riss::Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized,  bool _debug)

@@ -33,6 +33,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Dense.h"
 #include "coprocessor/Symmetry.h"
 #include "coprocessor/hbr.h"
+#include "coprocessor/Shuffler.h"
 
 #include "coprocessor/sls.h"
 #include "coprocessor/TwoSAT.h"
@@ -173,6 +174,7 @@ class Preprocessor
     LiteralAddition la;
     EntailedRedundant entailedRedundant;
     HyperBinaryResolution hbr;
+    VarShuffler shuffler;
 
     Sls sls;
     TwoSatSolver twoSAT;

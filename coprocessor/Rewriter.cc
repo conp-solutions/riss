@@ -491,19 +491,22 @@ bool Rewriter::rewriteAMO()
                 }
                 if (useVariableTwice) { continue; }   // do not allow AMOs that have the same variable
                 bool found = true;
+		int globalBinaryCount = 0;
                 for (int j = 0 ; j < c.size() ; ++ j) {
                     const Lit& l = c[j];
                     const Lit* lList = big.getArray(l);
                     const int lListSize = big.getSize(l);
                     int count = 0;
                     for (int k = 0 ; k < lListSize; ++ k) {
-                        count = (inAmo.isCurrentStep(toInt(lList[k])) || big.isChild(l, lList[k])) ? count + 1 : count;
+                        count = (inAmo.isCurrentStep(toInt(lList[k])) && big.isChild(l, lList[k])) ? count + 1 : count; // consider only the interesting literals!
                     }
+                    globalBinaryCount += count;
                     if (count + 1 < c.size()) { found = false; break; }   // not all literals can be found by this literal!
                 }
-                if (!found) { continue; }
-                // found ExO constraint
-                else {
+                if (!found) { 
+		  continue;
+                } else { // found ExO constraint
+		    cerr << "c found AMO with " << globalBinaryCount << " binary clauses" << endl;
                     const int index = amos.size();
                     amos.push_back(vector<Lit>());
                     for (int j = 0 ; j < c.size(); ++ j) {
@@ -631,7 +634,7 @@ bool Rewriter::rewriteAMO()
         amoTime = cpuTime() - amoTime;
         foundAmos += amos.size();
 
-        DOUT(if (config.rew_debug_out > 0) cerr << "c finished search AMO --- process ... " << endl;);
+        DOUT(if (config.rew_debug_out > 0) cerr << "c finished search AMO --- process ... (found: " << amos.size() << ")" << endl;);
 
         if (config.opt_rew_merge_amo) {
             cerr << "c WARNING: merging AMO not implemented yet" << endl;
@@ -654,7 +657,7 @@ bool Rewriter::rewriteAMO()
             int rSize = (size + 1) / 2;
             // assert( rSize * 2 == size && "AMO has to be even!" );
 
-            DOUT(if (config.rew_debug_out > 0) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << endl;);
+            DOUT(if (config.rew_debug_out > 0) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << " amo:" << amo << endl;);
 
             for (int j = 0 ; j < amo.size(); ++ j) {
                 assert(!data.ma.isCurrentStep(var(amo[j])) && "touch variable only once during one iteration!");

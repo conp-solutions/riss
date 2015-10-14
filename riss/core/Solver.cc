@@ -3379,7 +3379,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         ok = false;
     }
 
-    assert( status != l_Undef && "unknown should not happen here" );
+    assert( ( status != l_Undef || asynch_interrupt) && "unknown should not happen here if there was no interrupt" );
     
     cancelUntil(0);
 

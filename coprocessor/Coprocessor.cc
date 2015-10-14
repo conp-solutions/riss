@@ -58,6 +58,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , la(config, solver->ca, controller, data, propagation)
     , entailedRedundant(config, solver->ca, controller, data)
     , hbr(config, solver->ca, controller, data, propagation)
+    , shuffler(config)
     , sls(config, data, solver->ca, controller)
     , twoSAT(config, solver->ca, controller, data)
     , shuffleVariable(-1)
@@ -1592,8 +1593,6 @@ void Preprocessor::reSetupSolver()
 
 void Preprocessor::shuffle()
 {
-    VarShuffler vs(config);
-
     assert(solver->decisionLevel() == 0 && "shuffle only on level 0!");
 
     // clear all assignments, to not being forced of keeping track of shuffled trail
@@ -1603,7 +1602,7 @@ void Preprocessor::shuffle()
 
     // shuffle trail, clauses and learned clauses
     shuffleVariable = data.nVars();
-    vs.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca);
+    shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca);
 
     // set all assignments according to the trail!
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
@@ -1614,10 +1613,8 @@ void Preprocessor::shuffle()
 void Preprocessor::unshuffle(vec< lbool >& model)
 {
     // setup shuffler, and unshuffle model!
-    VarShuffler vs(config);
-
     assert((shuffleVariable == -1 || model.size() == shuffleVariable) && "number of variables has to match");
-    vs.unshuffle(model, model.size());
+    shuffler.unshuffle(model, model.size());
 }
 
 void Preprocessor::sortClauses()
