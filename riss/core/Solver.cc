@@ -2300,24 +2300,29 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
     }
   }
   
+  bool integrateBlockingClause = true; // usually, the blocking clause should be added to the solver (except for backtracking-enumeration with projection in some cases)
   // if projection is not active, we are furthermore allowed to try to come up with a shorter blocking clause starting from the full model
   if( ! master->usesProjection() ) {
-    if( mtype == EnumerationClient::MinimizeType::ONLYFROMFULL || mtype == EnumerationClient::MinimizeType::ALSOFROMBLOCKED ) {
-      solver->trail.copyTo( minimizedClause );
-      for( int i = 0 ; i < minimizedClause.size(); ++ i ) minimizedClause[i] = ~minimizedClause[i]; // first, create a full blocking clause
-      solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
-      if( minimizedClause.size() < blockingClause.size() ) { 
-	minimizedClause.moveTo( blockingClause ); // if the new clause is better, keep the new clause as blocking clause
-	// TODO collect statistics
-	maxLevel = -1; max2Level = -1;
+      if( mtype == EnumerationClient::MinimizeType::ONLYFROMFULL || mtype == EnumerationClient::MinimizeType::ALSOFROMBLOCKED ) {
+	solver->trail.copyTo( minimizedClause );
+	for( int i = 0 ; i < minimizedClause.size(); ++ i ) minimizedClause[i] = ~minimizedClause[i]; // first, create a full blocking clause
+	solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
+	if( minimizedClause.size() < blockingClause.size() ) { 
+	  minimizedClause.moveTo( blockingClause ); // if the new clause is better, keep the new clause as blocking clause
+	  // TODO collect statistics
+	  maxLevel = -1; max2Level = -1;
+	}
       }
-    }
-    // tell master about model, blocking clause, and the full model
-    uint64_t modelhash = convertModel( solver->nVars(), solver->trail, solver->model ); // convert in client, such that the master must not perform the conversion in the critical section!
-    bool newModel = master->addModel( clientID, solver->model, modelhash, & blockingClause, &solver->trail );
-    if( newModel ) foundModels ++; 
-    else duplicateModels ++;
+
+      // tell master about model, blocking clause, and the full model
+      uint64_t modelhash = convertModel( solver->nVars(), solver->trail, solver->model ); // convert in client, such that the master must not perform the conversion in the critical section!
+      bool newModel = master->addModel( clientID, solver->model, modelhash, & blockingClause, &solver->trail );
+      if( newModel ) foundModels ++; 
+      else duplicateModels ++;
+
+    
   } else {
+    // model minimization is independent of enumeration type (TODO: analyze whether minimization works under projection at all ... )
     if( modelSize == blockingClause.size() ) { // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
       blockingClause.copyTo( minimizedClause );
     }
@@ -2327,14 +2332,45 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
     bool newModel = master->addModel( clientID, solver->model, modelhash, & blockingClause, &solver->trail );  // tell master about model under projection, blocking clause, and the ful model
     if( newModel ) foundModels ++; 
     else duplicateModels ++;
+    
+    if( projectionType == BACKTRACKING ) { // use advanced enumeration with projection
+ 
+      int maxProjectionLevel = 0;
+      for( int i = 0 ; i < master->projectionSize(); ++ i ) {
+	const Var v = master->projectionVariable(i);
+	maxProjectionLevel = maxProjectionLevel >= solver->level(v) ? maxProjectionLevel : solver->level(v);
+      }
+
+      if( maxProjectionLevel == 0 ) { // if we are at level 0, we are done and just have to print the last solution (paper: algorithm 2, line 23)
+	integrateBlockingClause = false;  // do not add this solution
+	master->notifyReachedAllModels(); // tell master we found all solutions
+      } else {
+      
+	if( maxProjectionLevel == projectionBacktrackingLevel ) { // highest decision level of projection variables in this solution are at the current projection backtracking level (paper: algorithm 2, line 24 -- 29)
+	  const CRef cr = projectionReasonClauses[projectionBacktrackingLevel];   // blocking clause for the current backtracking level
+	  solver->removeClause( cr, true );         // strictly remove the clause from the watch lists, and mark it to be deleted
+	  const Lit blLit = projectionDecisionStack[projectionBacktrackingLevel]; // backtracking decision literal of the current level
+	  integrateBlockingClause = false;             // do not add the current solution as it will be disallowed by the naive backtracking anyways
+	  projectionBacktrackingLevel --;              // decrease backtracking level
+	  solver->cancelUntil( projectionBacktrackingLevel );  // jump back to the backtracking level
+	  solver->uncheckedEnqueue( ~blLit );                  // add complement of last decision on this (now lower) level -> naive backtracking
+	} else {
+	  projectionBacktrackingLevel ++;
+	  // TODO continue implementation here!
+	  assert( false && "add missing functionality" );
+	}
+      }
+    }
   }
 
   // add blocking clause to this solver without disturbing its search too much
-  bool moreModelsPossible = integrateClause( blockingClause, maxLevel, max2Level );
-  if( !moreModelsPossible ) {
-    cerr << "c stop after client found all models" << endl;
-    master->notifyReachedAllModels();
-    return stop;
+  if( integrateBlockingClause ) {
+    bool moreModelsPossible = integrateClause( blockingClause, maxLevel, max2Level );
+    if( moreModelsPossible == CRef_Error ) {
+      cerr << "c stop after client found all models" << endl;
+      master->notifyReachedAllModels();
+      return stop;
+    }
   }
 
   bool enoughModel = master->foundEnoughModels();
@@ -2348,7 +2384,7 @@ Solver::EnumerationClient::EnumerationClient(Solver* _solver)
   , blockedModels(0) 
   , lastReceiveDecisions(0)
   , projectionType( NAIVE )
-  , projectionBacktrackingLevel( -1 )
+  , projectionBacktrackingLevel( 0 )
   , mtype ( ALSOFROMBLOCKED )
   , minimizeReceived(ALSOFROMBLOCKED)
   , foundModels(0)
@@ -2406,7 +2442,7 @@ Solver::EnumerationClient::~EnumerationClient(){
   }
 }
 
-bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel, int max2Level)
+CRef Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel, int max2Level)
 {
   if( maxLevel < 0 || max2Level < 0 ) {
     maxLevel = 0; max2Level = 0;
@@ -2435,11 +2471,12 @@ bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel
     solver->cancelUntil(max2Level - 1);
     assert( solver->value( clause[0] ) == l_Undef && solver->value(clause[1]) == l_Undef && "first two literals have to be undefined" );
     solver->attachClause( cr );
+    return cr;
   } else { // restart and add clause (should be unary/conflict on level 0)
     solver->cancelUntil(0); // todo: can we get rid of the restart?
     succesful = solver->addClause_( clause ); // might have problems with the current model here
   }
-  return succesful;
+  return succesful ? CRef_Undef : CRef_Error;
 }
 
 

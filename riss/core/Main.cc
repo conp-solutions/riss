@@ -134,6 +134,7 @@ int main(int argc, char** argv)
     Int64Option  opt_enumeration    ("MODEL ENUMERATION", "models",     "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
     IntOption    opt_enuMinimize    ("MODEL ENUMERATION", "modelMini",  "minimize blocking clause (0=no,1=from full,2=also from blocking)\n", 2, IntRange(0, 2));
     BoolOption   opt_enumPrintOFT   ("MODEL ENUMERATION", "enuOnline" , "print model as soon as it has been found", true );
+    BoolOption   opt_enumPRnbt      ("MODEL ENUMERATION", "modelsNBT" , "use backtracking enumeration for projection", false );
     StringOption opt_projectionFile ("MODEL ENUMERATION", "modelScope", "file that store enumeration projection\n", 0 );
     StringOption opt_modelFile      ("MODEL ENUMERATION", "modelsFile", "file to store models to\n", 0 );
     StringOption opt_fullModelFile  ("MODEL ENUMERATION", "fullModels", "file to store full models to\n", 0 );
@@ -375,6 +376,7 @@ int main(int argc, char** argv)
 	  modelMaster = new Riss::EnumerateMaster( S->nVars() );
 	  modelMaster->setMaxModels(opt_enumeration);
 	  modelMaster->setModelMinimization( (int) opt_enuMinimize );
+	  if( opt_enumPRnbt ) modelMaster->activateNaiveBacktrackingEnumeration();
 	  
 	  if( S->getPreprocessor() != nullptr )  modelMaster->setPreprocessor ( S->getPreprocessor() ) ;
 	  if( (const char*) opt_projectionFile != 0 ) modelMaster->setProjectionFile( (const char*) opt_projectionFile );

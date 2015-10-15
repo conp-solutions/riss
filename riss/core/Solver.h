@@ -1526,9 +1526,9 @@ class Solver
        @param clause literals of the clause, can be modified during the method
        @param maxLevel maximum decision level in the clause (>= 0, otherwise, recomputed)
        @param max2Level second highest decision level in the clause (>= 0, otherwise, recomputed)
-       @return true, if everything went fine, false, if no more model is possible
+       @return reference to the added clause, CRef_Undef if the clause became unit, CRef_Error, if unsatisfiability was reached during adding the clause
        */
-      bool integrateClause( vec<Lit>& clause, int maxLevel, int max2Level );
+      CRef integrateClause( vec<Lit>& clause, int maxLevel, int max2Level );
       
       /** convert model into truth value representation
        @param nVars present variables in solver 

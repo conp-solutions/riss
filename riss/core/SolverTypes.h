@@ -631,6 +631,7 @@ class AllocatorReservation
 };
 
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
+const CRef CRef_Error = RegionAllocator<uint32_t>::Ref_Error;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
   public:
