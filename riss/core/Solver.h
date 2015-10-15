@@ -875,6 +875,25 @@ class Solver
      */
     bool handleRestarts(int& nof_conflicts, const int conflictC);
 
+    /** handle top level units for the unsatisfiability proof and clause sharing */
+    void handleTopLevelUnits(const int& beforeTrail, int& proofTopLevels);
+    
+    /** update the heuristic that is responsible for triggering restarts and blocking them */
+    void updateBlockRestartAndRemovalHeuristic (bool& blockNextRestart);
+    
+    /** perform conflict analysis based on the current conflict */
+    lbool conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause);
+    
+    /** check for commands from the outside, as well as for shared clauses
+     + @return l_True, if everything is fine, l_False is we found UNSAT, l_Undef if the search should be interupted
+     */
+    lbool receiveInformation();
+    
+    /** perform search decision, including handling assumptions recoding model for enumeration, performing look ahead 
+     @return decision literal, lit_Error -> return with the given returnValue, lit_Undef -> continue with the next search loop iteration
+     */
+    Lit performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits);
+    
     /** remove learned clauses during search */
     void clauseRemoval();
 
@@ -1482,6 +1501,12 @@ class Solver
 	ONLYFROMFULL = 1,
 	ALSOFROMBLOCKED = 2
       };
+      
+      // how to enumerate under projection
+      enum ProjectionType {
+	NAIVE = 0,         // simply block the projection variables of the current solution
+	BACKTRACKING = 1,  // use the sophisticated backtracking based algorithm from Gebser et al paper
+      };
 
     private:
       
@@ -1513,11 +1538,18 @@ class Solver
        */
       uint64_t convertModel( uint32_t nVars, vec< Lit >& trail, vec< lbool >& model );
       
-      vec<Lit> blockingClause;  // storage for the blocking clause
-      vec<Lit> minimizedClause; // storage for the minimize blocking clause 
+      vec<Lit> blockingClause;  /// storage for the blocking clause
+      vec<Lit> minimizedClause; /// storage for the minimize blocking clause 
       
-      uint64_t blockedModels; // number of models that have been received from the master already
-      uint64_t lastReceiveDecisions;  // number of decisions when receiving the last blocking clause
+      uint64_t blockedModels; /// number of models that have been received from the master already
+      uint64_t lastReceiveDecisions;  /// number of decisions when receiving the last blocking clause
+      
+      ProjectionType projectionType; /// how to perform enumeration under projection
+      
+      // for backtracking projection enumeration
+      int projectionBacktrackingLevel;   // bl in the paper
+      vec<Lit> projectionDecisionStack;  // memorize the decision variables used for projection
+      vec<CRef> projectionReasonClauses; // memorize the reason clauses that are used for projection
       
     public:
       
@@ -1564,6 +1596,12 @@ class Solver
       
       /** assign a id from the master to the client */
       void assignClientID();
+      
+      /** activate backtracking based enumeration */
+      void enableBTbasedEnumeration();
+      
+      /** indicate whether enumeration on projection interferes with usual search */
+      bool isBTenumerating() const;
       
     } enumerationClient;
     

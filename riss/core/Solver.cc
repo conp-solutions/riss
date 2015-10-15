@@ -1906,6 +1906,149 @@ int Solver::probingLiteral(Lit v)
     // No conflicting clause found
     return 0;
 }
+
+
+lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause )
+{
+  int backtrack_level;
+  unsigned int nblevels;
+  learnt_clause.clear();
+  if (config.opt_biAsserting && lastBiAsserting + config.opt_biAssiMaxEvery <= conflicts) { allowBiAsserting = true; }  // use bi-asserting only once in a while!
+  unsigned dependencyLevel = 0;
+  analysisTime.start();
+  // perform learnt clause derivation
+  int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, dependencyLevel);
+  analysisTime.stop();
+  allowBiAsserting = false;
+  assert((!isBiAsserting || ret == 0) && "cannot be multi unit and bi asserting at the same time");
+  DOUT(if (config.opt_rer_debug) cerr << "c analyze returns with " << ret << " , jumpLevel " << backtrack_level << " and set of literals " << learnt_clause << endl;);
+  // OTFSS TODO put into extra method!
+  bool backTrackedBeyondAsserting = false; // indicate whether learnt clauses can become unit (if no extra backtracking is performed, this stament is true)
+  cancelUntil(backtrack_level);  // cancel trail so that learned clause becomes a unit clause
+  // add the new clause(s) to the solver, perform more analysis on them
+  if (ret > 0) {   // multiple learned clauses
+      if (l_False == handleMultipleUnits(learnt_clause)) { return l_False; }
+      updateSleep(&learnt_clause, learnt_clause.size(), true);   // share multiple unit clauses!
+  } else { // treat usual learned clause!
+      if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, dependencyLevel)) { return l_False; }
+  }
+}
+
+void Solver::handleTopLevelUnits(const int& beforeTrail, int& proofTopLevels)
+{
+  assert( decisionLevel() == 0 && "should be called only on decision level 0" );
+  if (outputsProof()) {   // add the units to the proof that have been added by being propagated on level 0
+      for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }
+  }
+  // send all units that have been propagated on level 0! (other thread might not see the same clauses as this thread)
+  const int unitsToShare = trail.size() - beforeTrail;
+  if (unitsToShare > 0) {
+    Lit* headPointer = & (trail[beforeTrail]);  // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
+    #ifdef PCASSO
+    updateSleep(&headPointer, unitsToShare , currentDependencyLevel(), true);  // give some value to the method, it will trace the dependencies for multi-units automatically
+    #else
+    updateSleep(&headPointer, unitsToShare , true);
+    #endif
+  }
+}
+
+lbool Solver::receiveInformation()
+{
+  // check for communication to the outside (for example in the portfolio solver)
+  int result = updateSleep((vec<Lit>*)0x0, 0, 0);  // just receive
+  if (-1 == result) {
+      // interrupt via communication
+      return l_Undef;
+  } else if (result == 1) {
+      // interrupt received a clause that leads to a conflict on level 0
+      conflict.clear();
+      return l_False;
+  }
+}
+
+Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
+{
+  Lit next = lit_Undef;
+  bool checkedLookaheadAlready = false;
+  while (next == lit_Undef) {
+      while (decisionLevel() < assumptions.size()) {
+          // Perform user provided assumption:
+          Lit p = assumptions[decisionLevel()];
+          if (value(p) == l_True) {
+	    // Dummy decision level: // do not have a dummy level here!!
+	    DOUT(if (config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl;);
+	    newDecisionLevel();
+	  } else if (value(p) == l_False) {
+	    analyzeFinal(~p, conflict);
+	    returnValue = l_False; 
+	    return lit_Error;
+	  } else {
+	    DOUT(if (config.opt_printDecisions > 0) cerr << "c use assumption as next decision : " << p << endl;);
+	    next = p;
+	    break;
+          }
+      }
+
+      if (next == lit_Undef) {
+          // New variable decision:
+          decisions++;
+          next = pickBranchLit();
+	  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c pickBranchLit selects literal " << next << endl; );
+	  if( next != lit_Undef ) assert( value(next) == l_Undef && "decision variable has to be undefined" );
+          if (next == lit_Undef) {
+	    EnumerationClient::EnumerateState res = enumerationClient.processCurrentModel( next );
+	    if (res == EnumerationClient::oneModel ) {
+	      DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted to return SAT in search method (oneModel)"<< endl; );
+	      returnValue = l_True; 
+	      return lit_Error;
+	    }
+	    else if( res == EnumerationClient::goOn ) {
+	      DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted continue with search "<< endl; );
+	      return lit_Undef;
+	    } else {
+	      DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted and unhandled result "<< endl; );
+	      assert( false && "this case should not be reached" );
+	      returnValue = l_Undef; 
+	      return lit_Error;
+	    }
+          }
+      }
+
+      // if sufficiently many new top level units have been learned, trigger another LA!
+      if (!checkedLookaheadAlready) {
+          checkedLookaheadAlready = true; // memorize that we did the check in the first iteration
+          if (config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
+          if (config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber))) {  // perform LA hack -- only if max. nr is not reached?
+	    // if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
+	    int hl = decisionLevel();
+	    if (hl == 0) if (--untilLa == 0) { laStart = true; DOUT(if (config.localLookaheadDebug)cerr << "c startLA" << endl;); }
+	    if (laStart && hl == config.opt_laLevel) {
+		if (!laHack(tmp_Lits)) { 
+		  returnValue = l_False; 
+		  return lit_Error; 
+		}
+		topLevelsSinceLastLa = 0;
+	//          cerr << "c drop decision literal " << next << endl;
+		if (!order_heap.inHeap(var(next))) { order_heap.insert(var(next)); }     // add the literal back to the heap!
+		next = lit_Undef;
+		continue; // after local look-ahead re-check the assumptions
+	    }
+          }
+      }
+      assert(next != lit_Undef && value(next) == l_Undef && "the literal that is picked exists, and is unassigned");
+  }
+  assert ( next != lit_Undef );
+  
+  // Increase decision level and enqueue  the literal we just selected 'next'
+  newDecisionLevel();
+  DOUT(if (config.opt_printDecisions > 0) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel()););
+  uncheckedEnqueue(next);
+  
+  return next;
+}
+
+
+
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1937,24 +2080,10 @@ lbool Solver::search(int nof_conflicts)
         CRef confl = propagate();
         propagationTime.stop();
 
-        if (decisionLevel() == 0) {
-            if (outputsProof()) {   // add the units to the proof that have been added by being propagated on level 0
-                for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }
-            }
-            // send all units that have been propagated on level 0! (other thread might not see the same clauses as this thread)
-            const int unitsToShare = trail.size() - beforeTrail;
-            if (unitsToShare > 0) {
-                Lit* headPointer = & (trail[beforeTrail]);  // pointer to the actual element in the vector. as vectors use arrays to store data, the trick works
-                #ifdef PCASSO
-                updateSleep(&headPointer, unitsToShare , currentDependencyLevel(), true);  // give some value to the method, it will trace the dependencies for multi-units automatically
-                #else
-                updateSleep(&headPointer, unitsToShare , true);
-                #endif
-            }
-        }
+        if (decisionLevel() == 0) handleTopLevelUnits(beforeTrail, proofTopLevels);
 
-        if (confl != CRef_Undef) {
-            // CONFLICT
+        if (confl != CRef_Undef) { // CONFLICT
+            
             conflicts++; conflictC++;
             printConflictTrail(confl);
 
@@ -1967,96 +2096,40 @@ lbool Solver::search(int nof_conflicts)
             
 #warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
-            if( searchconfiguration.restarts_type == 0 ) trailQueue.push(trail.size());                  // tell queue about current size of the interpretation before the conflict
-	    slow_interpretationSizes.update(trail.size()); 
-	    // block restart based on the current interpretation size?
-            if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first  
-	      && config.opt_allow_restart_blocking                             // is blocking restarts ok?
-	      && searchconfiguration.restarts_type == 0                        // block only with dynamic restarts
-	      && lbdQueue.isvalid()                                            // block only, if we did not already block 'recently'
-	    ) {
-	      if(  (!config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * trailQueue.getavg() )       // glucose like: compare to value of trailQueue
-		|| ( config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * slow_interpretationSizes.getValue() )     // EMA: compare to value of slowly evolving trail size EMA
-	      ) {
-                lbdQueue.fastclear();
-                nbstopsrestarts++;
-                if (!blockNextRestart) {lastblockatrestart = starts; nbstopsrestartssame++; blockNextRestart = true;}
-	      }
-            }
-
+            updateBlockRestartAndRemovalHeuristic( blockNextRestart ); // update restart heuristic, decide about blocking restarts next time
             l1conflicts = (decisionLevel() != 1 ? l1conflicts : l1conflicts + 1);
 
-            learnt_clause.clear();
-            if (config.opt_biAsserting && lastBiAsserting + config.opt_biAssiMaxEvery <= conflicts) { allowBiAsserting = true; }  // use bi-asserting only once in a while!
-
-            unsigned dependencyLevel = 0;
-            analysisTime.start();
-            // perform learnt clause derivation
-            int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, dependencyLevel);
-            analysisTime.stop();
-            allowBiAsserting = false;
-
-            assert((!isBiAsserting || ret == 0) && "cannot be multi unit and bi asserting at the same time");
-
-            DOUT(if (config.opt_rer_debug) cerr << "c analyze returns with " << ret << " , jumpLevel " << backtrack_level << " and set of literals " << learnt_clause << endl;);
-
-            // OTFSS TODO put into extra method!
-            bool backTrackedBeyondAsserting = false; // indicate whether learnt clauses can become unit (if no extra backtracking is performed, this stament is true)
-            cancelUntil(backtrack_level);            // cancel trail so that learned clause becomes a unit clause
-
-            // add the new clause(s) to the solver, perform more analysis on them
-            if (ret > 0) {   // multiple learned clauses
-                if (l_False == handleMultipleUnits(learnt_clause)) { return l_False; }
-                updateSleep(&learnt_clause, learnt_clause.size(), true);   // share multiple unit clauses!
-            } else { // treat usual learned clause!
-                if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, dependencyLevel)) { return l_False; }
-            }
+	    lbool analysisResult = conflictAnalysis(confl, learnt_clause);  // perform conflict analysis with all its functionality
+	    if( analysisResult != l_Undef ) return analysisResult;          // if techniques on learned clauses reveal unsatisfiability of the formula, return this result
 
             varDecayActivity();
             claDecayActivity();
 
-            conflictsSinceLastRestart ++;
-	    
-	    if( config.opt_reduceType == 1 ) {
-	      if (--learntsize_adjust_cnt == 0){
-		  learntsize_adjust_confl *= learntsize_adjust_inc;
-		  learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
-		  max_learnts             *= learntsize_inc;
-	      }
-	    }
 
         } else { // there has not been a conflict
             if ( handleRestarts(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
 
             // check for new models, continue with propagation if new clauses have been added 
-	    if( enumerationClient. receiveModelBlockingClauses() ) continue;
+	    if( enumerationClient.receiveModelBlockingClauses() ) continue;
             
             // Handle Simplification Here!
             //
             // Simplify the set of problem clauses - but do not do it each iteration!
-            if (simplifyIterations > config.opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
-                DOUT(if (config.opt_printDecisions > 0) cerr << "c ran simplify" << endl;);
-                simplifyIterations = 0;
-                if (verbosity > 1) { fprintf(stderr, "c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel()); }
-                return l_False;
-            }
-            if (decisionLevel() == 0) {
-                simplifyIterations ++;
-                if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still, and we are on level 0 (collected before)
+	    if (decisionLevel() == 0) {
+	      if (simplifyIterations > config.opt_simplifyInterval && !simplify()) {
+		  DOUT(if (config.opt_printDecisions > 0) cerr << "c ran simplify" << endl;);
+		  simplifyIterations = 0;
+		  return l_False;
+	      }
+            
+              simplifyIterations ++;
+              if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still, and we are on level 0 (collected before)
             }
 
             if (!withinBudget()) { return l_Undef; }   // check whether we can still do conflicts
 
-            // check for communication to the outside (for example in the portfolio solver)
-            int result = updateSleep((vec<Lit>*)0x0, 0, 0);  // just receive
-            if (-1 == result) {
-                // interrupt via communication
-                return l_Undef;
-            } else if (result == 1) {
-                // interrupt received a clause that leads to a conflict on level 0
-                conflict.clear();
-                return l_False;
-            }
+            lbool receiveResult = receiveInformation();
+            if( receiveResult != l_True ) return receiveResult;
 
             // Perform clause database reduction !
             //
@@ -2071,78 +2144,12 @@ lbool Solver::search(int nof_conflicts)
                     return l_False;
                 }
             }
-            Lit next = lit_Undef;
-            bool checkedLookaheadAlready = false;
-            while (next == lit_Undef) {
-                while (decisionLevel() < assumptions.size()) {
-                    // Perform user provided assumption:
-                    Lit p = assumptions[decisionLevel()];
 
-                    if (value(p) == l_True) {
-                        // Dummy decision level: // do not have a dummy level here!!
-                        DOUT(if (config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl;);
-                        newDecisionLevel();
-                    } else if (value(p) == l_False) {
-                        analyzeFinal(~p, conflict);
-                        return l_False;
-                    } else {
-                        DOUT(if (config.opt_printDecisions > 0) cerr << "c use assumption as next decision : " << p << endl;);
-                        next = p;
-                        break;
-                    }
-                }
-
-                if (next == lit_Undef) {
-                    // New variable decision:
-                    decisions++;
-                    next = pickBranchLit();
-		    
-		    DOUT( if( config.opt_printDecisions > 1 ) cerr << "c pickBranchLit selects literal " << next << endl; );
-		    
-		    if( next != lit_Undef ) assert( value(next) == l_Undef && "decision variable has to be undefined" );
-
-                    if (next == lit_Undef) {
-                        EnumerationClient::EnumerateState res = enumerationClient.processCurrentModel( next );
-			if (res == EnumerationClient::oneModel ) {
-			  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted to return SAT in search method (oneModel)"<< endl; );
-			  return l_True;
-			}
-			else if( res == EnumerationClient::goOn ) {
-			  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted continue with search "<< endl; );
-			  goto SolverNextSearchIteration;
-			} else {
-			  DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enumeration opted and unhandled result "<< endl; );
-			  assert( false && "this case should not be reached" );
-			  return l_Undef; 
-			}
-                    }
-                }
-
-                // if sufficiently many new top level units have been learned, trigger another LA!
-                if (!checkedLookaheadAlready) {
-                    checkedLookaheadAlready = true; // memorize that we did the check in the first iteration
-                    if (config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
-                    if (config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber))) {  // perform LA hack -- only if max. nr is not reached?
-                        // if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
-                        int hl = decisionLevel();
-                        if (hl == 0) if (--untilLa == 0) { laStart = true; DOUT(if (config.localLookaheadDebug)cerr << "c startLA" << endl;); }
-                        if (laStart && hl == config.opt_laLevel) {
-                            if (!laHack(learnt_clause)) { return l_False; }
-                            topLevelsSinceLastLa = 0;
-//          cerr << "c drop decision literal " << next << endl;
-                            if (!order_heap.inHeap(var(next))) { order_heap.insert(var(next)); }     // add the literal back to the heap!
-                            next = lit_Undef;
-                            continue; // after local look-ahead re-check the assumptions
-                        }
-                    }
-                }
-                assert(next != lit_Undef && value(next) == l_Undef && "the literal that is picked exists, and is unassigned");
-            }
-
-            // Increase decision level and enqueue 'next'
-            newDecisionLevel();
-            DOUT(if (config.opt_printDecisions > 0) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel()););
-            uncheckedEnqueue(next);
+            // perform search decision 
+            lbool searchReturnCode = l_Undef;
+            Lit next = performSearchDecision(searchReturnCode, learnt_clause ) ;
+	    if( next == lit_Error ) return searchReturnCode;              // we should terminate with the given type
+	    else if ( next == lit_Undef ) goto SolverNextSearchIteration; // we should continue search without another decision 
         }
 SolverNextSearchIteration:;
     }
@@ -2151,11 +2158,56 @@ SolverNextSearchIteration:;
     return l_Undef;
 }
 
+void Solver::updateBlockRestartAndRemovalHeuristic(bool & blockNextRestart)
+{
+  if( searchconfiguration.restarts_type == 0 ) trailQueue.push(trail.size());                  // tell queue about current size of the interpretation before the conflict
+  
+  slow_interpretationSizes.update(trail.size()); 
+  // block restart based on the current interpretation size (before conflict analysis and backtracking)
+  if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first  
+    && config.opt_allow_restart_blocking                             // is blocking restarts ok?
+    && searchconfiguration.restarts_type == 0                        // block only with dynamic restarts
+    && lbdQueue.isvalid()                                            // block only, if we did not already block 'recently'
+  ) {
+    if(  (!config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * trailQueue.getavg() )       // glucose like: compare to value of trailQueue
+       ||( config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * slow_interpretationSizes.getValue() )     // EMA: compare to value of slowly evolving trail size EMA
+      ) {
+      lbdQueue.fastclear();
+      nbstopsrestarts++;
+      if (!blockNextRestart) {lastblockatrestart = starts; nbstopsrestartssame++; blockNextRestart = true;}
+    }
+  }
+  
+  conflictsSinceLastRestart ++;
+  // update values for removal heuristic 
+  if( config.opt_reduceType == 1 ) {
+    if (--learntsize_adjust_cnt == 0){
+      learntsize_adjust_confl *= learntsize_adjust_inc;
+      learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
+      max_learnts             *= learntsize_inc;
+    }
+  }
+}
+
+
 void Solver::EnumerationClient::assignClientID()
 {
   assert( master != 0 && "master has to exist to receive an ID" );
   clientID = master->assignClientID();
 }
+
+void Solver::EnumerationClient::enableBTbasedEnumeration()
+{
+  projectionType = BACKTRACKING;
+}
+
+bool Solver::EnumerationClient::isBTenumerating() const
+{
+  return master != 0 && projectionType == BACKTRACKING;
+}
+
+
+
 
 
 /** receive blocking clauses from enumeration master and add them to the formula of the current solver
@@ -2214,6 +2266,8 @@ Solver::EnumerationClient::EnumerateState
 Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
 {
   if( master == 0 ) return oneModel; // we do not perform enumeration
+  
+  assert( (!master->isShared() || projectionType == NAIVE) && "currently we do not support sophisticated enumeration in the parallel setting" );
   
   // allowed to reduce the blocked clause?
   if( mtype != EnumerationClient::MinimizeType::NONE ) solver->initReverseMinimitaion(); // initialize reverse minimization
@@ -2293,6 +2347,8 @@ Solver::EnumerationClient::EnumerationClient(Solver* _solver)
   , solver( _solver )
   , blockedModels(0) 
   , lastReceiveDecisions(0)
+  , projectionType( NAIVE )
+  , projectionBacktrackingLevel( -1 )
   , mtype ( ALSOFROMBLOCKED )
   , minimizeReceived(ALSOFROMBLOCKED)
   , foundModels(0)
