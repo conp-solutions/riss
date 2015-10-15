@@ -89,11 +89,13 @@ do
 		# add faulty configuration to used solver specification
 		echo "" >> $PARAMFILE
 		echo "# found faulty configuration on file `pwd`/$FAULTYINSTANCE within timeout $FAILTIME (minimized with double)"  >> $PARAMFILE
+		echo "# full faulty call: `grep "^final faulty options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'` (for simpler debugging)" >> $PARAMFILE
 		grep "^final faulty options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'                    >> $PARAMFILE
 	
 	else
 	  # in the last iteration we did not find a problem, hence quit
 	  echo "did not find a problem, exit fix loops"
+	  grep "Forbidden Parameter Declarations can only exclude combinations of categorical parameters" $SMACERROR
 	  break
 	fi
 
