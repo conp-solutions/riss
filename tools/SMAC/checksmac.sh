@@ -24,6 +24,7 @@ cp $PARAMFILE $PARAMFILE.old.$$.pcs
 SMACOUTPUT=/tmp/smacoutput_$$
 SMACERROR=/tmp/smacerror_$$
 REDUCEOUTPUT=/tmp/reduceoutput_$$
+INTERVALOPTIONS=/tmp/checksmac_intervals_$$
 
 # SMAC run parameters (might be specified from the command line?)
 #SMAC=./configurators/smac3/smac  # more recent version, output does not fit to older version - TODO: adapt greps and awks
@@ -35,18 +36,21 @@ SMACMODE=ROAR   # ROAD or SMAC
 # memorize directory
 PWD=`pwd`
 
+# get all interval options (for riss5, its either [range]i, or [range] [default], square brackets after option name identify interval options
+grep -e "]i" -e "\] \["  solvers/riss5/riss5.pcs | awk '{print $1}' > $INTERVALOPTIONS
+
 # start actual working loop
 echo "run configuration fixing in dir $DIRNAME with PCS file $PARAMFILE and $FIXATTEMPTS fix iterations"
 echo "SMAC run parameters: scenario: $SCENARIOFILE wall clock: $WALLCLOCKLIMIT mode: $SMACMODE"
 for (( i=1; i <= $FIXATTEMPTS; i++ ))
 do
   echo "fix iteration $i"
-
+  date 
 
 	# go to base directory (again)
 	cd $PWD
 	# call smac (again)
-	$SMAC --numRun 0 --wallClockLimit $WALLCLOCKLIMIT --doValidation false --abortOnCrash true --executionMode $SMACMODE --scenarioFile $SCENARIOFILE --algo "ruby ../scripts/generic_silent_solver_wrapper.rb $DIRNAME" --paramfile $PARAMFILE > $SMACOUTPUT  2> $SMACERROR
+	$SMAC --numRun 123456 --wallClockLimit $WALLCLOCKLIMIT --doValidation false --abortOnCrash true --executionMode $SMACMODE --scenarioFile $SCENARIOFILE --algo "ruby ../scripts/generic_silent_solver_wrapper.rb $DIRNAME" --paramfile $PARAMFILE > $SMACOUTPUT  2> $SMACERROR
 	smacexitcode=$?
 
 	#echo "smac exited with $?"
@@ -81,16 +85,24 @@ do
 		
 #		exit 0
 		
-		# reduce faulty call parameters
-		python shrinkFaultyParams.py $FAULTYCALL > $REDUCEOUTPUT # TODO convert into SMAC's pcs format to disable these options
-		echo "reduced call: " 
-		grep "^final faulty options: " $REDUCEOUTPUT
+		# reduce faulty call parameters (twice, forward and backward)
+		python shrinkFaultyParams.py $FAULTYCALL > $REDUCEOUTPUT # gives some output, including the small call that failed
+		# echo "reduced call: " 
+		SMALLCALL=`grep "^final faulty options: " $REDUCEOUTPUT  | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'`
+		# reduce the reduced call once more
+		python shrinkFaultyParams.py $SMALLCALL > $REDUCEOUTPUT # gives some output, including the combination of disallowed parameters
+	
+	  # reduced options, and options that can be excluded for continuing with SMAC
+	  grep "^final tool call: " $REDUCEOUTPUT
+	  grep "^final reduced-excludable options: " $REDUCEOUTPUT
 	
 		# add faulty configuration to used solver specification
 		echo "" >> $PARAMFILE
 		echo "# found faulty configuration on file `pwd`/$FAULTYINSTANCE within timeout $FAILTIME (minimized with double)"  >> $PARAMFILE
+		# write full call into file (as a comment)
 		echo "# full faulty call: `grep "^final faulty options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'` (for simpler debugging)" >> $PARAMFILE
-		grep "^final faulty options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'                    >> $PARAMFILE
+		# write partial call into file to be excluded
+		grep "^final reduced-excludable options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'                    >> $PARAMFILE
 	
 	else
 	  # in the last iteration we did not find a problem, hence quit
