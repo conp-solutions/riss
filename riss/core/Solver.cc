@@ -4600,9 +4600,37 @@ lbool Solver::preprocess()
         status = coprocessor->preprocess();
         preprocessTime.stop();
 	otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
+                
+        // recompute values for LPD parameter
+        if( config.opt_litPairDecisions > 0 ) {
+          recomputeLPDdata();
+        }
     }
     if (verbosity >= 1) { printf("c =========================================================================================================\n"); }
     return status;
+}
+
+
+void Solver::recomputeLPDdata()
+{
+  for( int index = 0 ; index < decisionLiteralPairs.size(); ++ index ) decisionLiteralPairs[index].reset(); // clear previous information
+  for( int index = 0 ; index < clauses.size(); ++ index ) { // recompute based on the order of the clauses in the clauses vector
+    const Clause& c = ca[clauses[index]];
+    if ( c.size() > 2 ) { // collect literals only for larger clauses (not binary!)
+      for( int i = 0 ; i < c.size(); ++i ) {
+	LitPairPair& lp = decisionLiteralPairs[ toInt( c [i] ) ];
+	if( lp.p.replaceWith != lit_Undef && lp.q.replaceWith != lit_Undef ) continue; // this literal already has enough literals stored
+	if( lp.p.replaceWith == lit_Undef ) {
+	  lp.p.replaceWith = c [(i + 1) % c.size() ]; // store next two literals
+	  lp.p.otherMatch  = c [(i + 2) % c.size() ]; // store next two literals
+	} else {
+	  assert( lp.q.replaceWith == lit_Undef && "this case is left over" );
+	  lp.q.replaceWith = c [(i + 1) % c.size() ]; // store next two literals
+	  lp.q.otherMatch  = c [(i + 2) % c.size() ]; // store next two literals
+	}
+      }
+    }
+  }
 }
 
 
@@ -4619,6 +4647,7 @@ lbool Solver::inprocess(lbool status)
                 inprocessTime.start();
                 status = coprocessor->inprocess();
                 inprocessTime.stop();
+		
 		otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
                 if (big != 0) {
                     big->recreate(ca, nVars(), clauses, learnts);   // build a new BIG that is valid on the "new" formula!
@@ -4632,6 +4661,11 @@ lbool Solver::inprocess(lbool status)
                     erRewriteInfo.clear();
                     erRewriteInfo.growTo(2 * nVars(), LitPair());
                     rerInitRewriteInfo();
+                }
+                
+                // recompute values for LPD parameter
+                if( config.opt_litPairDecisions > 0 ) {
+                  recomputeLPDdata();
                 }
             }
         }

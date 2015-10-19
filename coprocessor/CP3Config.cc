@@ -606,7 +606,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #ifndef NDEBUG
     twosat_debug_out (_cat_twosat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4),         optionListPtr, &opt_twosat),
     #endif
-    twosat_useUnits  (_cat_twosat, "2sat-units",  "If 2SAT finds units, use them!", false,           optionListPtr, &opt_twosat),
+    twosat_useUnits  (_cat_twosat, "2sat-units",  "If 2SAT finds units, use them! (use carfully!) #NoAutoT", false,           optionListPtr, &opt_twosat),
     twosat_clearQueue(_cat_twosat, "2sat-cq",     "do a decision after a unit has been found", true, optionListPtr, &opt_twosat),
 
     //
