@@ -240,7 +240,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bva_Alimit          (_cat_bva, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1200000, IntRange(0, INT32_MAX), optionListPtr, &opt_Abva),
     opt_Abva_maxRed         (_cat_bva, "cp3_bva_Amax",        "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_Abva),
     opt_bvaInpStepInc       (_cat_bva, "cp3_bva_incInp",  "increases of number of steps per inprocessing", 80000, IntRange(0, INT32_MAX), optionListPtr, &opt_Abva),
-    opt_Abva_heap           (_cat_bva, "cp3_Abva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0, 10), optionListPtr, &opt_Abva),
+    opt_Abva_heap           (_cat_bva, "cp3_Abva_heap",   "0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order", 1, IntRange(0, 9), optionListPtr, &opt_Abva),
 
     opt_bvaComplement       (_cat_bva, "cp3_bva_compl",   "treat complementary literals special", true, optionListPtr, &opt_Abva),
     opt_bvaRemoveDubplicates(_cat_bva, "cp3_bva_dupli",   "remove duplicate clauses", true, optionListPtr, &opt_Abva),

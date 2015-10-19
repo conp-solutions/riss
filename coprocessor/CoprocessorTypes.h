@@ -561,7 +561,7 @@ struct LitOrderHeapLt {
                 assert(false && "forgot to update all parameter checks!");
             }
         } else {
-            assert(false && "In case of random order no heap should be used"); return false;
+            assert(false && "In case of random order no heap should be used, or wrong parameter for heap comparison"); return false;
         }
         return false;
     }
@@ -1911,11 +1911,21 @@ inline void BIG::generateImplied(CoprocessorData& data)
     uint32_t stamp = 1 ;
     const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
 
+    if( maxVar == 0 ) return;
+    
     if (start == 0) { start = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if (start == 0) { free(oldPtr); exit(-1); } }
+    else { 
+      uint32_t* oldPtr = start;
+      start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); 
+      if (start == 0) { if( oldPtr != 0 ) free(oldPtr); } 
+    }
 
     if (stop == 0) { stop = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { uint32_t* oldPtr = stop; stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); if (stop == 0) { free(oldPtr); exit(-1); } }
+    else { 
+      uint32_t* oldPtr = stop;
+      stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); 
+      if (stop == 0) { if( oldPtr != 0 ) free(oldPtr); } 
+    }
 
     int32_t* index = (int32_t*)malloc(maxVar * sizeof(int32_t) * 2);
 
@@ -1964,7 +1974,8 @@ inline void BIG::generateImplied(uint32_t nVars, Riss::vec<Riss::Lit>& tmpLits)
 {
     uint32_t stamp = 1 ;
     const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
-
+    if( maxVar == 0 ) return;
+    
     if (start == 0) { start = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
     else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if (start == 0) { free(oldPtr); exit(-1); } }
 
@@ -2121,6 +2132,7 @@ inline uint32_t BIG::stampLiteral(const Riss::Lit& literal, uint32_t stamp, int3
     // linearized algorithm from paper
     stamp++;
     // handle initial literal before putting it on queue
+    assert( Riss::var(literal) < duringCreationVariables && "write only into valid range" );
     start[Riss::toInt(literal)] = stamp; // parent and root are already set to literal
     if (global_debug_out) { std::cerr << "c start[" << literal << "] = " << stamp << std::endl; }
     stampQueue.push_back(literal);
@@ -2143,6 +2155,7 @@ inline uint32_t BIG::stampLiteral(const Riss::Lit& literal, uint32_t stamp, int3
             ind ++;
             if (start[ Riss::toInt(impliedLit) ] != 0) { continue; }
             stamp ++;
+	    assert( Riss::var(impliedLit) < duringCreationVariables && "write only into valid range" );
             start[ Riss::toInt(impliedLit) ] = stamp;
             if (global_debug_out) { std::cerr << "c start[" << impliedLit << "] = " << stamp << std::endl; }
             index[ Riss::toInt(impliedLit) ] = 0;
