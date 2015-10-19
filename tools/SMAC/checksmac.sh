@@ -41,8 +41,7 @@ echo "SMAC run parameters: scenario: $SCENARIOFILE wall clock: $WALLCLOCKLIMIT m
 for (( i=1; i <= $FIXATTEMPTS; i++ ))
 do
   echo "fix iteration $i"
-
-
+  date 
 	# go to base directory (again)
 	cd $PWD
 	# call smac (again)
