@@ -38,6 +38,7 @@ PWD=`pwd`
 
 # get all interval options (for riss5, its either [range]i, or [range] [default], square brackets after option name identify interval options
 grep -e "]i" -e "\] \["  solvers/riss5/riss5.pcs | awk '{print $1}' > $INTERVALOPTIONS
+echo "found `cat $INTERVALOPTIONS | wc -l` interval options"
 
 # start actual working loop
 echo "run configuration fixing in dir $DIRNAME with PCS file $PARAMFILE and $FIXATTEMPTS fix iterations"
@@ -86,11 +87,11 @@ do
 #		exit 0
 		
 		# reduce faulty call parameters (twice, forward and backward)
-		python shrinkFaultyParams.py $FAULTYCALL > $REDUCEOUTPUT # gives some output, including the small call that failed
+		python shrinkFaultyParams.py $INTERVALOPTIONS $FAULTYCALL > $REDUCEOUTPUT # gives some output, including the small call that failed
 		# echo "reduced call: " 
-		SMALLCALL=`grep "^final faulty options: " $REDUCEOUTPUT  | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'`
+		SMALLCALL=`grep "^final tool call: " $REDUCEOUTPUT  | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'`
 		# reduce the reduced call once more
-		python shrinkFaultyParams.py $SMALLCALL > $REDUCEOUTPUT # gives some output, including the combination of disallowed parameters
+		python shrinkFaultyParams.py $INTERVALOPTIONS $SMALLCALL > $REDUCEOUTPUT # gives some output, including the combination of disallowed parameters
 	
 	  # reduced options, and options that can be excluded for continuing with SMAC
 	  grep "^final tool call: " $REDUCEOUTPUT
