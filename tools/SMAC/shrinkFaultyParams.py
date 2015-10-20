@@ -73,7 +73,7 @@ def main( intervalfile, callparams ):
 	
 	# print such that SMAC already sees it as invalid combination
 	precall=""
-	for s in callparams[1:n] :
+	for s in callparams[1:9] :
 		precall = precall + " " + s
 	for s in keepParams :
 		precall = precall + " " + s
@@ -139,5 +139,5 @@ def main( intervalfile, callparams ):
 #	
 # call to main method	
 #
-print "called with #param: " + str( len(sys.argv) )
+print "called with #param: " + str( sys.argv )
 main( sys.argv[1], sys.argv[1:] )

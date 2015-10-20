@@ -905,12 +905,31 @@ bool Rewriter::rewriteAMO()
                         clsLits.push(nr2);
                         sort(clsLits); sortCalls++;
                         if (hitPos > 0 && nr1 < c[hitPos - 1]) { c.sort() ; }
+                        DOUT(if (config.rew_debug_out > 1) cerr << "c newlits " << clsLits << " from initial clause " << c << endl;);
 
+			// delete old clause
+			c.set_delete(true);
+			
+			// check for duplicate / complements
+			bool compLit = false; // found complementary literals?
+			int keepLits = 0;
+			cerr << "c rewrite " << clsLits << endl;
+			Lit p = lit_Undef;
+			for( int index = 0 ; index < clsLits.size(); ++ index ) {
+			  if( p == clsLits[index] ) continue; // do not keep this literal
+			  else if ( clsLits[keepLits] == ~clsLits[index] ) { 
+			    compLit = true; 
+			    break;
+			  }
+			  clsLits[keepLits++] = p = clsLits[index]; // copy literal (forward)
+			}
+			if( compLit ) continue; // the new clause is a tautology, hence, no need to add the clause to the formula again
+			clsLits.shrink_( clsLits.size() - keepLits ); // remove redundant lits at the end of the clause
+			cerr << "c    into " << clsLits << endl;
+			
                         minL =  data[nr1] < data[minL] ? nr1 : minL;
                         minL =  data[nr2] < data[minL] ? nr2 : minL;
-
-                        c.set_delete(true);
-                        if (!hasDuplicate(data.list(minL), clsLits)) {
+			if (!hasDuplicate(data.list(minL), clsLits)) {
                             enlargedClauses ++;
                             data.removedClause(nll[k]);
                             CRef tmpRef = ca.alloc(clsLits, c.learnt());  // no learnt clause!
@@ -1146,8 +1165,10 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
         if (true) {   // check each clause for being subsumed -> kick subsumed clauses!
             if (d.size() < c.size()) {
                 detectedDuplicates ++;
-                DOUT(if (config.rew_debug_out > 1) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
-                if (ordered_subsumes(d, c)) { return true; }   // the other clause subsumes the current clause!
+                if (ordered_subsumes(d, c)) { 
+		  DOUT(if (config.rew_debug_out > 1) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
+		  return true;
+		}   // the other clause subsumes the current clause!
             } if (d.size() > c.size()) {   // if size is equal, then either removed before, or not removed at all!
                 if (ordered_subsumes(c, d)) {
                     d.set_delete(true);

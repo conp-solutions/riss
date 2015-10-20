@@ -90,7 +90,7 @@ do
 		# reduce faulty call parameters (twice, forward and backward)
 		python shrinkFaultyParams.py $INTERVALOPTIONS $FAULTYCALL > $REDUCEOUTPUT # gives some output, including the small call that failed
 		# echo "reduced call: " 
-		SMALLCALL=`grep "^ffinal tool call: " $REDUCEOUTPUT  | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'`
+		SMALLCALL=`grep "^final tool call: " $REDUCEOUTPUT  | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'`
 		# reduce the reduced call once more
 		python shrinkFaultyParams.py $INTERVALOPTIONS $SMALLCALL > $REDUCEOUTPUT # gives some output, including the combination of disallowed parameters
 	

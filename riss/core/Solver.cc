@@ -1059,7 +1059,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         // or 1stUIP is unit, but the current learned clause would be bigger, and there are still literals on the current level
         || (isOnlyUnit && units > 0 && index >= trail_lim[ decisionLevel() - 1])
     );
-    assert((units == 0 || pathLimit == 0 || decisionLevel() == 1) && "there cannot be a bi-asserting clause that is a unit clause on a level higher than 1!");
+    // Note: biasserting clauses can also be unit clauses!
     assert(out_learnt.size() > 0 && "there has to be some learnt clause");
 
     // if we do not use units, add asserting literal to learned clause!
