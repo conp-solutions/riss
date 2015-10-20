@@ -948,6 +948,7 @@ class Solver
         Lit otherMatch, replaceWith;
         LitPair(const Lit& l1, const Lit& l2) : otherMatch(l1), replaceWith(l2) {};
         LitPair() : otherMatch(lit_Undef), replaceWith(lit_Undef) {}
+        void reset() { otherMatch = lit_Undef; replaceWith = lit_Undef; }
     };
     vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
 
@@ -1489,9 +1490,12 @@ class Solver
     /** store two pairs of literals */
     struct LitPairPair {
       LitPair p,q;
+      void reset(){ p.reset(); q.reset(); }
     };
     
     vec<LitPairPair> decisionLiteralPairs; /// data to be used to select search decision literals
+    
+    void recomputeLPDdata(); /// clears current info, and recomputes the info again based on the current clauses
     
 // [BEGIN] modifications for model enumerating solver
     class EnumerationClient {

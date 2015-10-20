@@ -1059,7 +1059,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         // or 1stUIP is unit, but the current learned clause would be bigger, and there are still literals on the current level
         || (isOnlyUnit && units > 0 && index >= trail_lim[ decisionLevel() - 1])
     );
-    assert((units == 0 || pathLimit == 0) && "there cannot be a bi-asserting clause that is a unit clause!");
+    assert((units == 0 || pathLimit == 0 || decisionLevel() == 1) && "there cannot be a bi-asserting clause that is a unit clause on a level higher than 1!");
     assert(out_learnt.size() > 0 && "there has to be some learnt clause");
 
     // if we do not use units, add asserting literal to learned clause!
@@ -4693,9 +4693,37 @@ lbool Solver::preprocess()
         status = coprocessor->preprocess();
         preprocessTime.stop();
 	otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
+                
+        // recompute values for LPD parameter
+        if( config.opt_litPairDecisions > 0 ) {
+          recomputeLPDdata();
+        }
     }
     if (verbosity >= 1) { printf("c =========================================================================================================\n"); }
     return status;
+}
+
+
+void Solver::recomputeLPDdata()
+{
+  for( int index = 0 ; index < decisionLiteralPairs.size(); ++ index ) decisionLiteralPairs[index].reset(); // clear previous information
+  for( int index = 0 ; index < clauses.size(); ++ index ) { // recompute based on the order of the clauses in the clauses vector
+    const Clause& c = ca[clauses[index]];
+    if ( c.size() > 2 ) { // collect literals only for larger clauses (not binary!)
+      for( int i = 0 ; i < c.size(); ++i ) {
+	LitPairPair& lp = decisionLiteralPairs[ toInt( c [i] ) ];
+	if( lp.p.replaceWith != lit_Undef && lp.q.replaceWith != lit_Undef ) continue; // this literal already has enough literals stored
+	if( lp.p.replaceWith == lit_Undef ) {
+	  lp.p.replaceWith = c [(i + 1) % c.size() ]; // store next two literals
+	  lp.p.otherMatch  = c [(i + 2) % c.size() ]; // store next two literals
+	} else {
+	  assert( lp.q.replaceWith == lit_Undef && "this case is left over" );
+	  lp.q.replaceWith = c [(i + 1) % c.size() ]; // store next two literals
+	  lp.q.otherMatch  = c [(i + 2) % c.size() ]; // store next two literals
+	}
+      }
+    }
+  }
 }
 
 
@@ -4712,6 +4740,7 @@ lbool Solver::inprocess(lbool status)
                 inprocessTime.start();
                 status = coprocessor->inprocess();
                 inprocessTime.stop();
+		
 		otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
                 if (big != 0) {
                     big->recreate(ca, nVars(), clauses, learnts);   // build a new BIG that is valid on the "new" formula!
@@ -4725,6 +4754,11 @@ lbool Solver::inprocess(lbool status)
                     erRewriteInfo.clear();
                     erRewriteInfo.growTo(2 * nVars(), LitPair());
                     rerInitRewriteInfo();
+                }
+                
+                // recompute values for LPD parameter
+                if( config.opt_litPairDecisions > 0 ) {
+                  recomputeLPDdata();
                 }
             }
         }

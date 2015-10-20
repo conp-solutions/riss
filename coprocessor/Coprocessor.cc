@@ -1403,6 +1403,7 @@ void Preprocessor::destroyTechniques()
     if (config.opt_cce) { cce.destroy(); }
     if (config.opt_rate) { rate.destroy(); }
     if (config.opt_ent) { entailedRedundant.destroy(); }
+    if (config.opt_hbr) { hbr.destroy(); }
 
 }
 
