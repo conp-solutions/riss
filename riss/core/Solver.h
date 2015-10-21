@@ -89,6 +89,7 @@ namespace Riss
 class Communicator;
 class OnlineProofChecker;
 class IncSolver;
+
 class EnumerateMaster;
 
 //=================================================================================================
@@ -135,7 +136,7 @@ class Solver
 
     /** indicate whether this incarnation is working on the original formula in pfolio*/
     bool independent() const { return privateConfig->opt_useOriginal; }
-    
+
     // Problem specification:
     //
 
@@ -273,7 +274,7 @@ class Solver
         void update(double g_i)
         {
             ++ steps;
-//  cerr << "c update EMA with " << g_i << " at step " << steps << " with alpha=" << alpha << " from " << value;
+//  std::cerr << "c update EMA with " << g_i << " at step " << steps << " with alpha=" << alpha << " from " << value;
             if (!initialized) {
                 double compareAlpha = pow(2, - steps);
                 if (compareAlpha <= alpha) { initialized = true; compareAlpha = alpha; }  // set initiliazed to true, so that we do not have to do this calculation any more
@@ -281,7 +282,7 @@ class Solver
             } else {
                 value = alpha * g_i + (1 - alpha) * value;   // exponential update
             }
-//  cerr << " to " << value << endl;
+//  std::cerr << " to " << value << std::endl;
         }
 
         int64_t getSteps() const { return steps; }
@@ -464,16 +465,16 @@ class Solver
         #ifdef PCASSO
         unsigned dependencyLevel;
         #endif
-	VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
-	#ifdef PCASSO
-         , dependencyLevel(0)
-        #endif
-	{}
-	VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
-	#ifdef PCASSO
-         , dependencyLevel(0)
-        #endif
-	{}
+        VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
+        VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
     };
 
   protected:
@@ -695,6 +696,7 @@ class Solver
 //     vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     Compression         compression;      // if compression is enabled, this transformation info will be stored here
+
   protected:
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
     int                 realHead;         // indicate last literal that has been analyzed for unit propagation
@@ -883,6 +885,25 @@ class Solver
      */
     bool handleRestarts(int& nof_conflicts, const int conflictC);
 
+    /** handle top level units for the unsatisfiability proof and clause sharing */
+    void handleTopLevelUnits(const int& beforeTrail, int& proofTopLevels);
+
+    /** update the heuristic that is responsible for triggering restarts and blocking them */
+    void updateBlockRestartAndRemovalHeuristic(bool& blockNextRestart);
+
+    /** perform conflict analysis based on the current conflict */
+    lbool conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause);
+
+    /** check for commands from the outside, as well as for shared clauses
+     + @return l_True, if everything is fine, l_False is we found UNSAT, l_Undef if the search should be interupted
+     */
+    lbool receiveInformation();
+
+    /** perform search decision, including handling assumptions recoding model for enumeration, performing look ahead
+     @return decision literal, lit_Error -> return with the given returnValue, lit_Undef -> continue with the next search loop iteration
+     */
+    Lit performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits);
+
     /** remove learned clauses during search */
     void clauseRemoval();
 
@@ -1023,7 +1044,7 @@ class Solver
     /** all info neede to perform lazy on the fly self subsumption */
     class OTFSS
     {
-    public:
+      public:
         int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause, removedSat; // otfss stats
 
         /** store for each clause which literal can be removed */
@@ -1040,7 +1061,7 @@ class Solver
         OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0), removedSat(0) {}
 
         /** to be used to keep a state clean, e.g. after preprocessing/inprocessing */
-	void clearQueues() { info.clear(); tmpPropagateLits.clear(); } 
+        void clearQueues() { info.clear(); tmpPropagateLits.clear(); }
     } otfss;
 
     /** run over the stored clauses and remove the indicated literal
@@ -1315,10 +1336,12 @@ class Solver
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
+
     /** replace the current instance of coprocessor with the new one
         @return pointer to the old coprocessor
      */
     Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
+
     /** return the pointer to the currently used preprocessor
         @return pointer to coprocessor
      */
@@ -1326,8 +1349,11 @@ class Solver
 
     bool useCoprocessorPP;
     bool useCoprocessorIP;
+
     /** extend a given model (in case a preprocessor is present ) */
     void extendModel(Riss::vec<Riss::lbool>& model);
+
+    // if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { coprocessor->extendModel(model); }
 
     /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
     void setExtendedResolution(bool enabled) { doAddVariablesViaER = enabled; }
@@ -1492,6 +1518,12 @@ class Solver
             ALSOFROMBLOCKED = 2
         };
 
+        // how to enumerate under projection
+        enum ProjectionType {
+            NAIVE = 0,         // simply block the projection variables of the current solution
+            BACKTRACKING = 1,  // use the sophisticated backtracking based algorithm from Gebser et al paper
+        };
+
       private:
 
         int clientID;
@@ -1510,9 +1542,9 @@ class Solver
          @param clause literals of the clause, can be modified during the method
          @param maxLevel maximum decision level in the clause (>= 0, otherwise, recomputed)
          @param max2Level second highest decision level in the clause (>= 0, otherwise, recomputed)
-         @return true, if everything went fine, false, if no more model is possible
+         @return reference to the added clause, CRef_Undef if the clause became unit, CRef_Error, if unsatisfiability was reached during adding the clause
          */
-        bool integrateClause(vec<Lit>& clause, int maxLevel, int max2Level);
+        CRef integrateClause(vec<Lit>& clause, int maxLevel, int max2Level);
 
         /** convert model into truth value representation
          @param nVars present variables in solver
@@ -1522,11 +1554,18 @@ class Solver
          */
         uint64_t convertModel(uint32_t nVars, vec< Lit >& trail, vec< lbool >& model);
 
-        vec<Lit> blockingClause;  // storage for the blocking clause
-        vec<Lit> minimizedClause; // storage for the minimize blocking clause
+        vec<Lit> blockingClause;  /// storage for the blocking clause
+        vec<Lit> minimizedClause; /// storage for the minimize blocking clause
 
-        uint64_t blockedModels; // number of models that have been received from the master already
-        uint64_t lastReceiveDecisions;  // number of decisions when receiving the last blocking clause
+        uint64_t blockedModels; /// number of models that have been received from the master already
+        uint64_t lastReceiveDecisions;  /// number of decisions when receiving the last blocking clause
+
+        ProjectionType projectionType; /// how to perform enumeration under projection
+
+        // for backtracking projection enumeration
+        int projectionBacktrackingLevel;   // bl in the paper
+        vec<Lit> projectionDecisionStack;  // memorize the decision variables used for projection
+        vec<CRef> projectionReasonClauses; // memorize the reason clauses that are used for projection
 
       public:
 
@@ -1573,6 +1612,11 @@ class Solver
 
         /** assign a id from the master to the client */
         void assignClientID();
+        /** activate backtracking based enumeration */
+        void enableBTbasedEnumeration();
+
+        /** indicate whether enumeration on projection interferes with usual search */
+        bool isBTenumerating() const;
 
     } enumerationClient;
 
@@ -1753,7 +1797,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     if (false) {
     for (int i = 0 ; i < nVars(); ++ i) {
             std::cerr << "c value var " << i + 1 << " sat: " << (reverseMinimization.value(i) == l_True)
-                 << " unsat: " << (reverseMinimization.value(i) == l_False)
+                      << " unsat: " << (reverseMinimization.value(i) == l_False)
                       << " undef: " << (reverseMinimization.value(i) == l_Undef) << std::endl;
         }
     });
@@ -1791,7 +1835,8 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
                         std::cerr << "reverse minimization hit a conflict during propagation" << std::endl;
                         std::cerr << "c qhead: " << qhead << " level 0: " << (trail_lim.size() == 0 ? trail.size() : trail_lim[0]) << " trail: " << trail << std::endl;
                             std::cerr << "c trailHead: " << trailHead << " rev-trail: " << reverseMinimization.trail << std::endl;
-                        });
+                        }
+                            );
                         break;
                     } else if (reverseMinimization.value(imp) == l_Undef) {  // imply other literal
                         if (localDebug) { std::cerr << "c enqueue " << imp << " due to " << ca[ i->cref() ] << std::endl; }
@@ -1854,7 +1899,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
         if (i == learned_clause.size()) { break; }
 
         const Lit l = learned_clause[i];
-        assert(level(var(l)) != 0 && "there should not be any literal of the top level in the clause");
+        assert((force || level(var(l)) != 0 || reverseMinimization.value(l) == l_False) && "there should not be any relevant literal of the top level in the clause");
 // DOUT(   std::cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << std::endl; );
         if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
             learned_clause[keptLits++ ] = l; // keep literal
@@ -2070,7 +2115,7 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
 }
 
 inline
-bool Solver::checkProof()
+lbool Solver::checkProof()
 {
     if (onlineDratChecker != 0) {
         return onlineDratChecker->addClause(lit_Undef) ? l_True : l_False;
@@ -2090,13 +2135,16 @@ void Solver::addInputClause_(vec< Lit >& ps)
         onlineDratChecker->addParsedclause(ps);
     }
     #endif
+
 }
+
 inline
 void Solver::updatePosNeg(bool somePosInClause, bool somNegInClause)
 {
     posInAllClauses = posInAllClauses && somePosInClause; // memorize for the whole formula
     negInAllClauses = negInAllClauses && somNegInClause;
 }
+
 
 };
 

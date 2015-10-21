@@ -334,7 +334,7 @@ inline void BoundedVariableElimination::initializeTechnique(CoprocessorData& dat
     // if we do use a heap and the heap is not yet initialized, create the heap
     // with a comparator depending on the CoprocessorData
     if (config.opt_bve_heap != 2) {
-        assert(&(variable_heap->getComparator().data) == &data && "CoprocessorData must not change");
+        assert((variable_heap == nullptr || &(variable_heap->getComparator().data) == &data) && "CoprocessorData must not change");
 
         // create (or re-create) the BVE variable heap
         if (variable_heap == nullptr) {

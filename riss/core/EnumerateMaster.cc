@@ -13,6 +13,7 @@ using namespace std;
 EnumerateMaster::EnumerateMaster(int _nVars)
     :
     enumerateParallel(false)
+    , enumerateWithBacktracking(false)
     , coprocessor(nullptr)
     , nVars(_nVars)
     , useProjection(false)
@@ -160,4 +161,16 @@ void EnumerateMaster::setReceiveModels(bool r)
 {
     shareBlockingClauses = r;
 }
+
+void EnumerateMaster::activateNaiveBacktrackingEnumeration()
+{
+    enumerateWithBacktracking = true;
+}
+
+bool EnumerateMaster::usesBacktrackingEnumeration() const
+{
+    return enumerateWithBacktracking;
+}
+
+
 

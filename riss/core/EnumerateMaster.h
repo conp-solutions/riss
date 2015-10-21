@@ -38,6 +38,7 @@ class EnumerateMaster
 
     SleepLock ownLock;       // lock for shared access
     bool enumerateParallel;  // use shared access
+    bool enumerateWithBacktracking; // use backtracking for enumeration
 
     Coprocessor::Preprocessor* coprocessor; // pointer to formula simplification tool, that might be used for model extension
 
@@ -107,6 +108,12 @@ class EnumerateMaster
 
     /** do we search for models in a parallel setup ? */
     bool isShared() const { return enumerateParallel; }
+
+    /** use backtracking enumeration instead of naive clause blocking */
+    void activateNaiveBacktrackingEnumeration();
+
+    /** indicate whethre backtracking enumeration should be used */
+    bool usesBacktrackingEnumeration() const ;
 
     /** return number of found models (so far), not synchronized */
     int64_t foundModels() const { return models.size(); }
