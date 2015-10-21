@@ -10,6 +10,7 @@
 #
 # known problems:
 # - script will try to exclude continous parameters for a single value, which cannot be handled by SMAC any more.
+# - script requires gawk, awk command might break with other versions. Tested version: GNU Awk 4.0.1
 #
 
 # parameter
@@ -78,8 +79,10 @@ do
 		FAILTIME=`grep " Algorithm Reported: Result for ParamILS" $SMACOUTPUT | tail -n 1 | awk '{print $9}' | sed  's/\./,/' | awk -v f=$FAILFACTOR '{ print $1 ; }'`
 		echo "FAILTIME: $FAILTIME"
 #		grep "Failed Run Detected Call: " $SMACOUTPUT | tail -n 1
-	
-		FAULTYCALL=`grep "Failed Run Detected Call: " $SMACOUTPUT | tail -n 1 | awk -v ftime=$FAILTIME '{ for(i=10; i<=NF; i++) if( i != 15 ) printf("%s ", $i ); else printf("%lf ", $i * 2.0);}'`
+    echo "failed run call: " 
+  	grep "Failed Run Detected Call: " $SMACOUTPUT | tail -n 1 
+  	echo ""
+		FAULTYCALL=`grep "Failed Run Detected Call: " $SMACOUTPUT | tail -n 1 | awk '{ for(i=10; i<=NF; i++) if( i != 15 ) printf("%s ", $i ); else printf("%lf ", $i * 2.0);}'`
 #		echo "faulty call: $FAULTYCALL"
 		FAULTYINSTANCE=`echo $FAULTYCALL | awk '{print $4}'`
 		echo "faulty instance: `pwd`/$FAULTYINSTANCE"
