@@ -1,5 +1,6 @@
 # ChangeLog for riss
 
+ * model enumeration with blocking clauses
  * added restart switching heuristics
  * added dynamic EMA restart schedule, and non-restart option
  * added trivial model detection (all true or all false, ignores units)
