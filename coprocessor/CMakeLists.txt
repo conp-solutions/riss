@@ -37,6 +37,7 @@ set(LIB_SOURCES
     techniques/Unhiding.cc
     techniques/BCE.cc
     techniques/RATE.cc
+    techniques/HBR.cc
     techniques/SLS.cc
     techniques/Xor.cc
     ${VERSION_CC})
@@ -78,9 +79,9 @@ git_signature(PROJECT_NAME "coprocessor"
 add_executable(coprocessor Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(coprocessor coprocessor-lib-static)
+  target_link_libraries(coprocessor riss-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(coprocessor coprocessor-lib-shared)
+  target_link_libraries(coprocessor riss-lib-shared coprocessor-lib-shared)
 endif()
 
 # Installation:

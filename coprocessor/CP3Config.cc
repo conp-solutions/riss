@@ -18,6 +18,10 @@ using namespace Riss;
 namespace Coprocessor
 {
 
+//
+// to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description!
+//
+
 // Disable astyle formatting
 // *INDENT-OFF*
 
@@ -47,6 +51,7 @@ const char* _cat_twosat   = "COPROCESSOR - TWOSAT";
 const char* _cat_uhd      = "COPROCESSOR - UNHIDE";
 const char* _cat_xor      = "COPROCESSOR - XOR";
 const char* _cat_rat      = "COPROCESSOR - RAT Elimination";
+const char* _cat_hbr      = "COPROCESSOR - Hyper Binary Resolution";
 
 CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     :
@@ -67,17 +72,17 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_unlimited     (_cat, "cp3_limited",     "Limits for preprocessing techniques", true,                                                       optionListPtr, &opt_enabled),
     opt_randomized    (_cat, "cp3_randomized",  "Steps withing preprocessing techniques are executed in random order", false,                      optionListPtr, &opt_enabled),
     opt_inprocessInt  (_cat, "cp3_inp_cons",    "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX),                  optionListPtr, &opt_inprocess),
-    opt_inpIntInc     (_cat, "cp3_iinp_cons",   "Increase inprocessing interval in each iteration", 0, IntRange(0, INT32_MAX),                 optionListPtr, &opt_inprocess),
+    opt_inpIntInc     (_cat, "cp3_iinp_cons",   "Increase inprocessing interval in each iteration", 0, IntRange(0, INT32_MAX),                     optionListPtr, &opt_inprocess),
     opt_simplifyRounds(_cat, "cp3_iters",       "simplification rounds in preprocessing", 1, IntRange(0, INT32_MAX),                               optionListPtr, &opt_enabled),
 
-    opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
+    opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit) #NoAutoT", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
     opt_randInp       (_cat, "randInp",         "Randomize Inprocessing", true,                                                                    optionListPtr, &opt_inprocess),
     opt_inc_inp       (_cat, "inc-inp",         "increase technique limits per inprocess step", false,                                             optionListPtr, &opt_inprocess),
 
     opt_whiteList     (_cat2, "whiteList",      "variables whose set of solution is not touched", 0,                                               optionListPtr, &opt_enabled),
 
-    opt_printStats    (_cat, "cp3_stats",       "Print Technique Statistics", false,                                                               optionListPtr, &opt_enabled),
-    opt_verbose       (_cat, "cp3_verbose",     "Verbosity of preprocessor", 0, IntRange(0, 5),                                                    optionListPtr, &opt_enabled),
+    opt_printStats    (_cat, "cp3_stats",       "Print Technique Statistics #NoAutoT", false,                                                      optionListPtr, &opt_enabled),
+    opt_verbose       (_cat, "cp3_verbose",     "Verbosity of preprocessor #NoAutoT", 0, IntRange(0, 5),                                                    optionListPtr, &opt_enabled),
 
     // techniques
     opt_up             (_cat2, "up",            "Use Unit Propagation during preprocessing", false,                            optionListPtr, &opt_enabled),
@@ -102,13 +107,14 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_simplify       (_cat2, "simplify",      "Apply easy simplifications to the formula", true,                             optionListPtr, &opt_enabled),
     opt_symm           (_cat2, "symm",          "Do local symmetry breaking", false,                                           optionListPtr, &opt_enabled),
     opt_FM             (_cat2, "fm",            "Use the Fourier Motzkin transformation", false,                               optionListPtr, &opt_enabled),
+    opt_hbr            (_cat2, "hbr",           "Use hyper binary resolution", false,                                          optionListPtr, &opt_enabled),
 
     opt_ptechs         (_cat2, "cp3_ptechs",    "techniques for preprocessing", 0,                                             optionListPtr, &opt_enabled),
     opt_itechs         (_cat2, "cp3_itechs",    "techniques for inprocessing",  0,                                             optionListPtr, &opt_inprocess),
 
     // use 2sat and sls only for high versions!
 
-    opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX), optionListPtr, &opt_enabled),
+    opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing #NoAutoT", 0, IntRange(0, 64), optionListPtr, &opt_enabled),
     opt_sls         (_cat2,       "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false,       optionListPtr, &opt_enabled),
     opt_sls_phase   (_cat_sls,    "sls-phase",     "Use current interpretation of SLS as phase", false,                                        optionListPtr, &opt_sls),
     opt_sls_flips   (_cat_sls,    "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX),                      optionListPtr, &opt_sls),
@@ -179,6 +185,10 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_rew_cls         (_cat, "cp3_rew_cls",     "clause limit to enable REW",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
     opt_rew_lits        (_cat, "cp3_rew_lits",    "total literal limit to enable REW",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
 
+    opt_hbr_vars        (_cat, "cp3_hbr_vars",    "variable limit to enable HBR",                INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
+    opt_hbr_cls         (_cat, "cp3_hbr_cls",     "clause limit to enable HBR",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
+    opt_hbr_lits        (_cat, "cp3_hbr_lits",    "total literal limit to enable HBR",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
+
 
 
     #ifndef NDEBUG
@@ -192,7 +202,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // parameters BVE
     //
     opt_par_bve              (_cat_bve, "cp3_par_bve",            "Parallel BVE: 0 never, 1 heur., 2 always", 1, IntRange(0, 2),                                                                optionListPtr, &opt_bve),
-    opt_bve_verbose          (_cat_bve, "cp3_bve_verbose",        "Verbosity of preprocessor", 0, IntRange(0, 4),                                                                               optionListPtr, &opt_bve),
+    opt_bve_verbose          (_cat_bve, "cp3_bve_verbose",        "Verbosity of preprocessor #NoAutoT", 0, IntRange(0, 4),                                                                               optionListPtr, &opt_bve),
 
     opt_bve_limit            (_cat_bve, "cp3_bve_limit",          "perform at most this many clause derefferences", 25000000, IntRange(-1, INT32_MAX),                                          optionListPtr, &opt_bve),
     opt_learnt_growth        (_cat_bve, "cp3_bve_learnt_growth",  "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX),                         optionListPtr, &opt_bve),
@@ -205,15 +215,15 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // pick order of eliminations
     opt_bve_heap             (_cat_bve, "cp3_bve_heap",           "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 0, IntRange(0, 10), optionListPtr, &opt_bve),
     // increasing eliminations
-    opt_bve_grow             (_cat_bve, "bve_cgrow",              "number of additional clauses per elimination", 0, IntRange(-INT32_MAX, INT32_MAX),                                           optionListPtr, &opt_bve),
-    opt_bve_growTotal        (_cat_bve, "bve_cgrow_t",            "total number of additional clauses", INT32_MAX, IntRange(0, INT32_MAX),                                                      optionListPtr, &opt_bve),
+    opt_bve_grow             (_cat_bve, "bve_cgrow",              "number of additional clauses per elimination", 0, IntRange(-2000, 2000),                                           optionListPtr, &opt_bve),
+    opt_bve_growTotal        (_cat_bve, "bve_cgrow_t",            "total number of additional clauses", 1000, IntRange(0, 50000),                                                              optionListPtr, &opt_bve),
     opt_totalGrow            (_cat_bve, "bve_totalG",             "Keep track of total size of formula when allowing increasing eliminations", false,                                           optionListPtr, &opt_bve),
 
     opt_bve_bc               (_cat_bve, "bve_BCElim",             "Eliminate Blocked Clauses", false,                                                                                           optionListPtr, &opt_bve),
     heap_updates             (_cat_bve, "bve_heap_updates",       "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0, 2), optionListPtr, &opt_bve),
     opt_bve_earlyAbort       (_cat_bve, "bve_early",              "Interupt anticipate eagerly", false,                                                                                         optionListPtr, &opt_bve),
     opt_bce_only             (_cat_bve, "bce_only",               "Only remove blocked clauses but do not resolve variables.", false,                                                           optionListPtr, &opt_bve),
-    opt_print_progress       (_cat_bve, "bve_progress",           "Print bve progress stats.", false,                                                                                           optionListPtr, &opt_bve),
+    opt_print_progress       (_cat_bve, "bve_progress",           "Print bve progress stats. #NoAutoT", false,                                                                                  optionListPtr, &opt_bve),
     opt_bveInpStepInc        (_cat_bve, "cp3_bve_inpInc",         "increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX),                                                     optionListPtr, &opt_bve),
 
 
@@ -230,7 +240,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bva_Alimit          (_cat_bva, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1200000, IntRange(0, INT32_MAX), optionListPtr, &opt_Abva),
     opt_Abva_maxRed         (_cat_bva, "cp3_bva_Amax",    "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_Abva),
     opt_bvaInpStepInc       (_cat_bva, "cp3_bva_incInp",  "increases of number of steps per inprocessing", 80000, IntRange(0, INT32_MAX), optionListPtr, &opt_Abva),
-    opt_Abva_heap           (_cat_bva, "cp3_Abva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0, 10), optionListPtr, &opt_Abva),
+    opt_Abva_heap           (_cat_bva, "cp3_Abva_heap",   "0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order", 1, IntRange(0, 9), optionListPtr, &opt_Abva),
 
     opt_bvaComplement       (_cat_bva, "cp3_bva_compl",   "treat complementary literals special", true, optionListPtr, &opt_Abva),
     opt_bvaRemoveDubplicates(_cat_bva, "cp3_bva_dupli",   "remove duplicate clauses", true, optionListPtr, &opt_Abva),
@@ -249,8 +259,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bva_Ilimit          (_cat_bva, "cp3_bva_Ilimit", "number of steps allowed for ITE-BVA",           100000000, IntRange(0, INT32_MAX), optionListPtr, &opt_Ibva),
     opt_Xbva_maxRed         (_cat_bva, "cp3_bva_Xmax",   "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_Xbva),
     opt_Ibva_maxRed         (_cat_bva, "cp3_bva_Imax",   "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_Ibva),
-    opt_Xbva_heap           (_cat_bva, "cp3_Xbva_heap",  "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0, 10), optionListPtr, &opt_Xbva),
-    opt_Ibva_heap           (_cat_bva, "cp3_Ibva_heap",  "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0, 10), optionListPtr, &opt_Ibva),
+    opt_Xbva_heap           (_cat_bva, "cp3_Xbva_heap",  "0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order", 1, IntRange(0, 9), optionListPtr, &opt_Xbva),
+    opt_Ibva_heap           (_cat_bva, "cp3_Ibva_heap",  "0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order", 1, IntRange(0, 9), optionListPtr, &opt_Ibva),
     opt_Ibva_vars           (_cat,     "cp3_Ibva_vars",  "variable limit to enable IBVA",                  1000000,  IntRange(0, INT32_MAX), optionListPtr, &opt_Ibva),
     opt_Ibva_cls            (_cat,     "cp3_Ibva_cls",   "clause limit to enable IBVA",                   10000000,  IntRange(0, INT32_MAX), optionListPtr, &opt_Ibva),
     opt_Ibva_lits           (_cat,     "cp3_Ibva_lits",  "total literal limit to enable IBVA",            40000000,  IntRange(0, INT32_MAX), optionListPtr, &opt_Ibva),
@@ -270,9 +280,21 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bce_cla             (_cat_bce, "bce-cla",      "perform covered literal addition (CLA)", false,                                                     optionListPtr, &opt_bce),
     opt_bce_cle_conservative(_cat_bce, "bce-cle-cons", "conservative cle if taut. resolvents are present", false,                                           optionListPtr, &opt_bce_cle),
     opt_bceInpStepInc       (_cat_bce, "bce-incInp",   "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX),        optionListPtr, &opt_bce),
-    opt_bce_verbose         (_cat_bce, "bce-verbose",  "be verbose during BCE", 0, IntRange(0, 3),                                                          optionListPtr, &opt_bce),
+    opt_bce_verbose         (_cat_bce, "bce-verbose",  "be verbose during BCE #NoAutoT", 0, IntRange(0, 3),                                                          optionListPtr, &opt_bce),
     #ifndef NDEBUG
     opt_bce_debug           (_cat_bce, "bce-debug",    "output debug info during BCE", false,                                                               optionListPtr, &opt_bce),
+    #endif
+
+    //
+    // HBR
+    //
+    hbrLimit                (_cat_hbr, "hbr-limit",    "number of pairwise clause comparisons before interrupting HBR", 100000000, IntRange(0, INT32_MAX),  optionListPtr, &opt_hbr),
+    opt_hbr_maxCsize        (_cat_hbr, "hbr-csize",    "max. clause size to be considered for HBR", 3, IntRange(3, INT32_MAX),                              optionListPtr, &opt_hbr),
+    opt_hbr_addBinaries     (_cat_hbr, "hbr-addBin",   "when add binary clauses (0=always,1=1st iteration,2=never", 0, IntRange(0, 2),                      optionListPtr, &opt_hbr),
+    opt_hbrInpStepInc       (_cat_hbr, "hbr-incInp",   "number of steps given to HBR for another inprocessign round", 10000, IntRange(0, INT32_MAX),        optionListPtr, &opt_hbr),
+    opt_hbr_verbose         (_cat_hbr, "hbr-verbose",  "be verbose during HBR #NoAutoT", 0, IntRange(0, 3),                                                          optionListPtr, &opt_hbr),
+    #ifndef NDEBUG
+    opt_hbr_debug           (_cat_hbr, "hbr-debug",    "output debug info during HBR", false,                                                               optionListPtr, &opt_hbr),
     #endif
 
     //
@@ -503,7 +525,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_rew_rem_first      (_cat_rew, "cp3_rew_1st",      "how to find AMOs", false,                                                       optionListPtr, &opt_rew),
     opt_rew_avg            (_cat_rew, "cp3_rew_avg",      "use AMOs above equal average only?", true,                                      optionListPtr, &opt_rew),
     opt_rew_ratio          (_cat_rew, "cp3_rew_ratio",    "allow literals in AMO only, if their complement is not more frequent", true,    optionListPtr, &opt_rew),
-    opt_rew_once           (_cat_rew, "cp3_rew_once",     "rewrite each variable at most once! (currently: yes only!)", true,              optionListPtr, &opt_rew),
+    opt_rew_once           (_cat_rew, "cp3_rew_once",     "rewrite each variable at most once! (currently: yes only!) #NoAutoT", true,              optionListPtr, &opt_rew),
     opt_rew_stat_only      (_cat_rew, "cp3_rew_stats",    "analyze formula, but do not apply rewriting", false ,                           optionListPtr, &opt_rew),
     opt_rew_min_imp_size   (_cat_rew, "cp3_rewI_min",     "min size of an inplication chain to be rewritten", 4, IntRange(0, INT32_MAX),   optionListPtr, &opt_rew),
     opt_rew_impl_pref_small(_cat_rew, "cp3_rewI_small",   "prefer little imply variables", true,                                           optionListPtr, &opt_rew),
@@ -544,7 +566,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_sub_inpStepInc     (_cat_sub, "cp3_sub_inpInc",   "increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX),                                                          optionListPtr, &opt_subsimp),
 
     opt_sub_par_strength   (_cat_sub, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0, 2),                                                             optionListPtr, &opt_subsimp),
-    opt_sub_lock_stats     (_cat_sub, "cp3_lock_stats",   "measure time waiting in spin locks", false,                                                                                        optionListPtr, &opt_subsimp),
+    opt_sub_lock_stats     (_cat_sub, "cp3_lock_stats",   "measure time waiting in spin locks #NoAutoT", false,                                                                               optionListPtr, &opt_subsimp),
     opt_sub_par_subs       (_cat_sub, "cp3_par_subs",     "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0, 2),                                                               optionListPtr, &opt_subsimp),
     opt_sub_par_subs_counts(_cat_sub, "par_subs_counts",  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0, 1),                                              optionListPtr, &opt_subsimp),
     opt_sub_chunk_size     (_cat_sub, "susi_chunk_size",  "Size of Par SuSi Chunks", 100000, IntRange(1, INT32_MAX),                                                                          optionListPtr, &opt_subsimp),
@@ -566,7 +588,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     sym_opt_iter           (_cat_sym, "sym-iter",    "number of symmetry approximation iterations", 3, IntRange(0, INT32_MAX) ,                                                        optionListPtr, &opt_symm),
     sym_opt_pairs          (_cat_sym, "sym-show",    "show symmetry pairs", false,                                                                                                     optionListPtr, &opt_symm),
     sym_opt_print          (_cat_sym, "sym-print",   "show the data for each variable", false,                                                                                         optionListPtr, &opt_symm),
-    sym_opt_exit           (_cat_sym, "sym-exit",    "exit after analysis", false,                                                                                                     optionListPtr, &opt_symm),
+    sym_opt_exit           (_cat_sym, "sym-exit",    "exit after analysis #NoAutoT", false,                                                                                            optionListPtr, &opt_symm),
     sym_opt_hprop          (_cat_sym, "sym-prop",    "try to generate symmetry breaking clauses with propagation", false,                                                              optionListPtr, &opt_symm),
     sym_opt_hpropF         (_cat_sym, "sym-propF",   "generate full clauses", false,                                                                                                   optionListPtr, &opt_symm),
     sym_opt_hpropA         (_cat_sym, "sym-propA",   "test all four casese instead of two", false,                                                                                     optionListPtr, &opt_symm),
@@ -583,7 +605,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #ifndef NDEBUG
     twosat_debug_out (_cat_twosat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4),         optionListPtr, &opt_twosat),
     #endif
-    twosat_useUnits  (_cat_twosat, "2sat-units",  "If 2SAT finds units, use them!", false,           optionListPtr, &opt_twosat),
+    twosat_useUnits  (_cat_twosat, "2sat-units",  "If 2SAT finds units, use them! (use carfully!) #NoAutoT", false,           optionListPtr, &opt_twosat),
     twosat_clearQueue(_cat_twosat, "2sat-cq",     "do a decision after a unit has been found", true, optionListPtr, &opt_twosat),
 
     //
@@ -594,14 +616,14 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_uhd_UHLE      (_cat_uhd, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3),                                                  optionListPtr, &opt_unhide),
     opt_uhd_UHTE      (_cat_uhd, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true,                                                              optionListPtr, &opt_unhide),
     opt_uhd_NoShuffle (_cat_uhd, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false,                                                          optionListPtr, &opt_unhide),
-    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination", false,                                                            optionListPtr, &opt_unhide),
+    opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination", false,                                                                    optionListPtr, &opt_unhide),
     opt_uhd_TestDbl   (_cat_uhd, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false,                                                                     optionListPtr, &opt_unhide),
     opt_uhd_probe     (_cat_uhd, "cp3_uhdProbe",     "Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)", 0, IntRange(0, 4), optionListPtr, &opt_unhide),
     opt_uhd_fullProbe (_cat_uhd, "cp3_uhdPrSize",    "Enable unhide probing for larger clauses, size <= given parameter", 2, IntRange(2, INT32_MAX),                 optionListPtr, &opt_uhd_probe),
     opt_uhd_probeEE   (_cat_uhd, "cp3_uhdPrEE",      "Find Equivalences during uhd probing (requ. uhdProbe > 1)", false,                                             optionListPtr, &opt_uhd_probe),
     opt_uhd_fullBorder(_cat_uhd, "cp3_uhdPrSiBo",    "Check larger clauses only in first and last iteration", true,                                                  optionListPtr, &opt_uhd_probe),
     #ifndef NDEBUG
-    opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 6),                                                                   optionListPtr, &opt_unhide),
+    opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "debug level of unhiding", 0, IntRange(0, 6),                                                                   optionListPtr, &opt_unhide),
     #endif
 
 

@@ -658,7 +658,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
     MethodTimer mt(&gateTime);
     int oldEquivalences = data.getEquivalences().size();
 
-    DOUT( cerr << "c this algorithm is not final yet, and might produce incorrect results" << endl; );
+    DOUT(cerr << "c this algorithm is not final yet, and might produce incorrect results" << endl;);
     return false; // do not execute this algorithm!
 
     /** a variable in a circuit can participate in non-clustered gates only, or also participated in clustered gates */

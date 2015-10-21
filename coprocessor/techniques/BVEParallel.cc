@@ -70,15 +70,15 @@ static void printClauses(ClauseAllocator& ca, vector<CRef>& list, bool skipDelet
  *          you either hold a heap lock or any of the other locks
  */
 void BoundedVariableElimination::par_bve_worker(CoprocessorData& data,
-                                                Heap<VarOrderBVEHeapLt>& heap,
-                                                deque<CRef>& strengthQueue,
-                                                deque<CRef>& sharedStrengthQueue,
-                                                deque<PostponeReason>& postponed,
-                                                vector<SpinLock>& var_lock, ReadersWriterLock& rwlock,
-                                                ParBVEStats& stats,
-                                                MarkArray *gateMarkArray,
-                                                int& rwlock_count, int& garbageCounter, int64_t& parBVEchecks,
-                                                const bool force, const bool doStatistics)
+        Heap<VarOrderBVEHeapLt>& heap,
+        deque<CRef>& strengthQueue,
+        deque<CRef>& sharedStrengthQueue,
+        deque<PostponeReason>& postponed,
+        vector<SpinLock>& var_lock, ReadersWriterLock& rwlock,
+        ParBVEStats& stats,
+        MarkArray *gateMarkArray,
+        int& rwlock_count, int& garbageCounter, int64_t& parBVEchecks,
+        const bool force, const bool doStatistics)
 {
     if (doStatistics) { stats.processTime = wallClockTime() - stats.processTime; }
 
@@ -1066,10 +1066,10 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data, const bool d
     bool reachedLimit = false; // indicate if enough steps have been performed
 
     while (// variable queue / heap is not empty
-           ((config.opt_bve_heap != 2 && newheap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-           && !data.isInterupted()
-           && !reachedLimit
-          ) {
+        ((config.opt_bve_heap != 2 && newheap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
+        && !data.isInterupted()
+        && !reachedLimit
+    ) {
 
         updateModTime(data.getMyModTimer());
 
@@ -1082,9 +1082,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data, const bool d
 
         // determine if we should run parallel or sequential worker
         if (config.opt_par_bve == 2 // always parallel (cp3_par_bve: 2)
-            || (config.opt_par_bve == 1              // heuristic parallel (cp3_par_bve: 1) which means,
-                && QSize > config.par_bve_threshold) // number of variables exceeds the threshold
-            ) {
+                || (config.opt_par_bve == 1              // heuristic parallel (cp3_par_bve: 1) which means,
+                    && QSize > config.par_bve_threshold) // number of variables exceeds the threshold
+           ) {
             for (int i = 0; i < controller.size(); ++i) {
                 jobs[i].function = BoundedVariableElimination::runParallelBVE;
                 workData[i].rw_lock = &allocatorRWLock;

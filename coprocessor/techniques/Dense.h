@@ -44,17 +44,17 @@ class Dense : public Technique<Dense>
     /**
      * Writes the compression mapping to file, so that it can be loaded afterwards again
      */
-    bool writeCompressionMap(const std::string &filename);
+    bool writeCompressionMap(const std::string& filename);
 
     /**
      * Loads compression mapping from file that where previously exported with
      * writeCompressionMap
      */
-    bool readCompressionMap(const std::string &filename);
+    bool readCompressionMap(const std::string& filename);
 
-  /*
-   * Helper members and methods
-   */
+    /*
+     * Helper members and methods
+     */
   private:
 
     std::vector<uint32_t>    count;   // temporary counter for literal occurences in the formula
@@ -94,8 +94,8 @@ class Dense : public Technique<Dense>
                     const Riss::Lit l = clause[j];
 
                     DOUT(if (config.dense_debug_out && l_Undef != data.value(l)) {
-                        std:: cerr << "c DENSE found assigned literal " << l << " in clause ["
-                                   << data.getClauses()[i] << "] : " << clause << " learned?: "
+                    std:: cerr << "c DENSE found assigned literal " << l << " in clause ["
+                               << data.getClauses()[i] << "] : " << clause << " learned?: "
                                    << clause.learnt() << std::endl;
                     });
 

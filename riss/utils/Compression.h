@@ -29,7 +29,7 @@ namespace Riss
  *
  * The variable in the compressed formula will always be equal or smaller than in the original
  * formula.
- * 
+ *
  * @author Lucas Kahlert <lucas.kahlert@tu-dresden.de>
  */
 class Compression
@@ -89,13 +89,13 @@ class Compression
      * If the verbose flag is present, some additional debug information will
      * be written in comments to the map file.
      */
-    bool serialize(const std::string &filename, bool verbose = false) const;
+    bool serialize(const std::string& filename, bool verbose = false) const;
 
     /**
      * Read the compression map from a file that where previously saved and parses its content
      * as the current mapping.
      */
-    bool deserialize(const std::string &filename, bool verbose = false);
+    bool deserialize(const std::string& filename, bool verbose = false);
 
     /**
      * Clear all mappings
@@ -130,18 +130,18 @@ class Compression
             }
 
             const Var compressed = mapping[var(lit)];
-        
-           // if the variable is unit, it is removed in the compressed formula. Therefore
-           // we return undefined
-           if (compressed == UNIT) {
-               return lit_Undef;
-           } else {
-               return mkLit(compressed, sign(lit));
-           }
+
+            // if the variable is unit, it is removed in the compressed formula. Therefore
+            // we return undefined
+            if (compressed == UNIT) {
+                return lit_Undef;
+            } else {
+                return mkLit(compressed, sign(lit));
+            }
         }
         // no compression available, nothing to do! :)
         else {
-           return lit;
+            return lit;
         }
     }
 
@@ -181,7 +181,7 @@ class Compression
     {
         if (isAvailable()) {
             assert(var(lit) < forward.size() && "Variable must not be larger than current mapping. "
-                                                "Did you forget to update the compression?");
+                   "Did you forget to update the compression?");
             return mkLit(forward[var(lit)], sign(lit));
         }
         // no compression available, nothing to do! :)
@@ -199,7 +199,7 @@ class Compression
 
         if (isAvailable()) {
             assert(var < forward.size() && "Variable must not be larger than current mapping. "
-                                           "Did you forget to update the compression?");
+                   "Did you forget to update the compression?");
 
             return forward[var];
         } else {

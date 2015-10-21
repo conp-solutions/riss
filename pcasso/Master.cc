@@ -106,8 +106,8 @@ static BoolOption    opt_crossLink("SPLITTER", "crosslink",  "enable communicati
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
 Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
-    hybridThreads( nullptr ),
-    hybridMasterLock (nullptr),
+    hybridThreads(nullptr),
+    hybridMasterLock(nullptr),
     hybridData(nullptr),
     defaultSolverConfig((const char*)rissConfig == nullptr ? "" : rissConfig),
     defaultPfolioConfig((const char*)prissConfig == nullptr ? ""  : prissConfig),
@@ -116,7 +116,7 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
     model(0),
     param(p),
     threads(work_threads),
-    space_lim(data_space / (threads==0 ? 1 : threads) ),
+    space_lim(data_space / (threads == 0 ? 1 : threads)),
     communicationLock(1),
     sleepLock(1),
     masterState(working),
@@ -157,17 +157,17 @@ Master::Master(Pcasso::Master::Parameter p, string preferredSequentialConfig) :
             hardwareCores.clear();
         }
     }
-    
+
 //     DOUT( cerr << "c create new pfolio solver" << endl; );
-    globalSolver = new PSolver(0,(const char*)global_prissConfig == 0 ? 0 : (const char*)global_prissConfig, global_priss_threads);
+    globalSolver = new PSolver(0, (const char*)global_prissConfig == 0 ? 0 : (const char*)global_prissConfig, global_priss_threads);
     globalSolver->verbosity = MSverbosity;
-    
-     DOUT( cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig ) << endl; );
+
+    DOUT(cerr << "c create new pfolio solver at " << std::hex << globalSolver << std::dec << " with configuration " << ((const char*)global_prissConfig == 0 ? "" : (const char*)global_prissConfig) << endl;);
     // set the preferred sequential configuration to be executed in the global priss, if enabled
-    if( preferredSequentialConfig != "" && global_priss_threads > 0) { 
-      preferredSequentialConfig = preferredSequentialConfig + ":-no-cp3_stats"; // disable simplification output for extra configuration
-      DOUT( cerr << "c set preferred config for worker " << global_priss_threads - 1 << " : " << preferredSequentialConfig << endl; );
-      globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads-1);
+    if (preferredSequentialConfig != "" && global_priss_threads > 0) {
+        preferredSequentialConfig = preferredSequentialConfig + ":-no-cp3_stats"; // disable simplification output for extra configuration
+        DOUT(cerr << "c set preferred config for worker " << global_priss_threads - 1 << " : " << preferredSequentialConfig << endl;);
+        globalSolver->overwriteAsIndependent(preferredSequentialConfig, global_priss_threads - 1);
     }
 
 }
@@ -180,11 +180,11 @@ Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
     for (unsigned int i = 0 ; i < originalFormula.size(); ++i) {
         delete [] originalFormula[i].lits;
     }
-    
+
     // free resources
-    if( globalSolver != nullptr ) delete globalSolver;
+    if (globalSolver != nullptr) { delete globalSolver; }
     globalSolver = nullptr;
-    
+
     // clear vector
     originalFormula.clear();
     delete [] threadData;
@@ -206,174 +206,174 @@ PSolver& Master::getGlobalSolver()
 
 lbool Master::solveLimited(const vec< Lit >& assumps)
 {
-  
-  // simplify the formula
-  lbool simplifyReturn = globalSolver->simplifyFormula();
-  if( simplifyReturn != l_Undef ) {
-    if( simplifyReturn == l_True ) { // copy model
-      if( model == 0 ) model = new vec<lbool>();
-      globalSolver->model.copyTo( *model );
+
+    // simplify the formula
+    lbool simplifyReturn = globalSolver->simplifyFormula();
+    if (simplifyReturn != l_Undef) {
+        if (simplifyReturn == l_True) {  // copy model
+            if (model == 0) { model = new vec<lbool>(); }
+            globalSolver->model.copyTo(*model);
+        }
+        DOUT(cerr << "c solved formula by simplification with sat: " << (simplifyReturn == l_True) << " unsat: " << (simplifyReturn == l_False) << endl;);
+        return simplifyReturn; // return value here already
     }
-    DOUT( cerr << "c solved formula by simplification with sat: " << (simplifyReturn == l_True) << " unsat: " << (simplifyReturn == l_False) << endl; );
-    return simplifyReturn; // return value here already
-  }
-  
-  // 1 transfer formula from psolver to pcasso
-  maxVar = maxVar > globalSolver->nVars() ? maxVar : globalSolver->nVars();
-  
-  // clear current formula
+
+    // 1 transfer formula from psolver to pcasso
+    maxVar = maxVar > globalSolver->nVars() ? maxVar : globalSolver->nVars();
+
+    // clear current formula
 //   DOUT( cerr << "c remove formula with " << originalFormula.size() << " clauses" << endl; );
-  for( int i = 0 ; i < originalFormula.size(); ++ i ) delete [] originalFormula[i].lits; // delete all previous clauses
-  // add all unit clauses
+    for (int i = 0 ; i < originalFormula.size(); ++ i) { delete [] originalFormula[i].lits; }  // delete all previous clauses
+    // add all unit clauses
 //   DOUT( cerr << "c copy formula with " << globalSolver->getNumberOfTopLevelUnits() << " units and " << globalSolver->nClauses() << " clauses" << endl; );
-  for( int i = 0 ; i < globalSolver->getNumberOfTopLevelUnits(); ++ i ) {
-    Lit unitLiteral = globalSolver->trailGet(i);
-    clause c;
-    c.size = 1;
-    c.lits = new Lit [ 1 ];
-    c.lits[0] = unitLiteral;
-    originalFormula.push_back(c);
-  }
-  // add all remaining clauses
-  for( int i = 0 ; i < globalSolver->nClauses(); ++ i ) {
-    Clause& psolverClause = globalSolver->GetClause(i);
-    clause c;
-    c.size = psolverClause.size();
-    c.lits = new Lit [ c.size ];
-    for( int j = 0 ; j < c.size; ++ j ) c.lits[j] = psolverClause[j];
-    originalFormula.push_back(c);
-  }  
-  
-  // push the root node to the solve and split queues
-  if (!plainpart) {
-    solveQueue.push_back(&root);
-  }
-  splitQueue.push_back(&root);
-  
-  
-  // if there is a global solver, have two threads
-  
-  if( global_priss_threads == 0 ) { // run only pcasso
-    return solvePcasso();
-  } else if ( 0 == threads ) { // run pfolio with all threads
-    return solvePfolio();
-  }
-  
-  // otherwise, create two threads, one runs pfolio, one runs pcasso
-  return solveHybrid();
+    for (int i = 0 ; i < globalSolver->getNumberOfTopLevelUnits(); ++ i) {
+        Lit unitLiteral = globalSolver->trailGet(i);
+        clause c;
+        c.size = 1;
+        c.lits = new Lit [ 1 ];
+        c.lits[0] = unitLiteral;
+        originalFormula.push_back(c);
+    }
+    // add all remaining clauses
+    for (int i = 0 ; i < globalSolver->nClauses(); ++ i) {
+        Clause& psolverClause = globalSolver->GetClause(i);
+        clause c;
+        c.size = psolverClause.size();
+        c.lits = new Lit [ c.size ];
+        for (int j = 0 ; j < c.size; ++ j) { c.lits[j] = psolverClause[j]; }
+        originalFormula.push_back(c);
+    }
+
+    // push the root node to the solve and split queues
+    if (!plainpart) {
+        solveQueue.push_back(&root);
+    }
+    splitQueue.push_back(&root);
+
+
+    // if there is a global solver, have two threads
+
+    if (global_priss_threads == 0) {  // run only pcasso
+        return solvePcasso();
+    } else if (0 == threads) {   // run pfolio with all threads
+        return solvePfolio();
+    }
+
+    // otherwise, create two threads, one runs pfolio, one runs pcasso
+    return solveHybrid();
 }
 
-lbool Master::solveHybrid() {
-  // thread handles
-  hybridThreads = new pthread_t[2];
-  hybridMasterLock = new SleepLock();
-  
-  lbool ret = l_Undef;
-  hybridMasterLock->lock(); // start critical section, setup the two threads
-  
-  hybridData = new HybridSharedData[2]; // data that points to the shared data for the threads
-  
-  bool pfolioSolved = false, pcassoSolved = false;
-  
-  // enable link to global portfolio solver
-  if( opt_crossLink ) {
-    assert( root.sharingPool == 0 && "can set pool only once per node" );
-    root.sharingPool = new CommunicationData( defaultPcassoConfig.opt_storageSize ); // have more space in the root node, as its an important node for the partition tree
-    globalSolver->setExternBuffers( &root.sharingPool->getBuffer(), &root.sharingPool->getSpecialBuffer() );
-  }
-  
-  for( int i = 0 ; i < 2; ++ i ) { // setup all threads, which can start with work immediately
-    // setup data
-    hybridData[i].master = this;
-    hybridData[i].masterLock = hybridMasterLock;
-    hybridData[i].ret = l_Undef;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    // create one thread
-    int rc = pthread_create(&(hybridThreads[i]), &attr, (i == 0 ? solveWithPfolio : solveWithPcasso), (void *) &(hybridData[i]));
-    if (rc) {
-        fprintf(stderr, "ERROR; return code from pthread_create() is %d for thread %d, when creating hybrid threads\n", rc, i);
+lbool Master::solveHybrid()
+{
+    // thread handles
+    hybridThreads = new pthread_t[2];
+    hybridMasterLock = new SleepLock();
+
+    lbool ret = l_Undef;
+    hybridMasterLock->lock(); // start critical section, setup the two threads
+
+    hybridData = new HybridSharedData[2]; // data that points to the shared data for the threads
+
+    bool pfolioSolved = false, pcassoSolved = false;
+
+    // enable link to global portfolio solver
+    if (opt_crossLink) {
+        assert(root.sharingPool == 0 && "can set pool only once per node");
+        root.sharingPool = new CommunicationData(defaultPcassoConfig.opt_storageSize);   // have more space in the root node, as its an important node for the partition tree
+        globalSolver->setExternBuffers(&root.sharingPool->getBuffer(), &root.sharingPool->getSpecialBuffer());
     }
-    pthread_attr_destroy(&attr);
-  }
-  
-  hybridMasterLock->sleep(); // wait until one of the other threads calls awake again
-  
-  // check who solved the formula
-  if( hybridData[0].ret != l_Undef ) pfolioSolved = true;
-  if( hybridData[1].ret != l_Undef ) pcassoSolved = true;
-  
-  cerr << "c solved by pcasso: " << pcassoSolved << " pfolio: " << pfolioSolved << endl;
-  
-  hybridMasterLock->unlock(); // we are finished here, the other thread can call awake or overwrite its value, it would not help
-  
-  // terminate both threads
-  if( !pfolioSolved ) {
-    globalSolver->interrupt(); // first be friendly,
-    globalSolver->kill();      // next, not so friendly
-  }
-  if( !pcassoSolved) this->shutdown(); // shutdown the pcasso master, if its still running
-  
-  
-  // return result
-  if ( pcassoSolved ) {
-    return hybridData[1].ret; // simpy return result, model has been extended already
-  } else if( pfolioSolved ) {
-    if( ret == l_True ) {
-      model = new vec<lbool>();
-      globalSolver->model.copyTo( *model ); // make sure that the other thread is not running any more
+
+    for (int i = 0 ; i < 2; ++ i) {  // setup all threads, which can start with work immediately
+        // setup data
+        hybridData[i].master = this;
+        hybridData[i].masterLock = hybridMasterLock;
+        hybridData[i].ret = l_Undef;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+        // create one thread
+        int rc = pthread_create(&(hybridThreads[i]), &attr, (i == 0 ? solveWithPfolio : solveWithPcasso), (void *) & (hybridData[i]));
+        if (rc) {
+            fprintf(stderr, "ERROR; return code from pthread_create() is %d for thread %d, when creating hybrid threads\n", rc, i);
+        }
+        pthread_attr_destroy(&attr);
     }
-    return hybridData[0].ret;
-  } 
-  return l_Undef; // abortet, or some other problem
+
+    hybridMasterLock->sleep(); // wait until one of the other threads calls awake again
+
+    // check who solved the formula
+    if (hybridData[0].ret != l_Undef) { pfolioSolved = true; }
+    if (hybridData[1].ret != l_Undef) { pcassoSolved = true; }
+
+    cerr << "c solved by pcasso: " << pcassoSolved << " pfolio: " << pfolioSolved << endl;
+
+    hybridMasterLock->unlock(); // we are finished here, the other thread can call awake or overwrite its value, it would not help
+
+    // terminate both threads
+    if (!pfolioSolved) {
+        globalSolver->interrupt(); // first be friendly,
+        globalSolver->kill();      // next, not so friendly
+    }
+    if (!pcassoSolved) { this->shutdown(); } // shutdown the pcasso master, if its still running
+
+
+    // return result
+    if (pcassoSolved) {
+        return hybridData[1].ret; // simpy return result, model has been extended already
+    } else if (pfolioSolved) {
+        if (ret == l_True) {
+            model = new vec<lbool>();
+            globalSolver->model.copyTo(*model);   // make sure that the other thread is not running any more
+        }
+        return hybridData[0].ret;
+    }
+    return l_Undef; // abortet, or some other problem
 }
-  
+
 
 void* Master::solveWithPcasso(void* data)
 {
-  // make thread joinable
-  pthread_attr_t attr; pthread_attr_init(&attr); pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-  
-  HybridSharedData *sharedData = (HybridSharedData*)data;
-  lbool ret = sharedData->master->solvePcasso();
-  
-  if( ret != l_Undef ) {
-    sharedData->masterLock->lock();   // make sure the master sleeps already
-    sharedData->ret = ret;
-    cerr << "c pcasso solved formula, awake master" << endl;
-    sharedData->masterLock->unlock(); // free lock again, so that master can continue its work
-    sharedData->masterLock->awake();  // awake master thread
-  }
+    // make thread joinable
+    pthread_attr_t attr; pthread_attr_init(&attr); pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    HybridSharedData *sharedData = (HybridSharedData*)data;
+    lbool ret = sharedData->master->solvePcasso();
+
+    if (ret != l_Undef) {
+        sharedData->masterLock->lock();   // make sure the master sleeps already
+        sharedData->ret = ret;
+        cerr << "c pcasso solved formula, awake master" << endl;
+        sharedData->masterLock->unlock(); // free lock again, so that master can continue its work
+        sharedData->masterLock->awake();  // awake master thread
+    }
 }
 
 void* Master::solveWithPfolio(void* data)
 {
-  // make thread joinable
-  pthread_attr_t attr; pthread_attr_init(&attr); pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-  
-  HybridSharedData *sharedData = (HybridSharedData*)data;
-  lbool ret = sharedData->master->solvePfolio();
-  
-  if( ret != l_Undef ) {
-    sharedData->masterLock->lock();   // make sure the master sleeps already
-    sharedData->ret = ret;
-    cerr << "c pfolio solved formula, awake master" << endl;
-    sharedData->masterLock->unlock(); // free lock again, so that master can continue its work
-    sharedData->masterLock->awake();  // awake master thread
-  }
+    // make thread joinable
+    pthread_attr_t attr; pthread_attr_init(&attr); pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    HybridSharedData *sharedData = (HybridSharedData*)data;
+    lbool ret = sharedData->master->solvePfolio();
+
+    if (ret != l_Undef) {
+        sharedData->masterLock->lock();   // make sure the master sleeps already
+        sharedData->ret = ret;
+        cerr << "c pfolio solved formula, awake master" << endl;
+        sharedData->masterLock->unlock(); // free lock again, so that master can continue its work
+        sharedData->masterLock->awake();  // awake master thread
+    }
 }
 
 lbool Master::solvePcasso()
 {
     int ret = run();
-    
-    if( ret == 10 ) {
-      globalSolver->extendModel(*model); // undo simplifications
-      return l_True;
-    }
-    else if ( ret == 20 ) return l_False;
-    else return l_Undef;
+
+    if (ret == 10) {
+        globalSolver->extendModel(*model); // undo simplifications
+        return l_True;
+    } else if (ret == 20) { return l_False; }
+    else { return l_Undef; }
 }
 
 
@@ -381,9 +381,9 @@ lbool Master::solvePfolio()
 {
     vec<Lit> dummy;
     lbool ret = globalSolver->solveLimited(dummy);
-    if( ret == l_True ) {
-      model = new vec<lbool>();
-      globalSolver->model.copyTo( *model );
+    if (ret == l_True) {
+        model = new vec<lbool>();
+        globalSolver->model.copyTo(*model);
     }
     return ret;
 }
@@ -659,7 +659,7 @@ int Master::run()
     // cancel all threads
     for (unsigned int i = 0 ; i < threads ; ++i) {
         //    int err = 0;
-        DOUT( fprintf(stderr, "c try to cancel thread %d\n", i); );
+        DOUT(fprintf(stderr, "c try to cancel thread %d\n", i););
         // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == nullptr) continue;
         if (threadData[i].solver == 0) { continue; }
         threadData[i].solver->interrupt(); // Yeah, it takes time.
@@ -712,12 +712,12 @@ int Master::run()
     //statistics.changeI( evaLevelID, evaLevel );
 
     if (MSverbosity > 0) {
-      string statOutput;
-      statistics.print(statOutput);
-      fprintf(stderr, "c statistics:\n%s\n", statOutput.c_str());
-      fprintf(stderr, "c solved instance with result %d\n", solution);
-      printf("c CPU time              : %g s\n", cpuTime());
-      printf("c memory                : %g MB\n", memUsedPeak());
+        string statOutput;
+        statistics.print(statOutput);
+        fprintf(stderr, "c statistics:\n%s\n", statOutput.c_str());
+        fprintf(stderr, "c solved instance with result %d\n", solution);
+        printf("c CPU time              : %g s\n", cpuTime());
+        printf("c memory                : %g MB\n", memUsedPeak());
     }
 
     // report found value to calling method
@@ -855,15 +855,15 @@ Master::solveInstance(void* data)
     PcassoDebug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
 
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
-	cpu_set_t mask;
-	CPU_ZERO(&mask); 
-	for( int lokalID = 0; lokalID < priss_threads; lokalID ++ ) { // in case of using priss, use multiple cores
-  	  int coreID = (global_priss_threads + tData.id * priss_threads + lokalID) % hardwareCores.size();
-	  CPU_SET(hardwareCores[coreID], &mask);
-	}
-	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
-	}
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        for (int lokalID = 0; lokalID < priss_threads; lokalID ++) {  // in case of using priss, use multiple cores
+            int coreID = (global_priss_threads + tData.id * priss_threads + lokalID) % hardwareCores.size();
+            CPU_SET(hardwareCores[coreID], &mask);
+        }
+        if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+        }
     }
 
     long long int cputime = Master::getCpuTimeMS();
@@ -903,79 +903,79 @@ Master::solveInstance(void* data)
 
 
     Communicator* communicator = nullptr;
-    if( storageSize > 0 ) {
-    
-	// create ringbuffer for node
-	CommunicationData* comData = nullptr; 
-	if( tData.nodeToSolve->sharingPool == nullptr ) {
-	  comData = new CommunicationData(master.defaultPcassoConfig.opt_storageSize);
-	  tData.nodeToSolve->sharingPool = comData;
-	} else {
-	  assert( tData.nodeToSolve == tData.master->getRoot() && opt_crossLink && "only support this for the root node so far, and only if crosslink is enabled" );
-	  comData = tData.nodeToSolve->sharingPool; // talk about the same object in this routine
-	}
-	
-	  // setup communication layer with default values
-	  communicator = new Communicator(tData.id, comData);
-  #warning note for future: how to hande author IDs in ringbuffers with multiple writers from different nodes in one buffer (not necessary for downward.only)
-	  
-	  // setup parameters for communication system
-	  communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
-	  communicator->sendSize = master.defaultPcassoConfig.opt_sendSize;
-	  communicator->sendLbd = master.defaultPcassoConfig.opt_sendLbd;
-	  communicator->sendMaxSize = master.defaultPcassoConfig.opt_sendMaxSize;
-	  communicator->sendMaxLbd = master.defaultPcassoConfig.opt_sendMaxLbd;
-	  communicator->sizeChange = master.defaultPcassoConfig.opt_sizeChange;
-	  communicator->lbdChange = master.defaultPcassoConfig.opt_lbdChange;
-	  communicator->sendRatio = master.defaultPcassoConfig.opt_sendRatio;
-	  communicator->doBumpClauseActivity = master.defaultPcassoConfig.opt_doBumpClauseActivity;
+    if (storageSize > 0) {
 
-	  communicator->sendIncModel = master.defaultPcassoConfig.opt_sendIncModel;
-	  communicator->sendDecModel = master.defaultPcassoConfig.opt_sendDecModel;
-	  communicator->useDynamicLimits = master.defaultPcassoConfig.opt_useDynamicLimits;
-	  communicator->sendEquivalences = master.defaultPcassoConfig.opt_sendEquivalences;
-	  if (!master.defaultPcassoConfig.opt_share  ) { communicator->setDoSend(false);    }  // no sending
-	  if (!master.defaultPcassoConfig.opt_receive) { communicator->setDoReceive(false); }  // no receiving
+        // create ringbuffer for node
+        CommunicationData* comData = nullptr;
+        if (tData.nodeToSolve->sharingPool == nullptr) {
+            comData = new CommunicationData(master.defaultPcassoConfig.opt_storageSize);
+            tData.nodeToSolve->sharingPool = comData;
+        } else {
+            assert(tData.nodeToSolve == tData.master->getRoot() && opt_crossLink && "only support this for the root node so far, and only if crosslink is enabled");
+            comData = tData.nodeToSolve->sharingPool; // talk about the same object in this routine
+        }
 
-	  // add tree receivers recursively to communication object
-	  TreeNode* parent = tData.nodeToSolve->getFather();
-	  TreeReceiver* receiver = nullptr ; 
-	  if( parent != nullptr ) {
-	    receiver = new TreeReceiver();
-	    receiver->setData( parent->sharingPool );    // set data for communicator
-	    communicator->setParentReceiver( receiver ); // tell communicator object about this receiver
-	    
-	    while( parent->getFather() != nullptr ) { // there is another tree level
-	      TreeReceiver* nlReceiver = new TreeReceiver(); // create receiver for the new level
-	      nlReceiver->setData( parent->getFather()->sharingPool );    // add data for the new level
-	      receiver->setParent( nlReceiver );             // tell this level about the new level
-	      
-	      // prepare for next iteration
-	      receiver = nlReceiver;                         // work on parent node in next iteration!
-	      parent = parent->getFather();
-	    }
-	  }
+        // setup communication layer with default values
+        communicator = new Communicator(tData.id, comData);
+#warning note for future: how to hande author IDs in ringbuffers with multiple writers from different nodes in one buffer (not necessary for downward.only)
 
-	  // do not use this interface in pcasso to interrupt solver, hence, simply set to working, so that worker is not waiting for commands
-	  communicator->setState( Communicator::working );
+        // setup parameters for communication system
+        communicator->protectAssumptions = master.defaultPcassoConfig.opt_protectAssumptions;
+        communicator->sendSize = master.defaultPcassoConfig.opt_sendSize;
+        communicator->sendLbd = master.defaultPcassoConfig.opt_sendLbd;
+        communicator->sendMaxSize = master.defaultPcassoConfig.opt_sendMaxSize;
+        communicator->sendMaxLbd = master.defaultPcassoConfig.opt_sendMaxLbd;
+        communicator->sizeChange = master.defaultPcassoConfig.opt_sizeChange;
+        communicator->lbdChange = master.defaultPcassoConfig.opt_lbdChange;
+        communicator->sendRatio = master.defaultPcassoConfig.opt_sendRatio;
+        communicator->doBumpClauseActivity = master.defaultPcassoConfig.opt_doBumpClauseActivity;
 
-      // tell the communicator about the proof master
-      // communicator->setProofMaster(proofMaster);
-      // tell solver about its communication interface
-      solver->setCommunication(*communicator);
-  //	communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
+        communicator->sendIncModel = master.defaultPcassoConfig.opt_sendIncModel;
+        communicator->sendDecModel = master.defaultPcassoConfig.opt_sendDecModel;
+        communicator->useDynamicLimits = master.defaultPcassoConfig.opt_useDynamicLimits;
+        communicator->sendEquivalences = master.defaultPcassoConfig.opt_sendEquivalences;
+        if (!master.defaultPcassoConfig.opt_share) { communicator->setDoSend(false);    }    // no sending
+        if (!master.defaultPcassoConfig.opt_receive) { communicator->setDoReceive(false); }  // no receiving
 
-#if 0
+        // add tree receivers recursively to communication object
+        TreeNode* parent = tData.nodeToSolve->getFather();
+        TreeReceiver* receiver = nullptr ;
+        if (parent != nullptr) {
+            receiver = new TreeReceiver();
+            receiver->setData(parent->sharingPool);      // set data for communicator
+            communicator->setParentReceiver(receiver);   // tell communicator object about this receiver
+
+            while (parent->getFather() != nullptr) {  // there is another tree level
+                TreeReceiver* nlReceiver = new TreeReceiver(); // create receiver for the new level
+                nlReceiver->setData(parent->getFather()->sharingPool);      // add data for the new level
+                receiver->setParent(nlReceiver);               // tell this level about the new level
+
+                // prepare for next iteration
+                receiver = nlReceiver;                         // work on parent node in next iteration!
+                parent = parent->getFather();
+            }
+        }
+
+        // do not use this interface in pcasso to interrupt solver, hence, simply set to working, so that worker is not waiting for commands
+        communicator->setState(Communicator::working);
+
+        // tell the communicator about the proof master
+        // communicator->setProofMaster(proofMaster);
+        // tell solver about its communication interface
+        solver->setCommunication(*communicator);
+        //    communicator->setSolver(solver); // TODO have extra method in solverinterface that takes care, because of priss
+
+        #if 0
 #error somehow extract statistics about shared clauses
 #error integrate sharing into pcasso with priss
 #error check for leaks : valgrind -v --leak-check=full --track-origins=yes ./pcasso ... 2> /tmp/err
-    
+
 #error check prototype
 #error check invalid configurations of 2200 experiment
-#endif
-      
-	}
-	
+        #endif
+
+    }
+
 //    // Davide> Initialize the shared indeces to zero
 //    for (unsigned int i = 0; i <= solver->curPTLevel; i++)   // Davide> I put my level, also
 //    { solver->shared_indeces.push_back(0); }
@@ -1091,16 +1091,16 @@ Master::solveInstance(void* data)
     if (MSverbosity > 1) { fprintf(stderr, "c finished working on an instance (node %d, level %d)\n", tData.nodeToSolve->id(), tData.nodeToSolve->getLevel()); }
 
     // tell about sharing
-    if( tData.nodeToSolve->sharingPool != nullptr ) {
-      if (MSverbosity > 0) { fprintf(stderr, "c sharing on node %d : %d sent, %d received\n", tData.nodeToSolve->id(), communicator->nrSendCls, communicator->nrReceivedCls ); }  
+    if (tData.nodeToSolve->sharingPool != nullptr) {
+        if (MSverbosity > 0) { fprintf(stderr, "c sharing on node %d : %d sent, %d received\n", tData.nodeToSolve->id(), communicator->nrSendCls, communicator->nrReceivedCls); }
     }
-    
+
     // make sure that the communicator is delete again
-    if( communicator != nullptr ) {
-      delete communicator;
-      communicator = nullptr;
+    if (communicator != nullptr) {
+        delete communicator;
+        communicator = nullptr;
     }
-    
+
     // take care about statistics
     // since solver is dead, there is no need to have a lock for reading statistics!
     // since we are in the master, there is also no need to lock changing statistics here, however, its there ...
@@ -1233,15 +1233,15 @@ Master::splitInstance(void* data)
 
     if (MSverbosity > 1) { fprintf(stderr, "create a split thread[%d] that splits node %d\n", tData.id, tData.nodeToSolve->id()); }
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
-	cpu_set_t mask;
-	CPU_ZERO(&mask); 
-	for( int lokalID = 0; lokalID < priss_threads; lokalID ++ ) { // in case of using priss, use multiple cores
-  	  int coreID = (global_priss_threads + tData.id * priss_threads + lokalID) % hardwareCores.size();
-	  CPU_SET(hardwareCores[coreID], &mask);
-	}
-	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
-	}
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        for (int lokalID = 0; lokalID < priss_threads; lokalID ++) {  // in case of using priss, use multiple cores
+            int coreID = (global_priss_threads + tData.id * priss_threads + lokalID) % hardwareCores.size();
+            CPU_SET(hardwareCores[coreID], &mask);
+        }
+        if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+        }
     }
 
     long long int cputime = Master::getCpuTimeMS();
@@ -1441,9 +1441,9 @@ Master::splitInstance(void* data)
         // simply set the node to the unknown state
         tData.nodeToSolve->setState(TreeNode::unknown);
         for (unsigned int i = 0; i < validConstraints.size(); i++) {
-	    // can add all constraints here from 0 to i!
-	    int validStart = opt_collect_all_valid ? 0 : i;
-	    for( int j = validStart; j <= i; ++ j ) tData.nodeToSolve->addNodeConstraint(validConstraints[j]);
+            // can add all constraints here from 0 to i!
+            int validStart = opt_collect_all_valid ? 0 : i;
+            for (int j = validStart; j <= i; ++ j) { tData.nodeToSolve->addNodeConstraint(validConstraints[j]); }
         }
         //TODO FIXME: check whether the first valid constraints are actually valid for the node (they should)
         // expand the node
@@ -1477,8 +1477,8 @@ Master::splitInstance(void* data)
 void
 Master::addNode(TreeNode* t, bool splitOnly)
 {
-    if( !splitOnly ) solveQueue.push_back(t);
-    if( !plainpart ) splitQueue.push_back(t);
+    if (!splitOnly) { solveQueue.push_back(t); }
+    if (!plainpart) { splitQueue.push_back(t); }
 }
 
 void

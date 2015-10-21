@@ -67,7 +67,7 @@ class PfolioConfig : public Config
 
     /** set all the options of the specified preset option sets (multiple separated with : possible) */
     void setPreset(const std::string& optionSet);
-    
+
     /** set options of the specified preset option set (only one possible!)
      *  Note: overwrites the method of the class Riss::Config, but calls this method, if no match if found within this class
      *  @return true, if the option set is known and has been set!
@@ -78,9 +78,9 @@ class PfolioConfig : public Config
 inline
 void PfolioConfig::setPreset(const std::string& optionSet)
 {
-  
+
 //     std::cerr << "parse preset: " << optionSet << std::endl;
-    
+
     // split std::string into sub std::strings, separated by ':'
     std::vector<std::string> optionList;
     int lastStart = 0;
@@ -120,13 +120,13 @@ bool PfolioConfig::addPreset(const std::string& optionSet)
         parseOptions("-ppconfig=505-O:-no-cp3_stats -psetup=best6 -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
     } else if (optionSet == "pcassoworker") {
         parseOptions("-psetup=epsilon -storageSize=32000 -pAllSetup=-keepLonger:-no-cp3_stats:-recLBDf=-1", false);
-    } 
-    
+    }
+
     else {
-      ret = false; // indicate that no configuration has been found here!
-      if (optionSet != "") { 
-	Riss::Config::parseOptions(optionSet);     // pass string to parent class, which might find a valid setup
-      } 
+        ret = false; // indicate that no configuration has been found here!
+        if (optionSet != "") {
+            Riss::Config::parseOptions(optionSet);     // pass string to parent class, which might find a valid setup
+        }
     }
     parsePreset = false;
     return ret; // return whether a preset configuration has been found

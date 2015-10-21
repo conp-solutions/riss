@@ -731,8 +731,9 @@ bool FourierMotzkin::process()
                             if (v2[n2] != toEliminate) {
                                 data.lits.push_back(v2[n2]);
                             } else {
-                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl;); }
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl;);
                             }
+                        }
                     }
                     if (p == 0) {
                         thisCard.ll = data.lits;

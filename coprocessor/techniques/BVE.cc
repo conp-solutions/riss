@@ -14,9 +14,9 @@ namespace Coprocessor
 {
 
 BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss::ClauseAllocator& _ca,
-                                                       Riss::ThreadController& _controller,
-                                                       Coprocessor::Propagation& _propagation,
-                                                       Coprocessor::Subsumption& _subsumption)
+        Riss::ThreadController& _controller,
+        Coprocessor::Propagation& _propagation,
+        Coprocessor::Subsumption& _subsumption)
     : Technique(_config, _ca, _controller)
     , propagation(_propagation)
     , subsumption(_subsumption)
@@ -327,12 +327,12 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
 
 
     while (// repeat loop only, if not already interrupted
-           !data.isInterupted()
-           // variable heap or list is not empty
-           && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-           // check if we are inside the limit
-           && (stepper.inLimit() || data.unlimited())
-          ) {
+        !data.isInterupted()
+        // variable heap or list is not empty
+        && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
+        // check if we are inside the limit
+        && (stepper.inLimit() || data.unlimited())
+    ) {
 
         updateModTime(data.getMyModTimer());
 
@@ -388,12 +388,12 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
 void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& workerStepper, const bool force, const bool doStatistics)
 {
     while (// repeat loop only until being interrupted
-           !data.isInterupted()
-           // variable queue / heap is not empty
-           && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-           // step limit not reached
-           && (workerStepper.inLimit() || data.unlimited())
-        ) {
+        !data.isInterupted()
+        // variable queue / heap is not empty
+        && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
+        // step limit not reached
+        && (workerStepper.inLimit() || data.unlimited())
+    ) {
         Var v = var_Undef;
         if (config.opt_bve_heap != 2) {
             v = variable_heap->removeMin();
@@ -416,8 +416,8 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
 
         // Heuristic Cutoff Gate-Search
         if (!config.opt_force_gates && !config.opt_unlimited_bve &&
-            (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-             data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+                (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
+                 data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
             if (doStatistics) { ++skippedVars; }
             continue;
         }
@@ -436,10 +436,10 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
 
         // Heuristic Cutoff Anticipation (if no Gate Found)
         if (!config.opt_unlimited_bve && !foundGate &&
-            (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10
-             || data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)
-            )
-            ) {
+                (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10
+                 || data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)
+                )
+           ) {
             if (doStatistics) { ++skippedVars; }
             continue;
         }
@@ -508,7 +508,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
             if (pos_count != 0 && neg_count != 0) {
                 if (doStatistics) { ++anticipations; }
                 anticipateResult = anticipateElimination(data, pos, neg, v, p_limit, n_limit, pos_stats, neg_stats,
-                                                         lit_clauses, lit_learnts, resolvents, workerStepper);
+                                   lit_clauses, lit_learnts, resolvents, workerStepper);
                 if (anticipateResult == l_False) { return; }  // level 0 conflict found while anticipation TODO ABORT
             }
 
@@ -543,12 +543,12 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
 
         doResolve = reducedClss;    // number of clauses decreasesd
         // anticipateResult == l_True -> !reducedClss,
-        // anticipateResult == l_Undef -> ? 
+        // anticipateResult == l_Undef -> ?
         assert((anticipateResult != l_True || !reducedClss) && "in case of an early abort, we have to resolve");
 
         if ((force || doResolve) // clauses or literals should be reduced and we did
-            && !config.opt_bce_only // only if bve should be done
-            ) {
+                && !config.opt_bce_only // only if bve should be done
+           ) {
             if (resolvents < pos_count + neg_count) {
                 nClsDecreases++;
             } else if (resolvents > pos_count + neg_count) {
@@ -635,7 +635,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
  *      mark it for deletion
  */
 inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorData& data, const vector< Riss::CRef >& list,
-                                                      const Lit& l, const int limit, const bool doStatistics)
+        const Lit& l, const int limit, const bool doStatistics)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
         Clause& c = ca[list[cr_i]];
@@ -861,7 +861,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
 
         cerr << "c finished anticipate_bve normally" << endl;
     }
-    assert( ( !binariesOnly || resolvents > clausesToUse) && "binariesOnly can only be set if the limit was reached" );
+    assert((!binariesOnly || resolvents > clausesToUse) && "binariesOnly can only be set if the limit was reached");
     return binariesOnly ? l_True : l_Undef; // return l_True, if only binary clauses are tested any longer (limit reached)
 }
 
@@ -876,10 +876,10 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
  *          -> this is already done in anticipateElimination
  */
 lbool BoundedVariableElimination::resolveSet(CoprocessorData& data,
-                                             vector<CRef>& positive, vector<CRef>& negative, const int v,
-                                             const int p_limit, const int n_limit, Stepper& bveStepper,
-                                             const bool keepLearntResolvents, const bool force,
-                                             const bool doStatistics)
+        vector<CRef>& positive, vector<CRef>& negative, const int v,
+        const int p_limit, const int n_limit, Stepper& bveStepper,
+        const bool keepLearntResolvents, const bool force,
+        const bool doStatistics)
 {
     vec<Lit>& ps = resolvent;
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size());
@@ -1037,8 +1037,8 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData& data,
  * i.e. all resolvents are tautologies
  */
 inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData& data, const vector< Riss::CRef >& list,
-                                                             const int32_t stats[], const Lit& l, const int limit,
-                                                             const bool doStatistics)
+        const int32_t stats[], const Lit& l, const int limit,
+        const bool doStatistics)
 {
     // FIXME limit parameter is not used!
     for (unsigned ci = 0; ci < list.size(); ++ci) {
@@ -1127,7 +1127,7 @@ inline void BoundedVariableElimination::addClausesToSubsumption(const vector<CRe
 }
 
 bool BoundedVariableElimination::findGates(CoprocessorData& data, const Var v, int& p_limit, int& n_limit,
-                                           double& _gateTime, MarkArray *helper)
+        double& _gateTime, MarkArray *helper)
 {
     // do not touch lists that are too small for benefit
     if (data.list(mkLit(v, false)).size() < 3 && data.list(mkLit(v, true)).size() < 3) { return false; }

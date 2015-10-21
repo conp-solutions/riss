@@ -426,17 +426,26 @@ void Resolving::addRedundantBinaries()
             ps[0] = ~thisLit;
             for (int j =  seen[ toInt(thisLit) ]; j < big[ toInt(thisLit) ].size() ; ++ j) {
                 const Lit k = big[ toInt(thisLit) ][j];
-                ps[1] = k;
-                if (k < thisLit) { continue; }
-                assert(thisLit < k && "add only ordered clauses!");
-                const CRef cr = ca.alloc(ps, false); // not a learnt clause!
-                data.addCommentToProof("add as redundante binary clause");
-                data.addToProof(ps);
-                addedBinaries ++;
-                data.addClause(cr);
-                data.getClauses().push(cr);
-                modifiedFormula = true;
-                DOUT(if (config.res3_debug_out) cerr << "c added " << ca[cr] << endl;);
+
+                if (k == ps[0]) {
+                    data.addCommentToProof("add as redundante binary clause (duplicate literal, hence unit clause)");
+                    data.addUnitToProof(ps[0]);
+                    modifiedFormula = true;
+                    DOUT(if (config.res3_debug_out) cerr << "c add unit clause " << ps[0] << endl;);
+                    if (data.enqueue(ps [0]) == l_False) { return; }    // add the unit clause we found, if failure, stop procedure
+                } else {
+                    ps[1] = k;
+                    if (k < thisLit) { continue; }
+                    assert(thisLit < k && "add only ordered clauses!");
+                    const CRef cr = ca.alloc(ps, false); // not a learnt clause!
+                    data.addCommentToProof("add as redundante binary clause");
+                    data.addToProof(ps);
+                    addedBinaries ++;
+                    data.addClause(cr);
+                    data.getClauses().push(cr);
+                    modifiedFormula = true;
+                    DOUT(if (config.res3_debug_out) cerr << "c added " << ca[cr] << endl;);
+                }
             }
         }
     }

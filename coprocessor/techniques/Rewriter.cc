@@ -491,19 +491,22 @@ bool Rewriter::rewriteAMO()
                 }
                 if (useVariableTwice) { continue; }   // do not allow AMOs that have the same variable
                 bool found = true;
+                int globalBinaryCount = 0;
                 for (int j = 0 ; j < c.size() ; ++ j) {
                     const Lit& l = c[j];
                     const Lit* lList = big.getArray(l);
                     const int lListSize = big.getSize(l);
                     int count = 0;
                     for (int k = 0 ; k < lListSize; ++ k) {
-                        count = (inAmo.isCurrentStep(toInt(lList[k])) || big.isChild(l, lList[k])) ? count + 1 : count;
+                        count = (inAmo.isCurrentStep(toInt(lList[k])) && big.isChild(l, lList[k])) ? count + 1 : count; // consider only the interesting literals!
                     }
+                    globalBinaryCount += count;
                     if (count + 1 < c.size()) { found = false; break; }   // not all literals can be found by this literal!
                 }
-                if (!found) { continue; }
-                // found ExO constraint
-                else {
+                if (!found) {
+                    continue;
+                } else { // found ExO constraint
+                    cerr << "c found AMO with " << globalBinaryCount << " binary clauses" << endl;
                     const int index = amos.size();
                     amos.push_back(vector<Lit>());
                     for (int j = 0 ; j < c.size(); ++ j) {
@@ -632,7 +635,7 @@ bool Rewriter::rewriteAMO()
         amoTime = cpuTime() - amoTime;
         foundAmos += amos.size();
 
-        DOUT(if (config.rew_debug_out > 0) cerr << "c finished search AMO --- process ... " << endl;);
+        DOUT(if (config.rew_debug_out > 0) cerr << "c finished search AMO --- process ... (found: " << amos.size() << ")" << endl;);
 
         if (config.opt_rew_merge_amo) {
             cerr << "c WARNING: merging AMO not implemented yet" << endl;
@@ -655,7 +658,7 @@ bool Rewriter::rewriteAMO()
             int rSize = (size + 1) / 2;
             // assert( rSize * 2 == size && "AMO has to be even!" );
 
-            DOUT(if (config.rew_debug_out > 0) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << endl;);
+            DOUT(if (config.rew_debug_out > 0) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << " amo:" << amo << endl;);
 
             for (int j = 0 ; j < amo.size(); ++ j) {
                 assert(!data.ma.isCurrentStep(var(amo[j])) && "touch variable only once during one iteration!");
@@ -904,11 +907,30 @@ bool Rewriter::rewriteAMO()
                         clsLits.push(nr2);
                         sort(clsLits); sortCalls++;
                         if (hitPos > 0 && nr1 < c[hitPos - 1]) { c.sort() ; }
+                        DOUT(if (config.rew_debug_out > 1) cerr << "c newlits " << clsLits << " from initial clause " << c << endl;);
+
+                        // delete old clause
+                        c.set_delete(true);
+
+                        // check for duplicate / complements
+                        bool compLit = false; // found complementary literals?
+                        int keepLits = 0;
+                        cerr << "c rewrite " << clsLits << endl;
+                        Lit p = lit_Undef;
+                        for (int index = 0 ; index < clsLits.size(); ++ index) {
+                            if (p == clsLits[index]) { continue; }  // do not keep this literal
+                            else if (clsLits[keepLits] == ~clsLits[index]) {
+                                compLit = true;
+                                break;
+                            }
+                            clsLits[keepLits++] = p = clsLits[index]; // copy literal (forward)
+                        }
+                        if (compLit) { continue; }  // the new clause is a tautology, hence, no need to add the clause to the formula again
+                        clsLits.shrink_(clsLits.size() - keepLits);   // remove redundant lits at the end of the clause
+                        cerr << "c    into " << clsLits << endl;
 
                         minL =  data[nr1] < data[minL] ? nr1 : minL;
                         minL =  data[nr2] < data[minL] ? nr2 : minL;
-
-                        c.set_delete(true);
                         if (!hasDuplicate(data.list(minL), clsLits)) {
                             enlargedClauses ++;
                             data.removedClause(nll[k]);
@@ -1145,8 +1167,10 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
         if (true) {   // check each clause for being subsumed -> kick subsumed clauses!
             if (d.size() < c.size()) {
                 detectedDuplicates ++;
-                DOUT(if (config.rew_debug_out > 1) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
-                if (ordered_subsumes(d, c)) { return true; }   // the other clause subsumes the current clause!
+                if (ordered_subsumes(d, c)) {
+                    DOUT(if (config.rew_debug_out > 1) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
+                    return true;
+                }   // the other clause subsumes the current clause!
             } if (d.size() > c.size()) {   // if size is equal, then either removed before, or not removed at all!
                 if (ordered_subsumes(c, d)) {
                     d.set_delete(true);

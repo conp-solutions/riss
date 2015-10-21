@@ -1,5 +1,9 @@
 # ChangeLog for riss
 
+ * added restart switching heuristics
+ * added dynamic EMA restart schedule, and non-restart option
+ * added trivial model detection (all true or all false, ignores units)
+
 ## v5.0.3
 
  * added (lazy) OTFSS to the solver

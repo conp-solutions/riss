@@ -53,10 +53,10 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_sendEquivalences("SEND", "shareEE", "share equivalent literals", true, optionListPtr)
 
 {
-  if (defaultPreset.size() != 0) { 
+    if (defaultPreset.size() != 0) {
 //     DOUT( std::cerr << "c set preset for pfolio: " << defaultPreset << std::endl;  );
-    setPreset(defaultPreset);
-  }    // set configuration options immediately
+        setPreset(defaultPreset);
+    }    // set configuration options immediately
 }
 
 } // namespace Riss

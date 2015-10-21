@@ -16,8 +16,8 @@ Circuit::Circuit(CP3Config& _config, ClauseAllocator& _ca)
 
 Circuit::~Circuit()
 {
-  if( big != 0 ) delete big;
-  big = 0;
+    if (big != 0) { delete big; }
+    big = 0;
 }
 
 
@@ -110,6 +110,11 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
         DOUT(if (config.circ_debug_out) cerr << "c mark literal " << ~pos << endl;);
         // find all binary clauses for gate with positive output "pos"
         for (int i = 0 ; i < listSize; ++i) {
+            if (data.ma.isCurrentStep(toInt(~list[i]))) {
+                DOUT(if (config.circ_debug_out) cerr << "c marked complementary literal of " << list[i] << " already! hence, imply literal " << ~pos << " as a unit" << endl;);
+                data.enqueue(~pos);
+                data.lits.clear(); break;
+            }
             data.ma.setCurrentStep(toInt(list[i]));
             data.lits.push_back(list[i]);
             DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
@@ -343,6 +348,11 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 if (ck.can_be_deleted()) { continue; }
                 if (count ++ == data.lits.size() || ck.size() != 2)   // not the current clause, or more than one clause
                 { found = false; break; }
+                // all literals of the clause have to appear in the list of excluded literals
+                if (!data.ma.isCurrentStep(toInt(ck[0])) ||
+                        !data.ma.isCurrentStep(toInt(ck[1]))) {
+                    found = false; break;
+                }
             }
             // count has to be data.lits.size(), otherwise data structures are invalid!
             assert((!found || count + 1 == data.lits.size()) && "if for the current literal the situation for blocked has been found, exactly the n binary clauses have to be found!");

@@ -7,7 +7,7 @@
 
 
 CC=gcc
-CFLAGS=-O3 -DNDEBUG
+CFLAGS=-O3 -DNDEBUG -I..
 
 PICOSATDIRECTORY=/home/norbert/projects/BMC/hwmcc/picosat
 ABCDIRECTORY=/home/norbert/projects/BMC/hwmcc/abc

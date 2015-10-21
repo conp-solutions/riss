@@ -112,47 +112,48 @@ struct shareStruct {
 
 #ifdef CLASSIFIER
 /** method that returns a config that should be used based on a given CNF file */
-string findConfig( const string filename ) {
+string findConfig(const string filename)
+{
 
-// compilation  
+// compilation
 # warning link against libclassifier-pcasso!!!
-  
+
     Solver S; // have a default solver object
-    
-    DOUT( cerr << "c find config for file " << filename.c_str() << endl; );
-    
+
+    DOUT(cerr << "c find config for file " << filename.c_str() << endl;);
+
     gzFile in = gzopen(filename.c_str(), "rb");
     if (in == nullptr) {
-        printf("c ERROR! Could not open file: %s\n", filename.c_str() ), exit(1);
+        printf("c ERROR! Could not open file: %s\n", filename.c_str()), exit(1);
     }
     parse_DIMACS(in, S);
     gzclose(in);
-	  
-	  // default configuration, if parsed formula is too large
-	  string config = "505-O";
 
-	  DOUT( cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl; );
-	  if ( S.nClauses() < 4000000 || S.nVars() < 1900000 || S.nTotLits() < 12000000) {
-	    
-	    CNFClassifier* cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
-	    cnfclassifier->setVerb(0);
-	    cnfclassifier->setComputingClausesGraph(false);
-	    cnfclassifier->setComputingResolutionGraph(false);
-	    cnfclassifier->setComputingRwh(true);
-	    cnfclassifier->setComputeBinaryImplicationGraph(true);
-	    cnfclassifier->setComputeConstraints(true);
-	    cnfclassifier->setComputeXor(false);
-	    cnfclassifier->setQuantilesCount(4);
-	    cnfclassifier->setComputingVarGraph(false); 
-	    cnfclassifier->setAttrFileName(nullptr);
-	    cnfclassifier->setComputingDerivative(true);
-	    
-	    config = cnfclassifier->getConfig( S );
-	    // get new autoconfigured config
-	    
-	    delete cnfclassifier;
-	    
-	  }
+    // default configuration, if parsed formula is too large
+    string config = "505-O";
+
+    DOUT(cerr << "c found formula with " << S.nClauses() << " cls, " << S.nVars() << " vars, " << S.nTotLits() << " totalLits," << endl;);
+    if (S.nClauses() < 4000000 || S.nVars() < 1900000 || S.nTotLits() < 12000000) {
+
+        CNFClassifier* cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
+        cnfclassifier->setVerb(0);
+        cnfclassifier->setComputingClausesGraph(false);
+        cnfclassifier->setComputingResolutionGraph(false);
+        cnfclassifier->setComputingRwh(true);
+        cnfclassifier->setComputeBinaryImplicationGraph(true);
+        cnfclassifier->setComputeConstraints(true);
+        cnfclassifier->setComputeXor(false);
+        cnfclassifier->setQuantilesCount(4);
+        cnfclassifier->setComputingVarGraph(false);
+        cnfclassifier->setAttrFileName(nullptr);
+        cnfclassifier->setComputingDerivative(true);
+
+        config = cnfclassifier->getConfig(S);
+        // get new autoconfigured config
+
+        delete cnfclassifier;
+
+    }
     return config;
 }
 #endif // CLASSIFIER
@@ -178,7 +179,7 @@ int main(int argc, char** argv)
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
     BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
     BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
-    BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false );
+    BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false);
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
 
     bool foundHelp = ::parseOptions(argc, argv, true);
@@ -225,11 +226,11 @@ int main(int argc, char** argv)
         if (argc == 1) {
             fprintf(stderr, "c |  REJECT AUTOCONFIG WHEN READING FROM STDIN                                                            |\n");
         } else {
-            autoConfig = findConfig( string(argv[1]) );
-	    fprintf(stderr, "c |  USE AUTOCONFIG: %20s                                                                 |\n", autoConfig.c_str() );
+            autoConfig = findConfig(string(argv[1]));
+            fprintf(stderr, "c |  USE AUTOCONFIG: %20s                                                                 |\n", autoConfig.c_str());
         }
     }
-    #endif    
+    #endif
 
     Master::Parameter p;
     p.pre = pre;
@@ -237,10 +238,10 @@ int main(int argc, char** argv)
 
     Master pcassoMaster(p, autoConfig); // tell pcasso about the automatically determined configuration
     master = &pcassoMaster;
-    
-/*  // for now, handling signals is disabled  
-    signal(SIGINT, SIGINT_exit);
-    signal(SIGXCPU, SIGINT_exit);*/
+
+    /*  // for now, handling signals is disabled
+        signal(SIGINT, SIGINT_exit);
+        signal(SIGXCPU, SIGINT_exit);*/
 
     if (argc == 1) {
         printf("c Reading from standard input... Use '--help' for help.\n");
@@ -255,73 +256,71 @@ int main(int argc, char** argv)
 
     FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
     if (!pcassoMaster.getGlobalSolver().simplify()) {
-            if (res != nullptr) {
-                if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
-                else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
-            }
-            // add the empty clause to the proof, close proof file
-            // choose among output formats!
-            if (opt_modelStyle) { printf("UNSAT"); }
-            else { printf("s UNSATISFIABLE\n"); }
-            cout.flush(); cerr.flush();
-            exit(20);
-        }
-
-   vec<Lit> dummy;
-   lbool ret = pcassoMaster.solveLimited(dummy); // solve formula with master, and given assumptions
-
-       // check model of the formula
-        if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
-            if (check_DIMACS(in, *(pcassoMaster.model))) {
-                printf("c verified model\n");
-            } else {
-                printf("c model invalid -- turn answer into UNKNOWN\n");
-                ret = l_Undef; // turn result into unknown, because the model is not correct
-            }
-        }
-
-        // print solution to screen
-        if (opt_modelStyle) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
-        else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
-
-        // put empty clause on proof
-        // if (ret == l_False && m.getDrupFile() != nullptr) { fprintf(m.getDrupFile(), "0\n"); }
-
-        // print solution into file
         if (res != nullptr) {
-            if (ret == l_True) {
-                if (opt_modelStyle) { fprintf(res, "SAT\n"); }
-                else { fprintf(res, "s SATISFIABLE\nv "); }
-                for (int i = 0; i < pcassoMaster.model->size(); i++)
-                {
-                    fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (*(pcassoMaster.model)[i] == l_True) ? "" : "-", i + 1);
-                }
-                fprintf(res, " 0\n");
-            } else if (ret == l_False) {
-                if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
-                else { fprintf(res, "s UNSATISFIABLE\n"); }
-            } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
-            else { fprintf(res, "s UNKNOWN\n"); }
-            fclose(res);
+            if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
+            else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
         }
-
-        // print model to screen
-        if (! opt_quiet && ret == l_True && res == nullptr) {
-            if (!opt_modelStyle) { printf("v "); }
-            for (int i = 0; i < pcassoMaster.model->size(); i++)
-            {
-                printf("%s%s%d", (i == 0) ? "" : " ", ( (*pcassoMaster.model)[i] == l_True) ? "" : "-", i + 1);
-            }
-            printf(" 0\n");
-        }
-
+        // add the empty clause to the proof, close proof file
+        // choose among output formats!
+        if (opt_modelStyle) { printf("UNSAT"); }
+        else { printf("s UNSATISFIABLE\n"); }
         cout.flush(); cerr.flush();
+        exit(20);
+    }
 
-   #ifdef NDEBUG
-   exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
-   #else
-   return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
-   #endif
+    vec<Lit> dummy;
+    lbool ret = pcassoMaster.solveLimited(dummy); // solve formula with master, and given assumptions
+
+    // check model of the formula
+    if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+        if (check_DIMACS(in, *(pcassoMaster.model))) {
+            printf("c verified model\n");
+        } else {
+            printf("c model invalid -- turn answer into UNKNOWN\n");
+            ret = l_Undef; // turn result into unknown, because the model is not correct
+        }
+    }
+
+    // print solution to screen
+    if (opt_modelStyle) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
+    else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
+
+    // put empty clause on proof
+    // if (ret == l_False && m.getDrupFile() != nullptr) { fprintf(m.getDrupFile(), "0\n"); }
+
+    // print solution into file
+    if (res != nullptr) {
+        if (ret == l_True) {
+            if (opt_modelStyle) { fprintf(res, "SAT\n"); }
+            else { fprintf(res, "s SATISFIABLE\nv "); }
+            for (int i = 0; i < pcassoMaster.model->size(); i++) {
+                fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (*(pcassoMaster.model)[i] == l_True) ? "" : "-", i + 1);
+            }
+            fprintf(res, " 0\n");
+        } else if (ret == l_False) {
+            if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
+            else { fprintf(res, "s UNSATISFIABLE\n"); }
+        } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
+        else { fprintf(res, "s UNKNOWN\n"); }
+        fclose(res);
+    }
+
+    // print model to screen
+    if (! opt_quiet && ret == l_True && res == nullptr) {
+        if (!opt_modelStyle) { printf("v "); }
+        for (int i = 0; i < pcassoMaster.model->size(); i++) {
+            printf("%s%s%d", (i == 0) ? "" : " ", ((*pcassoMaster.model)[i] == l_True) ? "" : "-", i + 1);
+        }
+        printf(" 0\n");
+    }
+
+    cout.flush(); cerr.flush();
+
+    #ifdef NDEBUG
+    exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
+    #else
+    return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+    #endif
 
 }
 

@@ -130,8 +130,8 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
                                   const int v, const int p_limit, const int n_limit, Stepper& bveStepper,
                                   const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
     inline Riss::lbool anticipateElimination(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative,
-                                             const int v, const int p_limit, const int n_limit, Riss::vec<int32_t>& pos_stats, Riss::vec<int32_t>& neg_stats,
-                                             int& lit_clauses, int& lit_learnts, int& resolvents, Stepper& bveStepper, const bool doStatistics = true);
+            const int v, const int p_limit, const int n_limit, Riss::vec<int32_t>& pos_stats, Riss::vec<int32_t>& neg_stats,
+            int& lit_clauses, int& lit_learnts, int& resolvents, Stepper& bveStepper, const bool doStatistics = true);
     inline void addClausesToSubsumption(const std::vector<Riss::CRef>& clauses);
     void touchedVarsForSubsumption(CoprocessorData& data, const std::vector<Riss::Var>& touched_vars);
 
@@ -163,7 +163,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
                         std::deque < Riss::CRef >& strengthQueue ,
                         std::deque < Riss::CRef >& sharedStrengthQueue,
                         std::deque < PostponeReason >& postponed,
-                        std::vector< SpinLock >& var_lock,ReadersWriterLock& rwlock,
+                        std::vector< SpinLock >& var_lock, ReadersWriterLock& rwlock,
                         ParBVEStats& stats , Riss::MarkArray * gateMarkArray, int& rwlock_count,
                         int& garbageCounter,
                         int64_t& parBVEchecks,

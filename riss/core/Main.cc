@@ -40,6 +40,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "coprocessor/Coprocessor.h"
 #include "classifier/CNFClassifier.h"
 
+#include "riss/core/EnumerateMaster.h" // for model enumeration
+
 using namespace Riss;
 using namespace std;
 
@@ -122,12 +124,20 @@ int main(int argc, char** argv)
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
     BoolOption   opt_showParam("MAIN", "showUnusedParam", "print parameters after parsing", false);
     IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
-    BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false );
+    BoolOption   opt_autoconfig("MAIN", "auto", "pick a configuratoin automatically", false);
 
     IntOption    opt_assumeFirst("MAIN", "assumeFirst", "Assume the first X positive literals for search.", 0, IntRange(0, INT32_MAX));
-    
+
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
+
+    Int64Option  opt_enumeration("MODEL ENUMERATION", "models",     "number of models to be found (0=all)\n", -1, Int64Range(-1, INT64_MAX));
+    IntOption    opt_enuMinimize("MODEL ENUMERATION", "modelMini",  "minimize blocking clause (0=no,1=from full,2=also from blocking)\n", 2, IntRange(0, 2));
+    BoolOption   opt_enumPrintOFT("MODEL ENUMERATION", "enuOnline" , "print model as soon as it has been found", true);
+    StringOption opt_projectionFile("MODEL ENUMERATION", "modelScope", "file that store enumeration projection\n", 0);
+    StringOption opt_modelFile("MODEL ENUMERATION", "modelsFile", "file to store models to\n", 0);
+    StringOption opt_fullModelFile("MODEL ENUMERATION", "fullModels", "file to store full models to\n", 0);
+    StringOption opt_DNFfile("MODEL ENUMERATION", "dnf-file",   "file to store (reduced) DNF\n",  0);
 
     try {
 
@@ -145,7 +155,7 @@ int main(int argc, char** argv)
         if (0 != (const char*)opt_tuneFile) {
             FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
             fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
-            ::printOptions(pcsFile, opt_tuneLevel);
+            // ::printOptions(pcsFile, opt_tuneLevel); // do not print the global options, as those are usually not relevant for tuning
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
             coreConfig->printOptions(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
@@ -157,6 +167,7 @@ int main(int argc, char** argv)
             coreConfig->printOptionsDependencies(pcsFile);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
             cp3config->printOptionsDependencies(pcsFile);
+            fclose(pcsFile);
             exit(0);
         }
 
@@ -236,76 +247,76 @@ int main(int argc, char** argv)
             printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
             printf("c | Contributors:                                                                                         |\n");
             printf("c |      Kilian Gebhardt (BVE Implementation,parallel preprocessor)                                       |\n");
-	    printf("c |      Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                   |\n");
+            printf("c |      Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                   |\n");
             printf("c ============================[ Problem Statistics ]=======================================================\n");
             printf("c |                                                                                                       |\n");
         }
 
-    #ifdef CLASSIFIER
-	if( opt_autoconfig ) { // do configuration based on integrated configuration database
-	  
-	  if( (argc == 1) ) {
-	    printf("c cannot autoconfig with formula on stdin\n");
-	    exit(0);
-	  }
-	  
-	  // TODO FIXME set string according to current database "automatically". 
-	  // Here, the best configuration for the "cut" formulas should be used. 
-	  // The below limits should also be set automatically. 
-	  string config = "505-O";
-	  
-	  parse_DIMACS(in, *S);
-	  
-	  if ( S->nClauses() < 4000000 || S->nVars() < 1900000 || S->nTotLits() < 12000000){
-	    
-	    //gzclose(in);
-	    
-	    CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
-	    cnfclassifier->setVerb(verb);
-	    cnfclassifier->setComputingClausesGraph(false);
-	    cnfclassifier->setComputingResolutionGraph(false);
-	    cnfclassifier->setComputingRwh(true);
-	    cnfclassifier->setComputeBinaryImplicationGraph(true);
-	    cnfclassifier->setComputeConstraints(true);
-	    cnfclassifier->setComputeXor(false);
-	    cnfclassifier->setQuantilesCount(4);
-	    cnfclassifier->setComputingVarGraph(false); 
-	    cnfclassifier->setAttrFileName(nullptr);
-	    cnfclassifier->setComputingDerivative(true);
-	    
-	    config = cnfclassifier->getConfig( *S );
-	    // get new autoconfigured config
-	    
-	    delete cnfclassifier;
-	    
-	  }
-	  
-	  delete S;
-	  delete coreConfig;
-	  delete cp3config; 
+        #ifdef CLASSIFIER
+        if (opt_autoconfig) {  // do configuration based on integrated configuration database
 
-	  // set up the new configuration
-	  coreConfig = new CoreConfig( config.c_str() );
-	  cp3config = new Coprocessor::CP3Config( config.c_str() ); // use new and pointer
-	  
-	  // reset the solver with the new configuration
-	  S = new Solver(coreConfig);
-	  S->setPreprocessor(cp3config); // tell solver about preprocessor       
-	  S->verbosity = verb;
-	  S->verbEveryConflicts = vv;
-	
-	  gzclose(in); // reopening the formula file. (old one refers to EOF)
-	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
-	  if (S->verbosity > 0) { printf("c |  Config: %12s                                                                                |\n", config.c_str() ); }
-	}
-    #endif // CLASSIFIER
+            if ((argc == 1)) {
+                printf("c cannot autoconfig with formula on stdin\n");
+                exit(0);
+            }
+
+            // TODO FIXME set string according to current database "automatically".
+            // Here, the best configuration for the "cut" formulas should be used.
+            // The below limits should also be set automatically.
+            string config = "505-O";
+
+            parse_DIMACS(in, *S);
+
+            if (S->nClauses() < 4000000 || S->nVars() < 1900000 || S->nTotLits() < 12000000) {
+
+                //gzclose(in);
+
+                CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
+                cnfclassifier->setVerb(verb);
+                cnfclassifier->setComputingClausesGraph(false);
+                cnfclassifier->setComputingResolutionGraph(false);
+                cnfclassifier->setComputingRwh(true);
+                cnfclassifier->setComputeBinaryImplicationGraph(true);
+                cnfclassifier->setComputeConstraints(true);
+                cnfclassifier->setComputeXor(false);
+                cnfclassifier->setQuantilesCount(4);
+                cnfclassifier->setComputingVarGraph(false);
+                cnfclassifier->setAttrFileName(nullptr);
+                cnfclassifier->setComputingDerivative(true);
+
+                config = cnfclassifier->getConfig(*S);
+                // get new autoconfigured config
+
+                delete cnfclassifier;
+
+            }
+
+            delete S;
+            delete coreConfig;
+            delete cp3config;
+
+            // set up the new configuration
+            coreConfig = new CoreConfig(config.c_str());
+            cp3config = new Coprocessor::CP3Config(config.c_str());   // use new and pointer
+
+            // reset the solver with the new configuration
+            S = new Solver(coreConfig);
+            S->setPreprocessor(cp3config); // tell solver about preprocessor
+            S->verbosity = verb;
+            S->verbEveryConflicts = vv;
+
+            gzclose(in); // reopening the formula file. (old one refers to EOF)
+            in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+            if (S->verbosity > 0) { printf("c |  Config: %12s                                                                                |\n", config.c_str()); }
+        }
+        #endif // CLASSIFIER
 
         // open file for proof
         S->proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
         if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S->proofFile != nullptr) { fprintf(S->proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
-   	parse_DIMACS(in, *S);
-	//printf("\n%d\n", S->nClauses());
+        parse_DIMACS(in, *S);
+        //printf("\n%d\n", S->nClauses());
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : nullptr;
 
@@ -333,8 +344,8 @@ int main(int argc, char** argv)
             }
             // add the empty clause to the proof, close proof file
             if (S->proofFile != nullptr) {
-                bool validProof = S->checkProof(); // check the proof that is generated inside the solver
-//                 DOUT( if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; } ); // TODO FIXME this is not implemented right now (online checked is not activated by default)
+                lbool validProof = S->checkProof(); // check the proof that is generated inside the solver
+                if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ")) << endl; }
                 fprintf(S->proofFile, "0\n"), fclose(S->proofFile);
             }
             if (S->verbosity > 0) {
@@ -354,13 +365,43 @@ int main(int argc, char** argv)
         // tell solver about the number of conflicts it is allowed to use (for the current iteration)
         if (opt_maxConflicts != -1) { S->setConfBudget(opt_maxConflicts); }
         // assume first literals of the formula
-        if( opt_assumeFirst > 0 ) {
-	  const int maxV = opt_assumeFirst > S->nVars() ? S->nVars() : opt_assumeFirst;
-	  for( int i = 0 ; i < maxV; ++i ) dummy.push( mkLit(i,false) );
-	}
+        if (opt_assumeFirst > 0) {
+            const int maxV = opt_assumeFirst > S->nVars() ? S->nVars() : opt_assumeFirst;
+            for (int i = 0 ; i < maxV; ++i) { dummy.push(mkLit(i, false)); }
+        }
+
+        Riss::EnumerateMaster* modelMaster = nullptr;
+        if (opt_enumeration != -1) {
+            modelMaster = new Riss::EnumerateMaster(S->nVars());
+            modelMaster->setMaxModels(opt_enumeration);
+            modelMaster->setModelMinimization((int) opt_enuMinimize);
+
+            if (S->getPreprocessor() != nullptr) { modelMaster->setPreprocessor(S->getPreprocessor()) ; }
+            if ((const char*) opt_projectionFile != 0) { modelMaster->setProjectionFile((const char*) opt_projectionFile); }
+            modelMaster->initEnumerateModels(); // for this method, coprocessor and projection have to be known already!
+            modelMaster->setPrintEagerly(opt_enumPrintOFT);
+
+            if ((const char*) opt_modelFile != 0) { modelMaster->setModelFile((const char*) opt_modelFile); }
+            if ((const char*) opt_fullModelFile != 0) { modelMaster->setFullModelFile((const char*) opt_fullModelFile); }
+            if ((const char*) opt_DNFfile != 0) { modelMaster->setDNFfile((const char*) opt_DNFfile); }
+
+            S->setEnumnerationMaster(modelMaster);   // finally, tell the solver about the enumeration master
+        }
+
         // solve the formula (with the possible created assumptions)
         lbool ret = S->solveLimited(dummy);
         S->budgetOff(); // remove budget again!
+
+        if (modelMaster != nullptr) {  // handle model enumeration
+            if (S->verbosity > 0) { printf("c found models: %lld\n", modelMaster->foundModels()); }
+            if (modelMaster->foundModels() > 0) {
+                modelMaster->writeStreamToFile("", false); // for now, print all models to stderr is fine
+                printf("s SATISFIABLE\n");
+                if (res != nullptr) { fclose(res); res = nullptr; } // TODO: write result into output file!
+                exit(30);
+            }
+        }
+
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
             if (res != nullptr) { fclose(res); res = nullptr; }
@@ -394,10 +435,10 @@ int main(int argc, char** argv)
 
         // put empty clause on proof
         if (ret == l_False && S->proofFile != nullptr) {
-#ifdef DRATPROOF
-            bool validProof = S->checkProof(); // check the proof that is generated inside the solver
-            if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-#endif
+            #ifdef DRATPROOF
+            lbool validProof = S->checkProof(); // check the proof that is generated inside the solver
+            if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ")) << endl; }
+            #endif
             fprintf(S->proofFile, "0\n");
         }
 

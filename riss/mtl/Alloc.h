@@ -99,7 +99,7 @@ class RegionAllocator
         sz = cap = wasted_ = 0;
     }
 
-    void     copyTo(RegionAllocator& to) const 
+    void     copyTo(RegionAllocator& to) const
     {
         to.capacity(cap);                           // ensure that there is enough space
         memcpy(to.memory, memory, sizeof(T) * cap); // copy memory content

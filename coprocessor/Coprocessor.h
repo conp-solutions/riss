@@ -12,6 +12,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "riss/utils/ThreadController.h"
 #include "coprocessor/CP3Config.h"
 
+
 #include "coprocessor/techniques/Propagation.h"
 #include "coprocessor/techniques/Subsumption.h"
 #include "coprocessor/techniques/HiddenTautologyElimination.h"
@@ -31,6 +32,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/techniques/Entailed.h"
 #include "coprocessor/techniques/Dense.h"
 #include "coprocessor/techniques/Symmetry.h"
+#include "coprocessor/techniques/HBR.h"
+#include "coprocessor/Shuffler.h"
 
 #include "coprocessor/techniques/SLS.h"
 #include "coprocessor/techniques/TwoSAT.h"
@@ -55,21 +58,21 @@ class Preprocessor
 
     // attributes
     int32_t threads;             // number of threads that can be used by the preprocessor
-    Riss::Solver* solver;        // handle to the solver object that stores the formula
-    Riss::ClauseAllocator& ca;   // reference to clause allocator
+    Riss::Solver* solver;              // handle to the solver object that stores the formula
+    Riss::ClauseAllocator& ca;         // reference to clause allocator
 
-    Logger log;                        // log output
-    CoprocessorData data;              // all the data that needs to be accessed by other classes (preprocessing methods)
+    Logger log;                  // log output
+    CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
     Riss::ThreadController controller; // controller for all threads
 
-    Clock ppTime;         // time to do preprocessing
-    Clock ipTime;         // time to do inpreprocessing
-    Clock overheadTime;   // time for pp overhead (init and all that)
+    Clock ppTime;     // time to do preprocessing
+    Clock ipTime;     // time to do inpreprocessing
+    Clock overheadTime;       // time for pp overhead (init and all that)
     int thisClauses;      // number of original clauses before current run
     int thisLearnts;      // number of learnt clauses before current run
 
-    int lastInpConflicts; // number of conflicts when inprocessing has been called last time
-    int formulaVariables; // number of variables in the initial formula
+    int lastInpConflicts;     // number of conflicts when inprocessing has been called last time
+    int formulaVariables;     // number of variables in the initial formula
 
   public:
 
@@ -149,36 +152,38 @@ class Preprocessor
      * @return the new literal or lit_Undef if the literal is not present any more
      *         or lit_Error, if the information is not present
      */
-    Riss::Lit importLit(const Riss::Lit &lit) const;
+    Riss::Lit importLit(const Riss::Lit& lit) const;
 
-    int importLit(const int &lit) const;
+    int importLit(const int& lit) const;
 
   protected:
     //
     // techniques
     //
-    Propagation                 propagation;
-    Subsumption                 subsumption;
-    HiddenTautologyElimination  hte;
-    BoundedVariableElimination  bve;
-    BoundedVariableAddition     bva;
-    ClauseElimination           cce;
-    EquivalenceElimination      ee;
-    Unhiding                    unhiding;
-    Probing                     probing;
-    RATElimination              rate;
+    Propagation propagation;
+    Subsumption subsumption;
+    HiddenTautologyElimination hte;
+    BoundedVariableElimination bve;
+    BoundedVariableAddition bva;
+    ClauseElimination cce;
+    EquivalenceElimination ee;
+    Unhiding unhiding;
+    Probing probing;
+    RATElimination rate;
     Resolving                   resolving;
     Rewriter                    rewriter;
-    FourierMotzkin              fourierMotzkin;
-    Dense                       dense;
-    Symmetry                    symmetry;
-    XorReasoning                xorReasoning;
-    BlockedClauseElimination    bce;
-    LiteralAddition             la;
-    EntailedRedundant           entailedRedundant;
+    FourierMotzkin fourierMotzkin;
+    Dense dense;
+    Symmetry symmetry;
+    XorReasoning xorReasoning;
+    BlockedClauseElimination bce;
+    LiteralAddition la;
+    EntailedRedundant entailedRedundant;
+    HyperBinaryResolution hbr;
+    VarShuffler shuffler;
 
-    SLS                         sls;
-    TwoSatSolver                twoSAT;
+    SLS sls;
+    TwoSatSolver twoSAT;
 
     int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
     Riss::vec<Riss::Var> specialFrozenVariables;

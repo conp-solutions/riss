@@ -97,6 +97,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_simplify    ;
     Riss::BoolOption opt_symm        ;
     Riss::BoolOption opt_FM          ;
+    Riss::BoolOption opt_hbr         ;
 
 
     Riss::StringOption opt_ptechs ;
@@ -182,6 +183,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_rew_vars;  // variable limit to enable
     Riss::IntOption opt_rew_cls;   // clause limit to enable
     Riss::IntOption opt_rew_lits;  // total literals limit to enable
+    Riss::IntOption opt_hbr_vars;  // variable limit to enable
+    Riss::IntOption opt_hbr_cls;   // clause limit to enable
+    Riss::IntOption opt_hbr_lits;  // total literals limit to enable
 
     #ifndef NDEBUG
     Riss::BoolOption opt_debug    ;
@@ -277,6 +281,19 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_bce_verbose; // output operation steps
     #ifndef NDEBUG
     Riss::BoolOption opt_bce_debug; // debug output
+    #endif
+
+
+//
+// HBR
+//
+    Riss::IntOption hbrLimit;
+    Riss::IntOption opt_hbr_maxCsize;   // min size = 3
+    Riss::IntOption opt_hbr_addBinaries; // add new binary clauses (always, only in first iteration, never)
+    Riss::IntOption opt_hbrInpStepInc; // add to limit for inprocessing
+    Riss::IntOption opt_hbr_verbose; // output operation steps
+    #ifndef NDEBUG
+    Riss::BoolOption opt_hbr_debug; // debug output
     #endif
 
 //

@@ -749,7 +749,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
     // calculate ratio
     clauseRatio = data.getClauses().size() - ignoredRatioClauses == 0 ? 1 : (double)participatingXorClauses / (double)(data.getClauses().size() - ignoredRatioClauses);
     variableRatio = data.nVars() == 0 ? 1 : (double)backdoorVariables.size() / (double)data.nVars();
-    DOUT( if (config.opt_xor_debug > 0) cerr << "c clauseRatio: " << clauseRatio << " variableRatio: " << variableRatio << endl; );
+    DOUT(if (config.opt_xor_debug > 0) cerr << "c clauseRatio: " << clauseRatio << " variableRatio: " << variableRatio << endl;);
 
     DOUT(if (config.opt_xor_debug > 0) cerr << "c [XOR] found " << xors << " non-binary xors encoded with " << xorClauses << " clauses" << endl;);
     return didSomething;

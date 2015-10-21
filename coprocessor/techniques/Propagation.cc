@@ -103,6 +103,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
 
             // unit propagation
             if (c.size() == 0) {
+                c.set_delete(true);   // drop this clause from checks!
                 data.setFailed();   // set state to false
                 //-> this stops just the inner loop!
                 //break;              // abort unit propagation
@@ -110,6 +111,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
                 processTime = cpuTime() - processTime;
                 return l_False;
             } else if (c.size() == 1) {
+                c.set_delete(true);   // drop this clause from checks!
                 DOUT(if (solver->value(c[0]) == l_Undef && config.up_debug_out > 0)  cerr << "c UP enqueue " << c[0] << " with previous value "  << (solver->value(c[0]) == l_Undef ? "undef" : (solver->value(c[0]) == l_False ? "unsat" : " sat ")) << endl;);
                 if (solver->value(c[0]) == l_Undef) { solver->uncheckedEnqueue(c[0]); }
                 else if (solver->value(c[0]) == l_False) { data.setFailed(); }

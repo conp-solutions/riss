@@ -38,7 +38,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "coprocessor/Coprocessor.h"
 #include "coprocessor/CoprocessorTypes.h"
 // to be able to read var files
-#include "coprocessor/VarFileParser.h"
+#include "riss/utils/VarFileParser.h"
+
+#include "riss/core/EnumerateMaster.h"
 
 using namespace Coprocessor;
 using namespace std;
@@ -60,6 +62,10 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     // setup search configuration as code to fill struct
     , verbosity(config.opt_verb)
     , verbEveryConflicts(100000)
+
+    , posInAllClauses(true)
+    , negInAllClauses(true)
+
     , random_var_freq(config.opt_random_var_freq)
     , random_seed(config.opt_random_seed)
     , rnd_pol(random_var_freq > 0)               // if there is a random variable frequency, allow random decisions
@@ -74,7 +80,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , curRestart(1)
 
 
-    
+
     , ok(true)
     , cla_inc(1)
     , var_inc(1)
@@ -93,14 +99,14 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , remove_satisfied(true)
 
     // removal setup
-    , max_learnts( config.opt_min_learnts_lim )
-    , learntsize_factor( config.opt_learnt_size_factor )
-    , learntsize_inc( config.opt_learntsize_inc )
-    , learntsize_adjust_start_confl( config.opt_learntsize_adjust_start_confl )
-    , learntsize_adjust_inc( config.opt_learntsize_adjust_inc )
-    , learntsize_adjust_confl( config.opt_learntsize_adjust_start_confl )
-    , learntsize_adjust_cnt( config.opt_learntsize_adjust_start_confl )
-    
+    , max_learnts(config.opt_max_learnts)
+    , learntsize_factor(config.opt_learnt_size_factor)
+    , learntsize_inc(config.opt_learntsize_inc)
+    , learntsize_adjust_start_confl(config.opt_learntsize_adjust_start_confl)
+    , learntsize_adjust_inc(config.opt_learntsize_adjust_inc)
+    , learntsize_adjust_confl(config.opt_learntsize_adjust_start_confl)
+    , learntsize_adjust_cnt(config.opt_learntsize_adjust_start_confl)
+
     , preprocessCalls(0)
     , inprocessCalls(0)
 
@@ -227,15 +233,23 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , searchUHLElits(0)
 
     // preprocessor
-    , coprocessor(0)
+    , coprocessor(nullptr)
     , useCoprocessorPP(config.opt_usePPpp)
     , useCoprocessorIP(config.opt_usePPip)
 
     // communication to other solvers that might be run in parallel
     , communication(0)
     , sharingTimePoint(config.sharingType)
+
+    , enumerationClient(this)
 {
-  
+    // EMA for dynamic restart schedules
+    slow_interpretationSizes.reinit(config.opt_restart_ema_trailslow);              // collect all conflict levels
+    slow_LBDs.reinit(config.opt_restart_ema_lbdslow);   // collect all clause LBDs
+    recent_LBD.reinit(config.opt_restart_ema_lbdfast);
+
+    restartSwitchSchedule.initialize(config.opt_rswitch_isize);
+
     // Parameters (user settable):
     //
     searchconfiguration.K = config.opt_K;
@@ -284,7 +298,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     if (onlineDratChecker != 0) { onlineDratChecker->setVerbosity(config.opt_checkProofOnline); }
 
 //     cerr << "c sizes: solver: " << sizeof(Solver) << " comm: " << sizeof(Communicator) << endl;
-    
+
     if ((const char*)config.search_schedule != 0) {
         configScheduler.initConfigs(searchconfiguration, string(config.search_schedule), config.sscheduleGrowFactor, config.scheduleDefaultConflicts, config.scheduleConflicts);    // setup configuration
     }
@@ -334,6 +348,11 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     // space for replacement info
     eqInfo.replacedBy.push(mkLit(v, false));
 
+    if (config.opt_litPairDecisions > 0) {
+        decisionLiteralPairs.push(LitPairPair());    // add another pair per literal
+        decisionLiteralPairs.push(LitPairPair());    // add another pair per literal
+    }
+
     return v;
 }
 
@@ -365,6 +384,8 @@ void Solver::reserveVars(Var v)
 
     for (Var w = eqInfo.replacedBy.size(); w <= v ; ++w) { eqInfo.replacedBy.push(mkLit(w, false)); }
 
+    if (config.opt_litPairDecisions > 0) { decisionLiteralPairs.capacity(2 * v); }  // create sufficient capacity
+
 }
 
 
@@ -389,13 +410,28 @@ bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
         }
     }
 
+    bool somePositive = false;
+    bool someNegative = false;
     if (!config.opt_hpushUnit) {   // do not analyzes clauses for being satisfied or simplified
         for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
             if (value(ps[i]) == l_True || ps[i] == ~p) { // noRedundancyCheck breaks the second property, which is ok, as it also not fails
                 return true;
             } else if (value(ps[i]) != l_False && ps[i] != p) {
                 ps[j++] = p = ps[i]; // assigning p is not relevant for noRedundancyCheck
+                somePositive = somePositive || !sign(p);
+                someNegative = someNegative || sign(p);
             }
+        ps.shrink_(i - j);
+    } else { // delay units, but still remove tautologies!
+        for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
+            if (ps[i] == ~p) { // noRedundancyCheck breaks the second property, which is ok, as it also not fails
+                return true;
+            } else if (ps[i] != p) {
+                ps[j++] = p = ps[i]; // assigning p is not relevant for noRedundancyCheck
+                somePositive = somePositive || !sign(p);
+                someNegative = someNegative || sign(p);
+            }
+        }
         ps.shrink_(i - j);
     }
 
@@ -422,6 +458,25 @@ bool Solver::addClause_(vec< Lit >& ps, bool noRedundancyCheck)
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
         attachClause(cr);
+        assert(ps.size() > 1 && "this should not be a unit clause");
+        // to feed polarity heuristic
+        posInAllClauses = posInAllClauses && somePositive; // memorize for the whole formula
+        negInAllClauses = negInAllClauses && someNegative;
+
+        if (config.opt_litPairDecisions > 0 && ps.size() > 2) {  // collect literals only for larger clauses (not binary!)
+            for (int i = 0 ; i < ps.size(); ++i) {
+                LitPairPair& lp = decisionLiteralPairs[ toInt(ps [i]) ];
+                if (lp.p.replaceWith != lit_Undef && lp.q.replaceWith != lit_Undef) { continue; }  // this literal already has enough literals stored
+                if (lp.p.replaceWith == lit_Undef) {
+                    lp.p.replaceWith = ps [(i + 1) % ps.size() ]; // store next two literals
+                    lp.p.otherMatch  = ps [(i + 2) % ps.size() ]; // store next two literals
+                } else {
+                    assert(lp.q.replaceWith == lit_Undef && "this case is left over");
+                    lp.q.replaceWith = ps [(i + 1) % ps.size() ]; // store next two literals
+                    lp.q.otherMatch  = ps [(i + 2) % ps.size() ]; // store next two literals
+                }
+            }
+        }
     }
 
     return true;
@@ -598,7 +653,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
         const Lit p = learned_clause[0]; // this literal cannot be removed!
         const uint32_t cs = learned_clause.size(); // store the size of the initial clause
         Lit Splus  [cs];      // store sorted literals of the clause
-        DOUT( if (config.opt_learn_debug) cerr << "c minimize with UHLE: " << learned_clause << endl; );
+        DOUT(if (config.opt_learn_debug) cerr << "c minimize with UHLE: " << learned_clause << endl;);
         for (uint32_t ci = 0 ; ci  < cs; ++ ci) { Splus [ci] = learned_clause[ci]; }
 
         {
@@ -675,12 +730,13 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& d
         // do some stats!
         searchUHLEs ++;
         searchUHLElits += (cs - learned_clause.size());
-        if (cs != learned_clause.size()) { 
-	  DOUT( if (config.opt_learn_debug) cerr << "c UHLE result: " << learned_clause << endl; )
-	  // some literals have been removed
-	  return true; 
-	}   
-        else { return false; } // no literals have been removed
+        if (cs != learned_clause.size()) {
+            DOUT(if (config.opt_learn_debug) cerr << "c UHLE result: " << learned_clause << endl;)
+                // some literals have been removed
+            {
+                return true;
+            }
+        } else { return false; } // no literals have been removed
     } else { return false; }// no literals have been removed
 }
 
@@ -769,6 +825,34 @@ Lit Solver::pickBranchLit()
     }
     // NuSMV: PREF MOD END
 
+    // test simple version of BCD based decision heuristic
+    if (config.opt_litPairDecisions > 0 && decisionLevel() > 0) {
+        assert(trail_lim.size() > 0 && "there has to be a decision already");
+        int refDecisionLevel = 0;
+        while (refDecisionLevel < decisionLevel()) {    // as long as there are other reference decisions
+            assert(trail_lim[refDecisionLevel] < trail.size() && "decision literals have to be located in the trail");
+            Lit decideDecision = trail [ trail_lim[refDecisionLevel] ] ;
+            DOUT(if (config.opt_printDecisions > 1) cerr << endl << "c reference decision: " << decideDecision << " @ " << refDecisionLevel << endl ;);
+            LitPairPair& lp = decisionLiteralPairs[ toInt(decideDecision) ];
+            DOUT(if (config.opt_printDecisions > 1) { // print state of reference literal lists when picking the decision
+            cerr << "c pairs/sat/undefs: " << lp.p.otherMatch << " " << (lp.p.otherMatch != lit_Undef ? value(lp.p.otherMatch) == l_True : false)           << " " << (lp.p.otherMatch != lit_Undef ? value(lp.p.otherMatch) == l_Undef : false)
+                     << " " << lp.p.replaceWith << " " << (lp.p.replaceWith != lit_Undef ? value(lp.p.replaceWith) == l_True : false) << " " << (lp.p.replaceWith != lit_Undef ? value(lp.p.replaceWith) == l_Undef : false)
+                     << " -- "
+                     << lp.q.otherMatch  << " " << (lp.q.otherMatch != lit_Undef  ? value(lp.q.otherMatch)  == l_True : false)        << " " << (lp.q.otherMatch != lit_Undef  ? value(lp.q.otherMatch)  == l_Undef : false)
+                     << " " << lp.q.replaceWith << " " << (lp.q.replaceWith != lit_Undef ? value(lp.q.replaceWith) == l_True : false) << " " << (lp.q.replaceWith != lit_Undef ? value(lp.q.replaceWith) == l_Undef : false)
+                     << endl;
+            }
+                );
+            refDecisionLevel ++;
+            if (lp.p.otherMatch == lit_Undef || lp.q.otherMatch == lit_Undef) { continue; }  // there is no clause stored for the given literal
+            if (lp.q.otherMatch != lit_Undef && value(lp.q.otherMatch)  != l_True && value(lp.q.replaceWith) == l_Undef) { assert(lp.p.replaceWith != lit_Undef); return  lp.q.replaceWith; }        // return a free literal
+            if (lp.q.replaceWith != lit_Undef &&  value(lp.q.replaceWith) != l_True && value(lp.q.otherMatch) == l_Undef) { assert(lp.p.otherMatch != lit_Undef); return lp.q.otherMatch; }
+            assert(lp.p.otherMatch != lit_Undef && lp.p.replaceWith != lit_Undef && "case left, both lits have to be set");
+            if (value(lp.p.otherMatch)  != l_True && value(lp.p.replaceWith) == l_Undef) { assert(lp.p.replaceWith != lit_Undef); return lp.p.replaceWith; }
+            if (value(lp.p.replaceWith) != l_True && value(lp.p.otherMatch) == l_Undef) { assert(lp.p.otherMatch != lit_Undef); return lp.p.otherMatch; }
+        }
+    }
+
     // Random decision:
     if (
         // NuSMV: PREF MOD
@@ -790,8 +874,13 @@ Lit Solver::pickBranchLit()
             next = order_heap.removeMin();
         }
 
-    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : varFlags[next].polarity);
-    return returnLit;
+    // first path is usually chosen, one if
+    if (next != var_Undef && !posInAllClauses && !negInAllClauses) {
+        return mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : varFlags[next].polarity);
+    } else {
+        return next == var_Undef ? lit_Undef :
+               (posInAllClauses ? mkLit(next, false) : mkLit(next, true));
+    }
 }
 
 
@@ -971,7 +1060,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         // or 1stUIP is unit, but the current learned clause would be bigger, and there are still literals on the current level
         || (isOnlyUnit && units > 0 && index >= trail_lim[ decisionLevel() - 1])
     );
-    assert((units == 0 || pathLimit == 0) && "there cannot be a bi-asserting clause that is a unit clause!");
+    // Note: biasserting clauses can also be unit clauses!
     assert(out_learnt.size() > 0 && "there has to be some learnt clause");
 
     // if we do not use units, add asserting literal to learned clause!
@@ -1300,7 +1389,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uns
     // prefetch watch lists
     // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     __builtin_prefetch(& watches[p], 1, 0);   // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
-    DOUT(if (config.opt_printDecisions > 1) {cerr << "c uncheched enqueue " << p; if (from != CRef_Undef) { cerr << " because of [" << from << "] " <<  ca[from]; } cerr << endl;});
+    DOUT(if (config.opt_printDecisions > 1) {cerr << "c unchecked enqueue " << p; if (from != CRef_Undef) { cerr << " because of [" << from << "] " <<  ca[from]; } cerr << endl;});
 
     trail.push_(p);
 }
@@ -1839,7 +1928,7 @@ lbool Solver::search(int nof_conflicts)
     int         conflictC = 0;
     vec<Lit>    learnt_clause;
     unsigned int nblevels;
-    bool blocked = false;
+    bool blockNextRestart = false;
     starts++;
     int proofTopLevels = 0;
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
@@ -1876,14 +1965,24 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0) { // top level conflict - stop!
                 return l_False;
             }
-            
+
 #warning use earlyabort from IC3 minisat variant here! (might work well for maxsat if the solver is not re-used)
 
-            trailQueue.push(trail.size());
-            if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > searchconfiguration.R * trailQueue.getavg()) {
-                lbdQueue.fastclear();
-                nbstopsrestarts++;
-                if (!blocked) {lastblockatrestart = starts; nbstopsrestartssame++; blocked = true;}
+            if (searchconfiguration.restarts_type == 0) { trailQueue.push(trail.size()); }                   // tell queue about current size of the interpretation before the conflict
+            slow_interpretationSizes.update(trail.size());
+            // block restart based on the current interpretation size?
+            if (conflicts > config.opt_restart_min_noBlock                     // do not block within the first
+                    && config.opt_allow_restart_blocking                             // is blocking restarts ok?
+                    && searchconfiguration.restarts_type == 0                        // block only with dynamic restarts
+                    && lbdQueue.isvalid()                                            // block only, if we did not already block 'recently'
+               ) {
+                if ((!config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * trailQueue.getavg())         // glucose like: compare to value of trailQueue
+                        || (config.opt_restarts_dyn_ema && trail.size() > searchconfiguration.R * slow_interpretationSizes.getValue())       // EMA: compare to value of slowly evolving trail size EMA
+                   ) {
+                    lbdQueue.fastclear();
+                    nbstopsrestarts++;
+                    if (!blockNextRestart) {lastblockatrestart = starts; nbstopsrestartssame++; blockNextRestart = true;}
+                }
             }
 
             l1conflicts = (decisionLevel() != 1 ? l1conflicts : l1conflicts + 1);
@@ -1918,17 +2017,20 @@ lbool Solver::search(int nof_conflicts)
             claDecayActivity();
 
             conflictsSinceLastRestart ++;
-	    
-	    if( config.opt_reduceType == 1 ) {
-	      if (--learntsize_adjust_cnt == 0){
-		  learntsize_adjust_confl *= learntsize_adjust_inc;
-		  learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
-		  max_learnts             *= learntsize_inc;
-	      }
-	    }
+
+            if (config.opt_reduceType == 1) {
+                if (--learntsize_adjust_cnt == 0) {
+                    learntsize_adjust_confl *= learntsize_adjust_inc;
+                    learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
+                    max_learnts             *= learntsize_inc;
+                }
+            }
 
         } else { // there has not been a conflict
-            if (restartSearch(nof_conflicts, conflictC)) { return l_Undef; }   // perform a restart
+            if (handleRestarts(nof_conflicts, conflictC)) { return l_Undef; }    // perform a restart
+
+            // check for new models, continue with propagation if new clauses have been added
+            if (enumerationClient. receiveModelBlockingClauses()) { continue; }
 
             // Handle Simplification Here!
             //
@@ -1996,10 +2098,23 @@ lbool Solver::search(int nof_conflicts)
                     decisions++;
                     next = pickBranchLit();
 
+                    DOUT(if (config.opt_printDecisions > 1) cerr << "c pickBranchLit selects literal " << next << endl;);
+
+                    if (next != lit_Undef) { assert(value(next) == l_Undef && "decision variable has to be undefined"); }
+
                     if (next == lit_Undef) {
-                        if (verbosity > 1) { fprintf(stderr, "c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel()); }
-                        // Model found:
-                        return l_True;
+                        EnumerationClient::EnumerateState res = enumerationClient.processCurrentModel(next);
+                        if (res == EnumerationClient::oneModel) {
+                            DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted to return SAT in search method (oneModel)" << endl;);
+                            return l_True;
+                        } else if (res == EnumerationClient::goOn) {
+                            DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted continue with search " << endl;);
+                            goto SolverNextSearchIteration;
+                        } else {
+                            DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted and unhandled result " << endl;);
+                            assert(false && "this case should not be reached");
+                            return l_Undef;
+                        }
                     }
                 }
 
@@ -2029,61 +2144,392 @@ lbool Solver::search(int nof_conflicts)
             DOUT(if (config.opt_printDecisions > 0) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel()););
             uncheckedEnqueue(next);
         }
+    SolverNextSearchIteration:;
     }
+
+    assert(false && "this point should not be reached");
     return l_Undef;
 }
 
-void Solver::clauseRemoval()
+void Solver::EnumerationClient::assignClientID()
 {
-    if(  ( config.opt_reduceType == 1 && (learnts.size()-nAssigns() >= max_learnts) )                                // minisat style removal
-      || (config.opt_reduceType == 0 && (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0) ) )  // glucose style removal
-    { // perform only if learnt clauses are present
-        curRestart = (conflicts / nbclausesbeforereduce) + 1;
-        reduceDB();
-        nbclausesbeforereduce += searchconfiguration.incReduceDB;
+    assert(master != 0 && "master has to exist to receive an ID");
+    clientID = master->assignClientID();
+}
+
+
+/** receive blocking clauses from enumeration master and add them to the formula of the current solver
+ * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+ @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
+ */
+bool Solver::EnumerationClient::receiveModelBlockingClauses()
+{
+    if (master == nullptr) { return false; }  // nothing to be done
+    if (solver->decisions < lastReceiveDecisions + receiveEveryDecisions) { return false; }
+    if (!master->hasMoreModels(blockedModels)) { return false; }  // nothing to be received by master
+
+    // todo: make sure we do not receive the same blocking clause multiple times (the one of our own model)
+
+    // set number of decisions when receiving models
+    lastReceiveDecisions = solver->decisions;
+    int oldDecisionLevel = solver->decisionLevel();
+    while (master->hasMoreModels(blockedModels)) {
+        // models we have seen is the number we found plus the number of personally found models
+        if (!master->reveiveModel(clientID, blockedModels, solver->model, blockingClause)) {
+            blockedModels ++; // saw one more model - or at least asked for it
+            continue;
+        }
+        blockedModels ++; // saw one more model to block it
+
+        if (minimizeReceived != NONE) {
+            // allowed to reduce the blocked clause?
+            solver->initReverseMinimitaion(); // initialize reverse minimization
+            // dummies for minimization
+            unsigned int lbd = 0; unsigned dependencyLevel = 0;
+
+            blockingClause.copyTo(minimizedClause);
+            if (minimizeReceived == ALSOFROMBLOCKED) {
+                solver->reverseLearntClause(minimizedClause, lbd, dependencyLevel, true);
+            }
+            blockingClause.clear();
+            for (int i = 0 ; i < solver->model.size(); ++ i) {
+                blockingClause.push(mkLit(i , solver->model[i] == l_False));
+            }
+            solver->reverseLearntClause(blockingClause, lbd, dependencyLevel, true);
+            // use the shorter clause!
+            if (minimizedClause.size() < blockingClause.size()) { minimizedClause.copyTo(blockingClause); }
+        }
+
+        // integrate the clause, with no previous knowledge
+        int maxLevel = -1, max2Level = -1;
+        integrateClause(blockingClause, maxLevel, max2Level);
+    }
+
+    // if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+    return oldDecisionLevel != solver->decisionLevel();
+}
+
+
+Solver::EnumerationClient::EnumerateState
+Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
+{
+    if (master == 0) { return oneModel; }  // we do not perform enumeration
+
+    // allowed to reduce the blocked clause?
+    if (mtype != EnumerationClient::MinimizeType::NONE) { solver->initReverseMinimitaion(); }  // initialize reverse minimization
+
+    int maxLevel = 0, max2Level = 0;
+    int modelSize = solver->trail.size();
+    // create blocking clause if allowed
+    if (! master->usesProjection())  {
+        // negate all decision variables
+        createDecisionClause(blockingClause, maxLevel, max2Level);
+        // the best (shortest) blocking clause is now stored in the vector blocking clause
+    } else {
+        // count all models by adding the negated decision clause
+        // negate all variables from the projection
+        createBlockingProjectionClause(blockingClause, maxLevel, max2Level);
+        modelSize = blockingClause.size();
+    }
+
+    // dummies for minimization
+    unsigned int lbd = 0; unsigned dependencyLevel = 0;
+
+    // minimize blocking clause
+    if (mtype == EnumerationClient::MinimizeType::ALSOFROMBLOCKED) {  // minimized blocking clause we just created
+        blockingClause.copyTo(minimizedClause);
+        solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
+        if (minimizedClause.size() < blockingClause.size()) {
+            minimizedClause.swap(blockingClause);   // if the new clause is better, keep the new clause as blocking clause, in minimizedClause we store the current projection (if we use projection)
+            // TODO collect statistics
+            maxLevel = -1; max2Level = -1;
+        }
+    }
+
+    // if projection is not active, we are furthermore allowed to try to come up with a shorter blocking clause starting from the full model
+    if (! master->usesProjection()) {
+        if (mtype == EnumerationClient::MinimizeType::ONLYFROMFULL || mtype == EnumerationClient::MinimizeType::ALSOFROMBLOCKED) {
+            solver->trail.copyTo(minimizedClause);
+            for (int i = 0 ; i < minimizedClause.size(); ++ i) { minimizedClause[i] = ~minimizedClause[i]; }  // first, create a full blocking clause
+            solver->reverseLearntClause(minimizedClause, lbd , dependencyLevel, true);
+            if (minimizedClause.size() < blockingClause.size()) {
+                minimizedClause.moveTo(blockingClause);   // if the new clause is better, keep the new clause as blocking clause
+                // TODO collect statistics
+                maxLevel = -1; max2Level = -1;
+            }
+        }
+        // tell master about model, blocking clause, and the full model
+        uint64_t modelhash = convertModel(solver->nVars(), solver->trail, solver->model);   // convert in client, such that the master must not perform the conversion in the critical section!
+        bool newModel = master->addModel(clientID, solver->model, modelhash, & blockingClause, &solver->trail);
+        if (newModel) { foundModels ++; }
+        else { duplicateModels ++; }
+    } else {
+        if (modelSize == blockingClause.size()) {  // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
+            blockingClause.copyTo(minimizedClause);
+        }
+        // the model has the opposite values as the blocking clause
+        for (int i = 0 ; i < minimizedClause.size(); ++i) { minimizedClause[i] = ~ minimizedClause[i]; }
+        uint64_t modelhash = convertModel(solver->nVars(), minimizedClause, solver->model);   // convert in client, such that the master must not perform the conversion in the critical section!
+        bool newModel = master->addModel(clientID, solver->model, modelhash, & blockingClause, &solver->trail);    // tell master about model under projection, blocking clause, and the ful model
+        if (newModel) { foundModels ++; }
+        else { duplicateModels ++; }
+    }
+
+    // add blocking clause to this solver without disturbing its search too much
+    bool moreModelsPossible = integrateClause(blockingClause, maxLevel, max2Level);
+    if (!moreModelsPossible) {
+        cerr << "c stop after client found all models" << endl;
+        master->notifyReachedAllModels();
+        return stop;
+    }
+
+    bool enoughModel = master->foundEnoughModels();
+    return enoughModel ? stop : goOn;
+}
+
+Solver::EnumerationClient::EnumerationClient(Solver* _solver)
+    :   clientID(-1)
+    , master(nullptr)
+    , solver(_solver)
+    , blockedModels(0)
+    , lastReceiveDecisions(0)
+    , mtype(ALSOFROMBLOCKED)
+    , minimizeReceived(ALSOFROMBLOCKED)
+    , foundModels(0)
+    , duplicateModels(0)
+    , receiveEveryDecisions(512)
+{
+}
+
+uint64_t Solver::EnumerationClient::convertModel(uint32_t nVars, vec< Lit >& trail, vec< lbool >& model)
+{
+    // check whether model is already present
+    uint64_t currentHash = 0;
+    const int maxVar = trail.size() < nVars ? nVars : trail.size();
+    model.clear();
+    model.growTo(maxVar, l_Undef);
+    for (int i = 0 ; i < trail.size(); ++ i) {
+        currentHash += sign(trail[i]) ? ((uint64_t)var(trail[i])) << 32ull : var(trail[i]); // separate positive and negative literals, sum everything up
+        model[var(trail[i])] = sign(trail[i]) ? l_False : l_True;        // add this model
+    }
+    return currentHash;
+}
+
+
+uint64_t Solver::EnumerationClient::getModels() const
+{
+    return foundModels;
+}
+
+uint64_t Solver::EnumerationClient::getDupModels() const
+{
+    return duplicateModels;
+}
+
+
+bool Solver::EnumerationClient::enoughModels(lbool searchstatus) const
+{
+    // true, if there is no master, or if there is a master and all models have been found
+    if (searchstatus == l_True) {
+        return master == 0 || master->foundEnoughModels();
+    } else if (searchstatus == l_Undef) {
+        if (master == 0) { return false; }   // we did not find a model yet (in sequential search)
+        else {
+            return master->isShared() && master->foundEnoughModels();
+        }
     }
 }
 
 
-bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
+Solver::EnumerationClient::~EnumerationClient()
 {
+
+    // delete master only in sequential setup
+    if (master != 0 && ! master->isShared()) {
+        delete master;
+        master = 0;
+    }
+}
+
+bool Solver::EnumerationClient::integrateClause(vec< Lit >& clause, int maxLevel, int max2Level)
+{
+    if (maxLevel < 0 || max2Level < 0) {
+        maxLevel = 0; max2Level = 0;
+        for (int i = 0 ; i < clause.size(); ++ i) {
+            int varLevel = solver->level(var(clause[i]));
+            if (varLevel > maxLevel) { max2Level = maxLevel; maxLevel = varLevel; }
+            else if (varLevel > max2Level) { max2Level = varLevel; }
+        }
+    }
+    // modify clause so that the first two literals are l_Undef (after backjumping)
+    int tmp = 0 ;
+    for (int i = 0 ; i < clause.size(); ++ i) {
+        if (solver->level(var(clause[i])) >= max2Level) {
+            Lit tmpL = clause[i];
+            clause[i] = clause[tmp];
+            clause[tmp] = tmpL;
+            tmp ++;
+        }
+    }
+    bool succesful = true;
+    // can clause be used for unit propagation on some level?
+    if (max2Level > 1 && clause.size() > 2) {
+        // create clause
+        CRef cr = solver->ca.alloc(clause, false);
+        solver->clauses.push(cr);
+        solver->cancelUntil(max2Level - 1);
+        assert(solver->value(clause[0]) == l_Undef && solver->value(clause[1]) == l_Undef && "first two literals have to be undefined");
+        solver->attachClause(cr);
+    } else { // restart and add clause (should be unary/conflict on level 0)
+        solver->cancelUntil(0); // todo: can we get rid of the restart?
+        succesful = solver->addClause_(clause);   // might have problems with the current model here
+    }
+    return succesful;
+}
+
+
+void Solver::setEnumnerationMaster(EnumerateMaster* master)
+{
+    enumerationClient.setMaster(master);
+
+    enumerationClient.assignClientID();
+
+    switch (master->minimizeBlocked()) {
+    case 0: enumerationClient.mtype = EnumerationClient::NONE ; break;
+    case 1: enumerationClient.mtype = EnumerationClient::ONLYFROMFULL ; break;
+    case 2: enumerationClient.mtype = EnumerationClient::ALSOFROMBLOCKED ; break;
+    default:
+        assert(false && "this case is not handled here");
+        break;
+    }
+    switch (master->minimizeReceived()) {
+    case 0: enumerationClient.minimizeReceived = EnumerationClient::NONE ; break;
+    case 1: enumerationClient.minimizeReceived = EnumerationClient::ONLYFROMFULL ; break;
+    case 2: enumerationClient.minimizeReceived = EnumerationClient::ALSOFROMBLOCKED ; break;
+    default:
+        assert(false && "this case is not handled here");
+        break;
+    }
+    enumerationClient.receiveEveryDecisions = master->checkNewModelsEvery();
+}
+
+
+void Solver::initReverseMinimitaion()
+{
+    if (! reverseMinimization.enabled) {  // enable reverseMinimization to be able to use it
+        reverseMinimization.enabled = true;
+        reverseMinimization.assigns.growTo(nVars() + 1, l_Undef); // grow assignment
+        reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
+    }
+}
+
+void Solver::EnumerationClient::createDecisionClause(vec< Lit >& clause, int& maxLevel , int& max2Level)
+{
+    clause.clear();
+    assert(maxLevel == 0 && max2Level == 0 && "levels should be initialized correctly");
+    for (int i = 0 ; i < solver->trail_lim.size(); ++ i) {
+        const Lit l = ~ solver->trail[ solver->trail_lim[i] ];
+        const int varLevel = solver->level(var(l));
+        if (varLevel > maxLevel) { max2Level = maxLevel; maxLevel = varLevel; }
+        else if (varLevel > max2Level) { max2Level = varLevel; }
+        clause.push(l);
+    }
+}
+
+void Solver::EnumerationClient::createBlockingProjectionClause(vec< Lit >& clause, int& maxLevel, int& max2Level)
+{
+    clause.clear();
+    assert(maxLevel == 0 && max2Level == 0 && "levels should be initialized correctly");
+    assert(master != nullptr && "can use this only if master is present");
+    for (int i = 0 ; i < master->projectionSize(); ++ i) {
+        if (solver->value(master->projectionVariable(i)) == l_Undef) { continue; }
+        const Lit l = mkLit(master->projectionVariable(i), solver->value(master->projectionVariable(i)) == l_True ? true : false);
+        const int varLevel = solver->level(var(l));
+        if (varLevel > maxLevel) { max2Level = maxLevel; maxLevel = varLevel; }
+        else if (varLevel > max2Level) { max2Level = varLevel; }
+        clause.push(l);
+    }
+}
+
+
+void Solver::clauseRemoval()
+{
+    if ((config.opt_reduceType == 1 && (learnts.size() - nAssigns() >= max_learnts))                                 // minisat style removal
+            || (config.opt_reduceType == 0 && (conflicts >= curRestart * nbclausesbeforereduce && learnts.size() > 0))    // glucose style removal
+            || (config.opt_reduceType == 2 && learnts.size() >= max_learnts)
+       ) { // perform only if learnt clauses are present
+        curRestart = config.opt_reduceType == 0 ? (conflicts / nbclausesbeforereduce) + 1 : curRestart; // update only during dynamic restarts
+        reduceDB();
+        nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
+    }
+}
+
+
+bool Solver::handleRestarts(int& nof_conflicts, const int conflictC)
+{
+    // handle restart heuristic switching first
+    if (restartSwitchSchedule.heuristicSwitching()) {  // heuristic switching is enabled
+        if (restartSwitchSchedule.reachedIntervalLimit(conflicts)) {    // we reached the limit
+            // did we finish the whole intervale (currently using static schedules)
+            if (restartSwitchSchedule.finishedFullInterval()) {
+                // setup new interval
+                restartSwitchSchedule.setupNextFullInterval(conflicts, config.opt_rswitch_interval_inc, config.opt_dynamic_rtype_ratio);
+                searchconfiguration.restarts_type = 0; // trigger dynamic restarts
+                searchconfiguration.var_decay = 0.95;  // use var decay value of 0.95
+                searchconfiguration.var_decay_end = 0.95;  // use var decay value of 0.95
+            } else {
+                // the rest of the interval is reserved for a static schedule
+                restartSwitchSchedule.setupSecondIntervalHalf();
+                searchconfiguration.restarts_type = config.opt_alternative_rtype; // activate alternative restart type
+                searchconfiguration.var_decay = 0.999;  // use var decay value of 0.999
+            }
+        }
+    }
+
+    // we should never perform restarts due to the selected strategy
+    if (config.opt_restarts_type == 4) { return false; }
+
+    // next decide about restart
     {
         // dynamic glucose restarts
         if (searchconfiguration.restarts_type == 0) {
             // Our dynamic restart, see the SAT09 competition compagnion paper
             if (
-                (lbdQueue.isvalid() && ((lbdQueue.getavg()*searchconfiguration.K) > (sumLBD / (conflicts > 0 ? conflicts : 1))))
-                || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound) // if thre have been too many conflicts
+                (lbdQueue.isvalid()
+                 && ((!config.opt_restarts_dyn_ema && (lbdQueue.getavg()     * searchconfiguration.K) > (sumLBD / (conflicts > 0 ? conflicts : 1)))  // use glucose structures
+                     || (config.opt_restarts_dyn_ema && (recent_LBD.getValue() * searchconfiguration.K > slow_LBDs.getValue()))                        // or use EMA of LBDs
+                    )
+                )
+                || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound) // if there have been too many conflicts
             ) {
 
-                {
-                    // increase current limit, if this has been the reason for the restart!!
-                    if ((config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound)) {
-                        intervalRestart++; conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc;
-                    }
-                    // do counter implication before partial restart
-                    if (cir_bump_ratio != 0) {
-                        counterImplicationRestart();
-                    }
-                    conflictsSinceLastRestart = 0;
-                    lbdQueue.fastclear();
-                    progress_estimate = progressEstimate();
-                    int partialLevel = 0;
-                    if (config.opt_restart_level != 0) {
-                        partialLevel = getRestartLevel();
-                        if (partialLevel == -1) {
-                            if (verbosity > 0) {
-                                static bool didIt = false;
-                                if (!didIt) { cerr << "c prevent search from restarting while we have SAT" << endl; didIt = false;}
-                            }
-                            return false; // we found that we should not restart, because we have a (partial) model
-                        }
-                    }
-                    cancelUntil(partialLevel);
-                    return true;
+                // increase current limit, if this has been the reason for the restart!!
+                if ((config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound)) {
+                    intervalRestart++; conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc;
                 }
+                // do counter implication before partial restart
+                if (cir_bump_ratio != 0) {
+                    counterImplicationRestart();
+                }
+                conflictsSinceLastRestart = 0;
+                lbdQueue.fastclear();
+                progress_estimate = progressEstimate();
+                int partialLevel = 0;
+                if (config.opt_restart_level != 0) {
+                    partialLevel = getRestartLevel();
+                    if (partialLevel == -1) {
+                        if (verbosity > 0) {
+                            static bool didIt = false;
+                            if (!didIt) { cerr << "c prevent search from restarting while we have SAT" << endl; didIt = false;}
+                        }
+                        return false; // we found that we should not restart, because we have a (partial) model
+                    }
+                }
+                cancelUntil(partialLevel);
+                return true;
+
             }
-        } else { // usual static luby or geometric restarts
+        } else { // static restarts (luby, geometric, constant)
             if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
                 // do counter implication restart before partial restart
                 if (cir_bump_ratio != 0) {
@@ -2552,7 +2998,18 @@ lbool Solver::initSolve(int solves)
         nbstopsrestartssame = 0; lastblockatrestart = 0;
         las = 0; failedLAs = 0; maxBound = 0; maxLaNumber = config.opt_laBound;
         topLevelsSinceLastLa = 0; untilLa = config.opt_laEvery;
+
         curr_restarts = 0; // reset restarts
+        restartSwitchSchedule.lubyRestarts = 0;
+        restartSwitchSchedule.geometricRestarts = 0;
+        restartSwitchSchedule.constantRestarts = 0;
+        restartSwitchSchedule.resetInterval();
+
+        // reset restart heuristic information for dynamic restarts
+        slow_interpretationSizes.reset();
+        slow_LBDs.reset();
+        recent_LBD.reset();
+        lbdQueue.fastclear();
 
         configScheduler.reset(searchconfiguration);
     }
@@ -2606,7 +3063,7 @@ lbool Solver::initSolve(int solves)
     // parse for variable polarities from file!
     if (solves == 1 && config.polFile) {   // read polarities from file, initialize phase polarities with this value!
         string filename = string(config.polFile);
-        Coprocessor::VarFileParser vfp(filename);
+        Riss::VarFileParser vfp(filename);
         vector<int> polLits;
         vfp.extract(polLits);
         for (int i = 0 ; i < polLits.size(); ++ i) {
@@ -2623,7 +3080,7 @@ lbool Solver::initSolve(int solves)
     // parse for activities from file!
     if (solves == 1 && config.actFile) {   // set initial activities
         string filename = string(config.actFile);
-        Coprocessor::VarFileParser vfp(filename);
+        Riss::VarFileParser vfp(filename);
         vector<int> actVars;
         vfp.extract(actVars);
 
@@ -2673,15 +3130,16 @@ void Solver::applyConfiguration()
     assert(searchconfiguration.sizeTrailQueue > 0 && "thera have to be some elements (at least one)");
     trailQueue.initSize(searchconfiguration.sizeTrailQueue);
 
-    if( config.opt_reduceType == 1 ) { // minisat style removal?
-      max_learnts = nClauses() * learntsize_factor;
-      if (max_learnts < config.opt_min_learnts_lim)
-	  max_learnts = config.opt_min_learnts_lim;
+    if (config.opt_reduceType == 1) {  // minisat style removal?
+        max_learnts = nClauses() * learntsize_factor;
+        if (max_learnts < config.opt_max_learnts) {
+            max_learnts = config.opt_max_learnts;
+        }
 
-      learntsize_adjust_confl   = learntsize_adjust_start_confl;
-      learntsize_adjust_cnt     = (int)learntsize_adjust_confl; 
+        learntsize_adjust_confl   = learntsize_adjust_start_confl;
+        learntsize_adjust_cnt     = (int)learntsize_adjust_confl;
     }
-    
+
     nbclausesbeforereduce = searchconfiguration.firstReduceDB;
     sumLBD = 0;
 }
@@ -2731,7 +3189,7 @@ void Solver::dumpAndExit(const char* filename)
 lbool Solver::solve_(const SolveCallType preprocessCall)
 {
     lbool   status        = l_Undef;
-    
+
     if (preprocessCall != afterSimplification) {
 
         // print formula of the call?
@@ -2800,15 +3258,16 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
 
     rerInitRewriteInfo();
 
-    int type1restarts = 0, type2restarts = 0; // have extra counters for the restart types, could also be global
+
     //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
     while (status == l_Undef) {
 
         if (configScheduler.checkAndChangeSearchConfig(conflicts, searchconfiguration)) { applyConfiguration(); }  // if a new configuratoin was selected, update structures
 
-        double rest_base = 0;
-        if (searchconfiguration.restarts_type != 0) { // set current restart limit
-            rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, type1restarts) : pow(config.opt_restart_inc, type2restarts);
+        double rest_base = 0; // initially 0, as we want to use glucose restarts
+        if (searchconfiguration.restarts_type != 0) { // set current restart limit -- the value is multiplied with the parameter "opt_restart_first" below
+            rest_base = searchconfiguration.restarts_type == 1 ? luby(config.opt_restart_inc, restartSwitchSchedule.lubyRestarts) :
+                        (searchconfiguration.restarts_type == 2 ? pow(config.opt_restart_inc, restartSwitchSchedule.geometricRestarts) : 1);
         }
 
         // re-shuffle BIG, if a sufficient number of restarts is reached
@@ -2823,12 +3282,21 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         }
 
         status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
-        if (!withinBudget()) { break; }
+        DOUT(if (config.opt_learn_debug || config.opt_printDecisions > 1) cerr << "c search returned with status " << status << endl;);
+        if (!withinBudget()) {
+            DOUT(if (config.opt_learn_debug || config.opt_printDecisions > 1) cerr << "c interrupt solving due to budget with status" << status << endl;);
+            break;
+        }
+        if (enumerationClient.enoughModels(status)) {  // decide how to proceed based on the current status
+            DOUT(if (config.opt_learn_debug || config.opt_printDecisions > 1) cerr << "c interrupt solving due to number of revealed models with status" << status << endl;);
+            break; // stop if we found all the models we need
+        }
 
         // increment restart counters based on restart type
         curr_restarts++;
-        type1restarts = searchconfiguration.restarts_type == 1 ? type1restarts + 1 : type1restarts;
-        type2restarts = searchconfiguration.restarts_type == 2 ? type2restarts + 1 : type2restarts;
+        restartSwitchSchedule.lubyRestarts = searchconfiguration.restarts_type == 1 ? restartSwitchSchedule.lubyRestarts + 1 : restartSwitchSchedule.lubyRestarts;
+        restartSwitchSchedule.geometricRestarts = searchconfiguration.restarts_type == 2 ? restartSwitchSchedule.geometricRestarts + 1 : restartSwitchSchedule.geometricRestarts;
+        restartSwitchSchedule.constantRestarts = searchconfiguration.restarts_type == 3 ? restartSwitchSchedule.constantRestarts + 1 : restartSwitchSchedule.constantRestarts;
 
         status = inprocess(status);
     }
@@ -2859,6 +3327,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
                overheadC, overheadW);
         printf("c PP-Timing(cpu,wall, in s): preprocessing( %d ): %.2lf %.2lf ,inprocessing (%d ): %.2lf %.2lf\n",
                preprocessCalls, preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessCalls, inprocessTime.getCpuTime(), inprocessTime.getWallClockTime());
+        printf("c Trivial Polarity: True: %d  False: %d\n", (int)posInAllClauses , (int) negInAllClauses);
         printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt, learntUnit);
         printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits);
         printf("c otfss: %d (l1: %d ),cls: %d ,units: %d ,binaries: %d, eagerCandidates: %d\n", otfss.otfsss, otfss.otfsssL1, otfss.otfssClss, otfss.otfssUnits, otfss.otfssBinaries, otfss.revealedClause);
@@ -2911,6 +3380,9 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
     } else if (status == l_False && conflict.size() == 0) {
         ok = false;
     }
+
+    assert((status != l_Undef || asynch_interrupt) && "unknown should not happen here if there was no interrupt");
+
     cancelUntil(0);
 
     // cerr << "c finish solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts and status " << (status == l_Undef ? "UNKNOWN" : ( status == l_True ? "SAT" : "UNSAT" ) ) << endl;
@@ -2927,12 +3399,12 @@ void Solver::refineFinalConflict()
 //      cerr << "c trail: " << trail << endl;
 //      cerr << "c ================================" << endl;
 //      cerr << endl << endl << endl;
-    
+
     cancelUntil(0);    // make sure we are on level 0 again
     assert(decisionLevel() == 0 && "run this routine only after the trail has been cleared already");
 
     const int conflictSize = conflict.size();
-    
+
     // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again
     assumptions.clear();
     for (int i = 0 ; i < conflict.size(); ++ i) { assumptions.push(~conflict[i]); }    // assumptions are reversed now
@@ -2941,10 +3413,10 @@ void Solver::refineFinalConflict()
 
 //     // for debugging purposes, have a special exit
 //     if( conflictSize > conflict.size() + 1 && conflict.size() > 1) exit (42);
-    
+
 //     cerr << "c refined conflict: " << conflict << endl;
 //     cerr << "c trail: " << trail << endl;
-    
+
     // move assumptions back
     refineAssumptions.moveTo(assumptions);
 
@@ -3078,9 +3550,9 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     int keptClauses = 0;
     for (int i = 0; i < learnts.size(); i++) {
-	if (!ca[ learnts[i] ].mark()) { // reloc only if not marked already
-	  ca.reloc(learnts[i], to);
-          learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
+        if (!ca[ learnts[i] ].mark()) { // reloc only if not marked already
+            ca.reloc(learnts[i], to);
+            learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
         }
     }
     learnts.shrink_(learnts.size() - keptClauses);
@@ -3089,19 +3561,19 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     keptClauses = 0;
     for (int i = 0; i < clauses.size(); i++) {
-	if (!ca[ clauses[i]].mark()) { // reloc only if not marked already
-	  ca.reloc(clauses[i], to);
-          clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
+        if (!ca[ clauses[i]].mark()) { // reloc only if not marked already
+            ca.reloc(clauses[i], to);
+            clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
         }
     }
     clauses.shrink_(clauses.size() - keptClauses);
     // handle all clause pointers from OTFSS
     keptClauses = 0;
     for (int i = 0 ; i < otfss.info.size(); ++ i) {
-      if (!ca[otfss.info[i].cr].mark()) { // keep only relevant clauses (checks mark() != 0 )
-        ca.reloc(otfss.info[i].cr, to);
-        otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
-      }
+        if (!ca[otfss.info[i].cr].mark()) { // keep only relevant clauses (checks mark() != 0 )
+            ca.reloc(otfss.info[i].cr, to);
+            otfss.info[keptClauses++] = otfss.info[i]; // keep the clause only if its not marked!
+        }
     }
     otfss.info.shrink_(otfss.info.size() - keptClauses);
 }
@@ -3141,7 +3613,7 @@ void Solver::buildReduct()
             clauses[ keptClauses++ ] = clauses [j];
         }
     }
-    DOUT (if (verbosity>2) cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl; );
+    DOUT(if (verbosity > 2) cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl;);
     clauses.shrink_(clauses.size() - keptClauses);
 
 }
@@ -4050,6 +4522,17 @@ Coprocessor::Preprocessor* Solver::swapPreprocessor(Coprocessor::Preprocessor* n
     return oldPreprocessor;
 }
 
+Preprocessor* Solver::getPreprocessor() const
+{
+    return coprocessor;
+}
+
+void Solver::extendModel(vec< lbool >& model)
+{
+    if (coprocessor != 0) { coprocessor->extendModel(model); }
+}
+
+
 void Solver::printFullSolverState()
 {
     cerr << "c FULL SOLVER STATE" << endl;
@@ -4118,10 +4601,38 @@ lbool Solver::preprocess()
         preprocessTime.start();
         status = coprocessor->preprocess();
         preprocessTime.stop();
-	otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
+        otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
+
+        // recompute values for LPD parameter
+        if (config.opt_litPairDecisions > 0) {
+            recomputeLPDdata();
+        }
     }
     if (verbosity >= 1) { printf("c =========================================================================================================\n"); }
     return status;
+}
+
+
+void Solver::recomputeLPDdata()
+{
+    for (int index = 0 ; index < decisionLiteralPairs.size(); ++ index) { decisionLiteralPairs[index].reset(); }  // clear previous information
+    for (int index = 0 ; index < clauses.size(); ++ index) {  // recompute based on the order of the clauses in the clauses vector
+        const Clause& c = ca[clauses[index]];
+        if (c.size() > 2) {   // collect literals only for larger clauses (not binary!)
+            for (int i = 0 ; i < c.size(); ++i) {
+                LitPairPair& lp = decisionLiteralPairs[ toInt(c [i]) ];
+                if (lp.p.replaceWith != lit_Undef && lp.q.replaceWith != lit_Undef) { continue; }  // this literal already has enough literals stored
+                if (lp.p.replaceWith == lit_Undef) {
+                    lp.p.replaceWith = c [(i + 1) % c.size() ]; // store next two literals
+                    lp.p.otherMatch  = c [(i + 2) % c.size() ]; // store next two literals
+                } else {
+                    assert(lp.q.replaceWith == lit_Undef && "this case is left over");
+                    lp.q.replaceWith = c [(i + 1) % c.size() ]; // store next two literals
+                    lp.q.otherMatch  = c [(i + 2) % c.size() ]; // store next two literals
+                }
+            }
+        }
+    }
 }
 
 
@@ -4138,7 +4649,8 @@ lbool Solver::inprocess(lbool status)
                 inprocessTime.start();
                 status = coprocessor->inprocess();
                 inprocessTime.stop();
-		otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
+
+                otfss.clearQueues(); // make sure there are no OTFSS pointers left over //FIXME process OTFSS in coprocessor
                 if (big != 0) {
                     big->recreate(ca, nVars(), clauses, learnts);   // build a new BIG that is valid on the "new" formula!
                     big->removeDuplicateEdges(nVars());
@@ -4151,6 +4663,11 @@ lbool Solver::inprocess(lbool status)
                     erRewriteInfo.clear();
                     erRewriteInfo.growTo(2 * nVars(), LitPair());
                     rerInitRewriteInfo();
+                }
+
+                // recompute values for LPD parameter
+                if (config.opt_litPairDecisions > 0) {
+                    recomputeLPDdata();
                 }
             }
         }
@@ -4196,7 +4713,14 @@ void Solver::updateDecayAndVMTF()
 lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
 {
     assert(decisionLevel() == 0 && "found units, have to jump to level 0!");
-    lbdQueue.push(1); sumLBD += 1; // unit clause has one level
+    // update info for restart
+    if (searchconfiguration.restarts_type == 0) {
+        lbdQueue.push(1); // unit clause has one level
+        slow_LBDs.update(1);
+        recent_LBD.update(1);
+    }
+    sumLBD += 1;
+
     for (int i = 0 ; i < learnt_clause.size(); ++ i) {   // add all units to current state
         if (value(learnt_clause[i]) == l_Undef) { uncheckedEnqueue(learnt_clause[i]); }
         else if (value(learnt_clause[i]) == l_False) { return l_False; }  // otherwise, we have a top level conflict here!
@@ -4231,7 +4755,12 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         extResTime.stop();
     } else if (isBiAsserting) { resetRestrictedExtendedResolution(); }   // do not have two clauses in a row for rer, if one of them is bi-asserting!
 
-    lbdQueue.push(nblevels);
+    if (searchconfiguration.restarts_type == 0) {  // update only for dynamic restarts
+        lbdQueue.push(nblevels);
+        slow_LBDs.update(nblevels);
+        recent_LBD.update(nblevels);
+    }
+
     sumLBD += nblevels;
     // write learned clause to DRUP!
     addCommentToProof("learnt clause");
@@ -4365,10 +4894,10 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 data.tmpPropagateLits.push(other);
                 DOUT(if (config.debug_otfss) cerr << "c OTFSS-enqueue: " << other << endl;);
                 data.otfssUnits ++; data.otfssClss++;
-		// tell proof about reduced clause
-		addCommentToProof("shrink to unit due to otfss");
-		addUnitToProof(other);
-		// clause will be removed later, when check for satisfied clauses is performed
+                // tell proof about reduced clause
+                addCommentToProof("shrink to unit due to otfss");
+                addUnitToProof(other);
+                // clause will be removed later, when check for satisfied clauses is performed
             }
         } else if (c.size() == 3) {
             if (c[0] == removeLit || c[1] == removeLit || c[2] == removeLit) { // literal must not be in the clause anymore, because clause was in list multiple times
@@ -4379,11 +4908,11 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                 assert(c.size() == 2 && "clause has to be binary now");
                 attachClause(data.info[i].cr);   // added as binary watch again
                 data.otfssBinaries ++; data.otfssClss++;
-		// tell proof about reduced clause
-		addCommentToProof("shrink ternary to binary due to otfss");
-		addToProof(c);
-		addToProof(c, true, removeLit);
-		// remove clause, enqueue unit clause if necessary
+                // tell proof about reduced clause
+                addCommentToProof("shrink ternary to binary due to otfss");
+                addToProof(c);
+                addToProof(c, true, removeLit);
+                // remove clause, enqueue unit clause if necessary
                 c.mark(1); // mark clause, so that its not processed twice, is undone afterwards again
                 assert((value(c[0]) != l_False || value(c[1]) != l_False) && "otherwise the clause would have been found before");
                 if (value(c[0]) == l_False) {
@@ -4401,11 +4930,11 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                     data.otfssClss++;
                     c[j] = c[ c.size() - 1 ]; // move last literal forward
                     c.pop();                  // remove the literal
-		    // tell proof about reduced clause
-		    addCommentToProof("shrink clause due to otfss");
-		    addToProof(c);
-		    addToProof(c, true, removeLit);
-		    // handle new clause
+                    // tell proof about reduced clause
+                    addCommentToProof("shrink clause due to otfss");
+                    addToProof(c);
+                    addToProof(c, true, removeLit);
+                    // handle new clause
                     c.mark(1);                // mark clause, so that its not processed twice, is undone afterwards again
                     if (j < 2) {              // the literal was a watched literal
                         assert((value(removeLit) == l_True || value(c[ 1 - j ]) != l_False) && "the two watched literals of the clause should be free (true of undef");
@@ -4460,17 +4989,17 @@ bool Solver::processOtfss(Solver::OTFSS& data)
     // enqueue all found unit clauses, propagate afterwards (all new clauses are present already)
     for (int i = 0 ; i < data.tmpPropagateLits.size() ; ++ i) {
         const Lit& propLit = data.tmpPropagateLits[i];
-        if (value(propLit) == l_False) { 
-	  data.clearQueues(); // make sure that after processing otfss all data is removed. 
-	  return true; 
-	} else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
+        if (value(propLit) == l_False) {
+            data.clearQueues(); // make sure that after processing otfss all data is removed.
+            return true;
+        } else if (value(propLit) == l_Undef) { uncheckedEnqueue(propLit); }
     }
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after enqueue: " << trail << endl;);
     bool failed = propagate() != CRef_Undef;
     DOUT(if (config.debug_otfss) cerr << "c run OTFSS with trail after propagate: " << trail << endl;);
     if (failed) { ok = false; }
-    
-    data.clearQueues(); // make sure that after processing otfss all data is removed. 
+
+    data.clearQueues(); // make sure that after processing otfss all data is removed.
     return failed;
 }
 

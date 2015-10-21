@@ -178,7 +178,7 @@ bool Compression::deserialize(const string& filename, bool verbose)
     return true;
 }
 
-void Compression::update(vector<Var> &_mapping, vector<lbool> &_trail)
+void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
 {
     // initialize mapping
     if (!isAvailable()) {
@@ -190,16 +190,16 @@ void Compression::update(vector<Var> &_mapping, vector<lbool> &_trail)
         trail = _trail;
 
         #ifndef NDEBUG
-            // validate mapping in debug mode
-            for (Var var = 0; var < mapping.size(); ++var) {
-                const Var compressed = mapping[var];
+        // validate mapping in debug mode
+        for (Var var = 0; var < mapping.size(); ++var) {
+            const Var compressed = mapping[var];
 
-                if (compressed == Compression::UNIT) {
-                    assert(trail[var] != l_Undef && "If variable is unit, the trail value must not be undefined");
-                } else {
-                    assert(trail[var] == l_Undef && "If variable is not a unit, the trail value must be undefined");
-                }
+            if (compressed == Compression::UNIT) {
+                assert(trail[var] != l_Undef && "If variable is unit, the trail value must not be undefined");
+            } else {
+                assert(trail[var] == l_Undef && "If variable is not a unit, the trail value must be undefined");
             }
+        }
         #endif
     }
     // update current mapping

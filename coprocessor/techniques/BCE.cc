@@ -302,10 +302,13 @@ void BlockedClauseElimination::blockedClauseElimination()
                 // its a new clause, hence the array has to be renewed
                 if (config.opt_bce_bcm) { tautologyReasonLiterals.nextStep(); }
 
+                DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE analyze clause " << c << endl;);
+
                 for (int j = 0; j < data.list(left).size(); ++j) {
                     Clause& d = ca[data.list(left)[j]];
                     if (d.can_be_deleted()) { continue; } // do not work on uninteresting clauses!
                     bceSteps++;
+                    DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE compare with clause " << d << endl;);
                     const Lit tautLit = tautologicResolvent(c, d,
                                                             right);        // check whether there is a literal that produces a tautologic resolvent
                     if (tautLit == lit_Undef) {                                 // the resolvent is not a tautology
@@ -454,10 +457,18 @@ void BlockedClauseElimination::blockedClauseElimination()
                             assert(keptLiterals < c.size() &&
                                    "some literal was removed"); // something has to be removed
                             c.shrink(c.size() - keptLiterals);                             // remove the literals
+                            DOUT(if (config.opt_bce_debug) cerr << "c create clause " << c << " during BCM" << endl;);
                             data.addCommentToProof(
                                 "found a blocked clause during BCM");     // tell the proof about the clause
                             data.addToProof(c, false,
                                             right);                                // add the clause to the proof (its a RAT clause)
+
+                            if (c.size() == 1) {
+                                if (l_False == data.enqueue(c[0])) {
+                                    return;
+                                }
+                                c.set_delete(true);
+                            }
                         }
                     }
 

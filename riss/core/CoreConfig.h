@@ -53,6 +53,7 @@ class CoreConfig : public Config
     IntOption opt_size_trail_queue;
     IntOption opt_size_bounded_randomized; // Revisiting the Learned Clauses Database Reduction Strategies paper by Jabbour et al
 
+    IntOption opt_litPairDecisions; // how many decisions should be made based on literals of clauses of already decided literals
 
     IntOption opt_first_reduce_db;
     IntOption opt_inc_reduce_db;
@@ -66,12 +67,12 @@ class CoreConfig : public Config
     DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
     IntOption     opt_reduceType;          // which strategy to be used
-    DoubleOption  opt_learnt_size_factor;  
+    DoubleOption  opt_learnt_size_factor;
     DoubleOption  opt_learntsize_inc;
     IntOption     opt_learntsize_adjust_start_confl;
     DoubleOption  opt_learntsize_adjust_inc;
-    IntOption     opt_min_learnts_lim;
-    
+    IntOption     opt_max_learnts;
+
     BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
     IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;
@@ -93,9 +94,19 @@ class CoreConfig : public Config
 
     IntOption opt_restart_level;
     IntOption opt_restarts_type;
+    BoolOption opt_allow_restart_blocking;
+    BoolOption opt_restarts_dyn_ema;
+    DoubleOption opt_restart_ema_lbdfast;
+    DoubleOption opt_restart_ema_lbdslow;
+    DoubleOption opt_restart_ema_trailslow;
     IntOption opt_restart_first;
+    IntOption opt_restart_min_noBlock;
     DoubleOption opt_restart_inc;
     IntOption opt_inc_restart_level;
+    IntOption opt_rswitch_isize;      // initial size for restart switching
+    IntOption opt_alternative_rtype;  // restart type used when switching restart heuristics
+    DoubleOption opt_rswitch_interval_inc;
+    DoubleOption opt_dynamic_rtype_ratio;
 
     DoubleOption opt_garbage_frac;
 
