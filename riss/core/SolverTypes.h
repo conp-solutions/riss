@@ -655,7 +655,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::moveTo(to);
     }
 
-    void copyTo(ClauseAllocator& to) const 
+    void copyTo(ClauseAllocator& to) const
     {
         to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::copyTo(to);
@@ -680,7 +680,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         bool use_extra = learnt | extra_clause_field;
-	
+
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(psSize, use_extra));
         new(lea(cid)) Clause(ps, psSize, use_extra, learnt);
 
@@ -1198,7 +1198,7 @@ inline std::ostream& operator<<(std::ostream& other, const lbool& l)
 {
     if (l == l_True) { other << "l_True"; }
     else if (l == l_False) { other << "l_False"; }
-    else other << "l_Undef";
+    else { other << "l_Undef"; }
     return other;
 }
 

@@ -21,7 +21,7 @@ namespace Coprocessor
 //
 // to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description!
 //
-  
+
 // Disable astyle formatting
 // *INDENT-OFF*
 
@@ -189,7 +189,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_hbr_cls         (_cat, "cp3_hbr_cls",     "clause limit to enable HBR",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
     opt_hbr_lits        (_cat, "cp3_hbr_lits",    "total literal limit to enable HBR",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
 
-    
+
 
     #ifndef NDEBUG
     opt_debug (_cat, "cp3-debug", "do more debugging", false,                                                                            optionListPtr, &opt_enabled),
@@ -296,7 +296,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #ifndef NDEBUG
     opt_hbr_debug           (_cat_hbr, "hbr-debug",    "output debug info during HBR", false,                                                               optionListPtr, &opt_hbr),
     #endif
-    
+
     //
     // Literal Addition
     //

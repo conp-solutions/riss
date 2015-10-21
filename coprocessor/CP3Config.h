@@ -295,7 +295,7 @@ class CP3Config : public Riss::Config
     #ifndef NDEBUG
     Riss::BoolOption opt_hbr_debug; // debug output
     #endif
-    
+
 //
 // LiteralAddition
 //

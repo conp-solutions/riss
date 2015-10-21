@@ -55,7 +55,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_size_bounded_randomized (_cr, "sbr",                     "use removal with clause activity based on sbr (randomized)",   12, IntRange(0, INT32_MAX),       optionListPtr),
 
     opt_litPairDecisions        (_cr, "lpd",                     "decisions to be performed based on previous decisions (0=off)",   0, IntRange(0, 4096),     optionListPtr),
-    
+
     opt_first_reduce_db         (_cred, "firstReduceDB",         "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX),                                      optionListPtr),
     opt_inc_reduce_db           (_cred, "incReduceDB",           "Increment for reduce DB", 300, IntRange(0, INT32_MAX),                                                                  optionListPtr),
     opt_spec_inc_reduce_db      (_cred, "specialIncReduceDB",    "Special increment for reduce DB", 1000, IntRange(0, INT32_MAX),                                                         optionListPtr),
@@ -73,7 +73,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_learntsize_adjust_start_confl(_cred, "rem-asc",          "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
     opt_learntsize_adjust_inc   (_cred, "rem-asi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
     opt_max_learnts             (_cred, "maxlearnts",            "number of learnt clauses to initialize geometric/static removal", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
-    
+
     opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
     opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
@@ -104,7 +104,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_restart_min_noBlock     (_cr, "r-min-noBlock",           "Do not allow restart blocking before this number of conflicts", 10000, IntRange(1, INT32_MAX),                          optionListPtr),
     opt_restart_inc             (_cr,       "rinc",              "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false),                                           optionListPtr, &opt_restarts_type),
     opt_inc_restart_level       (_cr,    "irlevel",              "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX),                  optionListPtr, &opt_restarts_type),
-    
+
     opt_rswitch_isize           (_crsw,    "rsw-int",            "First interval for restart heuristic switching (>0 to activate)",   0, IntRange(0, INT32_MAX),                          optionListPtr), // restart type used when switching restart heuristics
     opt_alternative_rtype       (_crsw,   "rsw-type",            "Type of restart for switching(1=luby,2=geometric,3=static,4=none)", 4, IntRange(1, 4),                                  optionListPtr, &opt_rswitch_isize), // restart type used when switching restart heuristics
     opt_rswitch_interval_inc    (_crsw,   "rsw-iinc",            "Increase of the interval after finishing an interval", 1.1, DoubleRange(1, true, 10, true),                             optionListPtr, &opt_rswitch_isize),

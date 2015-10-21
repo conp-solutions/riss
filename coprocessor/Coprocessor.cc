@@ -115,12 +115,12 @@ lbool Preprocessor::performSimplification()
     moh.stop();
 
     for (int ppIteration = 0; ppIteration < (data.isInprocessing() ? 1 : config.opt_simplifyRounds); ++ ppIteration) {
-      
-      
-	if( data.isInterupted() ) break; // stop here due to signal
-      
+
+
+        if (data.isInterupted()) { break; }  // stop here due to signal
+
         double iterTime = cpuTime();
-        DOUT(if (config.opt_verbose > 0 || config.opt_debug ) cerr << "c pp iteration " << ppIteration << endl;);
+        DOUT(if (config.opt_verbose > 0 || config.opt_debug) cerr << "c pp iteration " << ppIteration << endl;);
         // do preprocessing
         if (config.opt_up) {
             if (config.opt_verbose > 0) { cerr << "c up ..." << endl; }
@@ -188,7 +188,7 @@ lbool Preprocessor::performSimplification()
         DOUT(if (printXOR || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
         printFormula("after XOR");
         });
-	if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_ent) {
             if (config.opt_verbose > 0) { cerr << "c ent ..." << endl; }
@@ -209,7 +209,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 1)  { printStatistics(cerr); res.printStatistics(cerr); }
             DOUT(if (printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3')) printFormula("after TernResolve"););
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         // clear subsimp stats
         if (true) {
@@ -230,8 +230,8 @@ lbool Preprocessor::performSimplification()
             printFormula("after Susi");
             });
         }
-	if( ! data.ok() ) break; // stop here already
-        
+        if (! data.ok()) { break; }  // stop here already
+
         DOUT(if (config.opt_debug) { checkLists("after SUSI"); scanCheck("after SUSI"); });
 
         if (config.opt_FM) {
@@ -249,7 +249,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after FM");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_rew) {
             if (config.opt_verbose > 0) { cerr << "c rew ..." << endl; }
@@ -266,7 +266,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after REW");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_ee) {  // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
             if (config.opt_verbose > 0) { cerr << "c ee ..." << endl; }
@@ -284,7 +284,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after EE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_unhide) {
             if (config.opt_verbose > 0) { cerr << "c unhide ..." << endl; }
@@ -299,7 +299,7 @@ lbool Preprocessor::performSimplification()
             });
             DOUT(if (config.opt_debug) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_hte) {
             if (config.opt_verbose > 0) { cerr << "c hte ..." << endl; }
@@ -313,7 +313,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after HTE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_probe) {
             if (config.opt_verbose > 0) { cerr << "c probe ..." << endl; }
@@ -328,7 +328,7 @@ lbool Preprocessor::performSimplification()
             });
             data.checkGarbage(); // perform garbage collection
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
 
         if (config.opt_bve) {
@@ -343,7 +343,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BVE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_bva) {
             if (config.opt_verbose > 0) { cerr << "c bva ..." << endl; }
@@ -358,7 +358,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BVA");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_bce) {
             if (config.opt_verbose > 0) { cerr << "c bce ..." << endl; }
@@ -372,7 +372,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BCE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_la) {
             if (config.opt_verbose > 0) { cerr << "c la ..." << endl; }
@@ -386,7 +386,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BCE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_cce) {
             if (config.opt_verbose > 0) { cerr << "c cce ..." << endl; }
@@ -400,7 +400,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after CCE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_rate) {
             if (config.opt_verbose > 0) { cerr << "c rate ..." << endl; }
@@ -416,7 +416,7 @@ lbool Preprocessor::performSimplification()
             });
         }
 
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_hbr) {
             if (config.opt_verbose > 0) { cerr << "c hbr ..." << endl; }
@@ -428,7 +428,7 @@ lbool Preprocessor::performSimplification()
 
             DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
         }
-        
+
         //
         // end of simplification iteration
         //
@@ -531,7 +531,7 @@ lbool Preprocessor::performSimplification()
     DOUT(if (config.opt_check) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
 
     // dense only if not inprocessing, or if enabled explicitly
-    if (config.opt_dense && ( !data.isInprocessing() || config.opt_dense_inprocess) ) {
+    if (config.opt_dense && (!data.isInprocessing() || config.opt_dense_inprocess)) {
         // do as very last step -- not nice, if there are units on the trail!
         dense.compress();
     }
@@ -849,14 +849,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
             change = rate.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c RATE changed formula: " << change << endl; }
         }
-        
+
         // HBR "H"
         else if (execute == 'H' && config.opt_hbr && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c HBR" << endl; }
             hbr.process();
             change = rate.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c HBR changed formula: " << change << endl; }
-        }        
+        }
 
         // hte "h"
         else if (execute == 'h' && config.opt_hte && status == l_Undef && data.ok()) {
@@ -886,7 +886,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         else {
             char name[2];
             name[0] = execute; name[1] = 0;
-            DOUT( cerr << "c warning: cannot execute technique related to  " << string(name) << endl; );
+            DOUT(cerr << "c warning: cannot execute technique related to  " << string(name) << endl;);
         }
 
         // perform afte reach call
@@ -1003,7 +1003,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     DOUT(if (config.opt_check) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
 
     // dense only if not inprocessing, or if enabled explicitly
-    if (config.opt_dense && ( !data.isInprocessing() || config.opt_dense_inprocess) ) {
+    if (config.opt_dense && (!data.isInprocessing() || config.opt_dense_inprocess)) {
         // do as very last step -- not nice, if there are units on the trail!
         dense.compress();
     }
@@ -1122,8 +1122,8 @@ lbool Preprocessor::inprocess()
     if (config.opt_inprocess) {
 
         // increase the distance to the next inprocessing according to the parameter
-	config.opt_inprocessInt = config.opt_inprocessInt + config.opt_inpIntInc;
-      
+        config.opt_inprocessInt = config.opt_inprocessInt + config.opt_inpIntInc;
+
         freezeSearchVariables(); // take care that special variables of the search are not destroyed during simplification
 
         /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/

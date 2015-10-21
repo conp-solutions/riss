@@ -135,7 +135,7 @@ class Solver
 
     /** indicate whether this incarnation is working on the original formula in pfolio*/
     bool independent() const { return privateConfig->opt_useOriginal; }
-    
+
     // Problem specification:
     //
 
@@ -249,106 +249,113 @@ class Solver
     // check the polarity of all clauses
     bool posInAllClauses; // indicate that there is a positive literal in all added clauses (after reducing units)
     bool negInAllClauses; // indicate that there is a negative literal in all added clauses (after reducing units)
-    void updatePosNeg( bool somePosInClause, bool somNegInClause ); /// if a clause is added in another way, the flags can be updated with this method accordingly
-    
+    void updatePosNeg(bool somePosInClause, bool somNegInClause);   /// if a clause is added in another way, the flags can be updated with this method accordingly
+
     /** class to calculate exponential moving averages
      * Series to control restarts, along "Evaluating CDCL Restart Schemes" by Biere and Fröhlich, POS 2015
      * Note: uses initialization, as described in the paper ( first alphas will be 2^{-step}, until 2^{-step} < alpha )
      * */
-    class EMA {
-      double value, alpha; // value, and update value of series
-      int64_t steps;        // number of added elements
-      bool initialized;    // indicate whether using actual alpha is ok now
-    public:
-      EMA ( double _alpha = 0 ) : value(0), alpha( _alpha ) , steps(0), initialized(false) {}
-      
-      /** assign a new value for alpha, reset series */
-      void reinit( double _alpha ) { value = 0; alpha = _alpha ; steps = 0; initialized = false;}
-      
-      /** reset all values, keep alpha */
-      void reset() { value = 0; steps = 0; initialized = false; assert( alpha != 0 && "should be initilized somehow" );}
-      
-      /** add next value to series */
-      void update(double g_i) { 
-	++ steps;
-// 	cerr << "c update EMA with " << g_i << " at step " << steps << " with alpha=" << alpha << " from " << value;
-	if( !initialized ) {
-	  double compareAlpha = pow(2, - steps );  
-	  if( compareAlpha <= alpha ) { initialized = true; compareAlpha = alpha; } // set initiliazed to true, so that we do not have to do this calculation any more
-	  value = compareAlpha * g_i + ( 1 - compareAlpha ) * value; // exponential update
-	} else {
-	  value = alpha * g_i + ( 1 - alpha ) * value; // exponential update
-	}
-// 	cerr << " to " << value << endl;
-      }
-      
-      int64_t getSteps() const { return steps; }
-      
-      double getValue() const { return value; }
+    class EMA
+    {
+        double value, alpha; // value, and update value of series
+        int64_t steps;        // number of added elements
+        bool initialized;    // indicate whether using actual alpha is ok now
+      public:
+        EMA(double _alpha = 0) : value(0), alpha(_alpha) , steps(0), initialized(false) {}
+
+        /** assign a new value for alpha, reset series */
+        void reinit(double _alpha) { value = 0; alpha = _alpha ; steps = 0; initialized = false;}
+
+        /** reset all values, keep alpha */
+        void reset() { value = 0; steps = 0; initialized = false; assert(alpha != 0 && "should be initilized somehow");}
+
+        /** add next value to series */
+        void update(double g_i)
+        {
+            ++ steps;
+//  cerr << "c update EMA with " << g_i << " at step " << steps << " with alpha=" << alpha << " from " << value;
+            if (!initialized) {
+                double compareAlpha = pow(2, - steps);
+                if (compareAlpha <= alpha) { initialized = true; compareAlpha = alpha; }  // set initiliazed to true, so that we do not have to do this calculation any more
+                value = compareAlpha * g_i + (1 - compareAlpha) * value;   // exponential update
+            } else {
+                value = alpha * g_i + (1 - alpha) * value;   // exponential update
+            }
+//  cerr << " to " << value << endl;
+        }
+
+        int64_t getSteps() const { return steps; }
+
+        double getValue() const { return value; }
     };
-    
+
     EMA slow_interpretationSizes; // collect all conflict levels
     EMA slow_LBDs;                // collect all clause LBDs
     EMA recent_LBD;               // collect all LBDs, slow moving average
-    
+
     /// collection of all the values that are useful to have a hybrid restart strategy (Paper by Oh at SAT conference 2015)
-    class RestartSwitchSchedule {
-    public:
-      int lubyRestarts, geometricRestarts, constantRestarts; // have extra counters for the restart types (luby, geometric, constant)
-    private:
-      int initial_restartScheduleSwitchInterval;       // initial size of the interval
-      int restartScheduleSwitchInterval;               // current size of the interval to switch between dynamic and static -1 == never
-      int restartScheduleSwitch_conflicts;             // next number of conflicts to switch the restart schedule -1 == never
-      int lastSwitch;                                  // number of conflicts when the last switch happened
-      bool performRestarts;                            // are we currently in a "noRestart" phase?
-      
-    public: 
-      RestartSwitchSchedule() 
-      : lubyRestarts(0), geometricRestarts(0), constantRestarts(0)
-        , initial_restartScheduleSwitchInterval(300), restartScheduleSwitchInterval(300) 
-        , restartScheduleSwitch_conflicts(0), lastSwitch(0)
-        , performRestarts(true)
-      {}
-      
-      void initialize( int firstIntervalSize ) { 
-	initial_restartScheduleSwitchInterval = firstIntervalSize; 
-	restartScheduleSwitchInterval = initial_restartScheduleSwitchInterval;
-	setupNextFullInterval( 0, 1, 0.666 ); // setup first interval with given size
-      }
-      
-      /** indicate whether the heuristic should be switched (at all) */
-      bool heuristicSwitching() const { return restartScheduleSwitch_conflicts > 0; }
-      
-      /** hit interval bound, has to take care of interval and schedule now */
-      bool reachedIntervalLimit( uint64_t searchConflicts ) { return searchConflicts >= restartScheduleSwitch_conflicts; }
-      
-      /** check whether the current interval limit is for the second half of the interval
-       * Note: useful to be checked after @reachedIntervalLimit returns true
-       * @return true, if full interval is 
-       */
-      bool finishedFullInterval() const { return restartScheduleSwitch_conflicts == lastSwitch + restartScheduleSwitchInterval; }
-      
-      /** setup all values for the next interval */
-      void setupNextFullInterval(uint64_t searchConflicts, double opt_rswitch_interval_inc, double opt_dynamic_rtype_ratio) {
-	lastSwitch = searchConflicts;
-	restartScheduleSwitchInterval = (double)restartScheduleSwitchInterval * opt_rswitch_interval_inc;
-	restartScheduleSwitch_conflicts = searchConflicts + (double)restartScheduleSwitchInterval * (opt_dynamic_rtype_ratio);
-      }
-      
-      /** set the limits to execute the second half of the schedule */
-      void setupSecondIntervalHalf () {
-	restartScheduleSwitch_conflicts = lastSwitch + restartScheduleSwitchInterval;
-      }
-      
-      void resetInterval() {
-	if( heuristicSwitching() ) {
-	  restartScheduleSwitchInterval = initial_restartScheduleSwitchInterval;
-	  setupNextFullInterval(0, 1, 1 ); // setup first interval with given size
-	}
-      }
-      
+    class RestartSwitchSchedule
+    {
+      public:
+        int lubyRestarts, geometricRestarts, constantRestarts; // have extra counters for the restart types (luby, geometric, constant)
+      private:
+        int initial_restartScheduleSwitchInterval;       // initial size of the interval
+        int restartScheduleSwitchInterval;               // current size of the interval to switch between dynamic and static -1 == never
+        int restartScheduleSwitch_conflicts;             // next number of conflicts to switch the restart schedule -1 == never
+        int lastSwitch;                                  // number of conflicts when the last switch happened
+        bool performRestarts;                            // are we currently in a "noRestart" phase?
+
+      public:
+        RestartSwitchSchedule()
+            : lubyRestarts(0), geometricRestarts(0), constantRestarts(0)
+            , initial_restartScheduleSwitchInterval(300), restartScheduleSwitchInterval(300)
+            , restartScheduleSwitch_conflicts(0), lastSwitch(0)
+            , performRestarts(true)
+        {}
+
+        void initialize(int firstIntervalSize)
+        {
+            initial_restartScheduleSwitchInterval = firstIntervalSize;
+            restartScheduleSwitchInterval = initial_restartScheduleSwitchInterval;
+            setupNextFullInterval(0, 1, 0.666);   // setup first interval with given size
+        }
+
+        /** indicate whether the heuristic should be switched (at all) */
+        bool heuristicSwitching() const { return restartScheduleSwitch_conflicts > 0; }
+
+        /** hit interval bound, has to take care of interval and schedule now */
+        bool reachedIntervalLimit(uint64_t searchConflicts) { return searchConflicts >= restartScheduleSwitch_conflicts; }
+
+        /** check whether the current interval limit is for the second half of the interval
+         * Note: useful to be checked after @reachedIntervalLimit returns true
+         * @return true, if full interval is
+         */
+        bool finishedFullInterval() const { return restartScheduleSwitch_conflicts == lastSwitch + restartScheduleSwitchInterval; }
+
+        /** setup all values for the next interval */
+        void setupNextFullInterval(uint64_t searchConflicts, double opt_rswitch_interval_inc, double opt_dynamic_rtype_ratio)
+        {
+            lastSwitch = searchConflicts;
+            restartScheduleSwitchInterval = (double)restartScheduleSwitchInterval * opt_rswitch_interval_inc;
+            restartScheduleSwitch_conflicts = searchConflicts + (double)restartScheduleSwitchInterval * (opt_dynamic_rtype_ratio);
+        }
+
+        /** set the limits to execute the second half of the schedule */
+        void setupSecondIntervalHalf()
+        {
+            restartScheduleSwitch_conflicts = lastSwitch + restartScheduleSwitchInterval;
+        }
+
+        void resetInterval()
+        {
+            if (heuristicSwitching()) {
+                restartScheduleSwitchInterval = initial_restartScheduleSwitchInterval;
+                setupNextFullInterval(0, 1, 1);  // setup first interval with given size
+            }
+        }
+
     } restartSwitchSchedule;
-    
+
     /// Object that controls configuration of search, might be changed during search
     class SearchConfiguration
     {
@@ -457,16 +464,16 @@ class Solver
         #ifdef PCASSO
         unsigned dependencyLevel;
         #endif
-	VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
-	#ifdef PCASSO
-         , dependencyLevel(0)
-        #endif
-	{}
-	VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
-	#ifdef PCASSO
-         , dependencyLevel(0)
-        #endif
-	{}
+        VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
+        VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
     };
 
   protected:
@@ -1013,8 +1020,9 @@ class Solver
     int learnedDecisionClauses;
 
     /** all info neede to perform lazy on the fly self subsumption */
-    class OTFSS {
-    public:
+    class OTFSS
+    {
+      public:
         int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause, removedSat; // otfss stats
 
         /** store for each clause which literal can be removed */
@@ -1031,7 +1039,7 @@ class Solver
         OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0), removedSat(0) {}
 
         /** to be used to keep a state clean, e.g. after preprocessing/inprocessing */
-	void clearQueues() { info.clear(); tmpPropagateLits.clear(); } 
+        void clearQueues() { info.clear(); tmpPropagateLits.clear(); }
     } otfss;
 
     /** run over the stored clauses and remove the indicated literal
@@ -1130,7 +1138,7 @@ class Solver
 
     /** setup reverse minimizatoin, if not done already */
     void initReverseMinimitaion();
-      
+
     /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
@@ -1306,7 +1314,7 @@ class Solver
     void setPreprocessor(Coprocessor::Preprocessor* cp);
 
     void setPreprocessor(Coprocessor::CP3Config* _config);
-    
+
     /** replace the current instance of coprocessor with the new one
         @return pointer to the old coprocessor
      */
@@ -1316,15 +1324,15 @@ class Solver
         @return pointer to coprocessor
      */
     Coprocessor::Preprocessor* getPreprocessor() const ;
-    
+
     bool useCoprocessorPP;
     bool useCoprocessorIP;
 
     /** extend a given model (in case a preprocessor is present ) */
     void extendModel(Riss::vec<Riss::lbool>& model);
-    
+
     // if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { coprocessor->extendModel(model); }
-    
+
     /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
     void setExtendedResolution(bool enabled) { doAddVariablesViaER = enabled; }
 
@@ -1467,111 +1475,112 @@ class Solver
     };
 
 // [END] modifications for parallel assumption based solver
-    
+
     /** store two pairs of literals */
     struct LitPairPair {
-      LitPair p,q;
-      void reset(){ p.reset(); q.reset(); }
+        LitPair p, q;
+        void reset() { p.reset(); q.reset(); }
     };
-    
-    vec<LitPairPair> decisionLiteralPairs; /// data to be used to select search decision literals
-    
-    void recomputeLPDdata(); /// clears current info, and recomputes the info again based on the current clauses
-    
-// [BEGIN] modifications for model enumerating solver
-    class EnumerationClient {
-    public:
-      enum MinimizeType {
-	NONE = 0,
-	ONLYFROMFULL = 1,
-	ALSOFROMBLOCKED = 2
-      };
 
-    private:
-      
-      int clientID;
-      
-      EnumerateMaster* master;
-      
-      Solver* solver; // handle to the solver class
-      
-      /** generate decision clause, and calculate the two highest levels in that clause */
-      void createDecisionClause( vec< Lit >& clause, int& maxLevel, int& max2Level);
-      
-      /** colllect all assigned projection variables and add them as complement literal to the clause*/
-      void createBlockingProjectionClause( vec< Lit >& clause, int& maxLevel, int& max2Level );
-      
-      /** try to add the given clause with as few changes as possible
-       @param clause literals of the clause, can be modified during the method
-       @param maxLevel maximum decision level in the clause (>= 0, otherwise, recomputed)
-       @param max2Level second highest decision level in the clause (>= 0, otherwise, recomputed)
-       @return true, if everything went fine, false, if no more model is possible
-       */
-      bool integrateClause( vec<Lit>& clause, int maxLevel, int max2Level );
-      
-      /** convert model into truth value representation
-       @param nVars present variables in solver 
-       @param trail list of literals that have been satisfied (taken as input)
-       @param model truth value representation of trail
-       @return hash that represents the model
-       */
-      uint64_t convertModel( uint32_t nVars, vec< Lit >& trail, vec< lbool >& model );
-      
-      vec<Lit> blockingClause;  // storage for the blocking clause
-      vec<Lit> minimizedClause; // storage for the minimize blocking clause 
-      
-      uint64_t blockedModels; // number of models that have been received from the master already
-      uint64_t lastReceiveDecisions;  // number of decisions when receiving the last blocking clause
-      
-    public:
-      
-      enum EnumerateState {
-	stop = 0,
-	goOn = 1,
-	oneModel = 2,
-      };
-      
-      MinimizeType mtype;            // minimization type before submitting blocking clause = master->minimizeBlocked();
-      MinimizeType minimizeReceived; // apply reverse minimization after receiving blocking clause (0=none, 1=only from full, 2=ALSOFROMBLOCKED
-      uint64_t foundModels;   // number of models found by this client
-      uint64_t duplicateModels;   // number of models found by this client
-      uint64_t receiveEveryDecisions; // try to receive new blocking clauses for models every X decisions
-      
-      EnumerationClient( Solver* _solver ); 
-      
-      ~EnumerationClient();
-      
-      /** tell client about master */
-      void setMaster( EnumerateMaster* m ) { assert( master == nullptr && "can set only one master" ); master = m; }
-      
-      /** check whether all models have been encountered already 
-       * @param searchstatus status of the current search (l_True = currently found a model, l_Undef = currently found no model (intterup/restart) )
-       */
-      bool enoughModels(lbool searchstatus) const ;
-      
-      /** return the number of models that have been found by this thread */
-      uint64_t getModels() const ;
-      
-      /** return the number of models that have been found too late (already submitted by another thread) */
-      uint64_t getDupModels() const ;
-      
-      /** process the current model of the solver where the client is embedded
-       @return goOn, if the search for a model should be continued, stop, if the search should be interrupted, and oneModel, if no enumeration is used 
-      */
-      EnumerateState processCurrentModel(Lit& nextDecision);
-      
-      /** receive blocking clauses from enumeration master and add them to the formula of the current solver
-      * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
-      @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
-      */
-      bool receiveModelBlockingClauses();
-      
-      /** assign a id from the master to the client */
-      void assignClientID();
-      
+    vec<LitPairPair> decisionLiteralPairs; /// data to be used to select search decision literals
+
+    void recomputeLPDdata(); /// clears current info, and recomputes the info again based on the current clauses
+
+// [BEGIN] modifications for model enumerating solver
+    class EnumerationClient
+    {
+      public:
+        enum MinimizeType {
+            NONE = 0,
+            ONLYFROMFULL = 1,
+            ALSOFROMBLOCKED = 2
+        };
+
+      private:
+
+        int clientID;
+
+        EnumerateMaster* master;
+
+        Solver* solver; // handle to the solver class
+
+        /** generate decision clause, and calculate the two highest levels in that clause */
+        void createDecisionClause(vec< Lit >& clause, int& maxLevel, int& max2Level);
+
+        /** colllect all assigned projection variables and add them as complement literal to the clause*/
+        void createBlockingProjectionClause(vec< Lit >& clause, int& maxLevel, int& max2Level);
+
+        /** try to add the given clause with as few changes as possible
+         @param clause literals of the clause, can be modified during the method
+         @param maxLevel maximum decision level in the clause (>= 0, otherwise, recomputed)
+         @param max2Level second highest decision level in the clause (>= 0, otherwise, recomputed)
+         @return true, if everything went fine, false, if no more model is possible
+         */
+        bool integrateClause(vec<Lit>& clause, int maxLevel, int max2Level);
+
+        /** convert model into truth value representation
+         @param nVars present variables in solver
+         @param trail list of literals that have been satisfied (taken as input)
+         @param model truth value representation of trail
+         @return hash that represents the model
+         */
+        uint64_t convertModel(uint32_t nVars, vec< Lit >& trail, vec< lbool >& model);
+
+        vec<Lit> blockingClause;  // storage for the blocking clause
+        vec<Lit> minimizedClause; // storage for the minimize blocking clause
+
+        uint64_t blockedModels; // number of models that have been received from the master already
+        uint64_t lastReceiveDecisions;  // number of decisions when receiving the last blocking clause
+
+      public:
+
+        enum EnumerateState {
+            stop = 0,
+            goOn = 1,
+            oneModel = 2,
+        };
+
+        MinimizeType mtype;            // minimization type before submitting blocking clause = master->minimizeBlocked();
+        MinimizeType minimizeReceived; // apply reverse minimization after receiving blocking clause (0=none, 1=only from full, 2=ALSOFROMBLOCKED
+        uint64_t foundModels;   // number of models found by this client
+        uint64_t duplicateModels;   // number of models found by this client
+        uint64_t receiveEveryDecisions; // try to receive new blocking clauses for models every X decisions
+
+        EnumerationClient(Solver* _solver);
+
+        ~EnumerationClient();
+
+        /** tell client about master */
+        void setMaster(EnumerateMaster* m) { assert(master == nullptr && "can set only one master"); master = m; }
+
+        /** check whether all models have been encountered already
+         * @param searchstatus status of the current search (l_True = currently found a model, l_Undef = currently found no model (intterup/restart) )
+         */
+        bool enoughModels(lbool searchstatus) const ;
+
+        /** return the number of models that have been found by this thread */
+        uint64_t getModels() const ;
+
+        /** return the number of models that have been found too late (already submitted by another thread) */
+        uint64_t getDupModels() const ;
+
+        /** process the current model of the solver where the client is embedded
+         @return goOn, if the search for a model should be continued, stop, if the search should be interrupted, and oneModel, if no enumeration is used
+        */
+        EnumerateState processCurrentModel(Lit& nextDecision);
+
+        /** receive blocking clauses from enumeration master and add them to the formula of the current solver
+        * Note: if the decision level has been changed, then clauses have been added lower than the decision level the solver has been working on
+        @return false, if nothing has to be changed during search, true, if propoagation should be called next (instead of doing a decision)
+        */
+        bool receiveModelBlockingClauses();
+
+        /** assign a id from the master to the client */
+        void assignClientID();
+
     } enumerationClient;
-    
-    void setEnumnerationMaster( EnumerateMaster* master );
+
+    void setEnumnerationMaster(EnumerateMaster* master);
 };
 
 
@@ -1617,7 +1626,7 @@ inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
     if ((c.activity() += cla_inc / inverseRatio) > 1e20) {
         // Rescale:
         for (int i = 0; i < learnts.size(); i++) {
-	  if( ca[learnts[i]].learnt() ) ca[learnts[i]].activity() *= 1e-20; // scale only if the clause is a learned clause
+            if (ca[learnts[i]].learnt()) { ca[learnts[i]].activity() *= 1e-20; }  // scale only if the clause is a learned clause
         }
         cla_inc *= 1e-20;
         DOUT(if (config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl;) ;
@@ -1732,10 +1741,10 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     #ifdef PCASSO
 #warning implement dependencyLevel correctly!
     #endif
-    if (!reverseMinimization.enabled || (!force && lbd > searchconfiguration.lbLBDReverseClause) ) { return false; }
+    if (!reverseMinimization.enabled || (!force && lbd > searchconfiguration.lbLBDReverseClause)) { return false; }
 
-    if( learned_clause.size() == 0 ) return false; // cannot shrink the empty clause
-    
+    if (learned_clause.size() == 0) { return false; }  // cannot shrink the empty clause
+
     // sort literal in the clause
     sort(learned_clause, TrailPosition_Gt(vardata));
     assert((force || communicationClient.refineReceived || level(var(learned_clause[0])) == decisionLevel()) && "first literal is conflict literal (or now assertion literal)");
@@ -1850,7 +1859,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
         if (i == learned_clause.size()) { break; }
 
         const Lit l = learned_clause[i];
-        assert( (force || level(var(l)) != 0 || reverseMinimization.value(l) == l_False) && "there should not be any relevant literal of the top level in the clause");
+        assert((force || level(var(l)) != 0 || reverseMinimization.value(l) == l_False) && "there should not be any relevant literal of the top level in the clause");
 // DOUT(   cerr << "c consider literal " << l << " sat: " << (reverseMinimization.value(l) == l_True) << " unsat: " << (reverseMinimization.value(l) == l_False)  << endl; );
         if (reverseMinimization.value(l) == l_Undef) {    // enqueue literal and perform propagation
             learned_clause[keptLits++ ] = l; // keep literal
@@ -2092,8 +2101,8 @@ void Solver::addInputClause_(vec< Lit >& ps)
 inline
 void Solver::updatePosNeg(bool somePosInClause, bool somNegInClause)
 {
-  posInAllClauses = posInAllClauses && somePosInClause; // memorize for the whole formula
-  negInAllClauses = negInAllClauses && somNegInClause;
+    posInAllClauses = posInAllClauses && somePosInClause; // memorize for the whole formula
+    negInAllClauses = negInAllClauses && somNegInClause;
 }
 
 

@@ -491,7 +491,7 @@ bool Rewriter::rewriteAMO()
                 }
                 if (useVariableTwice) { continue; }   // do not allow AMOs that have the same variable
                 bool found = true;
-		int globalBinaryCount = 0;
+                int globalBinaryCount = 0;
                 for (int j = 0 ; j < c.size() ; ++ j) {
                     const Lit& l = c[j];
                     const Lit* lList = big.getArray(l);
@@ -503,10 +503,10 @@ bool Rewriter::rewriteAMO()
                     globalBinaryCount += count;
                     if (count + 1 < c.size()) { found = false; break; }   // not all literals can be found by this literal!
                 }
-                if (!found) { 
-		  continue;
+                if (!found) {
+                    continue;
                 } else { // found ExO constraint
-		    cerr << "c found AMO with " << globalBinaryCount << " binary clauses" << endl;
+                    cerr << "c found AMO with " << globalBinaryCount << " binary clauses" << endl;
                     const int index = amos.size();
                     amos.push_back(vector<Lit>());
                     for (int j = 0 ; j < c.size(); ++ j) {
@@ -907,29 +907,29 @@ bool Rewriter::rewriteAMO()
                         if (hitPos > 0 && nr1 < c[hitPos - 1]) { c.sort() ; }
                         DOUT(if (config.rew_debug_out > 1) cerr << "c newlits " << clsLits << " from initial clause " << c << endl;);
 
-			// delete old clause
-			c.set_delete(true);
-			
-			// check for duplicate / complements
-			bool compLit = false; // found complementary literals?
-			int keepLits = 0;
-			cerr << "c rewrite " << clsLits << endl;
-			Lit p = lit_Undef;
-			for( int index = 0 ; index < clsLits.size(); ++ index ) {
-			  if( p == clsLits[index] ) continue; // do not keep this literal
-			  else if ( clsLits[keepLits] == ~clsLits[index] ) { 
-			    compLit = true; 
-			    break;
-			  }
-			  clsLits[keepLits++] = p = clsLits[index]; // copy literal (forward)
-			}
-			if( compLit ) continue; // the new clause is a tautology, hence, no need to add the clause to the formula again
-			clsLits.shrink_( clsLits.size() - keepLits ); // remove redundant lits at the end of the clause
-			cerr << "c    into " << clsLits << endl;
-			
+                        // delete old clause
+                        c.set_delete(true);
+
+                        // check for duplicate / complements
+                        bool compLit = false; // found complementary literals?
+                        int keepLits = 0;
+                        cerr << "c rewrite " << clsLits << endl;
+                        Lit p = lit_Undef;
+                        for (int index = 0 ; index < clsLits.size(); ++ index) {
+                            if (p == clsLits[index]) { continue; }  // do not keep this literal
+                            else if (clsLits[keepLits] == ~clsLits[index]) {
+                                compLit = true;
+                                break;
+                            }
+                            clsLits[keepLits++] = p = clsLits[index]; // copy literal (forward)
+                        }
+                        if (compLit) { continue; }  // the new clause is a tautology, hence, no need to add the clause to the formula again
+                        clsLits.shrink_(clsLits.size() - keepLits);   // remove redundant lits at the end of the clause
+                        cerr << "c    into " << clsLits << endl;
+
                         minL =  data[nr1] < data[minL] ? nr1 : minL;
                         minL =  data[nr2] < data[minL] ? nr2 : minL;
-			if (!hasDuplicate(data.list(minL), clsLits)) {
+                        if (!hasDuplicate(data.list(minL), clsLits)) {
                             enlargedClauses ++;
                             data.removedClause(nll[k]);
                             CRef tmpRef = ca.alloc(clsLits, c.learnt());  // no learnt clause!
@@ -1165,10 +1165,10 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
         if (true) {   // check each clause for being subsumed -> kick subsumed clauses!
             if (d.size() < c.size()) {
                 detectedDuplicates ++;
-                if (ordered_subsumes(d, c)) { 
-		  DOUT(if (config.rew_debug_out > 1) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
-		  return true;
-		}   // the other clause subsumes the current clause!
+                if (ordered_subsumes(d, c)) {
+                    DOUT(if (config.rew_debug_out > 1) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
+                    return true;
+                }   // the other clause subsumes the current clause!
             } if (d.size() > c.size()) {   // if size is equal, then either removed before, or not removed at all!
                 if (ordered_subsumes(c, d)) {
                     d.set_delete(true);

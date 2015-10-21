@@ -565,8 +565,9 @@ struct LitOrderHeapLt {
         }
         return false;
     }
-    LitOrderHeapLt(CoprocessorData& _data, int _heapOption, bool allowRandom = true) : data(_data), heapOption(allowRandom ? _heapOption : (_heapOption > 1 ? _heapOption + 1 : _heapOption) ) {
-      assert( (allowRandom || heapOption != 2) && "only allow heap option 2 if random selection is allowed" );
+    LitOrderHeapLt(CoprocessorData& _data, int _heapOption, bool allowRandom = true) : data(_data), heapOption(allowRandom ? _heapOption : (_heapOption > 1 ? _heapOption + 1 : _heapOption))
+    {
+        assert((allowRandom || heapOption != 2) && "only allow heap option 2 if random selection is allowed");
     }
 };
 
@@ -779,10 +780,10 @@ inline void CoprocessorData::addClause(const Riss::CRef& cr, bool check)
         }
         occs[Riss::toInt(c[l])].push_back(cr);
         lit_occurrence_count[Riss::toInt(c[l])] += 1;
-	somePosInClause = somePosInClause || !sign(c[l]);
-	somNegInClause  = somNegInClause  || sign(c[l]);
+        somePosInClause = somePosInClause || !sign(c[l]);
+        somNegInClause  = somNegInClause  || sign(c[l]);
     }
-    if( c.size() > 1 ) solver->updatePosNeg(somePosInClause, somNegInClause); // tell solver whether we can still use the polarity information, only for large clauses
+    if (c.size() > 1) { solver->updatePosNeg(somePosInClause, somNegInClause); }  // tell solver whether we can still use the polarity information, only for large clauses
     numberOfCls ++;
 }
 
@@ -1183,16 +1184,16 @@ inline void CoprocessorData::correctCounters()
 inline void CoprocessorData::garbageCollect(std::vector<Riss::CRef> ** updateVectors, int size)
 {
     if (debugging) {
-         std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
+        std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
         return;
     }
     Riss::ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
     // correct add / remove would be nicer
 
-    DOUT( std::cerr << "c garbage collection ... " << std::endl; );
+    DOUT(std::cerr << "c garbage collection ... " << std::endl;);
     relocAll(to, updateVectors);
-    DOUT( std::cerr << "c Garbage collection: " << ca.size()*Riss::ClauseAllocator::Unit_Size
-              << " bytes => " << to.size()*Riss::ClauseAllocator::Unit_Size <<  " bytes " << std::endl; );
+    DOUT(std::cerr << "c Garbage collection: " << ca.size()*Riss::ClauseAllocator::Unit_Size
+         << " bytes => " << to.size()*Riss::ClauseAllocator::Unit_Size <<  " bytes " << std::endl;);
 
     to.moveTo(ca);
 }
@@ -1318,16 +1319,16 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
         }
         learnts.shrink_(i - j);
     }
-    
+
     // handle all clause pointers from OTFSS
     int keptClauses = 0;
     for (int i = 0 ; i < solver->otfss.info.size(); ++ i) {
-      if (!ca[solver->otfss.info[i].cr].can_be_deleted()) { // keep only relevant clauses (checks mark() != 0 )
-        ca.reloc(solver->otfss.info[i].cr, to);
-        if (!to[ solver->otfss.info[i].cr ].mark()) {
-            solver->otfss.info[keptClauses++] = solver->otfss.info[i]; // keep the clause only if its not marked!
+        if (!ca[solver->otfss.info[i].cr].can_be_deleted()) { // keep only relevant clauses (checks mark() != 0 )
+            ca.reloc(solver->otfss.info[i].cr, to);
+            if (!to[ solver->otfss.info[i].cr ].mark()) {
+                solver->otfss.info[keptClauses++] = solver->otfss.info[i]; // keep the clause only if its not marked!
+            }
         }
-      }
     }
     solver->otfss.info.shrink_(solver->otfss.info.size() - keptClauses);
 }
@@ -1911,20 +1912,20 @@ inline void BIG::generateImplied(CoprocessorData& data)
     uint32_t stamp = 1 ;
     const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
 
-    if( maxVar == 0 ) return;
-    
+    if (maxVar == 0) { return; }
+
     if (start == 0) { start = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { 
-      uint32_t* oldPtr = start;
-      start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); 
-      if (start == 0) { if( oldPtr != 0 ) free(oldPtr); } 
+    else {
+        uint32_t* oldPtr = start;
+        start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2);
+        if (start == 0) { if (oldPtr != 0) { free(oldPtr); } }
     }
 
     if (stop == 0) { stop = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { 
-      uint32_t* oldPtr = stop;
-      stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); 
-      if (stop == 0) { if( oldPtr != 0 ) free(oldPtr); } 
+    else {
+        uint32_t* oldPtr = stop;
+        stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2);
+        if (stop == 0) { if (oldPtr != 0) { free(oldPtr); } }
     }
 
     int32_t* index = (int32_t*)malloc(maxVar * sizeof(int32_t) * 2);
@@ -1974,8 +1975,8 @@ inline void BIG::generateImplied(uint32_t nVars, Riss::vec<Riss::Lit>& tmpLits)
 {
     uint32_t stamp = 1 ;
     const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
-    if( maxVar == 0 ) return;
-    
+    if (maxVar == 0) { return; }
+
     if (start == 0) { start = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
     else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if (start == 0) { free(oldPtr); exit(-1); } }
 
@@ -2132,7 +2133,7 @@ inline uint32_t BIG::stampLiteral(const Riss::Lit& literal, uint32_t stamp, int3
     // linearized algorithm from paper
     stamp++;
     // handle initial literal before putting it on queue
-    assert( Riss::var(literal) < duringCreationVariables && "write only into valid range" );
+    assert(Riss::var(literal) < duringCreationVariables && "write only into valid range");
     start[Riss::toInt(literal)] = stamp; // parent and root are already set to literal
     if (global_debug_out) { std::cerr << "c start[" << literal << "] = " << stamp << std::endl; }
     stampQueue.push_back(literal);
@@ -2155,7 +2156,7 @@ inline uint32_t BIG::stampLiteral(const Riss::Lit& literal, uint32_t stamp, int3
             ind ++;
             if (start[ Riss::toInt(impliedLit) ] != 0) { continue; }
             stamp ++;
-	    assert( Riss::var(impliedLit) < duringCreationVariables && "write only into valid range" );
+            assert(Riss::var(impliedLit) < duringCreationVariables && "write only into valid range");
             start[ Riss::toInt(impliedLit) ] = stamp;
             if (global_debug_out) { std::cerr << "c start[" << impliedLit << "] = " << stamp << std::endl; }
             index[ Riss::toInt(impliedLit) ] = 0;

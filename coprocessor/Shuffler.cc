@@ -18,9 +18,9 @@ VarShuffler::VarShuffler(CP3Config& _config)
 
 void VarShuffler::process(vec< Riss::CRef >& clauses, vec< Riss::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca)
 {
-  if( shuffledAlready ) return ; // shuffle only once!
-  
-  setSeed(config.opt_shuffle_seed);
+    if (shuffledAlready) { return ; }  // shuffle only once!
+
+    setSeed(config.opt_shuffle_seed);
     setupShuffling(vars);
 
     shuffle(clauses, ca, config.opt_shuffle_order);
@@ -119,7 +119,7 @@ void VarShuffler::shuffle(vec<CRef>& clauses, ClauseAllocator& ca, bool shuffleO
 
 void VarShuffler::shuffle(vec<Lit>& lits, bool shuffleOrder)
 {
-  
+
     for (int i = 0 ; i < lits.size(); ++ i) {
         const Lit l = lits[i];
         lits[i] =  sign(l) ? ~ replacedBy[ var(l) ] : replacedBy[var(l)] ;
@@ -139,9 +139,9 @@ void VarShuffler::shuffle(vec<Lit>& lits, bool shuffleOrder)
 
 void VarShuffler::unshuffle(vec<lbool>& model, uint32_t vars)
 {
-  
-  if(! shuffledAlready ) return ; // nothing to be unshuffled
-  
+
+    if (! shuffledAlready) { return ; } // nothing to be unshuffled
+
     vec<lbool> copy;
     model.copyTo(copy);
 

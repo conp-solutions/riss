@@ -205,8 +205,9 @@ extern "C" {
      * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
      */
     int
-    riss_sat(void* riss) {
-    	return riss_sat_limited(riss, -1);
+    riss_sat(void* riss)
+    {
+        return riss_sat_limited(riss, -1);
     }
 
     /** solve the formula that is currently present (riss_add) under the specified assumptions since the last call

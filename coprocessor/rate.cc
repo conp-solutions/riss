@@ -1146,25 +1146,25 @@ bool RATElimination::blockedSubstitution()
 
             // check whether a clause is a tautology wrt. the other clauses
             const Lit left = ~right; // complement
-            
+
             data.lits.clear(); // used for covered literal elimination
             for (int i = 0 ; i < data.list(right).size(); ++ i) {
                 if (ca[ data.list(right)[i] ].can_be_deleted()
-                        || ca[ data.list(right)[i] ].size() == 2) { 
-		  continue; 
-			}  // do not use binary clauses and unit clauses
-		assert( ( ca[ data.list(right)[i] ].size() != 1 || ca[ data.list(right)[i] ].can_be_deleted() ) && "unit clauses in lists should always be marked as being deleted" );
-		const int sizeC = ca[ data.list(right)[i] ].size();
+                        || ca[ data.list(right)[i] ].size() == 2) {
+                    continue;
+                }  // do not use binary clauses and unit clauses
+                assert((ca[ data.list(right)[i] ].size() != 1 || ca[ data.list(right)[i] ].can_be_deleted()) && "unit clauses in lists should always be marked as being deleted");
+                const int sizeC = ca[ data.list(right)[i] ].size();
 
                 for (int j = 0 ; j < data.list(right).size(); ++ j) {
                     if (i == j) { continue; }   // do not replace the clause with itself!
 
                     Clause& c = ca[ data.list(right)[i] ];
-		    assert( c.size() == sizeC && "clause c should not change within one iteration" );
+                    assert(c.size() == sizeC && "clause c should not change within one iteration");
                     Clause& d = ca[ data.list(right)[j] ];
                     if (d.can_be_deleted() || c.size() > d.size()) { continue; }   // do not work on uninteresting clauses!
-		    // || d.size() <= 2 ?
-                    
+                    // || d.size() <= 2 ?
+
                     int pc = 0, pd = 0;
                     Lit extraClit = lit_Undef;
 
@@ -1200,7 +1200,7 @@ bool RATElimination::blockedSubstitution()
                         // delete the old clause
                         solver.detachClause(data.list(right)[j]);   // remove clause from unit propagation
                         ca[ data.list(right)[j] ] .set_delete(true);        // d can be deleted, because it can be produced by reslution with c and the new clause!
-			data.removedClause(data.list(right)[j]);
+                        data.removedClause(data.list(right)[j]);
                         continue;
                     }
 
@@ -1267,7 +1267,7 @@ bool RATElimination::blockedSubstitution()
                         isRedundant = isblocked;
                     }
 
-                    assert( data.getSolver()->decisionLevel() == 0 && "must work on level 0" );
+                    assert(data.getSolver()->decisionLevel() == 0 && "must work on level 0");
                     if (isRedundant) {
                         // stats
                         didSomething = true;
@@ -1291,7 +1291,7 @@ bool RATElimination::blockedSubstitution()
                         // delete the old clause
                         ca[ data.list(right)[j] ] .set_delete(true);        // d can be deleted, because it can be produced by reslution with c and the new clause!
                         solver.detachClause(data.list(right)[j]);   // remove clause from unit propagation
-			data.removedClause(data.list(right)[j]);
+                        data.removedClause(data.list(right)[j]);
 
                         // add literals for the next round!
                         for (int k = 0 ; k < data.lits.size(); ++ k) {

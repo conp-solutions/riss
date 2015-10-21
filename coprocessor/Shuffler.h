@@ -45,7 +45,7 @@ class VarShuffler
     uint32_t seed;
 
     bool shuffledAlready;
-    
+
     Randomizer randomizer;
 
   public:

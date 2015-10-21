@@ -464,7 +464,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Heap<VarOrder
 
         doResolve = reducedClss;    // number of clauses decreasesd
         // anticipateResult == l_True -> !reducedClss,
-        // anticipateResult == l_Undef -> ? 
+        // anticipateResult == l_Undef -> ?
         assert((anticipateResult != l_True || !reducedClss) && "in case of an early abort, we have to resolve");
 
         if ((force || doResolve) // clauses or literals should be reduced and we did
@@ -774,7 +774,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
 
         cerr << "c finished anticipate_bve normally" << endl;
     }
-    assert( ( !binariesOnly || resolvents > clausesToUse) && "binariesOnly can only be set if the limit was reached" );
+    assert((!binariesOnly || resolvents > clausesToUse) && "binariesOnly can only be set if the limit was reached");
     return binariesOnly ? l_True : l_Undef; // return l_True, if only binary clauses are tested any longer (limit reached)
 }
 

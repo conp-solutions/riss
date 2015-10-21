@@ -31,18 +31,19 @@ class HyperBinaryResolution : public Technique
     Clock hbrTime; // clocks for the two methods
 
     /** pair of literals, which always is stored sorted */
-    class LitPair { 
-      Lit x,y;
-    public:
-      LitPair( const Lit& a, const Lit& b ) : x( a <= b ? a : b ), y (a>b?a:b) {}
-      LitPair() : x(lit_Undef), y(lit_Undef) {}
-      Lit getX() const { return x; }
-      Lit getY() const { return y; }
-      
-      bool operator < (LitPair p)  const { return x < p.x || (x == p.x && y < p.y);  } 
-      bool operator != (LitPair p) const { return x != p.x || y != p.y; }
+    class LitPair
+    {
+        Lit x, y;
+      public:
+        LitPair(const Lit& a, const Lit& b) : x(a <= b ? a : b), y(a > b ? a : b) {}
+        LitPair() : x(lit_Undef), y(lit_Undef) {}
+        Lit getX() const { return x; }
+        Lit getY() const { return y; }
+
+        bool operator < (LitPair p)  const { return x < p.x || (x == p.x && y < p.y);  }
+        bool operator != (LitPair p) const { return x != p.x || y != p.y; }
     };
-    
+
     // to store the literals that should be used in the next iteration of the algorithm
     MarkArray nextRound;
     BIG big;
@@ -68,11 +69,11 @@ class HyperBinaryResolution : public Technique
 
     /** run hyper binary resolution */
     bool hyperBinaryResolution();
-    
-    /** add a new binary clause to the formula, if it does not exist already 
+
+    /** add a new binary clause to the formula, if it does not exist already
      @return true, if the new clause did not exist already
      */
-    bool addHBR( const Lit& otherLit, const Lit& clauseLit );
+    bool addHBR(const Lit& otherLit, const Lit& clauseLit);
 
 };
 

@@ -112,7 +112,7 @@ class Option
     virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
 
     virtual void reset() = 0;
-    
+
     int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
     {
         if (dependOnNonDefaultOf == 0) { return 0; }
@@ -128,17 +128,17 @@ class Option
     virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
 
     /// print the option (besides debug, can be overwritten by specific types, useful for strings)
-    virtual bool wouldPrintOption () const { return description != 0 && 0 == strstr(description, "#NoAutoT" ); }
-    
+    virtual bool wouldPrintOption() const { return description != 0 && 0 == strstr(description, "#NoAutoT"); }
+
     void printOptionsDependencies(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }  // do not print this option, as its dependency is too deep
         if (dependOnNonDefaultOf == 0) { return; } // no dependency
         if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }     // cannot express opposite value of dependency-parent
-        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0   ) return;                                          // do not print the parameter, if its is related to debug output
-        if( strstr(dependOnNonDefaultOf->name, "debug") != 0 || strstr(dependOnNonDefaultOf->description, "debug") != 0) return; // do not print the parameter, if its parent is related to debug output
-        if( !wouldPrintOption() ) return; // do not print this option
-        if( !dependOnNonDefaultOf->wouldPrintOption() ) return; // do not print parent option
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }                                             // do not print the parameter, if its is related to debug output
+        if (strstr(dependOnNonDefaultOf->name, "debug") != 0 || strstr(dependOnNonDefaultOf->description, "debug") != 0) { return; } // do not print the parameter, if its parent is related to debug output
+        if (!wouldPrintOption()) { return; }  // do not print this option
+        if (!dependOnNonDefaultOf->wouldPrintOption()) { return; }  // do not print parent option
 
         char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
         dependOnNonDefaultOf->getNonDefaultString(defaultAsString, 2047);
@@ -210,7 +210,7 @@ class DoubleOption : public Option
     }
 
     virtual void reset() { value = defaultValue; }
-    
+
     virtual bool parse(const char* str)
     {
         const char* span = str;
@@ -258,21 +258,21 @@ class DoubleOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
-        if ( ! wouldPrintOption() ) return; // do not print option?
-        
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
+
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
         double badd = 0, esub = 0;
         if (!range.begin_inclusive) { badd = 0.000001; }
         if (!range.end_inclusive) { esub = 0.000001; }
         // always logarithmic
-        double endValue = range.end == HUGE_VAL ? ( defaultValue > 1000000.0 ? defaultValue : 1000000.0 ) : range.end;
-        if( range.begin + badd > 0 || range.end - esub < 0 ) {
-	  fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, defaultValue, description);
-	} else {
-	  fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, defaultValue, description);
-	}
+        double endValue = range.end == HUGE_VAL ? (defaultValue > 1000000.0 ? defaultValue : 1000000.0) : range.end;
+        if (range.begin + badd > 0 || range.end - esub < 0) {
+            fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+        } else {
+            fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+        }
     }
 
     virtual bool canPrintOppositeOfDefault() { return false; }
@@ -319,7 +319,7 @@ class IntOption : public Option
     {
         s << "-" << name << "=" << value;
     }
-    
+
     virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
@@ -376,19 +376,19 @@ class IntOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
-        if ( ! wouldPrintOption() ) return; // do not print option?
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        if ( (range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX ) || (range.begin <= 0 && range.end >= 0) ) {
-	  if( range.end - range.begin <= 16 && range.end - range.begin > 0 ) { // print all values if the difference is really small
-	    fprintf(pcsFile, "%s  {%d", name, range.begin);
-	    for ( int i = range.begin + 1; i <= range.end; ++ i ) fprintf(pcsFile, ",%d",i);
-	    fprintf(pcsFile, "} [%d]    # %s\n", defaultValue, description);
-	  } else {
-            fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-	  }
+        if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
+            if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
+                fprintf(pcsFile, "%s  {%d", name, range.begin);
+                for (int i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%d", i); }
+                fprintf(pcsFile, "} [%d]    # %s\n", defaultValue, description);
+            } else {
+                fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+            }
         } else {
             fprintf(pcsFile, "%s  [%d,%d] [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
         }
@@ -449,7 +449,7 @@ class Int64Option : public Option
     {
         s << "-" << name << "=" << value;
     }
-    
+
     virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
@@ -506,23 +506,22 @@ class Int64Option : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
-        if ( ! wouldPrintOption() ) return; // do not print option?
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        
-        
-        if ( (range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX ) || (range.begin <= 0 && range.end >= 0) ) {
-	  if( range.end - range.begin <= 16 && range.end - range.begin > 0 ) { // print all values if the difference is really small
-	    fprintf(pcsFile, "%s  {%ld", name, range.begin);
-	    for ( int64_t i = range.begin + 1; i <= range.end; ++ i ) fprintf(pcsFile, ",%ld",i);
-	    fprintf(pcsFile, "} [%ld]    # %s\n", defaultValue, description);
-	  } else {
-            fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-	  }
-        }
-	else {
+
+
+        if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
+            if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
+                fprintf(pcsFile, "%s  {%ld", name, range.begin);
+                for (int64_t i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%ld", i); }
+                fprintf(pcsFile, "} [%ld]    # %s\n", defaultValue, description);
+            } else {
+                fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
+            }
+        } else {
             fprintf(pcsFile, "%s  [%ld,%ld] [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
         }
     }
@@ -569,36 +568,39 @@ class StringOption : public Option
     const char* defaultValue;
   public:
     StringOption(const char* c, const char* n, const char* d, const char* def = nullptr, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
-        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def == nullptr ? nullptr : new std::string(def) ), defaultValue(def) {}
+        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def == nullptr ? nullptr : new std::string(def)), defaultValue(def) {}
 
-    ~StringOption() { if( value != nullptr) delete value; }
-        
+    ~StringOption() { if (value != nullptr) { delete value; } }
+
     operator      const char*  (void) const     { return value == nullptr ? nullptr : value->c_str(); }
 //     operator      const char*& (void)           { return value; }
-    StringOption& operator= (const char* x)  { 
-      if( value == nullptr ) value = new std::string(x); 
-      else *value = std::string(x);
-      return *this; 
+    StringOption& operator= (const char* x)
+    {
+        if (value == nullptr) { value = new std::string(x); }
+        else { *value = std::string(x); }
+        return *this;
     }
 
-    virtual bool hasDefaultValue() { 
-      if( value == nullptr ) return defaultValue == nullptr; 
-      else if( defaultValue== nullptr ) return value == nullptr; 
-      else return *value == std::string(defaultValue);
+    virtual bool hasDefaultValue()
+    {
+        if (value == nullptr) { return defaultValue == nullptr; }
+        else if (defaultValue == nullptr) { return value == nullptr; }
+        else { return *value == std::string(defaultValue); }
     }
     virtual void printOptionCall(std::stringstream& s)
     {
         if (value != nullptr) { s << "-" << name << "=" << *value; }
         else { s << "-" << name << "=\"\""; }
     }
-    
-    virtual void reset() { 
-      if( defaultValue == nullptr ) { 
-	if( value != nullptr ) { delete value; value = nullptr; }
-      } else {	
-	if( value != nullptr ) { *value = std::string(defaultValue); }
-	else value = new std::string(defaultValue);
-      }
+
+    virtual void reset()
+    {
+        if (defaultValue == nullptr) {
+            if (value != nullptr) { delete value; value = nullptr; }
+        } else {
+            if (value != nullptr) { *value = std::string(defaultValue); }
+            else { value = new std::string(defaultValue); }
+        }
     }
 
     virtual bool parse(const char* str)
@@ -609,8 +611,8 @@ class StringOption : public Option
             return false;
         }
 
-        if( value == nullptr ) value = new std::string(span); 
-	else *value = std::string(span);
+        if (value == nullptr) { value = new std::string(span); }
+        else { *value = std::string(span); }
         return true;
     }
 
@@ -628,16 +630,17 @@ class StringOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
-        if ( ! wouldPrintOption() ) return; // do not print option?
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
 
         // print only, if there is a default
         if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
     }
-    
-    bool wouldPrintOption () const {
-      if( defaultValue == 0 ) return false; // print string option only, if it has a default value
-      return Option::wouldPrintOption();    // if the string has an default value, still check the global criterion
+
+    bool wouldPrintOption() const
+    {
+        if (defaultValue == 0) { return false; }  // print string option only, if it has a default value
+        return Option::wouldPrintOption();    // if the string has an default value, still check the global criterion
     }
 
     virtual bool canPrintOppositeOfDefault() { return false; }
@@ -681,7 +684,7 @@ class BoolOption : public Option
         if (value) { s << "-" << name ; }
         else { s << "-no-" << name ; }
     }
-    
+
     virtual void reset() { value = defaultValue; }
 
     virtual bool parse(const char* str)
@@ -722,8 +725,8 @@ class BoolOption : public Option
     void printOptions(FILE* pcsFile, int printLevel)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if( strstr(name, "debug") != 0 || strstr(description, "debug") != 0 ) return; // do not print the parameter, if its related to debug output
-        if ( ! wouldPrintOption() ) return; // do not print option?
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
 
         fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
     }
