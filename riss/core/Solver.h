@@ -135,7 +135,7 @@ class Solver
 
     /** indicate whether this incarnation is working on the original formula in pfolio*/
     bool independent() const { return privateConfig->opt_useOriginal; }
-
+    
     // Problem specification:
     //
 
@@ -464,16 +464,16 @@ class Solver
         #ifdef PCASSO
         unsigned dependencyLevel;
         #endif
-        VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
-            #ifdef PCASSO
-            , dependencyLevel(0)
-            #endif
-        {}
-        VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
-            #ifdef PCASSO
-            , dependencyLevel(0)
-            #endif
-        {}
+	VarData() : reason(CRef_Undef), level(-1), dom(lit_Undef), position(-1)
+	#ifdef PCASSO
+         , dependencyLevel(0)
+        #endif
+	{}
+	VarData(CRef r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+	#ifdef PCASSO
+         , dependencyLevel(0)
+        #endif
+	{}
     };
 
   protected:
@@ -1023,7 +1023,7 @@ class Solver
     /** all info neede to perform lazy on the fly self subsumption */
     class OTFSS
     {
-      public:
+    public:
         int otfsss, otfsssL1, otfssClss, otfssUnits, otfssBinaries, revealedClause, removedSat; // otfss stats
 
         /** store for each clause which literal can be removed */
@@ -1040,7 +1040,7 @@ class Solver
         OTFSS() : otfsss(0), otfsssL1(0), otfssClss(0), otfssUnits(0), otfssBinaries(0), revealedClause(0), removedSat(0) {}
 
         /** to be used to keep a state clean, e.g. after preprocessing/inprocessing */
-        void clearQueues() { info.clear(); tmpPropagateLits.clear(); }
+	void clearQueues() { info.clear(); tmpPropagateLits.clear(); } 
     } otfss;
 
     /** run over the stored clauses and remove the indicated literal
@@ -1135,7 +1135,7 @@ class Solver
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
     template <typename T>
-    bool reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel, bool forced = false);
+    bool reverseLearntClause(T& learned_clause, unsigned int& lbd, unsigned int& dependencyLevel, bool force = false);
 
     /** setup reverse minimizatoin, if not done already */
     void initReverseMinimitaion();
@@ -1319,7 +1319,6 @@ class Solver
         @return pointer to the old coprocessor
      */
     Coprocessor::Preprocessor* swapPreprocessor(Coprocessor::Preprocessor* newPreprocessor);
-
     /** return the pointer to the currently used preprocessor
         @return pointer to coprocessor
      */
@@ -1327,7 +1326,6 @@ class Solver
 
     bool useCoprocessorPP;
     bool useCoprocessorIP;
-
     /** extend a given model (in case a preprocessor is present ) */
     void extendModel(Riss::vec<Riss::lbool>& model);
 
@@ -1755,7 +1753,7 @@ inline bool Solver::reverseLearntClause(T& learned_clause, unsigned int& lbd, un
     if (false) {
     for (int i = 0 ; i < nVars(); ++ i) {
             std::cerr << "c value var " << i + 1 << " sat: " << (reverseMinimization.value(i) == l_True)
-                      << " unsat: " << (reverseMinimization.value(i) == l_False)
+                 << " unsat: " << (reverseMinimization.value(i) == l_False)
                       << " undef: " << (reverseMinimization.value(i) == l_Undef) << std::endl;
         }
     });

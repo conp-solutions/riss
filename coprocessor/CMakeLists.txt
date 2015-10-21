@@ -67,7 +67,6 @@ set_target_properties(coprocessor-pcasso-lib-shared PROPERTIES
                                                     COMPILE_FLAGS "-DPCASSO")
 
 target_link_libraries(coprocessor-lib-static riss-lib-static)
-
 git_signature(PROJECT_NAME "coprocessor"
               SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake
               DESTINATION ${VERSION_CC}
