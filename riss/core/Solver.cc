@@ -1931,6 +1931,7 @@ lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause)
     } else { // treat usual learned clause!
         if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, dependencyLevel)) { return l_False; }
     }
+    return l_Undef;
 }
 
 void Solver::handleTopLevelUnits(const int& beforeTrail, int& proofTopLevels)
@@ -3460,7 +3461,9 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
             }
         }
 
-        if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { coprocessor->extendModel(model); }
+        if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { 
+	  coprocessor->extendModel(model); 
+	}
 
     } else if (status == l_False && conflict.size() == 0) {
         ok = false;
