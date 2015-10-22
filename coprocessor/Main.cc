@@ -245,17 +245,18 @@ int main(int argc, char** argv)
                 if (ret == l_True) {
                     if (S.proofFile != 0) { fclose(S.proofFile); }  // close proof file!
                     preprocessor.extendModel(S.model);
+		    const int printVariables = (preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables() );
                     if (res != nullptr) {
                         cerr << "s SATISFIABLE" << endl;
                         fprintf(res, "s SATISFIABLE\nv ");
-                        for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+                        for (int i = 0; i < printVariables ; i++)
                             if (S.model[i] != l_Undef) {
                                 fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
                             }
                         fprintf(res, " 0\n");
                     } else {
                         printf("s SATISFIABLE\nv ");
-                        for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+                        for (int i = 0; i < printVariables; i++)
                             if (S.model[i] != l_Undef) {
                                 printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
                             }
