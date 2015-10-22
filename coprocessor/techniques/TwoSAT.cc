@@ -108,16 +108,11 @@ bool TwoSatSolver::unitPropagate()
             return false;
         }
 
-        if (permVal[toInt(x)] == 1) {
-            assert(tempVal[ toInt(x)] == 1 && "when unit propagated, temporary value should also be fixed!");
+        if (permVal[toInt(x)] == 1) { // might overwrite tempVal that has been set via search
             continue;
         }
 
         DOUT(if (config.twosat_debug_out > 2) cerr  << "PERM: Assign " << x << " " << endl;);
-        if (config.twosat_useUnits) {
-            DOUT(if (config.twosat_debug_out > 0) cerr << "c enqeue unit " << x << endl;);
-            data.enqueue(x); // if allowed, use the found unit!
-        }
 
 //   if (Debug_Print2SATAssignments.IsSet())
 

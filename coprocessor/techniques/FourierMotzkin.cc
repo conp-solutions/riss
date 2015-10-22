@@ -279,6 +279,7 @@ bool FourierMotzkin::process()
 
                 for (int i = 0 ; i < data.list(l).size(); ++ i) {   // collect all literals that occur with l in a ternary clause!
                     const Clause& c = ca[data.list(l)[i]];
+		    assert( ( c.can_be_deleted() || ( c.size() > 1 && c[0] < c[1])) && "clauses have to be sorted here" );
                     searchSteps++;
                     if (c.can_be_deleted() || c.size() != 3) { continue; }   // look for interesting, ternary clauses only!
                     if (c[0] != l) { continue; }   // consider only clauses, where l is the smallest literal?! (all other AMT's would have been found before!)
