@@ -212,6 +212,8 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                             cerr << "] leads to gate: ";
                             gates[ gates.size() - 1 ].print(cerr);
                         });
+			
+			sort( learnt_clause );                    // added clauses have to be sorted!
                         CRef cr = ca.alloc(learnt_clause, false); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
                         data.addClause(cr);
                         data.getClauses().push(cr);

@@ -10,13 +10,14 @@
 #param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4 -config=RERRW -revMin"
 #param="-act-based -cir-bump=100 -rlevel=2 -pq-order -prob-step-width=1024"
 #param="-enabled_cp3 -cp3_stats -quiet -hbr -config="
-param="-config= "
+param="-config=  -2sat -no-2sat-cq -enabled_cp3 -shuffle -shuffle-seed=86255590"
 
 #
 # select between printing a proof and not printing a proof
 #
 # run riss without printing a proof
 #gdb --args ./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? 
+echo "c call: ./riss $1 -mem-lim=2048 $param"
 ./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? #> /dev/null 2> /dev/null
 #./pcasso $1 -mem-lim=2048 $param #> /dev/null 2> /dev/null
 status=$?
