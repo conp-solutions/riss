@@ -248,15 +248,15 @@ void Dense::decompress(vec<lbool>& model)
             assert(unit != l_Undef && "Variable must not be undefined, because it is marked as unit");
 
             DOUT(if (config.dense_debug_out) {
-            cerr << "c satisfy " << var + 1 << "="
-                 << ((unit == l_True) ? "true" : "false") << endl;
+                cerr << "c satisfy " << var + 1 << "="
+                     << ((unit == l_True) ? "true" : "false") << endl;
             });
         }
         // renamed variable
         else if (compressed != var) {
             DOUT(if (config.dense_debug_out) {
-            cerr << "c move variable " << compressed + 1 << " to " << var + 1 << endl;
-        });
+                cerr << "c move variable " << compressed + 1 << " to " << var + 1 << endl;
+            });
 
             // Copy assignment from the compressed variable name to the variable
             // name in the original formula.
@@ -268,8 +268,8 @@ void Dense::decompress(vec<lbool>& model)
         // unchanged variable
         else {
             DOUT(if (config.dense_debug_out) {
-            cerr << "c variable " << var + 1 << " unchanged" << endl;
-        });
+                cerr << "c variable " << var + 1 << " unchanged" << endl;
+            });
         }
     }
 
@@ -283,8 +283,8 @@ void Dense::decompress(vec<lbool>& model)
 bool Dense::writeCompressionMap(const string& filename)
 {
     DOUT(if (config.dense_debug_out) {
-    cerr << "c write compression map" << endl;
-});
+        cerr << "c write compression map" << endl;
+    });
 
     return compression.serialize(filename, config.dense_debug_out);
 }
@@ -292,8 +292,9 @@ bool Dense::writeCompressionMap(const string& filename)
 bool Dense::readCompressionMap(const string& filename)
 {
     DOUT(if (config.dense_debug_out) {
-    cerr << "c read compression map" << endl;
-});
+        cerr << "c read compression map" << endl;
+    });
+
     return compression.deserialize(filename, config.dense_debug_out);
 }
 

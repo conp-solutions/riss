@@ -303,7 +303,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
         assert((wData.toUndo.size() > 0 || preserveEE) && "should not add empty undo information to extension!");
         if (wData.toUndo.size() > 0) {
             DOUT(if (config.cce_debug_out > 0) cerr << "c store CCE backup data: " << wData.toUndo << endl;);
-            data.addExtensionToExtension(wData.toUndo);
+            data.addExtensionToExtension<vector<Lit>>(wData.toUndo);
         }
         wData.removedClauses ++;
         if (!preserveEE) { wData.removedNonEEClauses ++; }

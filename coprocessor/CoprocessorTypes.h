@@ -172,10 +172,14 @@ class CoprocessorData
     void didCompress()
     {
         if (lastCompressUndoLits != -1 &&  // if there has been a  compression,
-                decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
-            std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
+            decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
+            std::cerr << "c variable renaming went wrong - abort. lastCom: "
+                      << lastCompressUndoLits
+                      << " decomp: " << decompressedUndoLits
+                      << " undo: " << undo.size() << std::endl;
             exit(14);
         }
+        
         lastCompressUndoLits = undo.size();
     }
 
@@ -269,13 +273,14 @@ class CoprocessorData
 
     // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
     void addToExtension(const Riss::CRef& cr, const Riss::Lit& l = Riss::lit_Error);
-    void addToExtension(const Riss::vec< Riss::Lit >& lits, const Riss::Lit& l);
-    void addToExtension(const std::vector< Riss::Lit >& lits, const Riss::Lit& l);
     void addToExtension(const Riss::Lit& dontTouch, const Riss::Lit& l = Riss::lit_Error);
 
-    /** add already created std::vector to extension std::vector */
-    void addExtensionToExtension(const Riss::vec< Riss::Lit >& lits);
-    void addExtensionToExtension(std::vector< Riss::Lit >& lits);
+    template<typename T>
+    void addToExtension(const T& lits, const Riss::Lit& l);
+
+    /** add already created vector to extension vector */
+    template<typename T>
+    void addExtensionToExtension(const T& lits);
 
     void extendModel(Riss::vec<Riss::lbool>& model);
     /** careful, should not be altered other than be the Dense object */
@@ -1449,17 +1454,8 @@ inline void CoprocessorData::addToExtension(const Riss::CRef& cr, const Riss::Li
     }
 }
 
-inline void CoprocessorData::addToExtension(const Riss::vec< Riss::Lit >& lits, const Riss::Lit& l)
-{
-    if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
-    undo.push_back(Riss::lit_Undef);
-    if (l != Riss::lit_Error) { undo.push_back(l); }
-    for (int i = 0 ; i < lits.size(); ++ i) {
-        if (lits[i] != l) { undo.push_back(lits[i]); }
-    }
-}
-
-inline void CoprocessorData::addToExtension(const std::vector< Riss::Lit >& lits, const Riss::Lit& l)
+template<typename T>
+inline void CoprocessorData::addToExtension(const T& lits, const Riss::Lit& l)
 {
     if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
     undo.push_back(Riss::lit_Undef);
@@ -1477,15 +1473,8 @@ inline void CoprocessorData::addToExtension(const Riss::Lit& dontTouch, const Ri
     undo.push_back(dontTouch);
 }
 
-// TODO: use template!
-inline void CoprocessorData::addExtensionToExtension(const Riss::vec< Riss::Lit >& lits)
-{
-    for (int i = 0 ; i < lits.size(); ++ i) {
-        undo.push_back(lits[i]);
-    }
-}
-
-inline void CoprocessorData::addExtensionToExtension(std::vector< Riss::Lit >& lits)
+template<typename T>
+inline void CoprocessorData::addExtensionToExtension(const T& lits)
 {
     for (int i = 0 ; i < lits.size(); ++ i) {
         undo.push_back(lits[i]);
@@ -1494,9 +1483,11 @@ inline void CoprocessorData::addExtensionToExtension(std::vector< Riss::Lit >& l
 
 inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 {
-    if (lastCompressUndoLits != -1 &&  // if there has been a  compression,
-            decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
-        std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
+    if (lastCompressUndoLits != -1 &&           // if there has been a  compression,
+        decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
+        std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits
+                  << " decomp: " << decompressedUndoLits
+                  << " undo: " << undo.size() << std::endl;
         exit(13);
     }
 
