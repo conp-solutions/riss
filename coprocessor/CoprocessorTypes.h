@@ -86,7 +86,7 @@ class CoprocessorData
 
     std::vector<Riss::Lit> undo;          // store clauses that have to be undone for extending the model
     int lastCompressUndoLits;             // number of literals when the last compression took place
-    int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
+    // int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
 
   private:
     std::vector<Riss::Lit> equivalences;            // stack of literal classes that represent equivalent literals
@@ -171,29 +171,23 @@ class CoprocessorData
     /** notify about variable renaming */
     void didCompress()
     {
-        if (lastCompressUndoLits != -1 &&  // if there has been a  compression,
-            decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
-            std::cerr << "c variable renaming went wrong - abort. lastCom: "
-                      << lastCompressUndoLits
-                      << " decomp: " << decompressedUndoLits
-                      << " undo: " << undo.size() << std::endl;
-            exit(14);
-        }
-        
-        lastCompressUndoLits = undo.size();
-    }
+        //if (lastCompressUndoLits != -1 &&  // if there has been a  compression,
+        //    decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
+        //    std::cerr << "c variable renaming went wrong - abort. lastCom: "
+        //              << lastCompressUndoLits
+        //              << " decomp: " << decompressedUndoLits
+        //              << " undo: " << undo.size() << std::endl;
+        //    exit(14);
+        //}
 
-    /** memorize that the undo info has been adopted until this size already */
-    void didDecompressUndo()
-    {
-        decompressedUndoLits = undo.size();
+        lastCompressUndoLits = solver->compression.postvars();
     }
 
     /** return number of literals that have already been uncompressed
      * will return -1, if no compression took place yet
      */
-    int getLastCompressUndoLits() const { return lastCompressUndoLits; }
-    int getLastDecompressUndoLits() const { return decompressedUndoLits; }
+    // int getLastCompressUndoLits() const { return lastCompressUndoLits; }
+    // int getLastDecompressUndoLits() const { return decompressedUndoLits; }
 
 // semantic:
     bool ok();                                             // return ok-state of solver
@@ -272,7 +266,7 @@ class CoprocessorData
     void correctCounters();
 
     // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
-    void addToExtension(const Riss::CRef& cr, const Riss::Lit& l = Riss::lit_Error);
+    void addToExtension(const Riss::CRef& cr, const Riss::Lit& l = Riss::lit_Error) { addToExtension(ca[cr], l); }
     void addToExtension(const Riss::Lit& dontTouch, const Riss::Lit& l = Riss::lit_Error);
 
     template<typename T>
@@ -591,7 +585,7 @@ inline CoprocessorData::CoprocessorData(Riss::ClauseAllocator& _ca, Riss::Solver
     , currentlyInprocessing(false)
     , debugging(_debug)
     , lastCompressUndoLits(-1)
-    , decompressedUndoLits(-1)
+    //, decompressedUndoLits(-1)
     , log(_log)
 {
 }
@@ -1443,53 +1437,66 @@ inline void CoprocessorData::mark2(Riss::Var x, Riss::MarkArray& array, Riss::Ma
     }
 }
 
-inline void CoprocessorData::addToExtension(const Riss::CRef& cr, const Riss::Lit& l)
-{
-    const Riss::Clause& c = ca[cr];
-    if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
-    undo.push_back(Riss::lit_Undef);
-    if (l != Riss::lit_Error) { undo.push_back(l); }
-    for (int i = 0 ; i < c.size(); ++ i) {
-        if (c[i] != l) { undo.push_back(c[i]); }
-    }
-}
-
 template<typename T>
 inline void CoprocessorData::addToExtension(const T& lits, const Riss::Lit& l)
 {
-    if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
+    // if the last element in the undo stack is lit_Undef, no other literal was
+    // add to the stack. That means, there was the attempt to add the empty
+    // clause on the stack
+    if (undo.size() > 0) {
+        assert(undo[undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack");
+    }
+
+    // separator for the different clauses
     undo.push_back(Riss::lit_Undef);
-    if (l != Riss::lit_Error) { undo.push_back(l); }
+
+    if (l != Riss::lit_Error) {
+        // the undo stack always operates on the orginal formula
+        // therefore we have to translate the literals back
+        undo.push_back(getCompression().exportLit(l));
+    }
+
+    // add all
     for (int i = 0 ; i < lits.size(); ++ i) {
-        if (lits[i] != l) { undo.push_back(lits[i]); }
+        if (lits[i] != l) {
+            undo.push_back(getCompression().exportLit(lits[i]));
+        }
     }
 }
 
 inline void CoprocessorData::addToExtension(const Riss::Lit& dontTouch, const Riss::Lit& l)
 {
-    if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
+    // for comments take a look at the above function
+    if (undo.size() > 0) {
+        assert(undo[undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack");
+    }
+
     undo.push_back(Riss::lit_Undef);
-    if (l != Riss::lit_Error) { undo.push_back(l); }
-    undo.push_back(dontTouch);
+
+    if (l != Riss::lit_Error) {
+        undo.push_back(getCompression().exportLit(l));
+    }
+
+    undo.push_back(getCompression().exportLit(dontTouch));
 }
 
 template<typename T>
 inline void CoprocessorData::addExtensionToExtension(const T& lits)
 {
     for (int i = 0 ; i < lits.size(); ++ i) {
-        undo.push_back(lits[i]);
+        undo.push_back(getCompression().exportLit(lits[i]));
     }
 }
 
 inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 {
-    if (lastCompressUndoLits != -1 &&           // if there has been a  compression,
-        decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
-        std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits
-                  << " decomp: " << decompressedUndoLits
-                  << " undo: " << undo.size() << std::endl;
-        exit(13);
-    }
+    //if (lastCompressUndoLits != -1 &&           // if there has been a  compression,
+    //    decompressedUndoLits != undo.size()) {  // then the complete undo-stack has to be adopted
+    //    std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits
+    //              << " decomp: " << decompressedUndoLits
+    //              << " undo: " << undo.size() << std::endl;
+    //    exit(13);
+    //}
 
     for (int j = 0 ; j < model.size(); ++ j) {
         if (model[j] == l_Undef) { model[j] = l_True; }   // set free variables to some value

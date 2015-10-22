@@ -147,7 +147,8 @@ class Compression
 
     /**
      * The same import method as above but for variables. var_Undef is returned, if the variable
-     * is a unit in the compressed formula.
+     * is a unit in the compressed formula. If the variable was removed from the formula,
+     * var_Undef will be returned.
      */
     inline Var importVar(const Var& var) const
     {
@@ -181,7 +182,7 @@ class Compression
     {
         if (isAvailable()) {
             assert(var(lit) < forward.size() && "Variable must not be larger than current mapping. "
-                   "Did you forget to update the compression?");
+                                                "Did you forget to update the compression?");
             return mkLit(forward[var(lit)], sign(lit));
         }
         // no compression available, nothing to do! :)
@@ -199,7 +200,7 @@ class Compression
 
         if (isAvailable()) {
             assert(var < forward.size() && "Variable must not be larger than current mapping. "
-                   "Did you forget to update the compression?");
+                                           "Did you forget to update the compression?");
 
             return forward[var];
         } else {

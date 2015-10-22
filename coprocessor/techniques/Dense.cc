@@ -211,21 +211,21 @@ void Dense::decompress(vec<lbool>& model)
     // to itself (identity map), but this would be a waste of resources
     if (!compression.isAvailable()) {
         DOUT(if (config.dense_debug_out) {
-        cerr << "c no decompression needed" << endl;
-    });
+            cerr << "c no decompression needed" << endl;
+        });
         return;
     }
 
     DOUT(if (config.dense_debug_out) {
-    cerr << "c dense decompress, model to work on: ";
-    printModel(model);
+        cerr << "c dense decompress, model to work on: ";
+        printModel(model);
 
-        if (!compression.isAvailable()) {
-            cerr << "c no decompression" << endl;
-        } else {
-            cerr << "c [DENSE] change number of variables from "
-                 << model.size() << " to " << compression.nvars() << endl;
-        }
+            if (!compression.isAvailable()) {
+                cerr << "c no decompression" << endl;
+            } else {
+                cerr << "c [DENSE] change number of variables from "
+                     << model.size() << " to " << compression.nvars() << endl;
+            }
     });
 
     // extend the assignment, so that it is large enough

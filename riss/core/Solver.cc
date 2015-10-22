@@ -3461,9 +3461,9 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
             }
         }
 
-        if (coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP)) { 
-	  coprocessor->extendModel(model); 
-	}
+        if (coprocessor != nullptr && (useCoprocessorPP || useCoprocessorIP)) {
+	        coprocessor->extendModel(model);
+	    }
 
     } else if (status == l_False && conflict.size() == 0) {
         ok = false;
