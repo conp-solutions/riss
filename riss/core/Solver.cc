@@ -3468,8 +3468,8 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
     } else if (status == l_False && conflict.size() == 0) {
         ok = false;
     }
-
-    assert((status != l_Undef || asynch_interrupt) && "unknown should not happen here if there was no interrupt");
+    
+    assert((status != l_Undef || !withinBudget() || asynch_interrupt) && "unknown should not happen here if there was no interrupt");
 
     cancelUntil(0);
 
