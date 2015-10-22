@@ -9,6 +9,8 @@ using namespace Riss;
 
 int main()
 {
+    cout << "Start testing Compression map ... ";
+
     Compression compression = Riss::Compression();
 
     vector<Var> mapping(10);
@@ -31,16 +33,12 @@ int main()
     trail[5] = l_False;
 
     compression.update(mapping, trail);
-    compression.serialize("debug.map", true);
 
-    assert(compression.deserialize("debug.map"));
+    // test number of variables
+    assert(compression.nvars() == 10);
+    assert(compression.postvars() == 8);
 
-    // validate mapping
-    for (Var var = 0; var < mapping.size(); ++var) {
-        assert(compression.importVar(var) == mapping[var]);
-    }
-
-    // validate forward mapping
+    // test forward mapping
     assert(compression.exportVar(0) == 0);
     assert(compression.exportVar(1) == 1);
     assert(compression.exportVar(2) == 3);
@@ -49,6 +47,20 @@ int main()
     assert(compression.exportVar(5) == 7);
     assert(compression.exportVar(6) == 8);
     assert(compression.exportVar(7) == 9);
+
+    // test mapping
+    assert(compression.importVar(0) == 0);
+    assert(compression.importVar(1) == 1);
+    assert(compression.importVar(2) == var_Undef);
+    assert(compression.importVar(3) == 2);
+    assert(compression.importVar(4) == 3);
+    assert(compression.importVar(5) == var_Undef);
+    assert(compression.importVar(6) == 4);
+    assert(compression.importVar(7) == 5);
+    assert(compression.importVar(8) == 6);
+    assert(compression.importVar(9) == 7);
+
+    cout << "OK" << endl;
 
     return 0;
 }
