@@ -95,7 +95,10 @@ class vec
     void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */
-    void fitSize();
+    void fitSize() {
+      cap = sz;
+      data = (T*)::realloc(data, (cap) * sizeof(T));
+    }
 
     /** swap content of two vectors */
     void swap(vec< T >& other)
@@ -153,6 +156,7 @@ void vec<T>::clear(bool dealloc)
         if (dealloc) { free(data), data = nullptr, cap = 0; }
     }
 }
+
 
 //=================================================================================================
 }
