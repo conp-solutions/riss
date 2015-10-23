@@ -67,7 +67,7 @@ class Config
     void configCall(std::stringstream& s);
 
     /** print specification of the options that belong to this configuration */
-    void printOptions(FILE* pcsFile, int printLevel = -1);
+    void printOptions(FILE* pcsFile, int printLevel, int granularity);
 
     /** print dependencies of the options that belong to this configuration */
     void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
@@ -805,7 +805,7 @@ bool Config::checkConfiguration()
 }
 
 inline
-void Config::printOptions(FILE* pcsFile, int printLevel)
+void Config::printOptions(FILE* pcsFile, int printLevel, int granularity)
 {
     sort((*optionListPtr), Option::OptionLt());
 
@@ -828,7 +828,7 @@ void Config::printOptions(FILE* pcsFile, int printLevel)
         }
 
         // print the actual option
-        (*optionListPtr)[i]->printOptions(pcsFile, printLevel);
+        (*optionListPtr)[i]->printOptions(pcsFile, printLevel,granularity);
 
         // set prev values, so that print is nicer
         prev_cat  = (*optionListPtr)[i]->category;

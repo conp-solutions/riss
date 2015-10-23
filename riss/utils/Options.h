@@ -50,7 +50,7 @@ extern void setHelpPrefixStr(const char* str);
 extern void configCall(int argc, char** argv, std::stringstream& s);
 
 // print global options in PCS file format into the given File
-extern void printOptions(FILE* pcsFile, int printLevel = -1);
+extern void printOptions(FILE* pcsFile, int printLevel = -1, int granularity = 0);
 /// print option dependencies in PCS file format into the given File, add #NoAutoT to the description if an option should be excluded
 extern void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
 
@@ -104,12 +104,12 @@ class Option
 
     virtual bool parse(const char* str)      = 0;
     virtual void help(bool verbose = false) = 0;
-    virtual void giveRndValue(std::string& optionText) = 0;        // return a valid option-specification as it could appear on the command line
+    virtual void giveRndValue(std::string& optionText) = 0;                                  // return a valid option-specification as it could appear on the command line
 
-    virtual bool hasDefaultValue() = 0;                 // check whether the current value corresponds to the default value of the option
-    virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
+    virtual bool hasDefaultValue() = 0;                                                      // check whether the current value corresponds to the default value of the option
+    virtual void printOptionCall(std::stringstream& strean) = 0;                             // print the call that is required to obtain that this option is set
 
-    virtual void printOptions(FILE* pcsFile, int printLevel = -1) = 0;                       // print the options specification
+    virtual void printOptions(FILE* pcsFile, int printLevel = -1, int granularity = 0) = 0;  // print the options specification
 
     virtual void reset() = 0;
 
@@ -255,7 +255,7 @@ class DoubleOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel)
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
@@ -268,11 +268,21 @@ class DoubleOption : public Option
         if (!range.end_inclusive) { esub = 0.000001; }
         // always logarithmic
         double endValue = range.end == HUGE_VAL ? (defaultValue > 1000000.0 ? defaultValue : 1000000.0) : range.end;
-        if (range.begin + badd > 0 || range.end - esub < 0) {
-            fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, defaultValue, description);
-        } else {
-            fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, defaultValue, description);
-        }
+	if( granularity == 0 ) { // use interval
+	  if (range.begin + badd > 0 || range.end - esub < 0) {
+	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+	  } else {
+	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+	  }
+	} else { // print linear distributed sampling for double option
+	  fprintf(pcsFile, "%s  {", name); // print name
+	  double diff = (endValue - (range.begin + badd)) / (double)granularity;
+	  for( double v = range.begin + badd; v <= endValue; v += diff) {
+	    if( v != range.begin + badd ) fprintf(pcsFile, "," ); // print comma, if there will be more and we printed one item already
+	    fprintf(pcsFile, "%lf", v); // print current value
+	  }
+	  fprintf(pcsFile, "} [%lf]    # %s\n", defaultValue, description);
+	}
     }
 
     virtual bool canPrintOppositeOfDefault() { return false; }
@@ -373,7 +383,7 @@ class IntOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel)
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
@@ -503,7 +513,7 @@ class Int64Option : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel)
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
@@ -627,7 +637,7 @@ class StringOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel)
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
@@ -722,7 +732,7 @@ class BoolOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel)
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output

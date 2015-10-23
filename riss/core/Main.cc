@@ -128,6 +128,7 @@ int main(int argc, char** argv)
 
     IntOption    opt_assumeFirst("MAIN", "assumeFirst", "Assume the first X positive literals for search.", 0, IntRange(0, INT32_MAX));
 
+    IntOption    opt_tuneGranularity("PARAMETER CONFIGURATION", "pcs-granularity", "Sample intervals into given number of values, 0=use intervals.\n", 0, IntRange(0, INT32_MAX));
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
 
@@ -156,18 +157,18 @@ int main(int argc, char** argv)
         if (0 != (const char*)opt_tuneFile) {
             FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
             fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
-            // ::printOptions(pcsFile, opt_tuneLevel); // do not print the global options, as those are usually not relevant for tuning
+            // ::printOptions(pcsFile, opt_tuneLevel,opt_tuneGranularity); // do not print the global options, as those are usually not relevant for tuning
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
-            coreConfig->printOptions(pcsFile);
+            coreConfig->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
-            cp3config->printOptions(pcsFile);
+            cp3config->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
-            fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
-            ::printOptionsDependencies(pcsFile, opt_tuneLevel);
+//             fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
+//             ::printOptionsDependencies(pcsFile, opt_tuneLevel);
             fprintf(pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
-            coreConfig->printOptionsDependencies(pcsFile);
+            coreConfig->printOptionsDependencies(pcsFile, opt_tuneLevel);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
-            cp3config->printOptionsDependencies(pcsFile);
+            cp3config->printOptionsDependencies(pcsFile, opt_tuneLevel);
             fclose(pcsFile);
             exit(0);
         }
