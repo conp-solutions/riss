@@ -531,12 +531,16 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
 
         // we do allow growth
         bool reducedClss = resolvents <= pos_count + neg_count + config.opt_bve_grow; // && resolvents > 0 ;
+	DOUT( if( config.opt_bve_verbose > 2 ) cerr << "c BVE reduced clauses " << reducedClss << " resolvents: " << resolvents << " posC: " << pos_count << " negC: " << neg_count << " grow: " << config.opt_bve_grow << endl; );
 
         if (resolvents > pos_count + neg_count) {
             if (reducedClss)
                 totallyAddedClauses +=
                     resolvents - (pos_count + neg_count); // TODO: decide whether to exchange this order!
-            if (totallyAddedClauses > config.opt_bve_growTotal) { reducedClss = false; } // stop increasing!
+            if (totallyAddedClauses > config.opt_bve_growTotal) { 
+	      DOUT( if( config.opt_bve_verbose > 2 ) cerr << "c BVE block increase due to totally added clauses " << totallyAddedClauses << " vs " << config.opt_bve_growTotal << endl; );
+	      reducedClss = false; 
+	    } // stop increasing!
         } else {
             if (config.opt_totalGrow) { totallyAddedClauses += resolvents - (pos_count + neg_count); } // substract!
         }
@@ -709,13 +713,17 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
         for (int cr_p = 0; cr_p < positive.size(); ++cr_p) {
             clausesToUse = (ca[positive[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1;
         }
+        DOUT( if (config.opt_bve_verbose > 2) cerr << "c limit after positives: " << clausesToUse << endl; );
         for (int cr_p = 0; cr_p < negative.size(); ++cr_p) {
             clausesToUse = (ca[negative[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1;
         }
+        DOUT( if (config.opt_bve_verbose > 2) cerr << "c limit after negtaives: " << clausesToUse << endl; );
         clausesToUse = clausesToUse + config.opt_bve_grow;
-        if (config.opt_bve_growTotal != INT32_MAX) {
+	DOUT( if (config.opt_bve_verbose > 2) cerr << "c limit after grow: " << clausesToUse << endl; );
+        if (config.opt_bve_growTotal != INT32_MAX && config.opt_bve_growTotal > config.opt_bve_grow) {
             clausesToUse += (config.opt_bve_growTotal -
                              totallyAddedClauses); // have one stable reference value
+	  if (config.opt_bve_verbose > 2) cerr << "c adapt limit due to total grow factor: " << clausesToUse << " by adding " <<  (config.opt_bve_growTotal - totallyAddedClauses) << endl;
         }
     }
     bool binariesOnly = false; // process only binary clauses? use if we already reached the clause limit with bve early
@@ -862,6 +870,9 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
         cerr << "c finished anticipate_bve normally" << endl;
     }
     assert((!binariesOnly || resolvents > clausesToUse) && "binariesOnly can only be set if the limit was reached");
+    DOUT( if(config.opt_bve_verbose > 2) {
+      cerr << "c binariesOnly: " << binariesOnly << " resolvents: " << resolvents << " clausesToUseLimit: " << clausesToUse << endl;
+    } );
     return binariesOnly ? l_True : l_Undef; // return l_True, if only binary clauses are tested any longer (limit reached)
 }
 

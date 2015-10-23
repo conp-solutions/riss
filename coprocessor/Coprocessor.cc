@@ -1289,11 +1289,14 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
     // get back the old number of variables inside the model, to be able to unshuffle!
     if (formulaVariables != - 1 && formulaVariables < model.size()) {
-        cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl;
+        DOUT( cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl; );
         model.shrink_(model.size() - formulaVariables);
-        cerr << "c model size afterwards: " << model.size() << endl;
+        DOUT( cerr << "c model size afterwards: " << model.size() << endl; );
     }
-    if (config.opt_shuffle) { unshuffle(model); }
+    if (config.opt_shuffle) { 
+      DOUT( cerr << "c unshuffle model " << model.size() << endl; );
+      unshuffle(model); 
+    }
 }
 
 
@@ -1417,7 +1420,7 @@ void Preprocessor::initializePreprocessor()
 
 void Preprocessor::destroyTechniques()
 {
-    DOUT(if (config.opt_verbose > 2) { cerr << "c destroy techniques"; });
+    DOUT(if (config.opt_verbose > 2) { cerr << "c destroy techniques" << endl; });
     // propagation.destroy();
     subsumption.destroy();
     ee.destroy();
@@ -1472,8 +1475,10 @@ void Preprocessor::reSetupSolver()
     for (int i = 0; i < solver->clauses.size(); ++i) {
         const CRef cr = solver->clauses[i];
         Clause& c = ca[cr];
+// 	cerr << "c decide what to do with clause [" << cr << "]: " << c << endl;
         assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
         if (c.can_be_deleted()) {
+// 	    cerr << "c delete" << endl;
             delete_clause(cr);
         } else {
             assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
@@ -1481,6 +1486,7 @@ void Preprocessor::reSetupSolver()
                 if (! config.opt_simplify && solver->qhead == 0) {  // do not change the clause, if nothing has been propagated yet
                     solver->attachClause(cr);
                     solver->clauses[kept_clauses++] = cr; // add original clauss back!
+//                     cerr << "c add silently" << endl;
                     continue;
                 }
 
@@ -1507,13 +1513,15 @@ void Preprocessor::reSetupSolver()
                         c.set_delete(true);
                     }
                     if (solver->propagate() != CRef_Undef) { data.setFailed(); return; }
+//                     cerr << "c propagate and delete unit" << endl;
                     c.set_delete(true);
                 } else {
                     solver->attachClause(cr);
                     solver->clauses[kept_clauses++] = cr; // add original clauss back!
+//                     cerr << "c attach" << endl;
                 }
             } else {
-                if (solver->value(c[0]) == l_Undef)
+                if (solver->value(c[0]) == l_Undef){
                     if (data.enqueue(c[0]) == l_False) {
                         data.addCommentToProof("learnt unit during resetup solver");
                         data.addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
@@ -1522,14 +1530,14 @@ void Preprocessor::reSetupSolver()
                         // assert( false && "This UNSAT case should be recognized before re-setup" );
                         data.setFailed();
                     }
+		}
+// 		cerr << "c propagate and delete unit " << endl;
                 c.set_delete(true);
             }
         }
     }
     int c_old = solver->clauses.size();
     solver->clauses.shrink_(solver->clauses.size() - kept_clauses);
-
-    if (config.opt_verbose > 2) { fprintf(stderr, "c Subs-STATs: removed clauses: %i of %i,%s" , c_old - kept_clauses, c_old, (config.opt_verbose == 1 ? "\n" : "")); }
 
     int learntToClause = 0;
     kept_clauses = 0;
@@ -1603,8 +1611,9 @@ void Preprocessor::reSetupSolver()
             cerr << solver->trail[i] << " " ;
         }
         cerr << endl;
+	cerr << "c qhead: " << solver->qhead << endl;
 
-        if (false) {
+        if (true) {
             cerr << "formula: " << endl;
             for (int i = 0 ; i < data.getClauses().size(); ++ i)
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
@@ -1612,15 +1621,18 @@ void Preprocessor::reSetupSolver()
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
         }
 
-        cerr << "c watch lists: " << endl;
-        for (int v = 0; v < solver->nVars(); v++)
-            for (int s = 0; s < 2; s++) {
-                const Lit l = mkLit(v, s == 0 ? false : true);
-                cerr << "c watch for " << l << endl;
-                for (int i = 0; i < solver->watches[ l ].size(); ++ i) {
-                    cerr << ca[solver->watches[l][i].cref()] << endl;
-                }
-            }
+        if( false ) {
+	  cerr << "c watch lists: " << endl;
+	  for (int v = 0; v < solver->nVars(); v++) {
+	      for (int s = 0; s < 2; s++) {
+		  const Lit l = mkLit(v, s == 0 ? false : true);
+		  cerr << "c watch for " << l << endl;
+		  for (int i = 0; i < solver->watches[ l ].size(); ++ i) {
+		      cerr << ca[solver->watches[l][i].cref()] << endl;
+		  }
+	      }
+	  }
+	}
     }
 
 }
@@ -1632,12 +1644,20 @@ void Preprocessor::shuffle()
     // clear all assignments, to not being forced of keeping track of shuffled trail
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
         solver->varFlags[ var(solver->trail[i]) ].assigns = l_Undef;
+	solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
     }
+    solver->qhead = 0;
+    solver->realHead = 0;
+    solver->rebuildOrderHeap(); // needs to add other variables as decision variables again!
 
     // shuffle trail, clauses and learned clauses
     shuffleVariable = data.nVars();
-    shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca);
+    shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca); // TODO: should also copy all other variable flags over!
 
+    for (Var v = 0 ; v < data.nVars(); ++ v ) {
+      assert( data.value(v) == l_Undef && "during shuffling no variable can have a value" );
+    }
+    
     // set all assignments according to the trail!
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
         solver->varFlags[ var(solver->trail[i]) ].assigns = sign(solver->trail[i]) ? l_False : l_True;

@@ -115,9 +115,11 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 data.enqueue(~pos);
                 data.lits.clear(); break;
             }
-            data.ma.setCurrentStep(toInt(list[i]));
-            data.lits.push_back(list[i]);
-            DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
+            if ( !data.ma.isCurrentStep(toInt(list[i]))) { // do not add the same literal twice!
+	      data.ma.setCurrentStep(toInt(list[i]));
+	      data.lits.push_back(list[i]);
+	      DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
+	    }
         }
         if (data.lits.size() > 1) {   // work on found binary clauses!
 

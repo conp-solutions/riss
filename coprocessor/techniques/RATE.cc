@@ -145,8 +145,14 @@ bool RATElimination::eliminateRAT()
             for (int i = 0 ; i < data.list(right).size(); ++ i) {
 
                 Clause& c = ca[ data.list(right)[i] ];
-                if (c.can_be_deleted() || c.learnt()) { continue; }   // TODO: yet we do not work with learned clauses, because its expensive
-                if (c.size() < config.rate_minSize) { continue; }   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
+                if (c.can_be_deleted() || c.learnt()) { 
+		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to learnt or deletion flag: " << c << endl;);
+		  continue; 
+		}   // TODO: yet we do not work with learned clauses, because its expensive
+                if (c.size() < config.rate_minSize) { 
+		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to size: " << c << " (vs. " << config.rate_minSize << ")" << endl;);
+		  continue;
+		}   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
 
                 rateCandidates ++;
                 DOUT(if (config.opt_rate_debug > 0) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;);
@@ -403,6 +409,29 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
                 }
             }
             data.list(solver.trail[g]).clear();
+	    
+	    const Lit& negLit = ~ solver.trail[g];
+            for (int p = 0; p < data.list(negLit).size(); ++p) {
+
+                Clause& gpclause = ca[data.list(negLit)[p]];
+                if (! gpclause.can_be_deleted()) {
+		    
+		    if( gpclause.size() > 2 ) {
+// hard to be checked as we do not know the blocking literal...		      assert( ( (gpclause[0] != negLit && gpclause[1] != negLit) || data.value( gpclause[0] ) == l_True || data.value( gpclause[1] ) == l_True ) && "the literal can be in the first two places only if the clause is satisfied (or if the blocking literal is satisfied)" );
+		      gpclause.remove_lit_unsorted( negLit );
+		      data.addCommentToProof("remove literal due to unit propagation");
+		      data.addToProof(gpclause);
+		      data.addToProof(gpclause,true,negLit);
+		    } else {
+		      assert( (data.value(gpclause[0]) == l_True || data.value(gpclause[1]) == l_True) && "in larger clauses, the clause is satisfied, or the literal is not on the first two positions" );
+		      gpclause.set_delete(true);
+		      data.addToProof(gpclause, true);    // remove the clause from the proof (its subsumed by a unit clause)
+		      data.removedClause(data.list(solver.trail[g])[p]);
+		    }
+                }
+            }
+            data.list(solver.trail[g]).clear();
+	    
         }
         trailPosition = solver.trail.size();
         return true;
@@ -697,7 +726,7 @@ bool RATElimination::minimizeRAT()
             if (solver.value(right) != l_Undef) { continue; }
             const Lit left = ~right; // complement
 
-            DOUT(if (config.opt_rate_debug > 0) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
+            DOUT(if (config.opt_rate_debug > 0) cerr << endl << "c RATM work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
             DOUT(if (config.opt_rate_debug > 3) cerr << "current trail: " << data.getTrail() << endl;);
 
             for (int i = 0 ; i < data.list(right).size() && data.ok(); ++ i) {
@@ -705,9 +734,17 @@ bool RATElimination::minimizeRAT()
                 Clause& c = ca[ cr ];
                 data.lits.clear();
 
-                if (c.can_be_deleted() || c.learnt()) { continue; }   // TODO: yet we do not work with learned clauses, because its expensive
-                if (c.size() < config.rate_minSize) { continue; }   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
+                if (c.can_be_deleted() || c.learnt()) { 
+		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to learnt or deletion flag: " << c << endl;);
+		  continue; 
+		}   // TODO: yet we do not work with learned clauses, because its expensive
+                if (c.size() < config.rate_minSize) { 
+		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to size: " << c << " (vs. " << config.rate_minSize << ")" << endl;);
+		  continue;
+		}   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
 
+                DOUT(if (config.opt_rate_debug > 0) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;);
+		
                 for (int k = 0; k < c.size(); ++k) if (c[k] != right) { data.lits.push_back(c[k]); }
 
                 reduct.nextStep();
@@ -721,6 +758,8 @@ bool RATElimination::minimizeRAT()
                     int detachTrailSize = 0;
                     const CRef clause = data.list(left)[j];
                     if (ca[ clause ].can_be_deleted()) { continue; }
+                    
+                    DOUT(if (config.opt_rate_debug > 1) cerr << "c consider for resolution with " << left << " : " << ca[clause] << endl;);
 
                     if (shortATM(clause, left, trailPosition, atlits)) {    // calls the ATM routine, returns true, if clause has AT
                         conflATM++;

@@ -1446,7 +1446,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             DOUT(if (config.opt_learn_debug) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl;);
             #ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
-            assert(ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals");
+//            assert(ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals"); (RATE also shrinks clauses during using the solver object)
             #endif
 
             // Try to avoid inspecting the clause:
@@ -1468,7 +1468,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
             #ifndef PCASSO // Pcasso reduces clauses without updating the watch lists
-            assert(c.size() > 2 && "at this point, only larger clauses should be handled!");
+//            assert(c.size() > 2 && "at this point, only larger clauses should be handled!"); (RATE also shrinks clauses during using the solver object)
             #endif
             const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
             if (first != blocker && value(first) == l_True) { // satisfied clause

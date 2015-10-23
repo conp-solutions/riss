@@ -506,13 +506,15 @@ bool Rewriter::rewriteAMO()
                 if (!found) {
                     continue;
                 } else { // found ExO constraint
-                    cerr << "c found AMO with " << globalBinaryCount << " binary clauses" << endl;
+                    // cerr << "c found AMO with " << globalBinaryCount << " binary clauses" << endl;
                     const int index = amos.size();
                     amos.push_back(vector<Lit>());
                     for (int j = 0 ; j < c.size(); ++ j) {
+			if(config.opt_rew_once && data.ma.isCurrentStep(var(c[j])) ) continue; // do not allow duplicates
                         amos[index].push_back(c[j]);   // store AMO
                         data.ma.setCurrentStep(var(c[j]));    // block theses variables for future AMOs
                     }
+                    DOUT(if (config.rew_debug_out > 0) cerr << "c store AMO[" << amos.size()-1 << "] (actually ExO): " << amos[amos.size()-1] << endl;);
                     maxAmo = maxAmo >= c.size() ? maxAmo : c.size();
                 }
             }
@@ -620,12 +622,14 @@ bool Rewriter::rewriteAMO()
             if (data.lits.size() < config.opt_rew_minAMO) { continue; }   // AMO not big enough -> continue!
 
             // remember that these literals have been used in an amo already!
+            DOUT(if (config.rew_debug_out > 0) cerr << "c store AMO[" << amos.size() << "]: " << data.lits << endl;);
             amos.push_back(data.lits);
             for (int i = 0 ; i < data.lits.size(); ++ i) {
                 amos[amos.size() - 1][i] = ~(amos[amos.size() - 1][i]);    // need to negate all!
             }
 
             for (int i = 0 ; i < data.lits.size(); ++ i) {
+		assert( ( !config.opt_rew_once || ! data.ma.isCurrentStep(var(data.lits[i])) ) && "no duplicates!" );
                 data.ma.setCurrentStep(var(data.lits[i]));
             }
 
@@ -661,7 +665,7 @@ bool Rewriter::rewriteAMO()
             DOUT(if (config.rew_debug_out > 0) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << " amo:" << amo << endl;);
 
             for (int j = 0 ; j < amo.size(); ++ j) {
-                assert(!data.ma.isCurrentStep(var(amo[j])) && "touch variable only once during one iteration!");
+                assert( (!config.opt_rew_once || !data.ma.isCurrentStep(var(amo[j])) ) && "touch variable only once during one iteration!");
                 data.ma.setCurrentStep(var(amo[j]));   // for debug only!
             }
 
@@ -915,7 +919,7 @@ bool Rewriter::rewriteAMO()
                         // check for duplicate / complements
                         bool compLit = false; // found complementary literals?
                         int keepLits = 0;
-                        cerr << "c rewrite " << clsLits << endl;
+                        // cerr << "c rewrite " << clsLits << endl;
                         Lit p = lit_Undef;
                         for (int index = 0 ; index < clsLits.size(); ++ index) {
                             if (p == clsLits[index]) { continue; }  // do not keep this literal
@@ -927,7 +931,7 @@ bool Rewriter::rewriteAMO()
                         }
                         if (compLit) { continue; }  // the new clause is a tautology, hence, no need to add the clause to the formula again
                         clsLits.shrink_(clsLits.size() - keepLits);   // remove redundant lits at the end of the clause
-                        cerr << "c    into " << clsLits << endl;
+                        // cerr << "c    into " << clsLits << endl;
 
                         minL =  data[nr1] < data[minL] ? nr1 : minL;
                         minL =  data[nr2] < data[minL] ? nr2 : minL;

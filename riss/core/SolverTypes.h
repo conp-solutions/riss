@@ -418,7 +418,8 @@ class Clause
     Lit          subsumes(const Clause& other) const;
     bool         ordered_subsumes(const Clause& other) const;
     bool         ordered_equals(const Clause& other) const;
-    void         remove_lit(const Lit& p);         /** keeps the order of the remaining literals */
+    void         remove_lit(const Lit& p);          /** keeps the order of the remaining literals */
+    void         remove_lit_unsorted(const Lit& p); /** modifies the order */
     void         strengthen(const Riss::Lit& p);
 
     void    set_delete(bool b)          { if (b) { header.mark = 1; }  else { header.mark = 0; } }
@@ -1041,6 +1042,22 @@ inline void Clause::remove_lit(const Lit& p)
         calcAbstraction();
     }
 }
+
+inline
+void Clause::remove_lit_unsorted(const Lit& p)
+{
+    for (int i = 0; i < size(); ++i) {
+        if (data[i].lit == p) {
+            data[i] = data[ size() - 1 ];
+            break;
+        }
+    }
+    shrink(1);
+    if (has_extra() && size() > 1 && !header.learnt) {
+        calcAbstraction();
+    }
+}
+
 
 inline void Clause::strengthen(const Lit& p)
 {
