@@ -286,7 +286,11 @@ bool Dense::writeCompressionMap(const string& filename)
         cerr << "c write compression map" << endl;
     });
 
+#ifdef NDEBUG
+    return compression.serialize(filename, false);
+#else
     return compression.serialize(filename, config.dense_debug_out);
+#endif
 }
 
 bool Dense::readCompressionMap(const string& filename)
@@ -295,7 +299,11 @@ bool Dense::readCompressionMap(const string& filename)
         cerr << "c read compression map" << endl;
     });
 
+#ifdef NDEBUG
+    return compression.deserialize(filename, false);
+#else
     return compression.deserialize(filename, config.dense_debug_out);
+#endif
 }
 
 /** parse a clause from string and store it in the literals vector

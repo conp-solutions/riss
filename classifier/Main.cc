@@ -15,6 +15,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include <zlib.h>
 #include <sys/resource.h>
 #include <fstream>
+#include <algorithm>
 
 #include "classifier/CNFClassifier.h"
 #include "classifier/WekaDataset.h"
@@ -45,19 +46,19 @@ StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and wr
 IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
 IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-BoolOption clausesf("CLASSIFY", "clausesf", "turn on/off computation of clauses graph features.", true);
-BoolOption resolutionf("CLASSIFY", "resf", "turn on/off computation of resolution graph features.", true);
-BoolOption varf("CLASSIFY", "varf", "turn on/off computation of variables graph features.", true);
-BoolOption derivative("CLASSIFY", "derivativef", "turn on/off computation of derivative of the sequences features.", true);
+BoolOption clausesf("FEATURES", "clausesf", "turn on/off computation of clauses graph features.", true);
+BoolOption resolutionf("FEATURES", "resf", "turn on/off computation of resolution graph features.", true);
+BoolOption varf("FEATURES", "varf", "turn on/off computation of variables graph features.", true);
+BoolOption derivative("FEATURES", "derivativef", "turn on/off computation of derivative of the sequences features.", true);
 
 // norbert: new options
-BoolOption opt_big("CLASSIFY", "big", "turn on/off computation of binary implication graph features.", true);
-BoolOption opt_constraints("CLASSIFY", "const", "turn on/off computation of constraints and related graph features.", true);
-BoolOption rwh("CLASSIFY", "rwhf", "turn on/off computation of Recursive Weight Heuristic features.", true);
-BoolOption opt_xor("CLASSIFY", "xor", "turn on/off computation of XORs and related features.", true);
+BoolOption opt_big("FEATURES", "big", "turn on/off computation of binary implication graph features.", true);
+BoolOption opt_constraints("FEATURES", "const", "turn on/off computation of constraints and related graph features.", true);
+BoolOption rwh("FEATURES", "rwhf", "turn on/off computation of Recursive Weight Heuristic features.", true);
+BoolOption opt_xor("FEATURES", "xor", "turn on/off computation of XORs and related features.", true);
 
 // TODO: should have an option for scaling down the feature values!
-IntOption    qcount("CLASSIFY", "qcount", "Quantiles count for distributions statistics.\n", 4, IntRange(0, INT32_MAX));
+IntOption    qcount("FEATURES", "qcount", "Quantiles count for distributions statistics.\n", 4, IntRange(0, INT32_MAX));
 DoubleOption    gainth("CLASSIFY", "gainth", "The Information Gain TH of the attributes to filter when training.\n", -1, DoubleRange(0.0, true, DOUBLE_MAX, false));
 DoubleOption    timeout("CLASSIFY", "timeout", "The the timeout for SAT solving.\n", 900, DoubleRange(0.0, false, DOUBLE_MAX, false));
 DoubleOption    classifytime("CLASSIFY", "classifytime", "The estimated time to classify an instance by the complete model.\n", 5, DoubleRange(0.0, true, DOUBLE_MAX, false));
@@ -268,9 +269,12 @@ void printFeatures(int argc, char** argv)
         cout.setf(ios::fixed);
         cout.precision(10);
         vector<string> names = cnfclassifier->getFeaturesNames();
+	cout << "Instance";
         for (int k = 0; k < features.size(); ++k) {
-            cout << "c " << names[k] << "  :  " << features[k] << endl;
+	    std::replace( names[k].begin(), names[k].end(), ' ', '_');
+	    cout << "," << names[k];
         }
+        cout << endl;
     }
     time1 = cpuTime() - time1;
     dumpData();

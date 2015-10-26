@@ -529,21 +529,23 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
         //    mark old clauses for deletion
         bool doResolve = false; // TODO: do we need the lit_clauses > 0 or resolvents > 0 check? Assumption: no!
 
+        int compareNumber = pos_count + neg_count + config.opt_bve_grow;
+        if (config.opt_bve_growTotal != INT32_MAX && config.opt_bve_growTotal > config.opt_bve_grow) {
+            compareNumber += (config.opt_bve_growTotal -
+                             totallyAddedClauses); // have one stable reference value
+        }
+        
         // we do allow growth
-        bool reducedClss = resolvents <= pos_count + neg_count + config.opt_bve_grow; // && resolvents > 0 ;
+        bool reducedClss = resolvents <= compareNumber; // && resolvents > 0 ;
 	DOUT( if( config.opt_bve_verbose > 2 ) cerr << "c BVE reduced clauses " << reducedClss << " resolvents: " << resolvents << " posC: " << pos_count << " negC: " << neg_count << " grow: " << config.opt_bve_grow << endl; );
 
-        if (resolvents > pos_count + neg_count) {
-            if (reducedClss)
-                totallyAddedClauses +=
-                    resolvents - (pos_count + neg_count); // TODO: decide whether to exchange this order!
-            if (totallyAddedClauses > config.opt_bve_growTotal) { 
-	      DOUT( if( config.opt_bve_verbose > 2 ) cerr << "c BVE block increase due to totally added clauses " << totallyAddedClauses << " vs " << config.opt_bve_growTotal << endl; );
-	      reducedClss = false; 
-	    } // stop increasing!
-        } else {
-            if (config.opt_totalGrow) { totallyAddedClauses += resolvents - (pos_count + neg_count); } // substract!
-        }
+        if (totallyAddedClauses > config.opt_bve_growTotal) { 
+	  DOUT( if( config.opt_bve_verbose > 2 ) cerr << "c BVE block increase due to totally added clauses " << totallyAddedClauses << " vs " << config.opt_bve_growTotal << endl; );
+	  reducedClss = false; 
+	} // stop increasing!
+        if (reducedClss)
+            totallyAddedClauses += resolvents - (pos_count + neg_count);
+        
 
         doResolve = reducedClss;    // number of clauses decreasesd
         // anticipateResult == l_True -> !reducedClss,
