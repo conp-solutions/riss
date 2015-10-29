@@ -31,6 +31,8 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Coprocessor.h"
 
+#include "classifier/CompareSolver.h"
+
 using namespace Riss;
 using namespace Coprocessor;
 using namespace std;
@@ -84,6 +86,8 @@ BoolOption tmpfilecommunication("CLASSIFY", "tmpfilecommunication", "sets if the
 StringOption wekaLocation("WEKA", "weka", "location to weka tool", "/usr/share/java/weka.jar");
 StringOption predictorLocation("WEKA", "predictor", "location to the predictor", "./predictor.jar");
 
+
+BoolOption compareCNF("COMPARATOR", "compareCNF", "take the first two parameters as file names and compare the CNF files (formulas, not p-lines)", false);
 
 void setTimeLimit(int timeout)
 {
@@ -298,6 +302,30 @@ void static SIGINT_exit(int signum)
 
 
 
+void compareFormulas(int argc, char** argv) {
+  if( argc < 3 ) { printf("c ERROR! two files have to be specified to be compared"); exit(1); }
+  
+  gzFile in1 = gzopen(argv[1], "rb");
+  if (in1 == nullptr) {
+      printf("c ERROR! Could not open file: %s\n", argv[1]), exit(1);
+  } 
+  gzFile in2 = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[2], "rb");
+  if (in2 == nullptr) {
+      printf("c ERROR! Could not open file: %s\n", argv[2]), exit(1);
+  }
+  
+  CompareSolver c1;
+  parse_DIMACS(in1, c1);
+  CompareSolver c2;
+  parse_DIMACS(in2, c2);
+  
+  if( c1.equals( c2 ) ) {
+    cout << "c formulas are equal" << endl;
+  } else {
+    cout << "c formulas are not equal" << endl;
+  }
+}
+
 //=================================================================================================
 // Main:
 
@@ -314,6 +342,13 @@ int main(int argc, char** argv)
 
         // parse the options
         parseOptions(argc, argv, true);
+	
+	
+	if( compareCNF ) {
+	  compareFormulas( argc, argv );
+	  exit(0);
+	}
+	
         if (classify || preclassify) {
             attr = true;
             fileoutput = true;
