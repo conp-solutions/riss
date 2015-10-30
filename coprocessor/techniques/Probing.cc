@@ -119,7 +119,10 @@ bool Probing::process()
         cleanSolver();
 
         #ifndef NDEBUG
-        for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i], config.pr_debug_out > 0); }     // incorporate new clauses into the solver
+        for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { 
+	  DOUT( if ( config.pr_debug_out > 2 ) cerr << "c add clause to all data structures " << data.getClauses()[i] << endl; );
+	  data.addClause(data.getClauses()[i], config.pr_debug_out > 0); 
+	}     // incorporate new clauses into the solver
         #else
         for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i]); }     // incorporate new clauses into the solver
         #endif
@@ -128,12 +131,10 @@ bool Probing::process()
         if (beforeLClauses < data.getLEarnts().size()) {
             if (config.pr_keepLHBRs > 0) {
                 #ifndef NDEBUG
-                for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i], config.pr_debug_out > 0); }     // incorporate new clauses into the solverif( config.pr_debug_out ) cerr << "c add another " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
                 for (int i = beforeLClauses; i < data.getLEarnts().size(); ++ i) {
                     data.addClause(data.getLEarnts()[i], config.pr_debug_out > 0);
                 }
                 #else
-                for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i]); }     // incorporate new clauses into the solverif( config.pr_debug_out ) cerr << "c add another " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
                 for (int i = beforeLClauses; i < data.getLEarnts().size(); ++ i) {
                     data.addClause(data.getLEarnts()[i]);
                 }
@@ -321,6 +322,7 @@ CRef Probing::prPropagate(bool doDouble)
                     }
                     // a new clause is required
                     CRef cr2 = ca.alloc(solver.oc, clearnt);  // add the new clause - now all references could be invalid!
+		    cerr << "c add clause [" << cr2 << "] : " << ca[cr2] << endl;
                     if (clearnt) { ca[cr2].setLBD(1); solver.learnts.push(cr2); ca[cr2].activity() = cactivity; }
                     else { solver.clauses.push(cr2); }
                     solver.clssToBump.push(cr2); // add clause to solver lazily!

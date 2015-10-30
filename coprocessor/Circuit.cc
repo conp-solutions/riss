@@ -350,16 +350,16 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
             for (int k = 0 ; k < lList.size(); ++ k) {
                 const Clause& ck = ca[lList[k]];
                 if (ck.can_be_deleted()) { continue; }
-                if (count ++ == data.lits.size() || ck.size() != 2)   // not the current clause, or more than one clause
-                { found = false; break; }
+                if( ck.size() != 2) { found = false; break; }   // not the current clause, or more than one clause
                 // all literals of the clause have to appear in the list of excluded literals
                 if (!data.ma.isCurrentStep(toInt(ck[0])) ||
                         !data.ma.isCurrentStep(toInt(ck[1]))) {
                     found = false; break;
                 }
+                count ++ ;
             }
             // count has to be data.lits.size(), otherwise data structures are invalid!
-            assert((!found || count + 1 == data.lits.size()) && "if for the current literal the situation for blocked has been found, exactly the n binary clauses have to be found!");
+            assert((!found || count + 1 >= data.lits.size()) && "if for the current literal the situation for blocked has been found, exactly the n binary clauses have to be found!");
         }
         if (found) {
             for (int j = 0 ; j < data.lits.size() ; j++) { data.lits[j] = ~data.lits[j]; }

@@ -166,8 +166,8 @@ bool XorReasoning::process()
         assert(xorList[ occs[v][selectIndex] ].used == false && "cannot use the same xor twice for simplification!");
 
         GaussXor& selectedX = xorList[ occs[v][selectIndex] ];
-        const int xorIndex = occs[v][selectIndex];
-        selectedX.used = true; // indicate that this xor was used!
+        const int xorIndex  = occs[v][selectIndex];
+        selectedX.used      = true; // indicate that this xor was used!
 
         DOUT(if (config.opt_xor_debug > 1) { cerr << "c eliminate " << v + 1 << " with XOR " <<  " + "; for (int j = 0 ; j < selectedX.vars.size(); ++ j) { cerr << selectedX.vars[j] + 1 << " + "; }  cerr << " == " << (selectedX.k ? 1 : 0) << endl; });
 
@@ -226,7 +226,7 @@ bool XorReasoning::process()
         }
 
     }
-
+    
     if (config.opt_xor_checkNewSubsume) {   // check whether newly added clauses subsume other clauses
         checkReaddedSubsumption();
     }
@@ -235,9 +235,8 @@ bool XorReasoning::process()
     if (!propagate(unitQueue, data.ma, occs, xorList)) {
         data.setFailed(); goto finishedGauss;
     }
-
+    
     ee.applyEquivalencesToFormula(data);
-
 
     if (config.opt_xor_setPolarity != 0) {
 

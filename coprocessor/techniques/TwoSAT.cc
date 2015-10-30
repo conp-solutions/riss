@@ -69,12 +69,8 @@ bool TwoSatSolver::tmpUnitPropagate()
             DOUT(if (config.twosat_debug_out > 1) cerr << "c add to propagation queue(out) : " << x << endl;);
             unitQueue.push_back(x);
 
-            if (config.twosat_clearQueue) {
-                if (! tmpUnitQueue.empty()) { tmpUnitQueue.clear(); }
-                return unitPropagate();
-            } else {
-                return unitPropagate();
-            }
+            if (! tmpUnitQueue.empty()) { tmpUnitQueue.clear(); }
+            return unitPropagate();
         }
 
         DOUT(if (config.twosat_debug_out > 2) cerr  << "TEMP: Assign " << x << " " << endl;);

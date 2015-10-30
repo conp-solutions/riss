@@ -993,6 +993,8 @@ Var Rewriter::nextVariable(char type)
 {
     Var nextVar = data.nextFreshVariable(type);
 
+    assert( var(data.replacedBy()[nextVar] ) == nextVar && "replacement of new variables should be equivalent to themselves" );
+    
     // enlarge own structures
     rewHeap.addNewElement(data.nVars());
 

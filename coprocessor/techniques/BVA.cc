@@ -564,12 +564,11 @@ bool BoundedVariableAddition::andBVA()
                     }
                     // ensure that the clauses are sorted
                     clauseI.sort();
-                    assert(replaceFlag && "could not replace literal right");
-
                     // remove clause from the occurrenceList list
                     if (!data.removeClauseFrom(iClauses[j], right)) {
                         cerr << "c was not able to find clause ref " << iClauses[j] << " (" << clauseI << ") in list of literal " << right << " (was rewritten)" << endl;
                     }
+                    assert(replaceFlag && "could not replace literal right");
 
                     // add clause into occurrenceList list of new variable
                     data.list(replaceLit). push_back(iClauses[j]);

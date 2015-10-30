@@ -118,7 +118,11 @@ lbool Preprocessor::performSimplification()
 
     for (int ppIteration = 0; ppIteration < (data.isInprocessing() ? 1 : config.opt_simplifyRounds); ++ ppIteration) {
 
-
+//      cerr << "c EE replacements: " << endl;
+// 	for ( Var v = 0 ; v < data.nVars(); ++ v ) {
+// 	  if( v != var(data.replacedBy() [ v ]) ) cerr << "c " << v << " <-> " << var(data.replacedBy() [ v ]) << endl;
+// 	}
+      
         if (data.isInterupted()) { break; }  // stop here due to signal
 
         double iterTime = cpuTime();
@@ -485,7 +489,7 @@ lbool Preprocessor::performSimplification()
                     }
                     if (j == cl.size()) {
                         isNotSat = true;
-                        cerr << "c twosat does not satisfy: " << cl << endl;
+                        if (config.opt_verbose > 2) { cerr << "c twosat does not satisfy: " << cl << endl; }
                         break;
                     }
                 }
@@ -494,21 +498,21 @@ lbool Preprocessor::performSimplification()
                     if (config.opt_ts_phase && !data.isInprocessing()) {
                         for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (-1 == twoSAT.getPolarity(v)); }
                     }
-                    cerr // << endl
+                    if (config.opt_verbose > 2) { cerr // << endl
                             << "c ================================" << endl
                             << "c  2SAT model is not a real model " << endl
-                            << "c ================================" << endl;
+                            << "c ================================" << endl; }
                 } else {
-                    cerr // << endl
+                    if (config.opt_verbose > 2) { cerr // << endl
                             << "c =================================" << endl
                             << "c  use the result of 2SAT as model " << endl
-                            << "c =================================" << endl;
+                            << "c =================================" << endl; }
                 }
             } else {
-                cerr // << endl
+                if (config.opt_verbose > 2) { cerr // << endl
                         << "================================" << endl
                         << " unsatisfiability shown by 2SAT " << endl
-                        << "================================" << endl;
+                        << "================================" << endl; }
                 data.setFailed();
             }
         }
@@ -972,23 +976,23 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
                     if (config.opt_ts_phase && !data.isInprocessing()) {
                         for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
                     }
-                    cerr // << endl
+                    if (config.opt_verbose > 2) { cerr // << endl
                             << "c ================================" << endl
                             << "c  2SAT model is not a real model " << endl
-                            << "c ================================" << endl;
+                            << "c ================================" << endl; }
                 } else {
-                    cerr // << endl
+                    if (config.opt_verbose > 2) { cerr // << endl
                             << "c =================================" << endl
                             << "c  use the result of 2SAT as model " << endl
-                            << "c =================================" << endl;
+                            << "c =================================" << endl; }
                     // next, search would be called, and then a model will be generated!
                     for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
                 }
             } else {
-                cerr // << endl
+                if (config.opt_verbose > 2) { cerr // << endl
                         << "================================" << endl
                         << " unsatisfiability shown by 2SAT " << endl
-                        << "================================" << endl;
+                        << "================================" << endl; }
                 data.setFailed();
             }
         }
@@ -1747,8 +1751,11 @@ bool Preprocessor::checkLists(const string& headline)
             for (int i = 0 ; i < data.list(l).size(); ++ i) {
                 for (int j = i + 1 ; j < data.list(l).size(); ++ j) {
                     if (data.list(l)[i] == data.list(l)[j]) {
-                        ret = true;
-                        cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
+		        if(! ca[ data.list(l)[i] ].can_be_deleted() ) {
+			  ret = true;
+			  cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
+			  assert( false && "fix duplicates!" );
+			}
                     }
                 }
             }

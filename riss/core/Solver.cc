@@ -345,7 +345,9 @@ Var Solver::newVar(bool sign, bool dvar, char type)
         reverseMinimization.assigns.push(l_Undef);
         reverseMinimization.trail.capacity(v + 1);
     }
+    
     // space for replacement info
+    assert( v == eqInfo.replacedBy.size() && "new variables have to match the size" );
     eqInfo.replacedBy.push(mkLit(v, false));
 
     if (config.opt_litPairDecisions > 0) {
@@ -382,7 +384,7 @@ void Solver::reserveVars(Var v)
         reverseMinimization.trail.capacity(v + 1);
     }
 
-    for (Var w = eqInfo.replacedBy.size(); w <= v ; ++w) { eqInfo.replacedBy.push(mkLit(w, false)); }
+    eqInfo.replacedBy.capacity( v+1 );
 
     if (config.opt_litPairDecisions > 0) { decisionLiteralPairs.capacity(2 * v); }  // create sufficient capacity
 
@@ -5025,7 +5027,7 @@ bool Solver::processOtfss(Solver::OTFSS& data)
                     // handle new clause
                     c.mark(1);                // mark clause, so that its not processed twice, is undone afterwards again
                     if (j < 2) {              // the literal was a watched literal
-                        assert((value(removeLit) == l_True || value(c[ 1 - j ]) != l_False) && "the two watched literals of the clause should be free (true of undef");
+
                         vec<Watcher>&  ws  = watches[ ~removeLit ];
                         for (int k = 0 ; k < ws.size(); ++ k) {
                             if (ws[k].cref() == data.info[i].cr) {

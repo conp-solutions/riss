@@ -2158,11 +2158,17 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                                     for (int m = 0 ; m < c.size(); ++ m) { proofClause.push_back(c[m]); }
                                 }
 
+                                Lit removedFrom[ c.size() ];
+				int removedFromSize = 0;
+                                
                                 // TODO: update counter statistics for all literals of the clause!
                                 for (int m = 0 ; m < c.size(); ++ m) {
                                     if (c[m] == repr || c[m] == ~repr) { duplicate = true; continue; }  // manage that this clause is not pushed into the list of clauses again!
                                     const Lit tr = getReplacement(c[m]);
-                                    if (tr != c[m]) { getsNewLiterals = true; }
+                                    if (tr != c[m]) { 
+				      if( var (tr) != var( repr ) ) { removedFrom[ removedFromSize ++ ] = c[m]; } // memorize literal that has been removed from the clause (not repr)
+				      getsNewLiterals = true; 
+				    }
                                     c[m] = tr;
                                 }
 

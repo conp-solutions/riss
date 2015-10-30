@@ -14,5 +14,5 @@ shift
 
 echo "./riss -checkModel -config= `python ./mapCSSCparams.py $*` $file "
 
-gdb --args ./riss -checkModel -config= `python ./mapCSSCparams.py $*` $file 
+gdb --args ./riss -checkModel -quiet -config= `python ./mapCSSCparams.py $*` $file 
 exit $?

@@ -642,7 +642,6 @@ class CP3Config : public Riss::Config
     #ifndef NDEBUG
     Riss::IntOption twosat_debug_out  ;
     #endif
-    Riss::BoolOption twosat_clearQueue;
 
 //
 // Unhide
