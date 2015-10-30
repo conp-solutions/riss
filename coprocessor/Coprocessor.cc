@@ -538,7 +538,7 @@ lbool Preprocessor::performSimplification()
     // dense only if not inprocessing, or if enabled explicitly
     if (config.opt_dense && (!data.isInprocessing() || config.opt_dense_inprocess)) {
         // do as very last step -- not nice, if there are units on the trail!
-        dense.compress();
+        dense.compress(false);
     }
 
     moh.cont();
@@ -890,7 +890,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // f "d"
         else if (execute == 'd' && config.opt_dense && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c dense" << endl; }
-            dense.compress();
+            dense.compress(true);
             change = dense.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c Dense changed formula: " << change << endl; }
         }
@@ -1018,7 +1018,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     // dense only if not inprocessing, or if enabled explicitly
     if (config.opt_dense && (!data.isInprocessing() || config.opt_dense_inprocess)) {
         // do as very last step -- not nice, if there are units on the trail!
-        dense.compress();
+        dense.compress(false);
     }
 
     moh.cont();

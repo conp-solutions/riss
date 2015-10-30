@@ -23,7 +23,7 @@ Dense::Dense(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _contro
 
 
 
-void Dense::compress(const char* newWhiteFile)
+void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
 {
     if (propagation.process(data) == l_False) { data.setFailed(); }
     if (!data.ok()) { return; }
@@ -62,17 +62,22 @@ void Dense::compress(const char* newWhiteFile)
         // compress (remove) variable
         else {
             diff++;
-            trail[var] = data.value(var);
+	    if( data.value( var ) != l_Undef ) {
+	      trail[var] = data.value(var);
+	      assert( mapping[var] == Compression::UNIT && "this variable has an assignment" );
 
-            DOUT(if (config.dense_debug_out) {
-            if (data.doNotTouch(var)) {
-                    cerr << "c do not touch variable will be dropped: "
-                         << var + 1 << " mapping: " << mapping[var] + 1 << endl;
-                } else {
-                    cerr << "c variable " << var + 1 << " occurrs " << count[var] << " times, and is undefined: "
-                         << (data.value(mkLit(var, false)) == l_Undef) << endl;
-                }
-            });
+	      DOUT(if (config.dense_debug_out) {
+	      if (data.doNotTouch(var)) {
+		      cerr << "c do not touch variable will be dropped: "
+			  << var + 1 << " mapping: " << mapping[var] + 1 << endl;
+		  } else {
+		      cerr << "c variable " << var + 1 << " occurrs " << count[var] << " times, and is undefined: "
+			  << (data.value(mkLit(var, false)) == l_Undef) << endl;
+		  }
+	      });
+	    } else {
+	      assert( mapping[var] == Compression::UNIT && "variables that are not present in the formula, and that do not have a truth value, are treated as gap" );
+	    }
         }
     }
 
@@ -201,6 +206,23 @@ void Dense::compress(const char* newWhiteFile)
     }
     assert(data.nVars() + diff == compression.nvars() && "number of variables has to be reduced");
 
+    // add the clauses to the structures again. as all clauses have been rewritten, we clear all lists and add all clauses again
+    if( addClausesToLists ) {
+	data.cleanOccurrences(); // clear all occurrences
+	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	  const Clause& c = ca[ data.getClauses()[i] ];
+	  if( ! c.can_be_deleted() ) {
+	    data.addClause( data.getClauses()[i] );
+	  }
+	}
+	for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
+	  const Clause& c = ca[ data.getLEarnts()[i] ];
+	  if( ! c.can_be_deleted() ) {
+	    data.addClause( data.getLEarnts()[i] );
+	  }
+	}
+    }
+    
     // notify data about compression
     data.didCompress();
 }
@@ -243,9 +265,7 @@ void Dense::decompress(vec<lbool>& model)
         // units - simply copy, because they do not occure in the compressed formula
         if (compressed == Compression::UNIT) {
             lbool unit = compression.value(var);
-            model[var] = unit;
-
-            assert(unit != l_Undef && "Variable must not be undefined, because it is marked as unit");
+	    if( unit != l_Undef ) model[var] = unit; // only use, if a value has been set
 
             DOUT(if (config.dense_debug_out) {
                 cerr << "c satisfy " << var + 1 << "="

@@ -31,7 +31,7 @@ class Dense : public Technique<Dense>
     /**
      * Compress the formula - if necessary, output a new whiteFile
      */
-    void compress(const char* newWhiteFile = nullptr);
+    void compress(bool addClausesToLists, const char* newWhiteFile = nullptr);
 
     /**
      * Undo variable mapping, so that passed model is a model for the original formula

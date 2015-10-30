@@ -189,6 +189,7 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
         mapping = _mapping;
         trail = _trail;
 
+#if 0
         #ifndef NDEBUG
         // validate mapping in debug mode
         for (Var var = 0; var < mapping.size(); ++var) {
@@ -201,6 +202,7 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
             }
         }
         #endif
+#endif
     }
     // update current mapping
     else {
@@ -236,7 +238,7 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
         // we found a variable in the old formula that is not a unit in the compressed
         // store the inverse direction in the forward map (to -> from) and increment
         // the "to" variable to write the next non-unit mapping to the next position
-        if (mapping[from] != UNIT) {
+        if (mapping[from] != UNIT ) {
             assert(to < forward.size() && "Compressed variable name must not be larger than forward mapping");
 
             forward[to++] = from;

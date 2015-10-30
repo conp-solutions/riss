@@ -688,6 +688,9 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
 
         solver->rebuildOrderHeap();
 
+	// resize the renaming vector
+	solver->eqInfo.replacedBy.shrink_( solver->eqInfo.replacedBy.size() - solver->nVars() );
+	
         // set cp3 variable representation!
         numberOfVars = solver->nVars();
         lit_occurrence_count.resize(nVars() * 2);
