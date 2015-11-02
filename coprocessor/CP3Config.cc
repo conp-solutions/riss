@@ -513,7 +513,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // Rewriter
     //
     opt_rew_min            (_cat_rew, "cp3_rew_min",      "min occurrence to be considered", 3, IntRange(0, INT32_MAX),                    optionListPtr, &opt_rew),
-    opt_rew_iter           (_cat_rew, "cp3_rew_iter",     "number of iterations", 1, IntRange(0, INT32_MAX),                               optionListPtr, &opt_rew),
+    opt_rew_iter           (_cat_rew, "cp3_rew_iter",     "number of iterations", 1, IntRange(0, 64),                                      optionListPtr, &opt_rew),
     opt_rew_minAMO         (_cat_rew, "cp3_rew_minA",     "min size of altered AMOs", 3, IntRange(0, INT32_MAX),                           optionListPtr, &opt_rew),
     opt_rew_limit          (_cat_rew, "cp3_rew_limit",    "number of steps allowed for REW", 1200000, IntRange(0, INT32_MAX),              optionListPtr, &opt_rew),
     opt_rew_Varlimit       (_cat_rew, "cp3_rew_Vlimit",   "max number of variables to still perform REW", 1000000, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
@@ -636,7 +636,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_xor_findResolved   (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false,                                          optionListPtr, &opt_xor),
     opt_xor_backdoor       (_cat_xor, "xorBackdoor",  "work on XOR backdoor, is size is smaller equal", 0, IntRange(0, INT32_MAX),                      optionListPtr, &opt_xor),
     opt_xor_dropPure       (_cat_xor, "xorDropPure",  "drop XORs with a literal that occurs only once", false,                                          optionListPtr, &opt_xor),
-    opt_xor_encodeSize     (_cat_xor, "xorEncSize",   "size of xors that are encoded back (<=2 ^= none)", 2, IntRange(2, INT32_MAX),                    optionListPtr, &opt_xor),
+    opt_xor_encodeSize     (_cat_xor, "xorEncSize",   "size of xors that are encoded back (<=2 ^= none)", 2, IntRange(1, 4),                            optionListPtr, &opt_xor),
     opt_xor_checkNewSubsume(_cat_xor, "xorEncSubs",   "perform subsumption checks with newly added XOR clauses", false,                                 optionListPtr, &opt_xor),
     opt_xor_addAsLearnt    (_cat_xor, "xorEncL",      "add clause to encode XOR as learnt clause", false,                                               optionListPtr, &opt_xor),
     opt_xor_setPolarity    (_cat_xor, "xorSetPol",    "set default polarities based on XOR elimination order and UP(-1=neg,1=pos)", 0, IntRange(-1, 1), optionListPtr, &opt_xor),

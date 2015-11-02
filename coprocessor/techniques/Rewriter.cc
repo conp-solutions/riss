@@ -678,6 +678,10 @@ bool Rewriter::rewriteAMO()
                 data.lits.push_back(mkLit(newRj, false));
             }
 
+            // resize internal structures
+            inAmo.resize( data.nVars() * 2 );
+	    rewHeap.addNewElement(data.nVars() * 2);
+            
             // find all AMO binary clauses, and replace them with smaller variables!
             inAmo.nextStep();
             for (int j = 0 ; j < amo.size(); ++ j) {

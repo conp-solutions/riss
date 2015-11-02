@@ -271,28 +271,39 @@ bool RATElimination::eliminateRAT()
                         }
                     }
 
-                    if (confl == false) { confl = CRef_Undef != solver.propagate(); }  // check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
+                    CRef ppConfl = CRef_Undef;
+                    if (confl == false) { 
+		      ppConfl = solver.propagate();  // check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
+		      confl = CRef_Undef != ppConfl; 
+		    }  
                     solver.cancelUntil(1);    // backtrack just to level 1 to keep first part of the resolvent propagated
                     rateSteps += solver.trail.size() - defaultLits; // approximate effort for propagation with respect to the level!
 
-                    DOUT(if (config.opt_rate_debug > 2) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;);
+                    DOUT( if (config.opt_rate_debug > 2) { cerr << "c propagate with conflict " << (ppConfl != CRef_Undef ? "yes" : " no") << endl;
+			  if( ppConfl != CRef_Undef ) cerr << "c conflict: " << ca[ppConfl] << endl;
+		      }
+		    );
 
                     if (confl == false) {
                         // the resolvent is not AT, hence, check whether the resolvent is blocked
                         if (config.opt_rate_brat) {
                             MethodClock bratMC(bratTime);   // measure time
+			    
+			    DOUT( if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, check resolvents for " << data.lits << endl; );
+			    
                             // check whether resolvent is blocked on one of its literals
                             bool isblocked = false;
 //        bratResolve.nextStep(); //TODO these two lines are not used
 //        for( int k = 0 ; k < data.lits.size(); ++k ) bratResolve.setCurrentStep( toInt(data.lits[k] ) ); // create markArray for redundant clause
-                            for (int k = 0 ; k < data.lits.size(); ++k) {
-                                const Lit resL = data.lits[k];
-                                if (data.doNotTouch(var(resL))) { continue; }     // do not perform blocked clause addition on doNotTouch variables
+                            // for (int k = 0 ; k < data.lits.size(); ++k) {
+                                const Lit resL = right; // currently not sure how to restore resolvents, that are not blocked on the literal we currently process ... data.lits[k]
+                                if (data.doNotTouch(var(resL))) { isblocked = true; break; }     // do not perform blocked clause addition on doNotTouch variables
                                 isblocked = true;
 
                                 for (int m = 0 ; m < data.list(~resL).size(); ++ m) {   // resolve with all candidates
                                     const Clause& e = ca[ data.list(~resL)[m] ];
-                                    if (e.can_be_deleted()) { continue; }
+				    if (e.can_be_deleted()) { continue; }
+				    DOUT( if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, resolve with " << e << " on " << resL << endl; );
                                     if (data.list(right)[i] == data.list(~resL)[m]) { blockCheckOnSameClause ++; }
 
                                     bool hasComplement = false; // check resolvent for being tautologic
@@ -302,13 +313,16 @@ bool RATElimination::eliminateRAT()
                                     }
 
                                     if (!hasComplement) { isblocked = false; break; }
+                                    else {
+				      DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, resolvent is blocked on " << resL << endl; );
+				    }
                                 }
 
                                 if (isblocked == true) {
                                     usedBratClause = true;
                                     break; // found a blocking literal
                                 }
-                            }
+                            // }
                             allResolventsRedundant = isblocked; // overloading ... not really AT, but the resolvent is redundant
 
                         } else {

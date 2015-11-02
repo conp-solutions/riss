@@ -1170,6 +1170,7 @@ class MarkArray
      */
     bool isCurrentStep(const uint32_t index) const
     {
+	assert( index < array.size() && "write access should only be done to elements in the array" );
         return array[index] == step;
     }
 
@@ -1177,6 +1178,7 @@ class MarkArray
      */
     void setCurrentStep(const uint32_t index)
     {
+	assert( index < array.size() && "write access should only be done to elements in the array" );
         array[index] = step;
     }
 

@@ -99,6 +99,7 @@ bool EntailedRedundant::process()
             if (resolveLit == lit_Undef) {   // candidate subsumes other clause - subsume, continue
                 subsumed ++;
                 DOUT(if (config.entailed_debug > 1) cerr << "c " << candidate << " subsumes " << c << "(" << clss[i] << " - " << cr << ")" << endl;);
+		c .set_delete( true ); // delete immediately
                 data.clss.push_back(cr);
                 goto checkNextClause;
             } else if (resolveLit == lit_Error) {
@@ -155,6 +156,7 @@ bool EntailedRedundant::process()
                     // here, candidate and match are found!
                     DOUT(if (config.entailed_debug > 0) cerr << "c ENT clause " << c << " is resolvent of " << candidate << " and " << c2 << endl;);
                     data.clss.push_back(cr);
+		    ca[cr].set_delete(true); // memorize, that this clause will be removed
                     goto checkNextClause;
 
                 checkNextMatch:;

@@ -3321,14 +3321,14 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         if (config.opt_uhdProbe > 2) { big->sort(nVars()); }     // sort all the lists once
     }
 
-    if (false) {
+    DOUT( if (config.opt_learn_debug) {
         cerr << "c solver state after preprocessing" << endl;
         cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts decision vars: " << order_heap.size() << endl;
         cerr << "c units: " ; for (int i = 0 ; i < trail.size(); ++ i) { cerr << " " << trail[i]; } cerr << endl;
         cerr << "c clauses: " << endl; for (int i = 0 ; i < clauses.size(); ++ i) { cerr << "c [" << clauses[i] << "]m: " << ca[clauses[i]].mark() << " == " << ca[clauses[i]] << endl; }
         cerr << "c assumptions: "; for (int i = 0 ; i < assumptions.size(); ++ i) { cerr << " " << assumptions[i]; } cerr << endl;
         cerr << "c solve with " << config.presetConfig() << endl;
-    }
+    } );
 
     //
     // Search:
