@@ -745,15 +745,15 @@ void Circuit::getXORGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 }
             }
             if (!found[1]) { continue; }   // this clause does not contribute to an XOR!
-            // cerr << "c found first two clauses, check for next two" << endl;
+
             // check whether we can find the other's by blocked clause analysis
-            if (!binary && config.circ_BLOCKED) {
+            if (false && !binary && config.circ_BLOCKED) {
                 int countPos = 0;
                 for (int j = 0 ; j < data.list(a).size(); ++ j) {
                     const Clause& aClause = ca[data.list(a)[j]];
                     if (aClause.can_be_deleted()) { continue; }
                     if (aClause.size() != 3) { countPos = 3; break; }
-                    countPos = countPos + 1;
+//                     countPos = countPos + 1;  // the ternary clauses have to fullfill further properties to enable the XOR gate to be blocked!
                 }
                 if (countPos == 2) {
                     DOUT(if (config.circ_debug_out) cerr << "c current XOR gate is implied with blocked clauses! ternaries: " << countPos << endl;);
