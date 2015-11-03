@@ -133,6 +133,7 @@ add_component(qprocessor/)
 add_component(test/)
 add_component(doc/)
 add_component(scripts/)
+add_component(features/)
 
 if(SHIFTBMC)
   add_component(shiftbmc/)
