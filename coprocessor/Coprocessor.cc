@@ -428,7 +428,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 0) { cerr << "c hbr ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
             if (status == l_Undef) { hbr.process(); }   // cannot change status, can generate new unit clauses
-            if (config.opt_verbose > 1)  { printStatistics(cerr); rate.printStatistics(cerr); }
+            if (config.opt_verbose > 1)  { printStatistics(cerr); hbr.printStatistics(cerr); }
 
             data.checkGarbage(); // perform garbage collection
 

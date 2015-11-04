@@ -270,9 +270,9 @@ class DoubleOption : public Option
         double endValue = range.end == HUGE_VAL ? (defaultValue > 1000000.0 ? defaultValue : 1000000.0) : range.end;
 	if( granularity == 0 ) { // use interval
 	  if (range.begin + badd > 0 || range.end - esub < 0) {
-	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, value, description);
 	  } else {
-	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, defaultValue, description);
+	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, value, description);
 	  }
 	} else { // print linear distributed sampling for double option
 	  fprintf(pcsFile, "%s  {", name); // print name
@@ -391,17 +391,42 @@ class IntOption : public Option
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
-            if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
-                fprintf(pcsFile, "%s  {%d", name, range.begin);
-                for (int i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%d", i); }
-                fprintf(pcsFile, "} [%d]    # %s\n", defaultValue, description);
-            } else {
-                fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-            }
-        } else {
-            fprintf(pcsFile, "%s  [%d,%d] [%d]il   # %s\n", name, range.begin, range.end, defaultValue, description);
-        }
+        if( granularity != 0 ) {
+	  fprintf(pcsFile, "%s  {", name);
+	  int values[granularity];
+	  int addedValues = 0;
+	  values[ addedValues++ ] = value;
+	  int dist = value < 16 ? 1 : ( value < 16000 ? 64 : 512 ); // smarter way to initialize the initial diff value
+	  if( addedValues < granularity) values[ addedValues++ ] = defaultValue;
+	  while( addedValues < granularity ) {
+	    if( value + dist <= range.end ) values[ addedValues++ ] = value + dist;
+	    if( addedValues < granularity && value - dist >= range.end ) values[ addedValues++ ] = value - dist;
+	    dist = dist * 4;
+	  }
+	  sort( values, addedValues );
+	  int j = 0;
+	  for( int i = 1 ; i < addedValues; ++ i ) {
+	    if( values[i] != values[j] ) values[++j] = values[i];
+	  }
+	  assert( j > 0 && "there has to be at least one option" );
+	  for( int i = 0 ; i < j; ++ i ) {
+	    if ( i != 0 )  fprintf(pcsFile, ",");
+	    fprintf(pcsFile, "%d", values[i] );
+	  }
+	  fprintf(pcsFile, "} [%d]    # %s\n", value, description);
+	} else {
+	  if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
+	      if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
+		  fprintf(pcsFile, "%s  {%d", name, range.begin);
+		  for (int i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%d", i); }
+		  fprintf(pcsFile, "} [%d]    # %s\n", value, description);
+	      } else {
+		  fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, value, description);
+	      }
+	  } else {
+	      fprintf(pcsFile, "%s  [%d,%d] [%d]il   # %s\n", name, range.begin, range.end, value, description);
+	  }
+	}
     }
 
     virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
@@ -522,18 +547,42 @@ class Int64Option : public Option
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
 
-
-        if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
-            if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
-                fprintf(pcsFile, "%s  {%ld", name, range.begin);
-                for (int64_t i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%ld", i); }
-                fprintf(pcsFile, "} [%ld]    # %s\n", defaultValue, description);
-            } else {
-                fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, defaultValue, description);
-            }
-        } else {
-            fprintf(pcsFile, "%s  [%ld,%ld] [%ld]il   # %s\n", name, range.begin, range.end, defaultValue, description);
-        }
+	if( granularity != 0 ) {
+	  fprintf(pcsFile, "%s  {", name);
+	  int64_t values[granularity];
+	  int addedValues = 0;
+	  values[ addedValues++ ] = value;
+	  int64_t dist = value < 16 ? 1 : ( value < 16000 ? 64 : 512 ); // smarter way to initialize the initial diff value
+	  if( addedValues < granularity) values[ addedValues++ ] = defaultValue;
+	  while( addedValues < granularity ) {
+	    if( value + dist <= range.end ) values[ addedValues++ ] = value + dist;
+	    if( addedValues < granularity && value - dist >= range.end ) values[ addedValues++ ] = value - dist;
+	    dist = dist * 4;
+	  }
+	  sort( values, addedValues );
+	  int j = 0;
+	  for( int i = 1 ; i < addedValues; ++ i ) {
+	    if( values[i] != values[j] ) values[++j] = values[i];
+	  }
+	  assert( j > 0 && "there has to be at least one option" );
+	  for( int i = 0 ; i < j; ++ i ) {
+	    if ( i != 0 )  fprintf(pcsFile, ",");
+	    fprintf(pcsFile, "%ld", values[i] );
+	  }
+	  fprintf(pcsFile, "} [%ld]    # %s\n", value, description);
+	} else {
+	  if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
+	      if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
+		  fprintf(pcsFile, "%s  {%ld", name, range.begin);
+		  for (int64_t i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%ld", i); }
+		  fprintf(pcsFile, "} [%ld]    # %s\n", value, description);
+	      } else {
+		  fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, value, description);
+	      }
+	  } else {
+	      fprintf(pcsFile, "%s  [%ld,%ld] [%ld]il   # %s\n", name, range.begin, range.end, value, description);
+	  }
+	}
     }
 
     virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
@@ -644,7 +693,7 @@ class StringOption : public Option
         if (! wouldPrintOption()) { return; }   // do not print option?
 
         // print only, if there is a default
-        if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, defaultValue, description); }
+        if (defaultValue != 0) { fprintf(pcsFile, "%s  {\"\",%s} [%s]     # %s\n", name, defaultValue, value->c_str(), description); }
     }
 
     bool wouldPrintOption() const
@@ -738,7 +787,7 @@ class BoolOption : public Option
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
         if (! wouldPrintOption()) { return; }   // do not print option?
 
-        fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, defaultValue ? "yes" : "no", description);
+        fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, value ? "yes" : "no", description);
     }
 
     virtual bool canPrintOppositeOfDefault() { return true; }
