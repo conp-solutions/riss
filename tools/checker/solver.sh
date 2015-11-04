@@ -10,7 +10,8 @@
 #param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4 -config=RERRW -revMin"
 #param="-act-based -cir-bump=100 -rlevel=2 -pq-order -prob-step-width=1024"
 #param="-enabled_cp3 -cp3_stats -quiet -hbr -config="
-param="-config= -enabled_cp3 -cp3_ptechs=uedbud -ee -dense -bve -up"
+#param="-config= -enabled_cp3 -cp3_ptechs=uedbud -ee -dense -bve -up"
+param="-config= -enabled_cp3 -hbr -rew -xor"
 
 #
 # select between printing a proof and not printing a proof

@@ -440,7 +440,7 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
 		      assert( (data.value(gpclause[0]) == l_True || data.value(gpclause[1]) == l_True) && "in larger clauses, the clause is satisfied, or the literal is not on the first two positions" );
 		      gpclause.set_delete(true);
 		      data.addToProof(gpclause, true);    // remove the clause from the proof (its subsumed by a unit clause)
-		      data.removedClause(data.list(solver.trail[g])[p]);
+		      data.removedClause( data.list(negLit)[p] );
 		    }
                 }
             }
