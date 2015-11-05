@@ -37,7 +37,7 @@ bool HyperBinaryResolution::hyperBinaryResolution()
     data.clss.clear(); // clear list of clauses
     for (int i = 0 ; i < data.getClauses().size(); ++i) {
         const Clause& c = ca[ data.getClauses()[i] ];
-        if (c.size() >= 3) { data.clss.push_back(data.getClauses()[i]); }
+        if ( c.size() >= 3 && !c.can_be_deleted() ) { data.clss.push_back(data.getClauses()[i]); }
     }
 
     // mark all literals
@@ -83,12 +83,12 @@ bool HyperBinaryResolution::hyperBinaryResolution()
         for (int i = 0; i < data.clss.size() && (data.unlimited() || config.hbrLimit > hbrSteps) && !data.isInterupted(); ++i) {
             const Clause& c = ca[ data.clss[i] ];
             hbrSteps ++;
-            if (c.size() < 3) { continue; }                         // delete this pointer from the current version of the clss vector, if the clause is binary now
-            data.clss [keptClauses ++ ] = data.clss[i];         // move the current pointer forward, if there is a gap
+            if ( c.size() < 3 || c.can_be_deleted() ) { continue; }  // delete this pointer from the current version of the clss vector, if the clause is binary now, of can be deleted
+            data.clss [keptClauses ++ ] = data.clss[i];              // move the current pointer forward, if there is a gap
             if (c.size() > config.opt_hbr_maxCsize) { continue; }
 
             assert(c.size() > 2 && "there cannot be binary or unit clauses in the list");
-            DOUT(if (config.opt_hbr_debug) cerr << "c HBR work on clause: " << c << endl;);
+            DOUT(if (config.opt_hbr_debug) cerr << "c HBR work on clause: [ " << data.clss[i] << " ]: " << c << endl;);
 
             // use next clause, if not all literals in this clause are marked
             bool skipClause = false;

@@ -1737,6 +1737,15 @@ void Preprocessor::printFormula(const string& headline)
         cerr << ca[  data.getLEarnts()[i] ] << endl;
     }
     cerr << "==================== " << endl;
+    cerr << " actual formula to be copied: " << endl;
+    for (int i = 0 ; i < data.getTrail().size() && !data.isInterupted(); ++ i) {
+      cerr << data.getTrail()[i] << " 0" << endl;
+    }
+    for (int i = 0 ; i < data.getClauses().size() && !data.isInterupted(); ++ i) {
+        if (ca[  data.getClauses()[i] ].can_be_deleted() || ca[  data.getClauses()[i] ].learnt()) { continue; }
+        cerr << ca[  data.getClauses()[i] ] << " 0" << endl;
+    }
+    cerr << "==================== " << endl;
 }
 
 bool Preprocessor::checkLists(const string& headline)
