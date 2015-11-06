@@ -28,9 +28,11 @@ REDUCEOUTPUT=/tmp/reduceoutput_$$
 INTERVALOPTIONS=/tmp/checksmac_intervals_$$
 
 # SMAC run parameters (might be specified from the command line?)
-#SMAC=./configurators/smac3/smac  # more recent version, output does not fit to older version - TODO: adapt greps and awks
-SMAC=./configurators/smac-v2.04.01-master-415/smac
-SCENARIOFILE=./scenarios/regressiontests-5s-1h.txt
+SMAC=./configurators/smac3/smac  # more recent version, output does not fit to older version - TODO: adapt greps and awks
+#SMAC=./configurators/smac-v2.04.01-master-415/smac
+#SCENARIOFILE=./scenarios/regressiontests-5s-1h.txt
+SCENARIOFILE=./scenarios/CSSC-SWV-GZIP-15s-3h.txt
+#SCENARIOFILE=./scenarios/CNFUZZ-15s-3h.txt   # instances without SAT data
 WALLCLOCKLIMIT=4000
 SMACMODE=ROAR   # ROAD or SMAC
 
@@ -104,6 +106,14 @@ do
 		echo "# found faulty configuration on file `pwd`/$FAULTYINSTANCE within timeout $FAILTIME (minimized with double)"  >> $PARAMFILE
 		# write full call into file (as a comment)
 		echo "# full faulty call: `grep "^final faulty options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'` (for simpler debugging)" >> $PARAMFILE
+		# prevent empty forbidden clause
+		grep "^final reduced-excludable options: " $REDUCEOUTPUT | grep "{ }" > /dev/null
+		ec=$?
+		if [ $ec == "0" ]
+		then
+		  echo "tried to add an empty faulty configuration"
+		  break
+		fi
 		# write partial call into file to be excluded
 		grep "^final reduced-excludable options: " $REDUCEOUTPUT | awk '{ for(i=4; i<=NF; i++) printf("%s ", $i ) }'                    >> $PARAMFILE
 	
@@ -118,6 +128,7 @@ done
 
 # print number of iterations
 echo "fix iterations: $i ( out of $FIXATTEMPTS )"
+date
 
 # remove intermediate files
 ls $SMACOUTPUT $SMACERROR $REDUCEOUTPUT
