@@ -33,7 +33,6 @@ set(LIB_SOURCES
     techniques/Rewriter.cc
     techniques/Subsumption.cc
     techniques/Symmetry.cc
-    techniques/TwoSAT.cc
     techniques/Unhiding.cc
     techniques/BCE.cc
     techniques/RATE.cc

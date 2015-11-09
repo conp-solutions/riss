@@ -36,7 +36,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Shuffler.h"
 
 #include "coprocessor/techniques/SLS.h"
-#include "coprocessor/techniques/TwoSAT.h"
 
 #include <string>
 #include <cstring>
@@ -183,7 +182,6 @@ class Preprocessor
     VarShuffler shuffler;
 
     SLS sls;
-    TwoSatSolver twoSAT;
 
     int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
     Riss::vec<Riss::Var> specialFrozenVariables;

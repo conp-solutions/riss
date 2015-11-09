@@ -60,7 +60,6 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , hbr(config, solver->ca, controller, data, propagation)
     , shuffler(config)
     , sls(config, data, solver->ca, controller)
-    , twoSAT(config, solver->ca, controller, data)
     , shuffleVariable(-1)
 {
     controller.init();
@@ -133,44 +132,6 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") propagate" << endl; }
             if (status == l_Undef) { status = propagation.process(data, true); }
             if (config.opt_verbose > 1)  { printStatistics(cerr); propagation.printStatistics(cerr); }
-        }
-
-        if (config.opt_twosat_init) {
-            if (config.opt_verbose > 0) { cerr << "c 2sat ..." << endl; }
-            if (config.opt_verbose > 4) { cerr << "c coprocessor 2SAT" << endl; }
-            if (status == l_Undef) {
-                bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-                if (solvedBy2SAT) {
-                    bool isNotSat = false;
-                    for (int i = 0 ; i < data.getClauses().size(); ++ i) {
-                        const Clause& cl = ca[ data.getClauses()[i] ];
-                        int j = 0;
-                        for (; j < cl.size(); ++ j) {
-                            if (twoSAT.isSat(cl[j])) { break; }
-                        }
-                        if (j == cl.size()) { isNotSat = true; break; }
-                    }
-                    if (isNotSat) {
-                        // only set the phase before search!
-                        if (config.opt_ts_phase && !data.isInprocessing()) {
-                            for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                        }
-                    } else {
-                        cerr // << endl
-                                << "c =================================" << endl
-                                << "c  use the result of 2SAT as model " << endl
-                                << "c =================================" << endl;
-                        // initial twosat model should always be used as a model!
-                        for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                        break;
-                    }
-                } else {
-                    data.setFailed();
-                }
-            }
-            if (! solver->okay()) {
-                status = l_False;
-            }
         }
 
         DOUT(if (printUP || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')) {
@@ -471,56 +432,6 @@ lbool Preprocessor::performSimplification()
         }
     }
 
-    if (config.opt_twosat) {
-        if (config.opt_verbose > 0) { cerr << "c 2sat ..." << endl; }
-        if (config.opt_verbose > 4) { cerr << "c coprocessor 2SAT" << endl; }
-        if (status == l_Undef) {
-            bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-            if (solvedBy2SAT) {
-                // cerr << "binary clauses have been solved with 2SAT" << endl;
-                // check satisfiability of whole formula!
-                bool isNotSat = false;
-                for (int i = 0 ; i < data.getClauses().size(); ++ i) {
-                    const Clause& cl = ca[ data.getClauses()[i] ];
-                    if (cl.can_be_deleted()) { continue; }
-                    int j = 0;
-                    for (; j < cl.size(); ++ j) {
-                        if (twoSAT.isSat(cl[j])) { break; }
-                    }
-                    if (j == cl.size()) {
-                        isNotSat = true;
-                        if (config.opt_verbose > 2) { cerr << "c twosat does not satisfy: " << cl << endl; }
-                        break;
-                    }
-                }
-                if (isNotSat) {
-                    // only set the phase before search!
-                    if (config.opt_ts_phase && !data.isInprocessing()) {
-                        for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (-1 == twoSAT.getPolarity(v)); }
-                    }
-                    if (config.opt_verbose > 2) { cerr // << endl
-                            << "c ================================" << endl
-                            << "c  2SAT model is not a real model " << endl
-                            << "c ================================" << endl; }
-                } else {
-                    if (config.opt_verbose > 2) { cerr // << endl
-                            << "c =================================" << endl
-                            << "c  use the result of 2SAT as model " << endl
-                            << "c =================================" << endl; }
-                }
-            } else {
-                if (config.opt_verbose > 2) { cerr // << endl
-                        << "================================" << endl
-                        << " unsatisfiability shown by 2SAT " << endl
-                        << "================================" << endl; }
-                data.setFailed();
-            }
-        }
-        if (! solver->okay()) {
-            status = l_False;
-        }
-    }
-
     // clear / update clauses and learnts vectores and statistical counters
     // attach all clauses to their watchers again, call the propagate method to get into a good state again
     if (config.opt_verbose > 4) { cerr << "c coprocessor re-setup solver" << endl; }
@@ -569,7 +480,6 @@ lbool Preprocessor::performSimplification()
         if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
-        if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
         if (config.opt_bce) { bce.printStatistics(cerr); }
         if (config.opt_la) { la.printStatistics(cerr); }
         if (config.opt_cce) { cce.printStatistics(cerr); }
@@ -951,56 +861,6 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         }
     }
 
-    if (false && config.opt_twosat) { // TODO: decide whether this should be possible! -> have a parameter, 2sat seems to be more useful
-        if (config.opt_verbose > 0) { cerr << "c 2sat ..." << endl; }
-        if (config.opt_verbose > 4) { cerr << "c coprocessor 2SAT" << endl; }
-        if (status == l_Undef) {
-            bool notFailed = twoSAT.solve();  // cannot change status, can generate new unit clauses
-
-            if (data.hasToPropagate()) if (propagation.process(data) == l_False) { data.setFailed(); } ;
-
-            if (notFailed) {
-                // cerr << "binary clauses have been solved with 2SAT" << endl;
-                // check satisfiability of whole formula!
-                bool isNotSat = false;
-                for (int i = 0 ; i < data.getClauses().size(); ++ i) {
-                    const Clause& cl = ca[ data.getClauses()[i] ];
-                    int j = 0;
-                    for (; j < cl.size(); ++ j) {
-                        if (twoSAT.isSat(cl[j])) { break; }
-                    }
-                    if (j == cl.size()) { isNotSat = true; break; }
-                }
-                if (isNotSat) {
-                    // only set the phase before search!
-                    if (config.opt_ts_phase && !data.isInprocessing()) {
-                        for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                    }
-                    if (config.opt_verbose > 2) { cerr // << endl
-                            << "c ================================" << endl
-                            << "c  2SAT model is not a real model " << endl
-                            << "c ================================" << endl; }
-                } else {
-                    if (config.opt_verbose > 2) { cerr // << endl
-                            << "c =================================" << endl
-                            << "c  use the result of 2SAT as model " << endl
-                            << "c =================================" << endl; }
-                    // next, search would be called, and then a model will be generated!
-                    for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                }
-            } else {
-                if (config.opt_verbose > 2) { cerr // << endl
-                        << "================================" << endl
-                        << " unsatisfiability shown by 2SAT " << endl
-                        << "================================" << endl; }
-                data.setFailed();
-            }
-        }
-        if (! solver->okay()) {
-            status = l_False;
-        }
-    }
-
     // clear / update clauses and learnts vectores and statistical counters
     // attach all clauses to their watchers again, call the propagate method to get into a good state again
     if (config.opt_verbose > 4) { cerr << "c coprocessor re-setup solver" << endl; }
@@ -1047,7 +907,6 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
-        if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
         if (config.opt_bce) { bce.printStatistics(cerr); }
         if (config.opt_la) { la.printStatistics(cerr); }
         if (config.opt_cce) { cce.printStatistics(cerr); }
@@ -1436,7 +1295,6 @@ void Preprocessor::destroyTechniques()
     if (config.opt_ternResolve || config.opt_addRedBins) { resolving.destroy(); }
     if (config.opt_xor) { xorReasoning.destroy(); }
     if (config.opt_sls) { sls.destroy(); }
-    if (config.opt_twosat) { twoSAT.destroy(); }
     if (config.opt_bce) { bce.destroy(); }
     if (config.opt_la) { la.destroy(); }
     if (config.opt_cce) { cce.destroy(); }

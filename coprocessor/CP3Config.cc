@@ -120,9 +120,6 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_sls_flips   (_cat_sls,    "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX),                      optionListPtr, &opt_sls),
     opt_xor         (_cat2,       "xor",           "Reason with XOR constraints", false,                                                       optionListPtr, &opt_enabled),
     opt_rew         (_cat2,       "rew",           "Rewrite AMO constraints", false,                                                           optionListPtr, &opt_enabled),
-    opt_twosat      (_cat2,       "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false,                          optionListPtr, &opt_enabled),
-    opt_twosat_init (_cat_twosat, "2sat1",         "2SAT before all other algorithms to find units", false,                                    optionListPtr, &opt_twosat),
-    opt_ts_phase    (_cat_twosat, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false,                                    optionListPtr, &opt_twosat),
 
     //
     // Var and Cls LIMTS
@@ -597,13 +594,6 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     sym_opt_total_conflicts(_cat_sym, "sym-consT",   "number of total conflicts for looking for being implied", 10000, IntRange(0, INT32_MAX) ,                                        optionListPtr, &opt_symm),
     #ifndef NDEBUG
     sym_debug_out          (_cat_sym, "sym-debug",   "debug output for probing", 0, IntRange(0, 4) ,                                                                                   optionListPtr, &opt_symm),
-    #endif
-
-    //
-    // Twosat
-    //
-    #ifndef NDEBUG
-    twosat_debug_out (_cat_twosat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4),         optionListPtr, &opt_twosat),
     #endif
 
     //
