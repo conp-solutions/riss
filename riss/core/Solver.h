@@ -999,7 +999,7 @@ class Solver
 
     OnlineProofChecker* onlineDratChecker;
 
-    int curr_restarts; // number of restarts for current call to solve_ method
+    uint64_t curr_restarts; // number of restarts for current call to solve_ method
 
     // UIP hack
     int l1conflicts; // number of conflicts at level 1

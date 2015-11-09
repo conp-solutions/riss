@@ -88,6 +88,9 @@ class CoreConfig : public Config
     DoubleOption opt_random_seed;
     IntOption opt_ccmin_mode;
     IntOption opt_phase_saving;
+    IntOption opt_phase_bit_level;   // decision level until which the bit phase is used
+    IntOption opt_phase_bit_number;  // mod of bits of the counter to be used to select bits
+    BoolOption opt_phase_bit_invert; // invert the phase of the bit encoding
     BoolOption opt_rnd_init_act;
     IntOption opt_init_act;
     IntOption opt_init_pol;

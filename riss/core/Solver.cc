@@ -878,7 +878,12 @@ Lit Solver::pickBranchLit()
 
     // first path is usually chosen, one if
     if (next != var_Undef && !posInAllClauses && !negInAllClauses) {
-        return mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : varFlags[next].polarity);
+	bool assignFalse = varFlags[next].polarity;           // usual phase saving
+        if( decisionLevel() < config.opt_phase_bit_level ) {  // bit phase saving
+	  assignFalse = curr_restarts >> ( decisionLevel() % config.opt_phase_bit_number ) & 1;
+	  if( config.opt_phase_bit_invert ) assignFalse = !assignFalse;
+	}
+        return mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : assignFalse );
     } else {
         return next == var_Undef ? lit_Undef :
                (posInAllClauses ? mkLit(next, false) : mkLit(next, true));
