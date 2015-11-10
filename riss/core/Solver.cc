@@ -1916,17 +1916,28 @@ int Solver::probingLiteral(Lit v)
     // No conflicting clause found
     return 0;
 }
+
+void Solver::enableDPLL()
+{
+  useNaiveBacktracking = true;
+}
+
+
+lbool Solver::dpllBacktracking() {
+  if( decisionLevel() == 0 ) return l_False; // no more search space left
+  assert( trail_lim.size() > 0 && "there are decisions that can be undone" );
+  const Lit impliedLit = ~ trail [ trail_lim[ trail_lim.size() - 1 ] ];
+  DOUT(if (config.opt_learn_debug || config.opt_printDecisions > 0) cerr << "c DPLL backtracking: add " << impliedLit << " for backtracking (was decision " << ~impliedLit << "@" << decisionLevel() << ")" << endl;);
+  cancelUntil( decisionLevel() - 1 );          // undo last level
+  uncheckedEnqueue( impliedLit, CRef_Undef );  // add the complement of the highest decision as implied literal (yet without reason clause)
+  return l_Undef;
+}
+
 lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause)
 {
     // run naive backtracking (dpll)
     if( useNaiveBacktracking ) {
-      if( decisionLevel() == 0 ) return l_False; // no more search space left
-      assert( trail_lim.size() > 0 && "there are decisions that can be undone" );
-      const Lit impliedLit = ~ trail [ trail_lim[ trail_lim.size() - 1 ] ];
-      DOUT(if (config.opt_learn_debug) cerr << "c DPLL backtracking: add " << impliedLit << " for backtracking (was decision " << ~impliedLit << "@" << decisionLevel() << endl;);
-      cancelUntil( decisionLevel() - 1 );          // undo last level
-      uncheckedEnqueue( impliedLit, CRef_Undef );  // add the complement of the highest decision as implied literal (yet without reason clause)
-      return l_Undef;
+      return dpllBacktracking();
     }
     
     int backtrack_level;
@@ -2024,7 +2035,11 @@ Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
                 } else if (res == EnumerationClient::goOn) {
                     DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted continue with search " << endl;);
                     return lit_Undef;
-                } else {
+                } else if (res == EnumerationClient::stop) {
+		    DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted to return SAT in search method (oneModel)" << endl;);
+                    returnValue = l_True;
+                    return lit_Error;
+		} else {
                     DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted and unhandled result " << endl;);
                     assert(false && "this case should not be reached");
                     returnValue = l_Undef;
@@ -2330,6 +2345,10 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
         bool newModel = master->addModel(clientID, solver->model, modelhash, & blockingClause, &solver->trail);
         if (newModel) { foundModels ++; }
         else { duplicateModels ++; }
+        
+        if (projectionType == BACKTRACKING) solver->enableDPLL();
+        
+        assert( integrateBlockingClause && "communication with master does not change search space of client" );
     } else {
         // model minimization is independent of enumeration type (TODO: analyze whether minimization works under projection at all ... )
         if (modelSize == blockingClause.size()) {  // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
@@ -2371,18 +2390,32 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
         }
     }
 
+    assert( (integrateBlockingClause || master->usesProjection() ) && "we only changed the search space if we use projection" );
+    
     // add blocking clause to this solver without disturbing its search too much
-    if (integrateBlockingClause) {
-        bool moreModelsPossible = integrateClause(blockingClause, maxLevel, max2Level);
-        if (moreModelsPossible == CRef_Error) {
-            cerr << "c stop after client found all models" << endl;
-            master->notifyReachedAllModels();
-            return stop;
-        }
+    if( !solver->useNaiveBacktracking ) {
+      if (integrateBlockingClause) {
+	  bool moreModelsPossible = integrateClause(blockingClause, maxLevel, max2Level);
+	  if (moreModelsPossible == CRef_Error) {
+	      cerr << "c stop after client found all models" << endl;
+	      master->notifyReachedAllModels();
+	      return stop;
+	  }
+      }
+    } else {
+      if (master->usesProjection()) {
+	// not yet implemented - apply naive backtracking in a way that the current model (under projection) cannot be found again during search
+	assert( false && "not implemented yet" );
+	cerr << "c WARNING: cannot (yet) use projection-enumeration and naive backtracking together - abort" << endl;
+	exit(1);
+      } else {
+	// simply perform backtracking
+	solver->dpllBacktracking();
+      }
     }
 
-    bool enoughModel = master->foundEnoughModels();
-    return enoughModel ? stop : goOn;
+    bool enoughModels = master->foundEnoughModels();
+    return enoughModels ? stop : goOn;
 }
 
 Solver::EnumerationClient::EnumerationClient(Solver* _solver)

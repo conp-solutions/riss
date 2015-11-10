@@ -1511,6 +1511,14 @@ class Solver
     
     bool useNaiveBacktracking; /// use DPLL instead of CDCL for conflict analysis. breaks invariants of the CDCL implementation
     
+    /** turn of clause learning and restarts*/
+    void enableDPLL();
+    
+    /** perform naive backtracking (dpll like) 
+     @return l_Undef, if everything worked out nicely, l_False, if backtracking is not possible because the search space is exhaused
+     */
+    lbool dpllBacktracking();
+    
 // [BEGIN] modifications for model enumerating solver
     class EnumerationClient
     {
