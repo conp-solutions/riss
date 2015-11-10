@@ -1,5 +1,6 @@
 # ChangeLog for riss
 
+ * add option to run DPLL instead of CDCL ( -dpll )
  * model enumeration with blocking clauses
  * added restart switching heuristics
  * added dynamic EMA restart schedule, and non-restart option

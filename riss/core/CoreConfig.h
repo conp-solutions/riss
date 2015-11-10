@@ -73,6 +73,8 @@ class CoreConfig : public Config
     DoubleOption  opt_learntsize_adjust_inc;
     IntOption     opt_max_learnts;
 
+    BoolOption opt_dpll;  // perform DPLL instead of CDCL (no restarts, no learning)
+    
     BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
     IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;

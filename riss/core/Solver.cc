@@ -242,6 +242,8 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , sharingTimePoint(config.sharingType)
 
     , enumerationClient(this)
+    
+    , useNaiveBacktracking(config.opt_dpll)
 {
     // EMA for dynamic restart schedules
     slow_interpretationSizes.reinit(config.opt_restart_ema_trailslow);              // collect all conflict levels
@@ -1916,6 +1918,17 @@ int Solver::probingLiteral(Lit v)
 }
 lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause)
 {
+    // run naive backtracking (dpll)
+    if( useNaiveBacktracking ) {
+      if( decisionLevel() == 0 ) return l_False; // no more search space left
+      assert( trail_lim.size() > 0 && "there are decisions that can be undone" );
+      const Lit impliedLit = ~ trail [ trail_lim[ trail_lim.size() - 1 ] ];
+      DOUT(if (config.opt_learn_debug) cerr << "c DPLL backtracking: add " << impliedLit << " for backtracking (was decision " << ~impliedLit << "@" << decisionLevel() << endl;);
+      cancelUntil( decisionLevel() - 1 );          // undo last level
+      uncheckedEnqueue( impliedLit, CRef_Undef );  // add the complement of the highest decision as implied literal (yet without reason clause)
+      return l_Undef;
+    }
+    
     int backtrack_level;
     unsigned int nblevels;
     learnt_clause.clear();
@@ -2560,6 +2573,8 @@ void Solver::clauseRemoval()
 
 bool Solver::handleRestarts(int& nof_conflicts, const int conflictC)
 {
+    if( useNaiveBacktracking ) return false; // if we run DPLL style search, we should not perform restarts, as we would redo the whole search
+  
     // handle restart heuristic switching first
     if (restartSwitchSchedule.heuristicSwitching()) {  // heuristic switching is enabled
         if (restartSwitchSchedule.reachedIntervalLimit(conflicts)) {    // we reached the limit

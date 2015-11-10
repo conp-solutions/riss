@@ -1506,8 +1506,11 @@ class Solver
 
     vec<LitPairPair> decisionLiteralPairs; /// data to be used to select search decision literals
 
-    void recomputeLPDdata(); /// clears current info, and recomputes the info again based on the current clauses
+    void recomputeLPDdata();   /// clears current info, and recomputes the info again based on the current clauses
 
+    
+    bool useNaiveBacktracking; /// use DPLL instead of CDCL for conflict analysis. breaks invariants of the CDCL implementation
+    
 // [BEGIN] modifications for model enumerating solver
     class EnumerationClient
     {
