@@ -157,10 +157,10 @@ int main(int argc, char** argv)
             }
 
             if (S.verbosity > 0) {
-                printf("c =========================[ Coprocessor %s  %13s ]============================================\n", coprocessorVersion, gitSHA1);
+                printf("c ====================[ Coprocessor %s  %30s ]================================\n", coprocessorVersion, gitSHA1);
                 printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
                 printf("c | Contributors:                                                                                         |\n");
-                printf("c |     Kilian Gebhard: Implementation of BVE, Subsumption, Parallelization                               |\n");
+                printf("c |     Kilian Gebhard                                                                                    |\n");
                 printf("c |     Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                    |\n");
                 printf("c ============================[ Problem Statistics ]=======================================================\n");
                 printf("c |                                                                                                       |\n");

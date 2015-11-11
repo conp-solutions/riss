@@ -244,11 +244,11 @@ int main(int argc, char** argv)
         }
 
         if (S->verbosity > 0) { // print only once!
-            printf("c ======================[ riss (core) %s  %.13s ]===============================================\n", solverVersion, gitSHA1);
+            printf("c =================[ riss (core) %s  %30s ]===================================\n", solverVersion, gitSHA1);
             printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
             printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
             printf("c | Contributors:                                                                                         |\n");
-            printf("c |      Kilian Gebhardt (BVE Implementation,parallel preprocessor)                                       |\n");
+            printf("c |      Kilian Gebhardt                                                                                  |\n");
             printf("c |      Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                   |\n");
             printf("c ============================[ Problem Statistics ]=======================================================\n");
             printf("c |                                                                                                       |\n");
