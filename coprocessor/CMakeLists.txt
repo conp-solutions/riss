@@ -1,7 +1,6 @@
 # Project definitions
 # 
 project(coprocessor)
-version("3.0.0")
 
 # 
 # Libraries

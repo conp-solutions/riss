@@ -34,7 +34,7 @@ endfunction()
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.0.6")
+version("5.1.0")
 
 option(DRATPROOF       "Produce DRAFT-proofs (disabled by default)" OFF)
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
