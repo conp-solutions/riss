@@ -1,5 +1,5 @@
 #
-# add family column to given data file, prints to stdout
+# loop over instances and check whether a family is known for the given instance, prints the matching results to stdout
 #
 # ./addFamily.sh data.csv 
 

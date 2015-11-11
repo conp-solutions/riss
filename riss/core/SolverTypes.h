@@ -50,8 +50,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 /// TODO remove after debug
 #include <iostream>
-using namespace std;
-
 
 namespace Riss
 {
@@ -81,9 +79,9 @@ struct Lit {
 
     bool operator == (Lit p) const { return x == p.x; }
     bool operator != (Lit p) const { return x != p.x; }
-    bool operator < (Lit p) const { return x < p.x;  }  // '<' makes p, ~p adjacent in the ordering.
-    bool operator <= (Lit p) const { return x <= p.x; } // '<' makes p, ~p adjacent in the ordering.
-    bool operator > (Lit p) const { return x > p.x;  }  // '>' makes p, ~p adjacent in the ordering.
+    bool operator < (Lit p) const { return x < p.x;  }   // '<' makes p, ~p adjacent in the ordering.
+    bool operator <= (Lit p) const { return x <= p.x; }  // '<' makes p, ~p adjacent in the ordering.
+    bool operator > (Lit p) const { return x > p.x;  }   // '>' makes p, ~p adjacent in the ordering.
 };
 
 
@@ -420,7 +418,8 @@ class Clause
     Lit          subsumes(const Clause& other) const;
     bool         ordered_subsumes(const Clause& other) const;
     bool         ordered_equals(const Clause& other) const;
-    void         remove_lit(const Lit& p);         /** keeps the order of the remaining literals */
+    void         remove_lit(const Lit& p);          /** keeps the order of the remaining literals */
+    void         remove_lit_unsorted(const Lit& p); /** modifies the order */
     void         strengthen(const Riss::Lit& p);
 
     void    set_delete(bool b)          { if (b) { header.mark = 1; }  else { header.mark = 0; } }
@@ -631,6 +630,7 @@ class AllocatorReservation
 };
 
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
+const CRef CRef_Error = RegionAllocator<uint32_t>::Ref_Error;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
   public:
@@ -655,7 +655,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::moveTo(to);
     }
 
-    void copyTo(ClauseAllocator& to) const 
+    void copyTo(ClauseAllocator& to) const
     {
         to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::copyTo(to);
@@ -680,7 +680,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         bool use_extra = learnt | extra_clause_field;
-	
+
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(psSize, use_extra));
         new(lea(cid)) Clause(ps, psSize, use_extra, learnt);
 
@@ -1043,6 +1043,22 @@ inline void Clause::remove_lit(const Lit& p)
     }
 }
 
+inline
+void Clause::remove_lit_unsorted(const Lit& p)
+{
+    for (int i = 0; i < size(); ++i) {
+        if (data[i].lit == p) {
+            data[i] = data[ size() - 1 ];
+            break;
+        }
+    }
+    shrink(1);
+    if (has_extra() && size() > 1 && !header.learnt) {
+        calcAbstraction();
+    }
+}
+
+
 inline void Clause::strengthen(const Lit& p)
 {
     remove_lit(p);
@@ -1154,6 +1170,7 @@ class MarkArray
      */
     bool isCurrentStep(const uint32_t index) const
     {
+	assert( index < array.size() && "write access should only be done to elements in the array" );
         return array[index] == step;
     }
 
@@ -1161,6 +1178,7 @@ class MarkArray
      */
     void setCurrentStep(const uint32_t index)
     {
+	assert( index < array.size() && "write access should only be done to elements in the array" );
         array[index] = step;
     }
 
@@ -1190,6 +1208,15 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l)
     if (l == lit_Undef) { other << "lUndef"; }
     else if (l == lit_Error) { other << "lError"; }
     else { other << (sign(l) ? "-" : "") << var(l) + 1; }
+    return other;
+}
+
+/** print literals into a stream */
+inline std::ostream& operator<<(std::ostream& other, const lbool& l)
+{
+    if (l == l_True) { other << "l_True"; }
+    else if (l == l_False) { other << "l_False"; }
+    else { other << "l_Undef"; }
     return other;
 }
 

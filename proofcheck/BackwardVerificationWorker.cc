@@ -7,6 +7,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "riss/utils/Options.h"
 
 using namespace Riss;
+using namespace std;
 
 static IntOption  opt_verbose      ("BACKWARD-CHECK", "bvw-verbose", "verbosity level of the verification worker", 0, IntRange(0, 9));
 static BoolOption opt_lazy         ("BACKWARD-CHECK", "bvw-lazy",    "lazy clause removal (faster,more space)", true);
@@ -16,56 +17,58 @@ static BoolOption opt_preUnit      ("BACKWARD-CHECK", "bvw-unit",    "re-use con
 static BoolOption opt_oldestReason ("BACKWARD-CHECK", "bvw-oreason", "try to mark clauses that are at the beginning of the proof", false);
 static BoolOption opt_preferFormula("BACKWARD-CHECK", "bvw-pformula", "try to mark clauses that are at the beginning of the proof", false);
 
-BackwardVerificationWorker::BackwardVerificationWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< ProofClauseData >& outer_fullProof, vec< ProofClauseLabel >& outer_label, vec< vec<int64_t> >& outer_dependencies, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
-:
-drat( opt_drat ),
-fullDrat( false ),
-parallelMode( none ),
-lazyRemoval( opt_lazy ),
-analyzeMark( opt_analyze ),
-sequentialLimit( 0 ),   // initially, there is no limit and the sequential worker
-verbose(opt_verbose),   // all details for development
-formulaClauses( outer_formulaClauses ),
-label( outer_label ),
-fullProof( outer_fullProof ),
-dependencies( outer_dependencies ),
-ca(0),                                 // have an empty allocator
-originalClauseData( outer_ca ),        // have a reference to the original clauses
-workOnCopy( keepOriginalClauses ),
+BackwardVerificationWorker::BackwardVerificationWorker(bool opt_drat, ClauseAllocator& outer_ca, vec<ProofClauseData>& outer_fullProof,
+                                                       vec<ProofClauseLabel>& outer_label, vec<vec<int64_t>>& outer_dependencies,
+                                                       int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
+    :
+    drat(opt_drat)
+    , fullDrat(false)
+    , parallelMode(none)
+    , lazyRemoval(opt_lazy)
+    , analyzeMark(opt_analyze)
+    , sequentialLimit(0)     // initially, there is no limit and the sequential worker
+    , verbose(opt_verbose)   // all details for development
+    , formulaClauses(outer_formulaClauses)
+    , label(outer_label)
+    , fullProof(outer_fullProof)
+    , dependencies(outer_dependencies)
+    , ca(0)                               // have an empty allocator
+    , originalClauseData(outer_ca)        // have a reference to the original clauses
+    , workOnCopy(keepOriginalClauses)
 
-markedWatches    ( ClauseDataClauseDeleted(ca) ),
-fullWatch        ( ClauseDataClauseDeleted(ca) ),
-variables( outer_variables ),
+    , markedWatches    (ClauseDataClauseDeleted(ca) )
+    , fullWatch        (ClauseDataClauseDeleted(ca) )
+    , variables(outer_variables)
 
-lastPosition(0),
-minimalMarkedProofItem( -1 ),
-markedQhead(0),
-markedUnitHead(0), 
-nonMarkedQHead(0), 
-nonMarkedUnithead(0),
+    , lastPosition(0)
+    , minimalMarkedProofItem( -1 )
+    , markedQhead(0)
+    , markedUnitHead(0)
+    , nonMarkedQHead(0)
+    , nonMarkedUnithead(0)
 
-unitTrailSize(0),
-activeUnits(0),
-rerunPrePropagation(false),
-clearUnitTrail(false),
-preUnitConflict(-1),
+    , unitTrailSize(0)
+    , activeUnits(0)
+    , rerunPrePropagation(false)
+    , clearUnitTrail(false)
+    , preUnitConflict(-1)
 
-lastUnmarkedLiteral(lit_Undef),
-lastUnmarkedPosition(0),
+    , lastUnmarkedLiteral(lit_Undef)
+    , lastUnmarkedPosition(0)
 
-interuptLock(0), // usually, there is no interrupt
+    , interuptLock(0) // usually, there is no interrupt
 
-clausesToBeChecked(0),
-maxClausesToBeChecked(0),
-num_props(0),
-verifiedClauses(0),
-ratChecks(0),
-usedOthersMark(0),
-checkedByOtherWorker(0),
-resolutions(0),
-removedLiterals(0),
-redundantPropagations(0),
-maxSpace(0)
+    , clausesToBeChecked(0)
+    , maxClausesToBeChecked(0)
+    , num_props(0)
+    , verifiedClauses(0)
+    , ratChecks(0)
+    , usedOthersMark(0)
+    , checkedByOtherWorker(0)
+    , resolutions(0)
+    , removedLiterals(0)
+    , redundantPropagations(0)
+    , maxSpace(0)
 {
 }
 

@@ -80,8 +80,9 @@ inline void     SolverRiss::getModel(Riss::vec<Riss::lbool>& model)     { solver
 inline Riss::Lit SolverRiss::trailGet(const unsigned int index)         { return solver.trail[index]; }
 inline unsigned int SolverRiss::getNumberOfTopLevelUnits() const        { return solver.trail_lim.size() == 0 ? solver.trail.size() : solver.trail_lim[0] ; }
 inline unsigned int SolverRiss::getLiteralPTLevel(const Riss::Lit& l) const { return solver.varFlags[var(l)].varPT; }
-inline void     SolverRiss::setCommunication(Riss::Communicator& com)   { 
-  solver.setCommunication(&com); // its a two way interface 
-  com.setSolver( & solver );     // its a two way interface
+inline void     SolverRiss::setCommunication(Riss::Communicator& com)
+{
+    solver.setCommunication(&com); // its a two way interface
+    com.setSolver(& solver);       // its a two way interface
 }
 } // namespace Pcasso

@@ -54,10 +54,13 @@ endif()
 #   of the solver toolchain (e.g. libpca)
 # 
 if(STATIC_BINARIES)
+  # Damn circular dependecies! We have to specify riss library twice,
+  # because libriss needs libcoprcessor and libcorpcessor needs libriss :/
   target_link_libraries(pcasso pcasso-lib-static
-                               riss-pcasso-lib-static
                                pfolio-pcasso-lib-static
-                               coprocessor-pcasso-lib-static)
+                               riss-pcasso-lib-static
+                               coprocessor-pcasso-lib-static
+                               riss-pcasso-lib-static)
   if(CLASSIFIER)
     target_link_libraries(pcasso classifier-pcasso-lib-static libpca-static)
   endif()

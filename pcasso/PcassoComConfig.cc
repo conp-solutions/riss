@@ -51,10 +51,10 @@ PcassoComConfig::PcassoComConfig(const std::string& presetOptions)  // add new o
     , opt_sendEquivalences("SEND", "pcasso-shareEE", "share equivalent literals", true, optionListPtr)
 
 {
-  if (defaultPreset.size() != 0) { 
+    if (defaultPreset.size() != 0) {
 //     DOUT( std::cerr << "c set preset for pcasso: " << defaultPreset << std::endl; );
-    setPreset(defaultPreset);
-  }    // set configuration options immediately
+        setPreset(defaultPreset);
+    }    // set configuration options immediately
 }
 
 } // namespace Riss

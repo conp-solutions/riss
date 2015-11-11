@@ -62,11 +62,11 @@ class PcassoComConfig : public Config
     BoolOption opt_sendDecModel;            // allow sending with variables where the number of models potentially deecreased
     BoolOption opt_useDynamicLimits;        // use dynamic limits for clause sharing
     BoolOption opt_sendEquivalences;        // send info about equivalences
-    
+
 
     /** set all the options of the specified preset option sets (multiple separated with : possible) */
     void setPreset(const std::string& optionSet);
-    
+
     /** set options of the specified preset option set (only one possible!)
      *  Note: overwrites the method of the class Riss::Config, but calls this method, if no match if found within this class
      *  @return true, if the option set is known and has been set!
@@ -106,12 +106,12 @@ bool PcassoComConfig::addPreset(const std::string& optionSet)
     } else if (optionSet == "large") {
         parseOptions("-pcasso-storageSize=100000", false);
     }
-    
+
     else {
-      ret = false; // indicate that no configuration has been found here!
-      if (optionSet != "") { 
-	Riss::Config::parseOptions(optionSet);     // pass string to parent class, which might find a valid setup
-      } 
+        ret = false; // indicate that no configuration has been found here!
+        if (optionSet != "") {
+            Riss::Config::parseOptions(optionSet);     // pass string to parent class, which might find a valid setup
+        }
     }
     parsePreset = false;
     return ret; // return whether a preset configuration has been found

@@ -180,3 +180,4 @@ endif()
 # the usage of coprocessor simpler (you only have to link against one lib).
 add_library(riss-coprocessor-lib-static STATIC $<TARGET_OBJECTS:riss-lib-object> $<TARGET_OBJECTS:coprocessor-lib-object>)
 set_target_properties(riss-coprocessor-lib-static PROPERTIES OUTPUT_NAME "riss-coprocessor")
+target_link_libraries(riss-coprocessor-lib-static z pthread rt)

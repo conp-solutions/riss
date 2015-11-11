@@ -104,7 +104,7 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose, int activeLeve
     // exit(0);
 }
 
-void Riss::printOptions(FILE* pcsFile, int printLevel)
+void Riss::printOptions(FILE* pcsFile, int printLevel, int granularity)
 {
     sort(Option::getOptionList(), Option::OptionLt());
 
@@ -127,7 +127,7 @@ void Riss::printOptions(FILE* pcsFile, int printLevel)
         }
 
         // print the actual option
-        Option::getOptionList()[i]->printOptions(pcsFile, printLevel);
+        Option::getOptionList()[i]->printOptions(pcsFile, printLevel, granularity);
 
         // set prev values, so that print is nicer
         prev_cat  = Option::getOptionList()[i]->category;

@@ -6,18 +6,13 @@ Copyright (c) 2014-2015,      Norbert Manthey, All rights reserved.
 #include "coprocessor/Coprocessor.h"
 #include <assert.h>
 
-
+#include "riss/core/EnumerateMaster.h" // for model enumeration
 
 using namespace Coprocessor;
 using namespace std;
 
 
 // pfolio todos
-#warning be able to disable output completely, use inc/decmodel flags
-#warning error shrink received clauses with reverseMinimization, share reduced clauses again (cite siert)
-#warning have another buffer for equivalences and multi-units, that should not be missed
-#warning set communicator settings incarnation specific, have a way to pass options from cmdline to each incarnation (have one long string as option, split that string)
-
 namespace Riss
 {
 
@@ -28,20 +23,21 @@ static void* runWorkerSolver(void* data);
 
 PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int externalThreads)
     :
-      privateConfig(externalConfig == 0 ? ( configName == 0 ? new PfolioConfig("") : new PfolioConfig(configName)) : externalConfig)
+    privateConfig(externalConfig == 0 ? (configName == 0 ? new PfolioConfig("") : new PfolioConfig(configName)) : externalConfig)
     , deleteConfig(externalConfig == 0)
     , pfolioConfig(* privateConfig)
     , initialized(false)
     , simplified(false)
     , killed(false)
     , threads(pfolioConfig.threads)
-    , winningSolver( -1 )
+    , winningSolver(-1)
     , globalSimplifierConfig(0)
     , globalSimplifier(0)
     , data(0)
     , threadIDs(0)
     , proofMaster(0)
     , opc(0)
+    , modelMaster(nullptr)
     , defaultConfig((const char*) pfolioConfig.opt_defaultSetup == 0 ? "" : string(pfolioConfig.opt_defaultSetup))   // setup the configuration
     , drupProofFile(0)
     , verbosity(0)
@@ -52,7 +48,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     , externalData(nullptr)
     , externalParent(nullptr)
 {
- 
+
     // set number of threads from constructor, overwrite command line, have at least one thread to allocate all structures
     if (externalThreads != -1) { threads = externalThreads > 0 ? externalThreads : 1; }
 
@@ -69,7 +65,7 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     // set global coprocessor configuratoin
     if ((const char*)pfolioConfig.opt_ppconfig != nullptr) {
         defaultSimplifierConfig = string((const char*)pfolioConfig.opt_ppconfig);
- 	DOUT( cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl; );
+        DOUT(cerr << "c pfolio default simplifier config: "  << defaultSimplifierConfig << endl;);
     }
 
     // set preprocessor, if there is one selected
@@ -85,8 +81,8 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     sched_getaffinity(0, sizeof(cpu_set_t), &mask);
     for (int i = 0; i < sizeof(cpu_set_t) << 3; ++i) // add all available cores to the system
         if (CPU_ISSET(i, &mask)) { hardwareCores.push_back(i); }
-    if( hardwareCores.size() > threads ) hardwareCores.resize( threads ); // use only the first required available cores!
-    
+    if (hardwareCores.size() > threads) { hardwareCores.resize(threads); }    // use only the first required available cores!
+
     // set preset configs here
     createThreadConfigs();
 
@@ -100,23 +96,30 @@ PSolver::PSolver(Riss::PfolioConfig* externalConfig, const char* configName, int
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
 
+void PSolver::setEnumnerationMaster(EnumerateMaster* m)
+{
+    assert(modelMaster == nullptr && "cannot have multiple model masters");
+    modelMaster = m;
+}
+
+
 void PSolver::setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* getSpecialBuffer)
 {
-   // simply set buffers
-   externBuffer = getBuffer;
-   externSpecialBuffer = getSpecialBuffer;
-   
-   // if we already ran (or are currently running), store pointers forward
-   if( data != 0 ) {
-     data->setExternBuffers(externBuffer, externSpecialBuffer);
-   }
+    // simply set buffers
+    externBuffer = getBuffer;
+    externSpecialBuffer = getSpecialBuffer;
+
+    // if we already ran (or are currently running), store pointers forward
+    if (data != 0) {
+        data->setExternBuffers(externBuffer, externSpecialBuffer);
+    }
 }
 
 
 void PSolver::setExternalCommunication(Communicator* com)
 {
-  externalData   = com->data;
-  externalParent = com->parent;
+    externalData   = com->data;
+    externalParent = com->parent;
 }
 
 
@@ -170,7 +173,7 @@ PSolver::~PSolver()
     solvers.clear(true);
 
     if (threadIDs != 0) { delete [] threadIDs; threadIDs = 0; }
-    if (data != 0 && data != externalData ) { delete data; } // only delete, if we created this object
+    if (data != 0 && data != externalData) { delete data; }  // only delete, if we created this object
     data = 0;
 
     if (deleteConfig) { delete privateConfig; }
@@ -196,7 +199,8 @@ int PSolver::nClauses() const
     return solvers[0]->nClauses();
 }
 
-Clause& PSolver::GetClause( int index ) const {
+Clause& PSolver::GetClause(int index) const
+{
     return solvers[0]->ca[ solvers[0]->clauses[index] ];
 }
 
@@ -222,18 +226,18 @@ bool PSolver::simplify()
 
 int PSolver::getNumberOfTopLevelUnits()
 {
-  assert( winningSolver <= threads && "" );
-  const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
-  if( s->trail_lim.size() == 0 ) s->trail.size();
-  else s->trail_lim[0];
+    assert(winningSolver <= threads && "");
+    const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
+    if (s->trail_lim.size() == 0) { s->trail.size(); }
+    else { s->trail_lim[0]; }
 }
 
 Lit PSolver::trailGet(int index)
 {
-  assert( winningSolver <= threads && "" );
-  const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
-  assert( index < s->trail.size() && "elements in trail should be available" );
-  return s->trail[index];
+    assert(winningSolver <= threads && "");
+    const Riss::Solver* s = solvers[ winningSolver == -1 ? 0 : winningSolver ];
+    assert(index < s->trail.size() && "elements in trail should be available");
+    return s->trail[index];
 }
 
 
@@ -275,15 +279,15 @@ bool PSolver::addClause_(vec< Lit >& ps)
 
 lbool PSolver::simplifyFormula()
 {
-    DOUT( cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl; );
-    if( winningSolver != -1 ) return l_Undef; // simplify only, if there is no winning solver already
+    DOUT(cerr << "c call of PSolver object " << std::hex << this << std::dec << " simplifyFormula with default config: " << defaultSimplifierConfig << " and winning solver: " << winningSolver << " and simplified: " << simplified << endl;);
+    if (winningSolver != -1) { return l_Undef; }  // simplify only, if there is no winning solver already
     lbool ret = l_Undef;
     /*
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration!
      */
     if (!simplified && defaultSimplifierConfig.size() != 0) {
-	simplified = true;
+        simplified = true;
         assert(globalSimplifierConfig == 0 && globalSimplifier == 0 && "so far we did not setup global solver and simplifier");
 
         globalSimplifierConfig = new Coprocessor::CP3Config(defaultSimplifierConfig.c_str());
@@ -303,7 +307,7 @@ lbool PSolver::simplifyFormula()
             winningSolver = 0;
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-	    extendModel(model);
+            extendModel(model);
             if (ret == l_True && verbosity > 0) { cerr << "c solved formula with simplification" << endl; }
             return ret;
         }
@@ -311,8 +315,9 @@ lbool PSolver::simplifyFormula()
     return ret; // we do not know the state, if we should not run simplification
 }
 
-void PSolver::extendModel( Riss::vec< Riss::lbool >& externalModel ) {
-  if (globalSimplifier != 0) { globalSimplifier->extendModel(externalModel); }
+void PSolver::extendModel(Riss::vec< Riss::lbool >& externalModel)
+{
+    if (globalSimplifier != 0) { globalSimplifier->extendModel(externalModel); }
 }
 
 lbool PSolver::solveLimited(const vec< Lit >& assumps)
@@ -320,46 +325,53 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
     winningSolver = -1;
     lbool ret = l_Undef;
-    
-    if( !initialized ) {  // check whether some solver wants to work on the original formula
-      bool keepOriginal = false;
-      for (int i = 1; i < threads; ++ i) { // iterate over threads, as we do not have solvers at the moment
-	if( configs[i].opt_useOriginal ) { // a configuration that wants to work on the original formula should not share anything
-	  keepOriginal = keepOriginal || configs[i].opt_useOriginal;
-	}
-      }
-      if( keepOriginal ) {
-	assert( originalFormula == nullptr && "set this only once" );
-	originalFormula = new OriginalFormula(solvers[0]->trail, solvers[0]->clauses, solvers[0]->ca, solvers[0]->nVars(),
-	    solvers[0]->activity, solvers[0]->order_heap, solvers[0]->varFlags, solvers[0]->vardata); // memorize current state for initialization
-      }
+
+    if (!initialized) {   // check whether some solver wants to work on the original formula
+        bool keepOriginal = false;
+        for (int i = 1; i < threads; ++ i) { // iterate over threads, as we do not have solvers at the moment
+            if (configs[i].opt_useOriginal) {  // a configuration that wants to work on the original formula should not share anything
+                keepOriginal = keepOriginal || configs[i].opt_useOriginal;
+            }
+        }
+        if (keepOriginal) {
+            assert(originalFormula == nullptr && "set this only once");
+            originalFormula = new OriginalFormula(solvers[0]->trail, solvers[0]->clauses, solvers[0]->ca, solvers[0]->nVars(),
+                                                  solvers[0]->activity, solvers[0]->order_heap, solvers[0]->varFlags, solvers[0]->vardata); // memorize current state for initialization
+        }
     }
-    
-    
+
+
     /*
      * preprocess the formula with the preprocessor of the first solver
      * but only in the very first iteration (there is a simplified-flag that is set accordingly)
      */
     ret = simplifyFormula();
-    if( ret != l_Undef ) {
-      if( originalFormula != nullptr ) {
-	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
-	  originalFormula = nullptr;
-      }
-      return ret; // simplification resulted in UNSAT or SAT already
+    if (ret == l_False) {
+        if (originalFormula != nullptr) {
+            delete originalFormula ;   // free resources again, as we initialized all incarnations now
+            originalFormula = nullptr;
+        }
+        return ret; // simplification resulted in UNSAT or SAT already
     }
 
     if (! initialized) {  // distribute the formula, if this is the first call to this method!
+
+        /** now we have a preprocessor, so that we can continue setting up the model master */
+        if (modelMaster != nullptr) {
+            if (globalSimplifier != nullptr) { modelMaster->setPreprocessor(globalSimplifier) ; }
+            modelMaster->initEnumerateModels(); // for this method, coprocessor and projection have to be known already!
+            solvers[0]->setEnumnerationMaster(modelMaster);
+        }
 
         /* setup all solvers
         * setup the communication system for the solvers, including the number of commonly known variables
         */
         if (initializeThreads()) {
-            DOUT( cerr << "c initialization of " << threads << " threads: failed" << endl; );
-	    if( originalFormula != nullptr ) {
-	      delete originalFormula ;   // free resources again, as we initialized all incarnations now
-	      originalFormula = nullptr;
-	    }
+            DOUT(cerr << "c initialization of " << threads << " threads: failed" << endl;);
+            if (originalFormula != nullptr) {
+                delete originalFormula ;   // free resources again, as we initialized all incarnations now
+                originalFormula = nullptr;
+            }
             return l_Undef;
         } else {
             if (verbosity > 0) { cerr << "c initialization of " << threads << " threads: succeeded" << endl; }
@@ -370,63 +382,65 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
          * copy the formula from the first solver to all the other solvers
          */
 
-	/// if the first solver was not initialized due to simplification, set it up correctly before copying to the other incarnations
-	if( !simplified ) solvers[0]->solve_(Solver::SolveCallType::initializeOnly);
-	
+        /// if the first solver was not initialized due to simplification, set it up correctly before copying to the other incarnations
+        if (!simplified) { solvers[0]->solve_(Solver::SolveCallType::initializeOnly); }
+
         for (int i = 1; i < solvers.size(); ++ i) {
-	  
-	  if( ! configs[i].opt_useOriginal ) {
-	  
-            solvers[i]->reserveVars(solvers[0]->nVars());
-            while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
-            communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
 
-            // pseudo clone solver incarnations
-            solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
-            solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
-            solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
-            solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
-            solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
-            solvers[0]->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
-            solvers[0]->varFlags.copyTo(solvers[i]->varFlags);
-            solvers[0]->vardata.copyTo(solvers[i]->vardata);
+            if (! configs[i].opt_useOriginal) {
 
-            // attach all clauses
-            for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
-                solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+                solvers[i]->reserveVars(solvers[0]->nVars());
+                while (solvers[i]->nVars() < solvers[0]->nVars()) { solvers[i]->newVar(); }
+                communicators[i]->setFormulaVariables(solvers[0]->nVars());   // tell which variables can be shared
+
+                // pseudo clone solver incarnations
+                solvers[i]->addUnitClauses(solvers[0]->trail);   // copy all the unit clauses, adds to the proof
+                solvers[0]->ca.copyTo(solvers[i]->ca);             // have information about clauses
+                solvers[0]->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
+                solvers[0]->learnts.copyTo(solvers[i]->learnts);   // copy clauses silently without the proof, no redundancy check required
+                solvers[0]->activity.copyTo(solvers[i]->activity); // copy activity
+                solvers[0]->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
+                solvers[0]->varFlags.copyTo(solvers[i]->varFlags);
+                solvers[0]->vardata.copyTo(solvers[i]->vardata);
+
+                // attach all clauses
+                for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
+                    solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+                }
+                for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
+                    solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+                }
+
+                assert(! configs[i].opt_useOriginal && "run initializeOnly only if we are working with the simplified formula already");
+                solvers[i]->solve_(Solver::SolveCallType::initializeOnly);   // let solve initialize itself, if it does not want to perform the full solving process on its own
+            } else { // initialize based on original formula
+
+                communicators[i]->setDoSend(false);     // disable sending hard   // TODO might be disabled once sharing and simplification works nicely together
+                communicators[i]->setDoReceive(false);  // disable receiving hard // TODO might be disabled once sharing and simplification works nicely together
+
+                assert(originalFormula != nullptr && "had to be collected before");
+                solvers[i]->reserveVars(originalFormula->nVars);
+                while (solvers[i]->nVars() < originalFormula->nVars) { solvers[i]->newVar(); }
+                communicators[i]->setFormulaVariables(originalFormula->nVars);   // tell which variables can be shared
+
+                solvers[i]->addUnitClauses(originalFormula->trail);   // copy all the unit clauses, adds to the proof
+                originalFormula->ca.copyTo(solvers[i]->ca);             // have information about clauses
+                originalFormula->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
+                originalFormula->activity.copyTo(solvers[i]->activity); // copy activity
+                originalFormula->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
+                originalFormula->varFlags.copyTo(solvers[i]->varFlags);
+                originalFormula->vardata.copyTo(solvers[i]->vardata);
+
+                // attach all clauses
+                for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
+                    solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
+                }
             }
-            for (int j = 0 ; j < solvers[i]->learnts.size(); ++ j) {
-                solvers[i]->attachClause(solvers[i]->learnts[j]);     // import the clause of solver 0 into solver i; does not add to the proof
-            }
-            
-            assert(! configs[i].opt_useOriginal && "run initializeOnly only if we are working with the simplified formula already" );
-            solvers[i]->solve_(Solver::SolveCallType::initializeOnly);   // let solve initialize itself, if it does not want to perform the full solving process on its own
-	  } else { // initialize based on original formula
-	    
-	    communicators[i]->setDoSend(false);     // disable sending hard   // TODO might be disabled once sharing and simplification works nicely together
-	    communicators[i]->setDoReceive(false);  // disable receiving hard // TODO might be disabled once sharing and simplification works nicely together
-	    
-	    assert( originalFormula != nullptr && "had to be collected before" );
-	    solvers[i]->reserveVars(originalFormula->nVars);
-            while (solvers[i]->nVars() < originalFormula->nVars) { solvers[i]->newVar(); }
-            communicators[i]->setFormulaVariables(originalFormula->nVars);   // tell which variables can be shared
-	    
-            solvers[i]->addUnitClauses(originalFormula->trail);   // copy all the unit clauses, adds to the proof
-            originalFormula->ca.copyTo(solvers[i]->ca);             // have information about clauses
-            originalFormula->clauses.copyTo(solvers[i]->clauses);   // copy clauses silently without the proof, no redundancy check required
-	    originalFormula->activity.copyTo(solvers[i]->activity); // copy activity
-            originalFormula->order_heap.copyOrderTo(solvers[i]->order_heap);   // rebuild order heap (use configuration of other heap, but use own acticities)
-            originalFormula->varFlags.copyTo(solvers[i]->varFlags);
-            originalFormula->vardata.copyTo(solvers[i]->vardata);
-	    
-            // attach all clauses
-            for (int j = 0 ; j < solvers[i]->clauses.size(); ++ j) {
-                solvers[i]->attachClause(solvers[i]->clauses[j]);     // import the clause of solver 0 into solver i; does not add to the proof
-            }
-	  }
-	  
-          if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
-          solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
+
+            if (verbosity > 1) { cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl; }
+            solvers[i]->setPreprocessor(&ppconfigs[i]); // tell solver incarnation about preprocessor
+
+            if (modelMaster != nullptr) { solvers[i]->setEnumnerationMaster(modelMaster); }
         }
 
         // copy the formula of the solver 0 number of thread times
@@ -445,12 +459,12 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 
 
         initialized = true;
-	
-	if( originalFormula != nullptr ) {
-	  delete originalFormula ;   // free resources again, as we initialized all incarnations now
-	  originalFormula = nullptr;
-	}
-	
+
+        if (originalFormula != nullptr) {
+            delete originalFormula ;   // free resources again, as we initialized all incarnations now
+            originalFormula = nullptr;
+        }
+
     } else {
         // already initialized -- simply print the summary
         for (int i = 0; i < solvers.size(); ++ i) {
@@ -509,11 +523,11 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         if (ret == l_True) {
             model.clear();
             solvers[winningSolver]->model.copyTo(model);
-	    
-	    // only extend model, if not independently solved
-	    if( ! configs[winningSolver].opt_useOriginal ) {
-	      extendModel(model);
-	    }
+
+            // only extend model, if not independently solved
+            if (! configs[winningSolver].opt_useOriginal) {
+                extendModel(model);
+            }
 
             if (false && verbosity > 2) {
                 cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;
@@ -562,6 +576,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             if (verbosity > 0) cerr << "c " << i << " : cons: " << communicators[i]->getSolver()->conflicts
                                         <<  "  dec: " << communicators[i]->getSolver()->decisions
                                         <<  "  units: " << (communicators[i]->getSolver()->trail_lim.size() == 0 ? communicators[i]->getSolver()->trail.size() : communicators[i]->getSolver()->trail_lim[0])
+                                        <<  "  models: " << communicators[i]->getSolver()->enumerationClient.getModels()
+                                        <<  "  dup-models: " << communicators[i]->getSolver()->enumerationClient.getDupModels()
                                         << endl;
         }
     }
@@ -575,7 +591,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 void PSolver::createThreadConfigs()
 {
     const char* Configs[] = {
-        "STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll", 
+        "STRONGUNSAT:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -cp3_uhdProbe=4 -cp3_uhdPrSize=5 -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=30000 -cp3_itechs=uepgxv -no-dense -up -refRec -shareTime=1 -sendAll",
         "-no-usePP -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -refRec -resRefRec",
         "-no-usePP -revMin -init-act=3 -actStart=2048 -keepWorst=0.01 -refRec ""-revMin -init-act=4 -actStart=2048 -refRec",
         "-no-usePP -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -refRec ",
@@ -597,7 +613,7 @@ void PSolver::createThreadConfigs()
     };
 
 
-    
+
     if (defaultConfig.size() > 0) {
         if (verbosity > 1) { cerr << "c setup pfolio with config " << defaultConfig << endl; }
     }
@@ -688,7 +704,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 8]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "beta") {
@@ -725,7 +741,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uev -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 8]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     }  else if (defaultConfig == "gamma") {
@@ -762,7 +778,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 8]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "delta") {
@@ -799,7 +815,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 8]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "epsilon") {
@@ -836,7 +852,7 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 8]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     }  else if (defaultConfig == "pcassoworker") {
@@ -873,79 +889,84 @@ void PSolver::createThreadConfigs()
             configs[7].setPreset("Riss427:plain_XOR:-no-usePP -cp3_iters=2 -up -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=1000000 -cp3_itechs=uegv -no-dense -up -refRec  -shareTime=2 -sendAll");
         }
         for (int t = 8 ; t < threads; ++ t) {  // set configurations for remaining (beyond 8)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-8]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 8]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "best3") {
-	if (threads > 0) {
+        if (threads > 0) {
             ppconfigs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits");
             configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
         }
-	if (threads > 1) {
+        if (threads > 1) {
             ppconfigs[1].setPreset("CircuitFuzz:-independent");
-              configs[1].setPreset("CircuitFuzz:-independent");
+            configs[1].setPreset("CircuitFuzz:-independent");
         }
-	if (threads > 2) {
+        if (threads > 2) {
             ppconfigs[2].setPreset("EDACC1:-independent");
-              configs[2].setPreset("EDACC1:-independent");
+            configs[2].setPreset("EDACC1:-independent");
         }
         for (int t = 3 ; t < threads; ++ t) {  // set configurations for remaining (beyond 3)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-3]); }   // assign preset, if no cmdline was specified
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 3]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "best4") {
-	if (threads > 0) {
+        if (threads > 0) {
             ppconfigs[0].setPreset("OldRealTime.data2");
             configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
         }
-	if (threads > 1) {
+        if (threads > 1) {
             ppconfigs[1].setPreset("CircuitFuzz:-independent");
-              configs[1].setPreset("CircuitFuzz:-independent");
+            configs[1].setPreset("CircuitFuzz:-independent");
         }
-	if (threads > 2) {
+        if (threads > 2) {
             ppconfigs[2].setPreset("EDACC1:-independent");
-              configs[2].setPreset("EDACC1:-independent");
+            configs[2].setPreset("EDACC1:-independent");
         }
-	if (threads > 3) {
+        if (threads > 3) {
             ppconfigs[3].setPreset("LABS:-independent");
-              configs[3].setPreset("LABS:-independent");
+            configs[3].setPreset("LABS:-independent");
         }
-	for (int t = 4 ; t < threads; ++ t) {  // set configurations for remaining (beyond 4)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-4]); }   // assign preset, if no cmdline was specified
+        for (int t = 4 ; t < threads; ++ t) {  // set configurations for remaining (beyond 4)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 4]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "best6") {
-	if (threads > 0) {
+        if (threads > 0) {
             ppconfigs[0].setPreset("OldRealTime.data2");
             configs[0].setPreset("OldRealTime.data2:-no-receive -shareTime=0 -dynLimits"); // sends all
         }
-	if (threads > 1) {
+        if (threads > 1) {
             ppconfigs[1].setPreset("CircuitFuzz:-independent");
-              configs[1].setPreset("CircuitFuzz:-independent");
+            configs[1].setPreset("CircuitFuzz:-independent");
         }
-	if (threads > 2) {
+        if (threads > 2) {
             ppconfigs[2].setPreset("EDACC1:-independent");
-              configs[2].setPreset("EDACC1:-independent");
+            configs[2].setPreset("EDACC1:-independent");
         }
-	if (threads > 3) {
+        if (threads > 3) {
             ppconfigs[3].setPreset("LABS:-independent");
-              configs[3].setPreset("LABS:-independent");
+            configs[3].setPreset("LABS:-independent");
         }
-	if (threads > 4) {
+        if (threads > 4) {
             ppconfigs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP");
-              configs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP"); // same pp as above, hence share clauses, but do not receive!
+            configs[4].setPreset("RealTime.data2:-no-receive -shareTime=0 -dynLimits -no-usePP -no-useIP"); // same pp as above, hence share clauses, but do not receive!
         }
-	if (threads > 5) {
+        if (threads > 5) {
             ppconfigs[5].setPreset("GI:-independent");
-              configs[5].setPreset("GI:-independent");
+            configs[5].setPreset("GI:-independent");
         }
-	for (int t = 6 ; t < threads; ++ t) {  // set configurations for remaining (beyond 6)
-            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t-6]); }   // assign preset, if no cmdline was specified
+        for (int t = 6 ; t < threads; ++ t) {  // set configurations for remaining (beyond 6)
+            if (incarnationConfigs[t].size() == 0) { configs[t].setPreset(Configs[t - 6]); } // assign preset, if no cmdline was specified
             else { configs[t].setPreset(incarnationConfigs[t]); }                          // otherwise, use commandline configuration
         }
-    } 
-      
-    
+    }  else if (defaultConfig == "ENU") {
+        for (int t = 1 ; t < threads; ++ t) {  // set configurations for remaining (beyond 3)
+            configs[t].setPreset("-shareTime=1 -dynLimits -rnd-freq=0.01");
+        }
+    }
+
+
+
     /*
     *
     * Configurations that are added here might also be added as preset to PfolioConfig.cc
@@ -955,14 +976,14 @@ void PSolver::createThreadConfigs()
 
 
     // add extra commands, even if a preset is used
-    if( pfolioConfig.addExtraSetup ) { 
-      // assign options from the commandline additionally to already set uptions
-      for (int t = 0 ; t < threads; ++ t) {
-        if (incarnationConfigs.size() > t && incarnationConfigs[t].size() > 0) {
-          configs[t].setPreset(incarnationConfigs[t]);
-          ppconfigs[t].setPreset(incarnationConfigs[t]);
-	}
-      }
+    if (pfolioConfig.addExtraSetup) {
+        // assign options from the commandline additionally to already set uptions
+        for (int t = 0 ; t < threads; ++ t) {
+            if (incarnationConfigs.size() > t && incarnationConfigs[t].size() > 0) {
+                configs[t].setPreset(incarnationConfigs[t]);
+                ppconfigs[t].setPreset(incarnationConfigs[t]);
+            }
+        }
     }
 
     // assign common setup prefix
@@ -976,17 +997,17 @@ void PSolver::createThreadConfigs()
 
 void PSolver::overwriteAsIndependent(const string& preferredSequentialConfig, int thread)
 {
-  assert( thread > 0 && thread < threads && "worker must exist" );
-  
-  // remove parsed values
-  configs[thread].reset();
-  ppconfigs[thread].reset();
-  
-  // set preset
-  configs[thread].setPreset( preferredSequentialConfig );
-  ppconfigs[thread].setPreset( preferredSequentialConfig );
-  // tell system that this configuration is independent
-  configs[thread].opt_useOriginal = true;
+    assert(thread > 0 && thread < threads && "worker must exist");
+
+    // remove parsed values
+    configs[thread].reset();
+    ppconfigs[thread].reset();
+
+    // set preset
+    configs[thread].setPreset(preferredSequentialConfig);
+    ppconfigs[thread].setPreset(preferredSequentialConfig);
+    // tell system that this configuration is independent
+    configs[thread].opt_useOriginal = true;
 }
 
 
@@ -1006,16 +1027,16 @@ bool PSolver::initializeThreads()
     // get space for thread ids
     threadIDs = new pthread_t [threads];
 
-    
-    if( externalData != nullptr ) {
-      data = externalData;  // use the external data 
+
+    if (externalData != nullptr) {
+        data = externalData;  // use the external data
     } else {
-      data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
+        data = new CommunicationData(privateConfig->opt_storageSize == 0 ? 4000 * threads : privateConfig->opt_storageSize);   // space for clauses, dynamic or static
     }
 
     // communicate with external data pool, if there are links present
-    if( externBuffer != 0 || externSpecialBuffer != 0) {
-      data->setExternBuffers(externBuffer, externSpecialBuffer);
+    if (externBuffer != 0 || externSpecialBuffer != 0) {
+        data->setExternBuffers(externBuffer, externSpecialBuffer);
     }
 
     // the portfolio should print proofs
@@ -1035,11 +1056,11 @@ bool PSolver::initializeThreads()
             solvers.push(new Solver(& configs[i]));      // solver 0 should exist already!
         }
 
-        if( hardwareCores.size() > 0 ) { // if cores are available
-	  int coreID = i % hardwareCores.size();
-	  communicators[i]->hardwareCore = coreID;
-	}
-        
+        if (hardwareCores.size() > 0) {  // if cores are available
+            int coreID = i % hardwareCores.size();
+            communicators[i]->hardwareCore = coreID;
+        }
+
         // setup parameters for communication system
         communicators[i]->protectAssumptions = pfolioConfig.opt_protectAssumptions;
         communicators[i]->sendSize = pfolioConfig.opt_sendSize;
@@ -1064,22 +1085,22 @@ bool PSolver::initializeThreads()
 
             }
         }
-        
+
         // forward tree parents (which will be deleted when this communicator is deleted)
-        if( externalParent != nullptr ) {
-	  TreeReceiver* p = externalParent;     // working pointer for the existing hierarchy
-	  TreeReceiver *r = new TreeReceiver(); // pointer for the copy of the hierarchy
-	  r->setData( p->getData() );           // link first level
-	  communicators[i]->setParentReceiver( r ); // tell communicator
-	  
-	  while( p->hasParent() ) {
-	    p = p->getParent();                    // move one level upwards
-	    TreeReceiver* n = new TreeReceiver();  // create new receiver
-	    n->setData( p->getData() );            // link data
-	    r->setParent( n );                     // store parent
-	    r = n;                                 // follow one level up
-	  }
-	}
+        if (externalParent != nullptr) {
+            TreeReceiver* p = externalParent;     // working pointer for the existing hierarchy
+            TreeReceiver *r = new TreeReceiver(); // pointer for the copy of the hierarchy
+            r->setData(p->getData());             // link first level
+            communicators[i]->setParentReceiver(r);   // tell communicator
+
+            while (p->hasParent()) {
+                p = p->getParent();                    // move one level upwards
+                TreeReceiver* n = new TreeReceiver();  // create new receiver
+                n->setData(p->getData());              // link data
+                r->setParent(n);                       // store parent
+                r = n;                                 // follow one level up
+            }
+        }
 
         // tell the communication system about the solver
         communicators[i]->setSolver(solvers[i]);
@@ -1180,13 +1201,13 @@ void PSolver::waitFor(const WaitState waitState)
 void PSolver::kill()
 {
     if (!initialized) { return; }  // child threads have never been created - no need to kill them
-    if( killed ) return; // killed already
+    if (killed) { return; }  // killed already
     killed = true;
     if (verbosity > 0) { cerr << "c MASTER kills all child threads ..." << endl; }
-    
+
     // tell each incarnation that it should stop now
     interrupt();
-    
+
     // set all threads to working (they'll have a look for new work on their own)
     for (unsigned i = 0 ; i < threads; ++ i) {
         communicators[i]->ownLock->lock();
@@ -1208,7 +1229,7 @@ void PSolver::kill()
     for (unsigned i = 0 ; i < threads; ++ i) {
         int* status = 0;
         int err = 0;
-	pthread_cancel(threadIDs[i]); // terminate thread
+        pthread_cancel(threadIDs[i]); // terminate thread
         err = pthread_join(threadIDs[i], (void**)&status); // wait for terminated thread
         if (err != 0) { cerr << "c joining a thread resulted in a failure with status " << *status << endl; }
     }
@@ -1231,14 +1252,14 @@ void* runWorkerSolver(void* data)
     Communicator& info = * ((Communicator*)data);
 
     if (info.hardwareCore >= 0) {  // pin this thread to the specified core, if greater equal to zero
-	cpu_set_t mask;
-	CPU_ZERO(&mask); 
-	CPU_SET(info.hardwareCore, &mask);
-	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-	  PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
-	}
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        CPU_SET(info.hardwareCore, &mask);
+        if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
+            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
+        }
     }
-    
+
     if (verbose) { cerr << "c started thread with id " << info.getID() << endl; }
     // initially, wait until master provides work!
     info.ownLock->lock();
@@ -1261,13 +1282,13 @@ void* runWorkerSolver(void* data)
         // do work
         lbool result l_Undef;
         if (!info.getSolver()->okay()) { result = l_False; }
-        else { 
-	  if( info.independent() ) {
-	    result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::full);  // as we are working on the original formula, have the change to initialize amd simplify
-	  } else {
-	    result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification); // we work on a simplified formula, do not simplify/initialize again
-	  }
-	}
+        else {
+            if (info.independent()) {
+                result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::full);  // as we are working on the original formula, have the change to initialize amd simplify
+            } else {
+                result = info.getSolver()->solveLimited(assumptions, Solver::SolveCallType::afterSimplification); // we work on a simplified formula, do not simplify/initialize again
+            }
+        }
 
         info.setReturnValue(result);
         if (verbose) cerr << "c [THREAD] " << info.getID() << " result " <<

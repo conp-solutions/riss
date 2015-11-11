@@ -18,6 +18,9 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 namespace Riss
 {
 
+/** forward declaration */
+class EnumerateMaster;
+
 class PSolver
 {
 
@@ -45,61 +48,65 @@ class PSolver
     ProofMaster* proofMaster;     // in a portfolio setup, use the proof master for generating DRUP proofs
     OnlineProofChecker* opc;      // check the proof on the fly during its creation
 
+    EnumerateMaster* modelMaster; // object that controls parallel model enumeration
+
     std::string defaultConfig;                     // name of the configuration that should be used
     std::string defaultSimplifierConfig;           // name of the configuration that should be used by the global simplification
     std::vector< std::string > incarnationConfigs; // strings of incarnation configurations
 
     std::vector<unsigned short int> hardwareCores; // list of available cores for this parallel solver
-    
+
     // communicate with external solvers
     ClauseRingBuffer* externBuffer;            // special buffer that should be used to send clauses to
     ClauseRingBuffer* externSpecialBuffer;     // special buffer that should be used to send clauses to
-    
+
     /** store original formula for incarnations that do not want to use global preprocessing */
-    class OriginalFormula {
-    public: 
-      vec<Lit>    trail;    // trail for learned clause minimization
-      vec<CRef>   clauses;  // List of problem clauses.
-      ClauseAllocator ca; // clause allocator
-      vec<double> activity; // A heuristic measurement of the activity of a variable.
-      Heap<Solver::VarOrderLt> order_heap;  // A priority queue of variables ordered with respect to the variable activity.
-      vec<Solver::VarFlags>    varFlags;    // state of variables
-      vec<Solver::VarData>     vardata;     // Stores reason and level for each variable.
-      int nVars;
-      
-      OriginalFormula(const vec<Lit>&  originaltrail, const vec<CRef>& originalclauses, const ClauseAllocator& originalca, const int vars,
-	const vec<double>& originalactivity,
-	const Heap<Solver::VarOrderLt>& originalorder_heap,
-	const vec<Solver::VarFlags>&    originalvarFlags,
-	const vec<Solver::VarData>&     originalvardata
-      ) : nVars(vars)
-      , order_heap(Solver::VarOrderLt(activity))
-      {
-	originaltrail.copyTo( trail );
-	originalclauses.copyTo( clauses );
-	originalca.copyTo( ca );
-	originalactivity.copyTo(activity);
-	originalorder_heap.copyOrderTo(order_heap);
-	originalvarFlags.copyTo( varFlags );
-	originalvardata.copyTo(  vardata  );
-      }
-      
-      ~OriginalFormula () {
-	vardata.clear(true);
-	varFlags.clear(true);
-	order_heap.clear(true);
-	activity.clear(true);
-	ca.clear(true);
-	clauses.clear(true);
-	trail.clear(true);
-      }
+    class OriginalFormula
+    {
+      public:
+        vec<Lit>    trail;    // trail for learned clause minimization
+        vec<CRef>   clauses;  // List of problem clauses.
+        ClauseAllocator ca; // clause allocator
+        vec<double> activity; // A heuristic measurement of the activity of a variable.
+        Heap<Solver::VarOrderLt> order_heap;  // A priority queue of variables ordered with respect to the variable activity.
+        vec<Solver::VarFlags>    varFlags;    // state of variables
+        vec<Solver::VarData>     vardata;     // Stores reason and level for each variable.
+        int nVars;
+
+        OriginalFormula(const vec<Lit>&  originaltrail, const vec<CRef>& originalclauses, const ClauseAllocator& originalca, const int vars,
+                        const vec<double>& originalactivity,
+                        const Heap<Solver::VarOrderLt>& originalorder_heap,
+                        const vec<Solver::VarFlags>&    originalvarFlags,
+                        const vec<Solver::VarData>&     originalvardata
+                       ) : nVars(vars)
+            , order_heap(Solver::VarOrderLt(activity))
+        {
+            originaltrail.copyTo(trail);
+            originalclauses.copyTo(clauses);
+            originalca.copyTo(ca);
+            originalactivity.copyTo(activity);
+            originalorder_heap.copyOrderTo(order_heap);
+            originalvarFlags.copyTo(varFlags);
+            originalvardata.copyTo(vardata);
+        }
+
+        ~OriginalFormula()
+        {
+            vardata.clear(true);
+            varFlags.clear(true);
+            order_heap.clear(true);
+            activity.clear(true);
+            ca.clear(true);
+            clauses.clear(true);
+            trail.clear(true);
+        }
     };
     OriginalFormula* originalFormula; // data of original formula after parsing (if not set to be used, equal to nullptr)
-    
-    
+
+
     CommunicationData* externalData;    // pointer to the data, that is shared among all threads
     TreeReceiver* externalParent;       // handle to communcation of parent node
-    
+
     // Output for DRUP unsat proof
     FILE* drupProofFile;
 
@@ -128,7 +135,7 @@ class PSolver
     Coprocessor::CP3Config& getPPConfig(const int solverID);
 
     /** set global pp config */
-    void setGlobalSimplifierConfig(const string& _config) { defaultSimplifierConfig = _config; }
+    void setGlobalSimplifierConfig(const std::string& _config) { defaultSimplifierConfig = _config; }
 
     //
     // solve the formula in parallel, including communication and all that
@@ -138,19 +145,19 @@ class PSolver
      */
     Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
 
-    /** simplify given formula with the global preprocessor 
+    /** simplify given formula with the global preprocessor
      *  (only once, sets simplified flag)
      *  @return state of the formula, adds model, if state is l_true
      */
     Riss::lbool simplifyFormula();
 
     /** use global simplifier to re-setup given model */
-    void extendModel( Riss::vec< Riss::lbool>& externalModel );
-    
-    
+    void extendModel(Riss::vec< Riss::lbool>& externalModel);
+
+
     /** use these buffers when initializin the solver to send clauses to, also cross link own buffers back */
     void setExternBuffers(ClauseRingBuffer* getBuffer, ClauseRingBuffer* getSpecialBuffer);
-	
+
     //
     // executed only for the first solver (e.g. for parsing and simplification)
     //
@@ -160,8 +167,8 @@ class PSolver
     int nClauses() const;
 
     /** return reference to the clause with the given index */
-    Clause& GetClause( int index ) const ;
-    
+    Clause& GetClause(int index) const ;
+
     /** The current number of variables of the 1st solver. */
     int nVars() const;
 
@@ -173,12 +180,12 @@ class PSolver
 
     /** Removes already satisfied clauses in the first solver */
     bool simplify();
-    
+
     /** execute for first solver, or winning solver, if there is a winning solver */
     int getNumberOfTopLevelUnits();
-    
+
     /** execute for first solver, or winning solver, if there is a winning solver */
-    Lit trailGet( int index );
+    Lit trailGet(int index);
 
     //
     // executed for all present solvers:
@@ -207,7 +214,7 @@ class PSolver
      * and split them into the data strcuture incarnationConfigs
      */
     void parseConfigurations(const std::string& combinedConfigurations);
-    
+
     /** overwrite a thread configuration from the outside, the thread will work on the original formula then
      * @param preferredSequentialConfig configuration to be set with "setPreset" for the given thread
      * @param thread worker number that should use this configuration
@@ -218,7 +225,7 @@ class PSolver
      *  Note: when this solver is shut down, nothing is deleted additionally
      */
     void setExternalCommunication(Communicator* com);
-    
+
   protected:
 
     /** initialize all the thread configurations
@@ -251,11 +258,14 @@ class PSolver
      */
     void continueWork();
 
-public:
+  public:
     /** stops all parallel workers and kill their processes
      * note: afterwards, no other operations should be executed any more (for now)
      */
     void kill();
+
+    /** tell pfolio solver about enumeration */
+    void setEnumnerationMaster(EnumerateMaster* modelMaster);
 
 };
 

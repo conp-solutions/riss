@@ -5,7 +5,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Coprocessor.h"
 
 
-#include "coprocessor/VarFileParser.h"
+#include "riss/utils/VarFileParser.h"
 #include "coprocessor/Shuffler.h"
 #include "riss/mtl/Sort.h"
 
@@ -48,8 +48,8 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
     , probing(config, solver->ca, controller, data, propagation, ee, *solver)
     , rate(config, solver->ca, controller, data, *solver, propagation)
-    , res(config, solver->ca, controller, data, propagation)
-    , rew(config, solver->ca, controller, data, subsumption)
+    , resolving(config, solver->ca, controller, data, propagation)
+    , rewriter(config, solver->ca, controller, data, subsumption)
     , fourierMotzkin(config, solver->ca, controller, data, propagation, *solver)
     , dense(config, solver->ca, controller, data, propagation)
     , symmetry(config, solver->ca, controller, data, *solver)
@@ -57,8 +57,9 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , bce(config, solver->ca, controller, data, propagation)
     , la(config, solver->ca, controller, data, propagation)
     , entailedRedundant(config, solver->ca, controller, data)
+    , hbr(config, solver->ca, controller, data, propagation)
+    , shuffler(config)
     , sls(config, data, solver->ca, controller)
-    , twoSAT(config, solver->ca, controller, data)
     , shuffleVariable(-1)
 {
     controller.init();
@@ -72,7 +73,9 @@ Preprocessor::~Preprocessor()
 lbool Preprocessor::performSimplification()
 {
     if (! config.opt_enabled) { return l_Undef; }
-    if (config.opt_verbose > 4) { cerr << "c start simplifying with coprocessor" << endl; }
+    if (config.opt_verbose > 4) {
+        cerr << "c start simplifying with coprocessor" << endl;
+    }
 
     if (formulaVariables == -1) {
         if (config.opt_verbose > 2) { cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl; }
@@ -113,56 +116,22 @@ lbool Preprocessor::performSimplification()
     moh.stop();
 
     for (int ppIteration = 0; ppIteration < (data.isInprocessing() ? 1 : config.opt_simplifyRounds); ++ ppIteration) {
+
+//      cerr << "c EE replacements: " << endl;
+// 	for ( Var v = 0 ; v < data.nVars(); ++ v ) {
+// 	  if( v != var(data.replacedBy() [ v ]) ) cerr << "c " << v << " <-> " << var(data.replacedBy() [ v ]) << endl;
+// 	}
       
-      
-	if( data.isInterupted() ) break; // stop here due to signal
-      
+        if (data.isInterupted()) { break; }  // stop here due to signal
+
         double iterTime = cpuTime();
-        DOUT(if (config.opt_verbose > 0 || config.opt_debug ) cerr << "c pp iteration " << ppIteration << endl;);
+        DOUT(if (config.opt_verbose > 0 || config.opt_debug) cerr << "c pp iteration " << ppIteration << endl;);
         // do preprocessing
         if (config.opt_up) {
             if (config.opt_verbose > 0) { cerr << "c up ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") propagate" << endl; }
             if (status == l_Undef) { status = propagation.process(data, true); }
             if (config.opt_verbose > 1)  { printStatistics(cerr); propagation.printStatistics(cerr); }
-        }
-
-        if (config.opt_twosat_init) {
-            if (config.opt_verbose > 0) { cerr << "c 2sat ..." << endl; }
-            if (config.opt_verbose > 4) { cerr << "c coprocessor 2SAT" << endl; }
-            if (status == l_Undef) {
-                bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-                if (solvedBy2SAT) {
-                    bool isNotSat = false;
-                    for (int i = 0 ; i < data.getClauses().size(); ++ i) {
-                        const Clause& cl = ca[ data.getClauses()[i] ];
-                        int j = 0;
-                        for (; j < cl.size(); ++ j) {
-                            if (twoSAT.isSat(cl[j])) { break; }
-                        }
-                        if (j == cl.size()) { isNotSat = true; break; }
-                    }
-                    if (isNotSat) {
-                        // only set the phase before search!
-                        if (config.opt_ts_phase && !data.isInprocessing()) {
-                            for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                        }
-                    } else {
-                        cerr // << endl
-                                << "c =================================" << endl
-                                << "c  use the result of 2SAT as model " << endl
-                                << "c =================================" << endl;
-                        // initial twosat model should always be used as a model!
-                        for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                        break;
-                    }
-                } else {
-                    data.setFailed();
-                }
-            }
-            if (! solver->okay()) {
-                status = l_False;
-            }
         }
 
         DOUT(if (printUP || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')) {
@@ -186,7 +155,7 @@ lbool Preprocessor::performSimplification()
         DOUT(if (printXOR || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
         printFormula("after XOR");
         });
-	if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_ent) {
             if (config.opt_verbose > 0) { cerr << "c ent ..." << endl; }
@@ -203,11 +172,11 @@ lbool Preprocessor::performSimplification()
 
         if (config.opt_ternResolve) {
             if (config.opt_verbose > 0) { cerr << "c res3 ..." << endl; }
-            res.process(false);
-            if (config.opt_verbose > 1)  { printStatistics(cerr); res.printStatistics(cerr); }
+            resolving.process(false);
+            if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
             DOUT(if (printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3')) printFormula("after TernResolve"););
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         // clear subsimp stats
         if (true) {
@@ -228,8 +197,8 @@ lbool Preprocessor::performSimplification()
             printFormula("after Susi");
             });
         }
-	if( ! data.ok() ) break; // stop here already
-        
+        if (! data.ok()) { break; }  // stop here already
+
         DOUT(if (config.opt_debug) { checkLists("after SUSI"); scanCheck("after SUSI"); });
 
         if (config.opt_FM) {
@@ -247,13 +216,13 @@ lbool Preprocessor::performSimplification()
             printFormula("after FM");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_rew) {
             if (config.opt_verbose > 0) { cerr << "c rew ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl; }
-            if (status == l_Undef) { rew.process(); }   // cannot change status, can generate new unit clauses
-            if (config.opt_verbose > 1)  { printStatistics(cerr); rew.printStatistics(cerr); }
+            if (status == l_Undef) { rewriter.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); rewriter.printStatistics(cerr); }
             if (! data.ok()) {
                 status = l_False;
             }
@@ -264,12 +233,12 @@ lbool Preprocessor::performSimplification()
             printFormula("after REW");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_ee) {  // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
             if (config.opt_verbose > 0) { cerr << "c ee ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl; }
-            if (status == l_Undef) { ee.process(); }   // cannot change status, can generate new unit clauses
+            if (status == l_Undef) { ee.process(data); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); ee.printStatistics(cerr); }
             if (! data.ok()) {
                 status = l_False;
@@ -282,7 +251,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after EE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_unhide) {
             if (config.opt_verbose > 0) { cerr << "c unhide ..." << endl; }
@@ -297,7 +266,7 @@ lbool Preprocessor::performSimplification()
             });
             DOUT(if (config.opt_debug) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_hte) {
             if (config.opt_verbose > 0) { cerr << "c hte ..." << endl; }
@@ -311,7 +280,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after HTE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_probe) {
             if (config.opt_verbose > 0) { cerr << "c probe ..." << endl; }
@@ -326,13 +295,13 @@ lbool Preprocessor::performSimplification()
             });
             data.checkGarbage(); // perform garbage collection
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
 
         if (config.opt_bve) {
             if (config.opt_verbose > 0) { cerr << "c bve ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl; }
-            if (status == l_Undef) { status = bve.runBVE(data); }   // can change status, can generate new unit clauses
+            if (status == l_Undef) { status = bve.process(data); }   // can change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); bve.printStatistics(cerr); }
             data.checkGarbage(); // perform garbage collection
 
@@ -341,7 +310,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BVE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_bva) {
             if (config.opt_verbose > 0) { cerr << "c bva ..." << endl; }
@@ -356,7 +325,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BVA");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_bce) {
             if (config.opt_verbose > 0) { cerr << "c bce ..." << endl; }
@@ -370,7 +339,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BCE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_la) {
             if (config.opt_verbose > 0) { cerr << "c la ..." << endl; }
@@ -384,7 +353,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after BCE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_cce) {
             if (config.opt_verbose > 0) { cerr << "c cce ..." << endl; }
@@ -398,7 +367,7 @@ lbool Preprocessor::performSimplification()
             printFormula("after CCE");
             });
         }
-        if( ! data.ok() ) break; // stop here already
+        if (! data.ok()) { break; }  // stop here already
 
         if (config.opt_rate) {
             if (config.opt_verbose > 0) { cerr << "c rate ..." << endl; }
@@ -414,6 +383,18 @@ lbool Preprocessor::performSimplification()
             });
         }
 
+        if (! data.ok()) { break; }  // stop here already
+
+        if (config.opt_hbr) {
+            if (config.opt_verbose > 0) { cerr << "c hbr ..." << endl; }
+            if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
+            if (status == l_Undef) { hbr.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); hbr.printStatistics(cerr); }
+
+            data.checkGarbage(); // perform garbage collection
+
+            DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
+        }
         //
         // end of simplification iteration
         //
@@ -423,8 +404,8 @@ lbool Preprocessor::performSimplification()
 
     if (config.opt_addRedBins) {
         if (config.opt_verbose > 0) { cerr << "c add2 ..." << endl; }
-        res.process(true);
-        if (config.opt_verbose > 1)  { printStatistics(cerr); res.printStatistics(cerr); }
+        resolving.process(true);
+        if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
         DOUT(if (printAddRedBin || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a')) printFormula("after Add2"););
     }
 
@@ -451,56 +432,6 @@ lbool Preprocessor::performSimplification()
         }
     }
 
-    if (config.opt_twosat) {
-        if (config.opt_verbose > 0) { cerr << "c 2sat ..." << endl; }
-        if (config.opt_verbose > 4) { cerr << "c coprocessor 2SAT" << endl; }
-        if (status == l_Undef) {
-            bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-            if (solvedBy2SAT) {
-                // cerr << "binary clauses have been solved with 2SAT" << endl;
-                // check satisfiability of whole formula!
-                bool isNotSat = false;
-                for (int i = 0 ; i < data.getClauses().size(); ++ i) {
-                    const Clause& cl = ca[ data.getClauses()[i] ];
-                    if (cl.can_be_deleted()) { continue; }
-                    int j = 0;
-                    for (; j < cl.size(); ++ j) {
-                        if (twoSAT.isSat(cl[j])) { break; }
-                    }
-                    if (j == cl.size()) {
-                        isNotSat = true;
-                        cerr << "c twosat does not satisfy: " << cl << endl;
-                        break;
-                    }
-                }
-                if (isNotSat) {
-                    // only set the phase before search!
-                    if (config.opt_ts_phase && !data.isInprocessing()) {
-                        for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (-1 == twoSAT.getPolarity(v)); }
-                    }
-                    cerr // << endl
-                            << "c ================================" << endl
-                            << "c  2SAT model is not a real model " << endl
-                            << "c ================================" << endl;
-                } else {
-                    cerr // << endl
-                            << "c =================================" << endl
-                            << "c  use the result of 2SAT as model " << endl
-                            << "c =================================" << endl;
-                }
-            } else {
-                cerr // << endl
-                        << "================================" << endl
-                        << " unsatisfiability shown by 2SAT " << endl
-                        << "================================" << endl;
-                data.setFailed();
-            }
-        }
-        if (! solver->okay()) {
-            status = l_False;
-        }
-    }
-
     // clear / update clauses and learnts vectores and statistical counters
     // attach all clauses to their watchers again, call the propagate method to get into a good state again
     if (config.opt_verbose > 4) { cerr << "c coprocessor re-setup solver" << endl; }
@@ -516,9 +447,9 @@ lbool Preprocessor::performSimplification()
     DOUT(if (config.opt_check) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
 
     // dense only if not inprocessing, or if enabled explicitly
-    if (config.opt_dense && ( !data.isInprocessing() || config.opt_dense_inprocess) ) {
+    if (config.opt_dense && (!data.isInprocessing() || config.opt_dense_inprocess)) {
         // do as very last step -- not nice, if there are units on the trail!
-        dense.compress();
+        dense.compress(false);
     }
 
     moh.cont();
@@ -546,16 +477,16 @@ lbool Preprocessor::performSimplification()
         if (config.opt_bva) { bva.printStatistics(cerr); }
         if (config.opt_probe) { probing.printStatistics(cerr); }
         if (config.opt_unhide) { unhiding.printStatistics(cerr); }
-        if (config.opt_ternResolve || config.opt_addRedBins) { res.printStatistics(cerr); }
+        if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
-        if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
         if (config.opt_bce) { bce.printStatistics(cerr); }
         if (config.opt_la) { la.printStatistics(cerr); }
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
+        if (config.opt_hbr) { hbr.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
-        if (config.opt_rew) { rew.printStatistics(cerr); }
+        if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
         if (config.opt_dense) { dense.printStatistics(cerr); }
         if (config.opt_symm) { symmetry.printStatistics(cerr); }
@@ -733,16 +664,16 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // addRed2 "a"
         else if (execute == 'a' && config.opt_addRedBins && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c addRed2" << endl; }
-            res.process(true);
-            change = res.appliedSomething() || change;
+            resolving.process(true);
+            change = resolving.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c AddRed2 changed formula: " << change << endl; }
         }
 
         // ternRes "3"
         else if (execute == '3' && config.opt_ternResolve && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c ternRes" << endl; }
-            res.process(false);
-            change = res.appliedSomething() || change;
+            resolving.process(false);
+            change = resolving.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c TernRes changed formula: " << change << endl; }
         }
 
@@ -789,7 +720,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // ee "e"
         else if (execute == 'e' && config.opt_ee && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c ee" << endl; }
-            ee.process();
+            ee.process(data);
             change = ee.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c EE changed formula: " << change << endl; }
         }
@@ -834,6 +765,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
             if (config.opt_verbose > 1) { cerr << "c RATE changed formula: " << change << endl; }
         }
 
+        // HBR "H"
+        else if (execute == 'H' && config.opt_hbr && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c HBR" << endl; }
+            hbr.process();
+            change = rate.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c HBR changed formula: " << change << endl; }
+        }
+
         // hte "h"
         else if (execute == 'h' && config.opt_hte && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c hte" << endl; }
@@ -845,8 +784,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // rewriting "r"
         else if (execute == 'r' && config.opt_rew && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c rew" << endl; }
-            rew.process();
-            change = rew.appliedSomething() || change;
+            rewriter.process();
+            change = rewriter.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c REW changed formula: " << change << endl; }
         }
 
@@ -858,11 +797,19 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
             if (config.opt_verbose > 1) { cerr << "c FM changed formula: " << change << endl; }
         }
 
+        // f "d"
+        else if (execute == 'd' && config.opt_dense && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c dense" << endl; }
+            dense.compress(true);
+            change = dense.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c Dense changed formula: " << change << endl; }
+        }
+
         // none left so far
         else {
             char name[2];
             name[0] = execute; name[1] = 0;
-            DOUT( cerr << "c warning: cannot execute technique related to  " << string(name) << endl; );
+            DOUT(cerr << "c warning: cannot execute technique related to  " << string(name) << endl;);
         }
 
         // perform afte reach call
@@ -914,56 +861,6 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         }
     }
 
-    if (false && config.opt_twosat) { // TODO: decide whether this should be possible! -> have a parameter, 2sat seems to be more useful
-        if (config.opt_verbose > 0) { cerr << "c 2sat ..." << endl; }
-        if (config.opt_verbose > 4) { cerr << "c coprocessor 2SAT" << endl; }
-        if (status == l_Undef) {
-            bool notFailed = twoSAT.solve();  // cannot change status, can generate new unit clauses
-
-            if (data.hasToPropagate()) if (propagation.process(data) == l_False) { data.setFailed(); } ;
-
-            if (notFailed) {
-                // cerr << "binary clauses have been solved with 2SAT" << endl;
-                // check satisfiability of whole formula!
-                bool isNotSat = false;
-                for (int i = 0 ; i < data.getClauses().size(); ++ i) {
-                    const Clause& cl = ca[ data.getClauses()[i] ];
-                    int j = 0;
-                    for (; j < cl.size(); ++ j) {
-                        if (twoSAT.isSat(cl[j])) { break; }
-                    }
-                    if (j == cl.size()) { isNotSat = true; break; }
-                }
-                if (isNotSat) {
-                    // only set the phase before search!
-                    if (config.opt_ts_phase && !data.isInprocessing()) {
-                        for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                    }
-                    cerr // << endl
-                            << "c ================================" << endl
-                            << "c  2SAT model is not a real model " << endl
-                            << "c ================================" << endl;
-                } else {
-                    cerr // << endl
-                            << "c =================================" << endl
-                            << "c  use the result of 2SAT as model " << endl
-                            << "c =================================" << endl;
-                    // next, search would be called, and then a model will be generated!
-                    for (Var v = 0; v < data.nVars(); ++ v) { solver->varFlags[v].polarity = (1 == twoSAT.getPolarity(v)); }
-                }
-            } else {
-                cerr // << endl
-                        << "================================" << endl
-                        << " unsatisfiability shown by 2SAT " << endl
-                        << "================================" << endl;
-                data.setFailed();
-            }
-        }
-        if (! solver->okay()) {
-            status = l_False;
-        }
-    }
-
     // clear / update clauses and learnts vectores and statistical counters
     // attach all clauses to their watchers again, call the propagate method to get into a good state again
     if (config.opt_verbose > 4) { cerr << "c coprocessor re-setup solver" << endl; }
@@ -979,9 +876,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     DOUT(if (config.opt_check) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
 
     // dense only if not inprocessing, or if enabled explicitly
-    if (config.opt_dense && ( !data.isInprocessing() || config.opt_dense_inprocess) ) {
+    if (config.opt_dense && (!data.isInprocessing() || config.opt_dense_inprocess)) {
         // do as very last step -- not nice, if there are units on the trail!
-        dense.compress();
+        dense.compress(false);
     }
 
     moh.cont();
@@ -1007,16 +904,16 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_bva) { bva.printStatistics(cerr); }
         if (config.opt_probe) { probing.printStatistics(cerr); }
         if (config.opt_unhide) { unhiding.printStatistics(cerr); }
-        if (config.opt_ternResolve || config.opt_addRedBins) { res.printStatistics(cerr); }
+        if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
-        if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
         if (config.opt_bce) { bce.printStatistics(cerr); }
         if (config.opt_la) { la.printStatistics(cerr); }
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
+        if (config.opt_hbr) { hbr.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
-        if (config.opt_rew) { rew.printStatistics(cerr); }
+        if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
         if (config.opt_dense) { dense.printStatistics(cerr); }
         if (config.opt_symm) { symmetry.printStatistics(cerr); }
@@ -1039,7 +936,11 @@ lbool Preprocessor::preprocess()
     const bool wasDoingER = solver->getExtendedResolution();
 
     // do not preprocess, if the formula is considered to be too large!
-    if (!data.unlimited() && (data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls || data.nTotLits() > config.opt_cp3_lits)) { return l_Undef; }
+    if (!data.unlimited() && (data.nVars() > config.opt_cp3_vars
+                              || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls
+                              || data.nTotLits() > config.opt_cp3_lits)) {
+        return l_Undef;
+    }
 
     if (config.opt_symm && config.opt_enabled) {  // do only if preprocessor is enabled
         symmetry.process();
@@ -1047,8 +948,11 @@ lbool Preprocessor::preprocess()
     }
 
     lbool ret = l_Undef;
-    if (config.opt_ptechs && string(config.opt_ptechs).size() > 0) { ret = performSimplificationScheduled(string(config.opt_ptechs)); }
-    else { ret = performSimplification(); }
+    if (config.opt_ptechs && string(config.opt_ptechs).size() > 0) {
+        ret = performSimplificationScheduled(string(config.opt_ptechs));
+    } else {
+        ret = performSimplification();
+    }
 
     if (config.opt_exit_pp > 0) { // exit?
         if (config.opt_exit_pp > 1) { // print? TODO: have a method for this output!
@@ -1091,15 +995,19 @@ lbool Preprocessor::inprocess()
     // if no inprocesing enabled, do not do it!
     if (!config.opt_inprocess) { return l_Undef; }
 
-    // do not preprocess, if the formula is considered to be too large!
-    if (!data.unlimited() && ((data.nVars() > config.opt_cp3_ipvars) || ((data.getClauses().size() + data.getLEarnts().size()) > config.opt_cp3_ipcls) || data.nTotLits() > config.opt_cp3_iplits)) { return l_Undef; }
+    // do not inprocess, if the formula is considered to be too large!
+    if (!data.unlimited() && (data.nVars() > config.opt_cp3_ipvars
+                              || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_ipcls
+                              || data.nTotLits() > config.opt_cp3_iplits)) {
+        return l_Undef;
+    }
 
     // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
     if (config.opt_inprocess) {
 
         // increase the distance to the next inprocessing according to the parameter
-	config.opt_inprocessInt = config.opt_inprocessInt + config.opt_inpIntInc;
-      
+        config.opt_inprocessInt = config.opt_inprocessInt + config.opt_inpIntInc;
+
         freezeSearchVariables(); // take care that special variables of the search are not destroyed during simplification
 
         /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/
@@ -1142,9 +1050,11 @@ void Preprocessor::giveMoreSteps()
     ee.giveMoreSteps();
     unhiding.giveMoreSteps();
     probing.giveMoreSteps();
-    res.giveMoreSteps();
-    rew.giveMoreSteps();
+    resolving.giveMoreSteps();
+    rewriter.giveMoreSteps();
     fourierMotzkin.giveMoreSteps();
+    rate.giveMoreSteps();
+    hbr.giveMoreSteps();
 }
 
 lbool Preprocessor::preprocessScheduled()
@@ -1183,18 +1093,24 @@ void Preprocessor::dumpFormula(std::vector< int >& outputFormula)
     }
 }
 
-int Preprocessor::giveNewLit(const int& l) const
+int Preprocessor::importLit(const int& l) const
 {
     // conversion to inner representation, check move value, return value
     const Lit lit = l > 0 ? mkLit(l - 1, false) : mkLit(-l - 1, true);
-    const Lit nl = dense.giveNewLit(lit);
-    return nl == lit_Error ? 0 : (sign(nl) ? (-var(nl) - 1) : (var(nl) + 1));
+    const Lit compressed = solver->compression.importLit(lit);
+
+    if (compressed == lit_Error) {
+        return 0;
+    } else if (sign(compressed)) {
+        return -var(compressed) - 1;
+    } else {
+        return var(compressed) + 1;
+    }
 }
 
-Lit Preprocessor::giveNewLit(const Lit& l) const
+Lit Preprocessor::importLit(const Lit& lit) const
 {
-    const Lit nl = dense.giveNewLit(l);
-    return nl;
+    return solver->compression.importLit(lit);
 }
 
 
@@ -1224,7 +1140,7 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
     // for the most recent changes that have not reached a dense.compress yet
     if (config.opt_dense) {
-        dense.adoptUndoStack(); // necessary here!
+#warning        // TODO has been erased during merging dense.adoptUndoStack(); // necessary here!
         // order is important!
         dense.decompress(model);   // if model has not been compressed before, nothing has to be done!
     }
@@ -1236,11 +1152,14 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
     // get back the old number of variables inside the model, to be able to unshuffle!
     if (formulaVariables != - 1 && formulaVariables < model.size()) {
-        cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl;
+        DOUT( cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl; );
         model.shrink_(model.size() - formulaVariables);
-        cerr << "c model size afterwards: " << model.size() << endl;
+        DOUT( cerr << "c model size afterwards: " << model.size() << endl; );
     }
-    if (config.opt_shuffle) { unshuffle(model); }
+    if (config.opt_shuffle) { 
+      DOUT( cerr << "c unshuffle model " << model.size() << endl; );
+      unshuffle(model); 
+    }
 }
 
 
@@ -1358,10 +1277,13 @@ void Preprocessor::initializePreprocessor()
       }
     }
     */
+    // initialize techniques
+    if (config.opt_bve) { bve.initializeTechnique(data); }
 }
 
 void Preprocessor::destroyTechniques()
 {
+    DOUT(if (config.opt_verbose > 2) { cerr << "c destroy techniques" << endl; });
     // propagation.destroy();
     subsumption.destroy();
     ee.destroy();
@@ -1370,15 +1292,16 @@ void Preprocessor::destroyTechniques()
     if (config.opt_bva) { bva.destroy(); }
     if (config.opt_probe) { probing.destroy(); }
     if (config.opt_unhide) { unhiding.destroy(); }
-    if (config.opt_ternResolve || config.opt_addRedBins) { res.destroy(); }
+    if (config.opt_ternResolve || config.opt_addRedBins) { resolving.destroy(); }
     if (config.opt_xor) { xorReasoning.destroy(); }
     if (config.opt_sls) { sls.destroy(); }
-    if (config.opt_twosat) { twoSAT.destroy(); }
     if (config.opt_bce) { bce.destroy(); }
     if (config.opt_la) { la.destroy(); }
     if (config.opt_cce) { cce.destroy(); }
     if (config.opt_rate) { rate.destroy(); }
     if (config.opt_ent) { entailedRedundant.destroy(); }
+    if (config.opt_hbr) { hbr.destroy(); }
+    if (config.opt_rew) { rewriter.destroy(); }
 
 }
 
@@ -1414,8 +1337,10 @@ void Preprocessor::reSetupSolver()
     for (int i = 0; i < solver->clauses.size(); ++i) {
         const CRef cr = solver->clauses[i];
         Clause& c = ca[cr];
+// 	cerr << "c decide what to do with clause [" << cr << "]: " << c << endl;
         assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
         if (c.can_be_deleted()) {
+// 	    cerr << "c delete" << endl;
             delete_clause(cr);
         } else {
             assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
@@ -1423,6 +1348,7 @@ void Preprocessor::reSetupSolver()
                 if (! config.opt_simplify && solver->qhead == 0) {  // do not change the clause, if nothing has been propagated yet
                     solver->attachClause(cr);
                     solver->clauses[kept_clauses++] = cr; // add original clauss back!
+//                     cerr << "c add silently" << endl;
                     continue;
                 }
 
@@ -1449,13 +1375,15 @@ void Preprocessor::reSetupSolver()
                         c.set_delete(true);
                     }
                     if (solver->propagate() != CRef_Undef) { data.setFailed(); return; }
+//                     cerr << "c propagate and delete unit" << endl;
                     c.set_delete(true);
                 } else {
                     solver->attachClause(cr);
                     solver->clauses[kept_clauses++] = cr; // add original clauss back!
+//                     cerr << "c attach" << endl;
                 }
             } else {
-                if (solver->value(c[0]) == l_Undef)
+                if (solver->value(c[0]) == l_Undef){
                     if (data.enqueue(c[0]) == l_False) {
                         data.addCommentToProof("learnt unit during resetup solver");
                         data.addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
@@ -1464,14 +1392,14 @@ void Preprocessor::reSetupSolver()
                         // assert( false && "This UNSAT case should be recognized before re-setup" );
                         data.setFailed();
                     }
+		}
+// 		cerr << "c propagate and delete unit " << endl;
                 c.set_delete(true);
             }
         }
     }
     int c_old = solver->clauses.size();
     solver->clauses.shrink_(solver->clauses.size() - kept_clauses);
-
-    if (config.opt_verbose > 2) { fprintf(stderr, "c Subs-STATs: removed clauses: %i of %i,%s" , c_old - kept_clauses, c_old, (config.opt_verbose == 1 ? "\n" : "")); }
 
     int learntToClause = 0;
     kept_clauses = 0;
@@ -1545,8 +1473,9 @@ void Preprocessor::reSetupSolver()
             cerr << solver->trail[i] << " " ;
         }
         cerr << endl;
+	cerr << "c qhead: " << solver->qhead << endl;
 
-        if (false) {
+        if (true) {
             cerr << "formula: " << endl;
             for (int i = 0 ; i < data.getClauses().size(); ++ i)
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
@@ -1554,34 +1483,43 @@ void Preprocessor::reSetupSolver()
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
         }
 
-        cerr << "c watch lists: " << endl;
-        for (int v = 0; v < solver->nVars(); v++)
-            for (int s = 0; s < 2; s++) {
-                const Lit l = mkLit(v, s == 0 ? false : true);
-                cerr << "c watch for " << l << endl;
-                for (int i = 0; i < solver->watches[ l ].size(); ++ i) {
-                    cerr << ca[solver->watches[l][i].cref()] << endl;
-                }
-            }
+        if( false ) {
+	  cerr << "c watch lists: " << endl;
+	  for (int v = 0; v < solver->nVars(); v++) {
+	      for (int s = 0; s < 2; s++) {
+		  const Lit l = mkLit(v, s == 0 ? false : true);
+		  cerr << "c watch for " << l << endl;
+		  for (int i = 0; i < solver->watches[ l ].size(); ++ i) {
+		      cerr << ca[solver->watches[l][i].cref()] << endl;
+		  }
+	      }
+	  }
+	}
     }
 
 }
 
 void Preprocessor::shuffle()
 {
-    VarShuffler vs(config);
-
     assert(solver->decisionLevel() == 0 && "shuffle only on level 0!");
 
     // clear all assignments, to not being forced of keeping track of shuffled trail
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
         solver->varFlags[ var(solver->trail[i]) ].assigns = l_Undef;
+	solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
     }
+    solver->qhead = 0;
+    solver->realHead = 0;
+    solver->rebuildOrderHeap(); // needs to add other variables as decision variables again!
 
     // shuffle trail, clauses and learned clauses
     shuffleVariable = data.nVars();
-    vs.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca);
+    shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca); // TODO: should also copy all other variable flags over!
 
+    for (Var v = 0 ; v < data.nVars(); ++ v ) {
+      assert( data.value(v) == l_Undef && "during shuffling no variable can have a value" );
+    }
+    
     // set all assignments according to the trail!
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
         solver->varFlags[ var(solver->trail[i]) ].assigns = sign(solver->trail[i]) ? l_False : l_True;
@@ -1590,11 +1528,8 @@ void Preprocessor::shuffle()
 
 void Preprocessor::unshuffle(vec< lbool >& model)
 {
-    // setup shuffler, and unshuffle model!
-    VarShuffler vs(config);
-
     assert((shuffleVariable == -1 || model.size() == shuffleVariable) && "number of variables has to match");
-    vs.unshuffle(model, model.size());
+    shuffler.unshuffle(model, model.size());
 }
 
 void Preprocessor::sortClauses()
@@ -1660,6 +1595,15 @@ void Preprocessor::printFormula(const string& headline)
         cerr << ca[  data.getLEarnts()[i] ] << endl;
     }
     cerr << "==================== " << endl;
+    cerr << " actual formula to be copied: " << endl;
+    for (int i = 0 ; i < data.getTrail().size() && !data.isInterupted(); ++ i) {
+      cerr << data.getTrail()[i] << " 0" << endl;
+    }
+    for (int i = 0 ; i < data.getClauses().size() && !data.isInterupted(); ++ i) {
+        if (ca[  data.getClauses()[i] ].can_be_deleted() || ca[  data.getClauses()[i] ].learnt()) { continue; }
+        cerr << ca[  data.getClauses()[i] ] << " 0" << endl;
+    }
+    cerr << "==================== " << endl;
 }
 
 bool Preprocessor::checkLists(const string& headline)
@@ -1674,8 +1618,11 @@ bool Preprocessor::checkLists(const string& headline)
             for (int i = 0 ; i < data.list(l).size(); ++ i) {
                 for (int j = i + 1 ; j < data.list(l).size(); ++ j) {
                     if (data.list(l)[i] == data.list(l)[j]) {
-                        ret = true;
-                        cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
+		        if(! ca[ data.list(l)[i] ].can_be_deleted() ) {
+			  ret = true;
+			  cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
+			  assert( false && "fix duplicates!" );
+			}
                     }
                 }
             }

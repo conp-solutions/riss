@@ -5,8 +5,6 @@ Copyright (c) 2015, Norbert Manthey, All rights reserved.
 #ifndef RISS_CONFIGURATIONSELECTOR_H_
 #define RISS_CONFIGURATIONSELECTOR_H_
 
-#warning remove namespace after prototyping
-using namespace std;
 #include <vector>
 
 /** class that implements selection strategies to assign a configuration to instances */

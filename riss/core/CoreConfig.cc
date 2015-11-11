@@ -20,6 +20,7 @@ namespace Riss
 
 static const char* _cat  = "CORE";
 static const char* _cr   = "CORE -- RESTART";
+static const char* _crsw   = "CORE -- RESTART SWITCHING";
 static const char* _cs   = "CORE -- SEARCH";
 static const char* _cred = "CORE -- REDUCE";
 static const char* _cm   = "CORE -- MINIMIZE";
@@ -33,11 +34,11 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     //
     // all the options for the object
     //
-    opt_solve_stats  (_cat, "solve_stats", "print stats about solving process", false,                              optionListPtr),
+    opt_solve_stats  (_cat, "solve_stats", "print stats about solving process #NoAutoT", false,                     optionListPtr),
     opt_fast_rem     (_cat, "rmf", "use fast remove", false,                                                        optionListPtr),
 
-    nanosleep(_misc, "nanosleep", "For each conflict sleep this amount of nano seconds", 0, IntRange(0, INT32_MAX), optionListPtr),
-    ppOnly   (_misc, "ppOnly",    "interrupts search after preprocessing", false,                                   optionListPtr),
+    nanosleep(_misc, "nanosleep", "For each conflict sleep this amount of nano seconds #NoAutoT", 0, IntRange(0, INT32_MAX), optionListPtr),
+    ppOnly   (_misc, "ppOnly",    "interrupts search after preprocessing #NoAutoT", false,                                   optionListPtr),
 
     #ifndef NDEBUG
     opt_learn_debug          (_cat, "learn-debug", "print debug information during learning", false,                        optionListPtr),
@@ -47,11 +48,13 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_refineConflict          (_cm, "refConflict",             "refine conflict clause after solving with assumptions", true,        optionListPtr),
     opt_refineConflictReverse   (_cm, "revRevC",                 "reverse new conflict clause after reverse minimization", false,       optionListPtr),
 
-    opt_K                       (_cr, "K",                       "The constant used to force restart",                         0.8,  DoubleRange(0, false, 1, false), optionListPtr),
-    opt_R                       (_cr, "R",                       "The constant used to block restart",                         1.4,  DoubleRange(1, false, 5, false), optionListPtr),
-    opt_size_lbd_queue          (_cr, "szLBDQueue",              "The size of moving average for LBD (restarts)",                50, IntRange(10, INT32_MAX),         optionListPtr),
-    opt_size_trail_queue        (_cr, "szTrailQueue",            "The size of moving average for trail (block restarts)",      5000, IntRange(10, INT32_MAX),         optionListPtr),
-    opt_size_bounded_randomized (_cr, "sbr",                     "use removal with clause activity based on sbr (randomized)",   12, IntRange(0, INT32_MAX),          optionListPtr),
+    opt_K                       (_cr, "K",                       "The constant used to force restart",                          0.8, DoubleRange(0, false, 1, false), optionListPtr),
+    opt_R                       (_cr, "R",                       "The constant used to block restart",                          1.4, DoubleRange(1, false, 5, false), optionListPtr),
+    opt_size_lbd_queue          (_cr, "szLBDQueue",              "The size of moving average for LBD (restarts)",                50, IntRange(10, 100000),         optionListPtr),
+    opt_size_trail_queue        (_cr, "szTrailQueue",            "The size of moving average for trail (block restarts)",      5000, IntRange(10, 100000),         optionListPtr),
+    opt_size_bounded_randomized (_cr, "sbr",                     "use removal with clause activity based on sbr (randomized)",   12, IntRange(0, INT32_MAX),       optionListPtr),
+
+    opt_litPairDecisions        (_cr, "lpd",                     "decisions to be performed based on previous decisions (0=off)",   0, IntRange(0, 4096),     optionListPtr),
 
     opt_first_reduce_db         (_cred, "firstReduceDB",         "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX),                                      optionListPtr),
     opt_inc_reduce_db           (_cred, "incReduceDB",           "Increment for reduce DB", 300, IntRange(0, INT32_MAX),                                                                  optionListPtr),
@@ -64,13 +67,15 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_quick_reduce            (_cred, "quickRed",              "check only first two literals for being satisfied", false,                                                              optionListPtr),
     opt_keep_worst_ratio        (_cred, "keepWorst",             "keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true),  optionListPtr),
 
-    opt_reduceType              (_cr, "remtype",                 "update LBD during (0=glucose,1=minisat),", 0, IntRange(0, 1),                                                           optionListPtr),
-    opt_learnt_size_factor      (_cr, "rem-lsf",                 "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
-    opt_learntsize_inc          (_cr, "rem-lsi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
-    opt_learntsize_adjust_start_confl(_cr, "rem-asc",            "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
-    opt_learntsize_adjust_inc   (_cr, "rem-asi",                 "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
-    opt_min_learnts_lim         (_cr, "rem-minlearnts",          "Minimum learnt clause limit", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
+    opt_reduceType              (_cred, "remtype",               "remove clauses (0=glucose/dynamic,1=minisat/geometric,2=fixed limit)", 0, IntRange(0, 2),                                                  optionListPtr),
+    opt_learnt_size_factor      (_cred, "rem-lsf",               "factor of learnts compared to original formula", (double)1/(double)3,  DoubleRange(0, false, HUGE_VAL, false),          optionListPtr),
+    opt_learntsize_inc          (_cred, "rem-lsi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_learntsize_adjust_start_confl(_cred, "rem-asc",          "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
+    opt_learntsize_adjust_inc   (_cred, "rem-asi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
+    opt_max_learnts             (_cred, "maxlearnts",            "number of learnt clauses to initialize geometric/static removal", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
     
+    opt_dpll                    (_cm, "dpll",                    "Perform DPLL instead of CDCL (no restarts, no learning)", false,                                                        optionListPtr),
+
     opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
     opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
@@ -86,25 +91,39 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_random_seed             (_cs,   "rnd-seed",              "Used by the random variable selection", 91648253, DoubleRange(0, false, HUGE_VAL, false),                               optionListPtr),
     opt_ccmin_mode              (_cm,   "ccmin-mode",            "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2),                                    optionListPtr),
     opt_phase_saving            (_cs,   "phase-saving",          "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2),                                     optionListPtr),
+    opt_phase_bit_level         (_cs,   "phase-bit",             "decision level until which the bit phase is used", 0, IntRange(0, INT32_MAX),                                           optionListPtr),
+    opt_phase_bit_number        (_cs,   "phase-bitmod",          "mod of bits of the counter to be used to select bits for bit phase", 4, IntRange(1, 64),                                optionListPtr, &opt_phase_bit_level),
+    opt_phase_bit_invert        (_cs,   "phase-bitinv",          "invert value of polarity assigned by bit-strategy", false,                                                              optionListPtr, &opt_phase_bit_level),
     opt_rnd_init_act            (_init, "rnd-init",              "Randomize the initial activity", false,                                                                                 optionListPtr),
     opt_init_act                (_init, "init-act",              "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6),             optionListPtr),
     opt_init_pol                (_init, "init-pol",              "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 6),                       optionListPtr),
 
-    opt_restart_level           (_cr,  "rlevel",                 "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2),                     optionListPtr),
-    opt_restarts_type           (_cr,  "rtype",                  "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2),                                              optionListPtr),
-    opt_restart_first           (_cr,  "rfirst",                 "The base restart interval", 100, IntRange(1, INT32_MAX),                                                                optionListPtr, &opt_restarts_type),
-    opt_restart_inc             (_cr,  "rinc",                   "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false),                                           optionListPtr, &opt_restarts_type),
-    opt_inc_restart_level       (_cr,  "irlevel",                "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX),                  optionListPtr, &opt_restarts_type),
+    opt_restart_level           (_cr,     "rlevel",              "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2),                     optionListPtr),
+    opt_restarts_type           (_cr,      "rtype",              "Choose type of restart (0=dynamic,1=luby,2=geometric,3=static,4=none)", 0, IntRange(0, 4),                              optionListPtr),
+    opt_allow_restart_blocking  (_cr,   "r-dyn-bl",              "Perform dynamic restarts blocking", true,                                                                               optionListPtr),
+    opt_restarts_dyn_ema        (_cr,  "r-dyn-ema",              "Perform dynamic restarts based on EMA", false,                                                                          optionListPtr),
+    opt_restart_ema_lbdfast     (_cr,"r-ema-lfast",              "Alpha for fast evolving EMA for interpretation size", 0.03125, DoubleRange(0, true, 1, true),                           optionListPtr, &opt_restarts_dyn_ema),
+    opt_restart_ema_lbdslow     (_cr,"r-ema-lslow",              "Alpha for slow evolving EMA for interpretation size", 0.000061035156, DoubleRange(0, true, 1, true),                    optionListPtr, &opt_restarts_dyn_ema),
+    opt_restart_ema_trailslow   (_cr,"r-ema-tslow",              "Alpha for slow evolving EMA for clause LBDs", 0.000244140625, DoubleRange(0, true, 1, true),                            optionListPtr, &opt_restarts_dyn_ema),
+    opt_restart_first           (_cr,     "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX),                                                                optionListPtr, &opt_restarts_type),
+    opt_restart_min_noBlock     (_cr, "r-min-noBlock",           "Do not allow restart blocking before this number of conflicts", 10000, IntRange(1, INT32_MAX),                          optionListPtr),
+    opt_restart_inc             (_cr,       "rinc",              "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false),                                           optionListPtr, &opt_restarts_type),
+    opt_inc_restart_level       (_cr,    "irlevel",              "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX),                  optionListPtr, &opt_restarts_type),
 
-    opt_garbage_frac            (_cat, "gc-frac",                "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, 1, false), optionListPtr),
+    opt_rswitch_isize           (_crsw,    "rsw-int",            "First interval for restart heuristic switching (>0 to activate)",   0, IntRange(0, INT32_MAX),                          optionListPtr), // restart type used when switching restart heuristics
+    opt_alternative_rtype       (_crsw,   "rsw-type",            "Type of restart for switching(1=luby,2=geometric,3=static,4=none)", 4, IntRange(1, 4),                                  optionListPtr, &opt_rswitch_isize), // restart type used when switching restart heuristics
+    opt_rswitch_interval_inc    (_crsw,   "rsw-iinc",            "Increase of the interval after finishing an interval", 1.1, DoubleRange(1, true, 10, true),                             optionListPtr, &opt_rswitch_isize),
+    opt_dynamic_rtype_ratio     (_crsw, "rsw-iratio",            "Percentage of dynamic restarts in switch intervals", 0.6666, DoubleRange(0, true, 1, true),                             optionListPtr, &opt_rswitch_isize),
 
-    opt_allUipHack              ("CORE -- CONFLIG ANALYSIS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2),                                                         optionListPtr),
-    opt_vsids_start             (_cs,  "vsids-s",                "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true),                                      optionListPtr),
-    opt_vsids_end               (_cs,  "vsids-e",                "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true),                                       optionListPtr),
-    opt_vsids_inc               (_cs,  "vsids-i",                "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true),                               optionListPtr),
-    opt_vsids_distance          (_cs,  "vsids-d",                "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(1, INT32_MAX),            optionListPtr),
-    opt_var_act_bump_mode       (_cs,  "varActB",                "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2),                 optionListPtr),
-    opt_cls_act_bump_mode       (_cs,  "clsActB",                "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
+    opt_garbage_frac            (_cat,   "gc-frac",              "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, 1, false), optionListPtr),
+
+    opt_allUipHack              (_cs, "alluiphack",              "learn all unit UIPs at any level", 0, IntRange(0, 2),                                                                   optionListPtr),
+    opt_vsids_start             (_cs,    "vsids-s",              "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true),                                      optionListPtr),
+    opt_vsids_end               (_cs,    "vsids-e",              "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true),                                       optionListPtr),
+    opt_vsids_inc               (_cs,    "vsids-i",              "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true),                               optionListPtr),
+    opt_vsids_distance          (_cs,    "vsids-d",              "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(1, INT32_MAX),            optionListPtr),
+    opt_var_act_bump_mode       (_cs,    "varActB",              "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2),                 optionListPtr),
+    opt_cls_act_bump_mode       (_cs,    "clsActB",              "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
 
     opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences", true,                                                                             optionListPtr),
     sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse)", 1, IntRange(0, 2) ,                                                     optionListPtr),
@@ -138,20 +157,20 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_long_conflict       ("REASON", "longConflict", "if a binary conflict is found, check for a longer one!", false, optionListPtr),
 
     // extra
-    opt_act            (_init, "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3),          optionListPtr),
-    opt_actStart       (_init, "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false),  optionListPtr),
-    pot_actDec         (_init, "actDec",     "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, 1, true), optionListPtr),
-    actFile            (_init, "actFile",    "increase activities of those variables", 0,                                       optionListPtr),
-    opt_pol            (_init, "polMode",    "invert provided polarities", false,                                               optionListPtr),
-    polFile            (_init, "polFile",    "use these polarities", 0,                                                         optionListPtr),
+    opt_act            (_init, "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3),           optionListPtr),
+    opt_actStart       (_init, "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false),   optionListPtr),
+    pot_actDec         (_init, "actDec",     "decrease per element (sub, or divide)", 1 / 0.95, DoubleRange(0, false, 10, true), optionListPtr),
+    actFile            (_init, "actFile",    "increase activities of those variables", 0,                                        optionListPtr),
+    opt_pol            (_init, "polMode",    "invert provided polarities #NoAutoT", false,                                       optionListPtr),
+    polFile            (_init, "polFile",    "use these polarities", 0,                                                          optionListPtr),
     #ifndef NDEBUG
-    opt_printDecisions (_init, "printDec",   "1=print decisions, 2=print all enqueues, 3=show clauses", 0, IntRange(0, 3),      optionListPtr),
+    opt_printDecisions (_init, "printDec",   "1=print decisions, 2=print all enqueues, 3=show clauses #NoAutoT", 0, IntRange(0, 3),      optionListPtr),
     #endif
 
     opt_rMax   (_cr, "rMax",    "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX),            optionListPtr),
     opt_rMaxInc(_cr, "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &opt_rMax),
 
-    printOnSolveTo          ("DEBUG",    "printOnSolve",    "print formula present at call solve to given filename and exit", 0, optionListPtr),
+    printOnSolveTo          ("DEBUG",    "printOnSolve",    "print formula present at call solve to given filename and exit #NoAutoT", 0, optionListPtr),
 
     search_schedule         ("SCHEDULE", "sschedule",       "specify configs to be schedules", 0,                                                     optionListPtr),
     scheduleConflicts       ("SCHEDULE", "sscheConflicts",  "initial conflicts for schedule", 10000000, IntRange(1, INT32_MAX),                       optionListPtr, &search_schedule),
@@ -236,12 +255,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     uhle_minimizing_lbd         (_cm, "sUHLElbd",   "maximal LBD for UHLE for learnt clauses (0=off)", 6, IntRange(0, INT32_MAX),                optionListPtr, &opt_uhdProbe),
 
     // DRUP
-    opt_verboseProof    ("CORE -- PROOF", "verb-proof",      "also print comments into the proof, 2=print proof also to stderr", 0, IntRange(0, 2) ,                  optionListPtr),
-    opt_rupProofOnly    ("CORE -- PROOF", "rup-only",        "do not print delete lines into proof", false,                                                           optionListPtr),
-    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking)", 0, IntRange(0, 10), optionListPtr),
+    opt_verboseProof    ("CORE -- PROOF", "verb-proof",      "also print comments into the proof, 2=print proof also to stderr #NoAutoT", 0, IntRange(0, 2) ,                  optionListPtr),
+    opt_rupProofOnly    ("CORE -- PROOF", "rup-only",        "do not print delete lines into proof #NoAutoT", false,                                                           optionListPtr),
+    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking) #NoAutoT", 0, IntRange(0, 10), optionListPtr),
 
-    opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2),                                                             optionListPtr),
-    opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more).", 0, IntRange(0, 2),                                                  optionListPtr),
+    opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                             optionListPtr),
+    opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                  optionListPtr),
 
     opt_usePPpp(_misc, "usePP",         "use preprocessor for preprocessing", true,                                                                                   optionListPtr),
     opt_usePPip(_misc, "useIP",         "use preprocessor for inprocessing", true,                                                                                    optionListPtr),

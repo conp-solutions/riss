@@ -184,7 +184,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
 
     if (! communication->sendEquivalences && equivalences) {
 // #warning remove after debug
-//         cerr << "c reject equivalences due to disabled option" << endl;
+//         std::cerr << "c reject equivalences due to disabled option" << std::endl;
         return 0;
     }  // do not share equivalences
 
@@ -365,7 +365,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 // perform vivification only with clauses that are at least binary, afterwards handle the shortened clause correctly
                 if (c.size() > 1 && communicationClient.refineReceived) {
                     if (! reverseMinimization.enabled) {  // enable reverseMinimization to be able to use it
-//                         DOUT( cerr << "c initialize reverseMinimization during receiving" << endl; );
+                        // DOUT(std::cerr << "c initialize reverseMinimization during receiving" << std::endl;);
                         reverseMinimization.enabled = true;
                         reverseMinimization.assigns.growTo(nVars() + 1, l_Undef); // grow assignment
                         reverseMinimization.trail.capacity(nVars()  + 1);       // allocate trail
@@ -382,21 +382,21 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                     #else
                     unsigned dependency = currentDependencyLevel();
                     DOUT(if (localDebug) {
-                    cerr << "c received clause(" << i << "): " << c << endl;
+                    std::cerr << "c received clause(" << i << "): " << c << std::endl;
                     {
-                        stringstream s;
+                        std::stringstream s;
                         s << "c sat: ";
                         for (int k  = 0 ; k < c.size(); ++ k) { s << " " << (value(c[k]) == l_True) << "/" << (value(c[k]) == l_False); }
-                            s << endl;
-                            cerr << s.str();
+                            s << std::endl;
+                            std::cerr << s.str();
                         }
                     });
                     shrinkedClause = reverseLearntClause(c, lbd, dependency);
                     #endif
-//            cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << endl;
+                    // std::cerr << "c shrinked received clause(" << i << "): " << c << " first sat: " << (value(c[0]) == l_True) << std::endl;
                     communication->vivifiedLiterals += beforeSize - c.size();
                     if (shrinkedClause && communicationClient.resendRefined) {  // re-share clause (should be performed only by one thread per group
-//          cerr << "c recend received clause(" << i << "): " << c << endl;
+                        // std::cerr << "c recend received clause(" << i << "): " << c << std::endl;
                         #ifdef PCASSO
                         updateSleep(&(c), c.size(), dependency);
                         #else

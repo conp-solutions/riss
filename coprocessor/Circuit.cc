@@ -16,8 +16,8 @@ Circuit::Circuit(CP3Config& _config, ClauseAllocator& _ca)
 
 Circuit::~Circuit()
 {
-  if( big != 0 ) delete big;
-  big = 0;
+    if (big != 0) { delete big; }
+    big = 0;
 }
 
 
@@ -110,9 +110,16 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
         DOUT(if (config.circ_debug_out) cerr << "c mark literal " << ~pos << endl;);
         // find all binary clauses for gate with positive output "pos"
         for (int i = 0 ; i < listSize; ++i) {
-            data.ma.setCurrentStep(toInt(list[i]));
-            data.lits.push_back(list[i]);
-            DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
+            if (data.ma.isCurrentStep(toInt(~list[i]))) {
+                DOUT(if (config.circ_debug_out) cerr << "c marked complementary literal of " << list[i] << " already! hence, imply literal " << ~pos << " as a unit" << endl;);
+                data.enqueue(~pos);
+                data.lits.clear(); break;
+            }
+            if ( !data.ma.isCurrentStep(toInt(list[i]))) { // do not add the same literal twice!
+	      data.ma.setCurrentStep(toInt(list[i]));
+	      data.lits.push_back(list[i]);
+	      DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
+	    }
         }
         if (data.lits.size() > 1) {   // work on found binary clauses!
 
@@ -207,6 +214,8 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                             cerr << "] leads to gate: ";
                             gates[ gates.size() - 1 ].print(cerr);
                         });
+			
+			sort( learnt_clause );                    // added clauses have to be sorted!
                         CRef cr = ca.alloc(learnt_clause, false); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
                         data.addClause(cr);
                         data.getClauses().push(cr);
@@ -341,11 +350,16 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
             for (int k = 0 ; k < lList.size(); ++ k) {
                 const Clause& ck = ca[lList[k]];
                 if (ck.can_be_deleted()) { continue; }
-                if (count ++ == data.lits.size() || ck.size() != 2)   // not the current clause, or more than one clause
-                { found = false; break; }
+                if( ck.size() != 2) { found = false; break; }   // not the current clause, or more than one clause
+                // all literals of the clause have to appear in the list of excluded literals
+                if (!data.ma.isCurrentStep(toInt(ck[0])) ||
+                        !data.ma.isCurrentStep(toInt(ck[1]))) {
+                    found = false; break;
+                }
+                count ++ ;
             }
             // count has to be data.lits.size(), otherwise data structures are invalid!
-            assert((!found || count + 1 == data.lits.size()) && "if for the current literal the situation for blocked has been found, exactly the n binary clauses have to be found!");
+            assert((!found || count + 1 >= data.lits.size()) && "if for the current literal the situation for blocked has been found, exactly the n binary clauses have to be found!");
         }
         if (found) {
             for (int j = 0 ; j < data.lits.size() ; j++) { data.lits[j] = ~data.lits[j]; }
@@ -731,15 +745,15 @@ void Circuit::getXORGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 }
             }
             if (!found[1]) { continue; }   // this clause does not contribute to an XOR!
-            // cerr << "c found first two clauses, check for next two" << endl;
+
             // check whether we can find the other's by blocked clause analysis
-            if (!binary && config.circ_BLOCKED) {
+            if (false && !binary && config.circ_BLOCKED) {
                 int countPos = 0;
                 for (int j = 0 ; j < data.list(a).size(); ++ j) {
                     const Clause& aClause = ca[data.list(a)[j]];
                     if (aClause.can_be_deleted()) { continue; }
                     if (aClause.size() != 3) { countPos = 3; break; }
-                    countPos = countPos + 1;
+//                     countPos = countPos + 1;  // the ternary clauses have to fullfill further properties to enable the XOR gate to be blocked!
                 }
                 if (countPos == 2) {
                     DOUT(if (config.circ_debug_out) cerr << "c current XOR gate is implied with blocked clauses! ternaries: " << countPos << endl;);

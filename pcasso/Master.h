@@ -83,40 +83,40 @@ class Master
     enum state { idle = 1, working = 2, splitting = 3, unclean = 4, sleeping = 5 };
 
     /************* BEGIN OF HYBRID CODE ***************/
-    
+
     /** data to be used by the hybrid version with pfolio and pcasso */
     struct HybridSharedData {
-      Master* master;
-      SleepLock *masterLock;  // one sleeplock for the master
-      lbool ret;              // return state of this solver
+        Master* master;
+        SleepLock *masterLock;  // one sleeplock for the master
+        lbool ret;              // return state of this solver
     };
-    
+
     pthread_t* hybridThreads;    /// thread handles of the two threads that run in parallel
-    
+
     SleepLock* hybridMasterLock; /// lock to be used when pfolio is executed next to pcasso
-    
+
     HybridSharedData* hybridData; /// data that is forwarded to created thread
-    
+
     /** solve current formula in parallel with pfolio and pcasso */
     lbool solveHybrid();
-    
+
     /** solve current state with pcasso (to be executed in a new thread)*/
     static void* solveWithPcasso(void* data);
-    
+
     /** solve current state with pfolio (to be executed in a new thread)*/
     static void* solveWithPfolio(void* data);
-    
-    /************** END OF HYBRID CODE ****************/
-    
 
-public: 
+    /************** END OF HYBRID CODE ****************/
+
+
+  public:
     /** simple call to solve current formula with pcasso */
     lbool solvePcasso();
-    
+
     /** simple call to solve current formula with pfolio */
     lbool solvePfolio();
-    
-private:
+
+  private:
     // to be stored in original formula
     struct clause {
         int size;
@@ -149,7 +149,7 @@ private:
     // to maintain the original formula
     int maxVar;
     std::vector< clause > originalFormula;
-    
+
     //std::vector<char> polarity;   // preferred polarity from the last solver, for the next solvers
     // std::vector<double> activity; // activity of each variable
 
@@ -260,14 +260,14 @@ private:
     /** return reference to global Priss solver */
     PSolver& getGlobalSolver();
 
-    
+
     Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
-    
+
     /** kill both pcasso and pfolio */
     void killHybrid();
-    
+
     Riss::vec<Riss::lbool>* model;       // model that will be produced by one of the child nodes
-    
+
     void shutdown() { done = true; notify(); }
 
     friend class TreeNode;
@@ -284,14 +284,14 @@ private:
     }
 
     TreeNode* getRoot() { return &root; }
-    
+
     // statistics section
   public:
-    
+
     /** setup everything and handle the conrol loop */
     int run();
-    
-    
+
+
     unsigned createdNodeID;
     unsigned unsolvedNodesID;
     unsigned splitSolvedNodesID;

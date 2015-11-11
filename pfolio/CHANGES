@@ -1,0 +1,12 @@
+# ChangeLog for priss
+
+## v5.0.3
+
+ * allow incarnations to work on original formula, then does not participate in sharing (both send and receive)
+ * set LBD value of received clauses based on size, or average LBD/size ratio
+ * pfolio can pass configurations from commandline to each incarnation with extra semantic [N]configN[N+1]configN+1, can also pass options to all incarnations
+ * use extra buffer to share multiunits and equivalences
+ * enabled incranations to perform vivification on received clauses, and to sent shrinked clauses again
+ * have global simplifier for pfolio
+ * use pfolioconfig object to setup configurations
+ * can share equivalence classes and sets of unit clauses

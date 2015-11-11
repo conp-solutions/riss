@@ -276,7 +276,7 @@ bool Preprocessor::parseUndoInfo(const string& filename)
         return false;
     }
 
-    dense.readUndoInfo(filename + ".map");
+    dense.readCompressionMap(filename + ".map");
 
     return true;
 }
@@ -331,7 +331,7 @@ bool Preprocessor::writeUndoInfo(const string& filename, int originalVariables)
         file << s.str();
     }
 
-    return dense.writeUndoInfo(filename + ".map");
+    return dense.writeCompressionMap(filename + ".map");
 }
 
 } // namespace Coprocessor

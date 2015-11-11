@@ -114,10 +114,10 @@ TreeNode::~TreeNode()
         delete this->lv_pool; // The destructor should be called
         this->lv_pool = 0;
     }
-    
-    if( sharingPool != nullptr ) {
-      delete sharingPool;
-      sharingPool = nullptr;
+
+    if (sharingPool != nullptr) {
+        delete sharingPool;
+        sharingPool = nullptr;
     }
 
 }

@@ -97,35 +97,18 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_simplify    ;
     Riss::BoolOption opt_symm        ;
     Riss::BoolOption opt_FM          ;
+    Riss::BoolOption opt_hbr         ;
 
 
     Riss::StringOption opt_ptechs ;
     Riss::StringOption opt_itechs ;
 
-// use 2sat and sls only for high versions!
-    #if defined TOOLVERSION && TOOLVERSION < 301
-    const int opt_threads;
-    const bool opt_sls;
-    const bool opt_sls_phase;
-    const int opt_sls_flips;
-    const bool opt_xor;
-    const bool opt_rew;
-    const bool opt_twosat;
-    const bool opt_twosat_init;
-    const bool  opt_ts_phase;
-    #else
     Riss::IntOption  opt_threads     ;
     Riss::BoolOption opt_sls         ;
     Riss::BoolOption opt_sls_phase   ;
     Riss::IntOption  opt_sls_flips   ;
     Riss::BoolOption opt_xor         ;
     Riss::BoolOption opt_rew         ;
-    Riss::BoolOption opt_twosat      ;
-    Riss::BoolOption opt_twosat_init ;
-    Riss::BoolOption opt_ts_phase    ;
-    #endif
-
-
 
     Riss::IntOption opt_subsimp_vars;  // variable limit to enable
     Riss::IntOption opt_subsimp_cls;   // clause limit to enable
@@ -182,10 +165,13 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_rew_vars;  // variable limit to enable
     Riss::IntOption opt_rew_cls;   // clause limit to enable
     Riss::IntOption opt_rew_lits;  // total literals limit to enable
+    Riss::IntOption opt_hbr_vars;  // variable limit to enable
+    Riss::IntOption opt_hbr_cls;   // clause limit to enable
+    Riss::IntOption opt_hbr_lits;  // total literals limit to enable
 
     #ifndef NDEBUG
     Riss::BoolOption opt_debug    ;
-    Riss::IntOption opt_check    ;
+    Riss::IntOption opt_check     ;
     Riss::IntOption  opt_log      ;
     Riss::StringOption printAfter ;
     #endif
@@ -195,7 +181,7 @@ class CP3Config : public Riss::Config
 //
 
     Riss::IntOption opt_par_bve         ;
-    Riss::IntOption  opt_bve_verbose     ;
+    Riss::IntOption  opt_bve_verbose    ;
 
     Riss::IntOption  opt_bve_limit       ;
     Riss::IntOption  opt_learnt_growth   ;
@@ -213,7 +199,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_totalGrow       ;
 
     Riss::BoolOption opt_bve_bc          ;
-    Riss::IntOption heap_updates         ;
+    Riss::IntOption  heap_updates        ;
     Riss::BoolOption opt_bve_earlyAbort  ;
     Riss::BoolOption opt_bce_only        ;
     Riss::BoolOption opt_print_progress  ;
@@ -279,6 +265,19 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_bce_debug; // debug output
     #endif
 
+
+//
+// HBR
+//
+    Riss::IntOption hbrLimit;
+    Riss::IntOption opt_hbr_maxCsize;   // min size = 3
+    Riss::IntOption opt_hbr_addBinaries; // add new binary clauses (always, only in first iteration, never)
+    Riss::IntOption opt_hbrInpStepInc; // add to limit for inprocessing
+    Riss::IntOption opt_hbr_verbose; // output operation steps
+    #ifndef NDEBUG
+    Riss::BoolOption opt_hbr_debug; // debug output
+    #endif
+
 //
 // LiteralAddition
 //
@@ -334,7 +333,6 @@ class CP3Config : public Riss::Config
     #endif
     Riss::BoolOption opt_dense_inprocess;
     Riss::IntOption  opt_dense_fragmentation;
-    Riss::BoolOption opt_dense_store_forward;
     Riss::BoolOption opt_dense_keep_assigned;
 
 //
@@ -619,15 +617,6 @@ class CP3Config : public Riss::Config
     #ifndef NDEBUG
     Riss::IntOption sym_debug_out;
     #endif
-
-//
-// Twosat
-//
-    #ifndef NDEBUG
-    Riss::IntOption twosat_debug_out  ;
-    #endif
-    Riss::BoolOption twosat_useUnits  ;
-    Riss::BoolOption twosat_clearQueue;
 
 //
 // Unhide

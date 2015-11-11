@@ -44,6 +44,8 @@ class VarShuffler
     std::vector< Riss::Lit > replacedBy;
     uint32_t seed;
 
+    bool shuffledAlready;
+
     Randomizer randomizer;
 
   public:

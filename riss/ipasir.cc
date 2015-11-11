@@ -60,7 +60,7 @@ const char * ipasir_signature()
  */
 void * ipasir_init()
 {
-    return riss_init("INCSOLVE:-init-act=3:-actStart=2048:INCSIMP"); // use riss with the configuration for incremental solving, and incremental simplification (after 50000 conflicts)
+    return riss_init_configured("INCSOLVE:-init-act=3:-actStart=2048:INCSIMP"); // use riss with the configuration for incremental solving, and incremental simplification (after 50000 conflicts)
 }
 
 /**
@@ -73,7 +73,7 @@ void * ipasir_init()
  */
 void ipasir_release(void * solver)
 {
-    riss_destroy(solver);
+    riss_destroy(&solver);
 }
 
 /**

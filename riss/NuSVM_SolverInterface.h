@@ -85,7 +85,7 @@ inline MiniSat_ptr MiniSat_Create()
 inline void MiniSat_Delete(MiniSat_ptr ms)
 {
     // destroy the riss solver object
-    riss_destroy(ms);
+    riss_destroy(&ms);
 }
 
 inline int MiniSat_Nof_Variables(MiniSat_ptr ms)

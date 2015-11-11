@@ -1,5 +1,5 @@
 #
-# add family column to given data file, prints to stdout
+# write all files of a familiy FAM into $2/FAM.txt, uses the family information of $1
 #
 # ./script.sh familyFile.txt result-dirname
 
@@ -9,8 +9,8 @@
 tmp=/tmp/families_$$
 tmp2=/tmp/joinTimes2_$$
 
-mkdir -p $2
-		
+mkdir -p $2	
+
 # iterate over all files, put into correct family file
 awk '{ if( NR > 1 ) print $0}' $1 | while read f
 do
@@ -21,5 +21,5 @@ do
 	echo $file >> $2/$fam.txt
 done
 
-		
+
 rm -f $tmp $tmp2		

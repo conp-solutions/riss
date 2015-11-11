@@ -13,28 +13,29 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/CP3Config.h"
 
 
-#include "coprocessor/Propagation.h"
-#include "coprocessor/Subsumption.h"
-#include "coprocessor/HiddenTautologyElimination.h"
-#include "coprocessor/BoundedVariableElimination.h"
-#include "coprocessor/ClauseElimination.h"
-#include "coprocessor/rate.h"
-#include "coprocessor/EquivalenceElimination.h"
-#include "coprocessor/Bva.h"
-#include "coprocessor/Unhiding.h"
-#include "coprocessor/Probing.h"
-#include "coprocessor/Resolving.h"
-#include "coprocessor/Rewriter.h"
-#include "coprocessor/FourierMotzkin.h"
-#include "coprocessor/bce.h"
-#include "coprocessor/LiteralAddition.h"
-#include "coprocessor/xor.h"
-#include "coprocessor/Entailed.h"
-#include "coprocessor/Dense.h"
-#include "coprocessor/Symmetry.h"
+#include "coprocessor/techniques/Propagation.h"
+#include "coprocessor/techniques/Subsumption.h"
+#include "coprocessor/techniques/HiddenTautologyElimination.h"
+#include "coprocessor/techniques/BVE.h"
+#include "coprocessor/techniques/ClauseElimination.h"
+#include "coprocessor/techniques/RATE.h"
+#include "coprocessor/techniques/EquivalenceElimination.h"
+#include "coprocessor/techniques/BVA.h"
+#include "coprocessor/techniques/Unhiding.h"
+#include "coprocessor/techniques/Probing.h"
+#include "coprocessor/techniques/Resolving.h"
+#include "coprocessor/techniques/Rewriter.h"
+#include "coprocessor/techniques/FourierMotzkin.h"
+#include "coprocessor/techniques/BCE.h"
+#include "coprocessor/techniques/LiteralAddition.h"
+#include "coprocessor/techniques/Xor.h"
+#include "coprocessor/techniques/Entailed.h"
+#include "coprocessor/techniques/Dense.h"
+#include "coprocessor/techniques/Symmetry.h"
+#include "coprocessor/techniques/HBR.h"
+#include "coprocessor/Shuffler.h"
 
-#include "coprocessor/sls.h"
-#include "coprocessor/TwoSAT.h"
+#include "coprocessor/techniques/SLS.h"
 
 #include <string>
 #include <cstring>
@@ -143,15 +144,21 @@ class Preprocessor
      */
     void dumpFormula(std::vector<int>& outputFormula);
 
-    /** return the literal, to which the specified literal is mapped to
-     * @param l literal in the external world representation
-     * @return the new literal, or Riss::lit_Undef if the literal is not present any more, or lit_Error, if the information is not present
+    /**
+     * return the literal, to which the specified literal is mapped to
+     *
+     * @param lit literal in the external world representation
+     * @return the new literal or lit_Undef if the literal is not present any more
+     *         or lit_Error, if the information is not present
      */
-    int giveNewLit(const int& l) const;
-    Riss::Lit giveNewLit(const Riss::Lit& l) const;
+    Riss::Lit importLit(const Riss::Lit& lit) const;
+
+    int importLit(const int& lit) const;
 
   protected:
+    //
     // techniques
+    //
     Propagation propagation;
     Subsumption subsumption;
     HiddenTautologyElimination hte;
@@ -162,8 +169,8 @@ class Preprocessor
     Unhiding unhiding;
     Probing probing;
     RATElimination rate;
-    Resolving res;
-    Rewriter rew;
+    Resolving                   resolving;
+    Rewriter                    rewriter;
     FourierMotzkin fourierMotzkin;
     Dense dense;
     Symmetry symmetry;
@@ -171,9 +178,10 @@ class Preprocessor
     BlockedClauseElimination bce;
     LiteralAddition la;
     EntailedRedundant entailedRedundant;
+    HyperBinaryResolution hbr;
+    VarShuffler shuffler;
 
-    Sls sls;
-    TwoSatSolver twoSAT;
+    SLS sls;
 
     int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
     Riss::vec<Riss::Var> specialFrozenVariables;

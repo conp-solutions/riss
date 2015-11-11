@@ -184,10 +184,11 @@ The Knowledge base for prediction is now integrated into the solver, such that t
 From a formula we extract 382 features, which are projected to 40 values by \emph{principal component analysis} (PCA). 
 We replaced the selection based on \emph{information gain ratio}, as in the latter case the projected values still correlate. 
 After PCA there is no more correlation among the values. 
-Based on the data base, which is created based on 14 configurations and 2200 application formulas. 
-The best prediction we found so this set uses a k-nearest neighbor with only a single neighbor, instead of the random decision forest we in \textsc{Riss 4.27 BlackBox}.  
-This might be the case due to the small number of formulas and the comparably high number of configurations. 
-We currently experiment how to improve this prediction, especially for working better on unknown formulas. 
+The data base is created based on 14 configurations and 2200 application formulas. 
+The best prediction we found for this set uses a k-nearest neighbor with only a single neighbor.
+\textsc{Riss 4.27 BlackBox} used a random decision forest. 
+The found values might perform well due to the small number of formulas and the comparably high number of configurations. 
+We currently experiment on how to improve this prediction, especially for working better on unknown formulas. 
 
 The implementation of PCA is based on two external libraries: \emph{Libpca}\footnote{\url{http://sourceforge.net/projects/libpca/}} and \emph{armadillo}\footnote{\url{http://arma.sourceforge.net/}}.
 
@@ -240,12 +241,12 @@ After this simplification, the next simplification is allowed after another $100
 
 \subsection{Parallel SAT Solving}
 
-\todo{update numbers}
+% \todo{update numbers}
 
 In \pcasso, we use different configurations depending on the number of available computational resources. 
 The configuration of \pcasso uses a global \priss incarnation with $3$ workers. 
-Another $3$ workers are used for solving in the partitioning approach. 
-The values are increased to $4$ workers in \priss and $8$ in partitioning. 
+Another $5$ workers are used for solving in the partitioning approach. 
+The values are increased to $8$ workers in \priss and $24$ in partitioning. 
 The full number of cores is not used, as the slowdown based on resource sharing is too high with the currently implemented data structures, as explained in~\cite{portfolioSlowdown}. 
 Each node in the partition tree is allowed to store 100 learned clauses, as well as 100 groups of unit clauses or equivalent literals. 
 We do not utilize hyper threads. 
