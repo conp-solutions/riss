@@ -923,10 +923,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     bool isOnlyUnit = true;
     lastDecisionLevel.clear();  // must clear before loop, because alluip can abort loop and would leave filled vector
     int currentSize = 0;        // count how many literals are inside the resolvent at the moment! (for otfss)
-    CRef lastConfl = CRef_Undef;
 
     varsToBump.clear(); clssToBump.clear(); // store info for bumping
 
+    Solver::ReasonStruct currentReason( confl );
+    
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
@@ -934,9 +935,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
     do {
         DOUT(if (config.opt_learn_debug) cerr << "c enter loop with lit " << p << endl;);
-        Clause& c = ca[confl];
+        Clause& c = ca[currentReason.getReasonC()];
 
-        DOUT(if (config.opt_rer_debug) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;);
+        DOUT(if (config.opt_rer_debug) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << currentReason.getReasonC() << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;);
         int clauseReductSize = c.size();
         // Special case for binary clauses
         // The first one has to be SAT
@@ -954,13 +955,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             #endif
             c.setUsedInAnalyze();
         }
-
         resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
-
         if (!foundFirstLearnedClause) {  // dynamic adoption only until first learned clause!
             if (c.learnt()) {
                 if (config.opt_cls_act_bump_mode == 0) { claBumpActivity(c); }
-                else { clssToBump.push(confl); }
+                else { clssToBump.push(currentReason.getReasonC()); }
             }
 
             if (config.opt_update_lbd == 1) {    // update lbd during analysis, if allowed
@@ -974,7 +973,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                         c.setLBD(nblevels); // Update it
                         if (c.lbd() < lbd_core_threshold) { // turn learned clause into core clause and keep it for ever
                             // move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
-                            clauses.push(confl);
+                            clauses.push(currentReason.getReasonC());
                             c.learnt(false);
                             // to prevent learnt clauses participated in revert conflict analyses
                             // from being dropped immediately (by fast-paced periodic clause database reduction)
@@ -1002,14 +1001,16 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                     pathC++;
                     #ifdef UPDATEVARACTIVITY
                     if (!foundFirstLearnedClause && config.opt_updateLearnAct) {  // should be set similar to no_LBD as its used this way in the hack solver
-                        const CRef& r = reason(var(q));
-                        // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-                        // VSIDS scores of variables at the current decision level is aditionally
-                        // bumped if they are propagated by core learnt clauses (similar to glucose)
-                        if (r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause())) { // either core clause, as some learnt clauses are moved ) {
-                            DOUT(if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl;);
-                            lastDecisionLevel.push(q);
-                        }
+		        if( ! reason(var(q)).isBinaryClause() ) {
+			  const CRef& r = reason(var(q)).getReasonC();
+			  // UPDATEVARACTIVITY trick (see competition'09 companion paper)
+			  // VSIDS scores of variables at the current decision level is aditionally
+			  // bumped if they are propagated by core learnt clauses (similar to glucose)
+			  if (r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause())) { // either core clause, as some learnt clauses are moved ) {
+			      DOUT(if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl;);
+			      lastDecisionLevel.push(q);
+			  }
+			}
                     }
                     #endif
 
@@ -1034,7 +1035,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 #warning add dependency to otfss info
                 #else
                 otfss.revealedClause ++;
-                otfss.info.push({ confl, p });   // add pair to vector to be processed afterwards
+                otfss.info.push({ currentReason.getReasonC(), p });   // add pair to vector to be processed afterwards
                 #endif
                 DOUT(if (config.debug_otfss) cerr << "c OTFSS can remove literal " << p << " from " << c << endl;);
             }
@@ -1044,8 +1045,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         // Select next clause to look at:
         while (! varFlags[ var(trail[index--]) ].seen) {}    // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index + 1];
-        lastConfl = confl;
-        confl = reason(var(p));
+        currentReason = reason(var(p));
         DOUT(if (config.opt_learn_debug) cerr << "c reset seen for " << p << endl;);
         varFlags[var(p)].seen = 0;
         pathC--;
@@ -1146,7 +1146,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
             for (i = j = 1; i < out_learnt.size(); i++) {
                 minimize_dependencyLevel = dependencyLevel;
-                if (reason(var(out_learnt[i])) == CRef_Undef) {
+                if ( reason(var(out_learnt[i])).getReasonC() == CRef_Undef) {
                     out_learnt[j++] = out_learnt[i]; // keep, since we cannot resolve on decisino literals
                 } else if (!litRedundant(out_learnt[i], abstract_level, dependencyLevel)) {
                     dependencyLevel = minimize_dependencyLevel; // not minimized, thus, keep the old value
@@ -1158,10 +1158,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             for (i = j = 1; i < out_learnt.size(); i++) {
                 Var x = var(out_learnt[i]);
 
-                if (reason(x) == CRef_Undef) {
+                if (reason(x).getReasonC() == CRef_Undef) {
                     out_learnt[j++] = out_learnt[i];
                 } else {
-                    Clause& c = ca[reason(var(out_learnt[i]))];
+                    Clause& c = ca[reason(var(out_learnt[i])).getReasonC()];
                     int k = ((c.size() == 2) ? 0 : 1); // bugfix by Siert Wieringa
                     for (; k < c.size(); k++) {
                         if (! varFlags[var(c[k])].seen && level(var(c[k])) > 0) {
@@ -1266,8 +1266,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
     if (lastDecisionLevel.size() > 0) {
         for (int i = 0; i < lastDecisionLevel.size(); i++) {
-            if (ca[reason(var(lastDecisionLevel[i]))].lbd() < lbd) {
-                DOUT(if (config.opt_learn_debug) cerr << "c add " << lastDecisionLevel[i] << " to bump, with " << ca[reason(var(lastDecisionLevel[i]))].lbd() << " vs " << lbd << endl;);
+            if (ca[ reason(var(lastDecisionLevel[i])).getReasonC() ].lbd() < lbd) {
+                DOUT(if (config.opt_learn_debug) cerr << "c add " << lastDecisionLevel[i] << " to bump, with " << ca[ reason(var(lastDecisionLevel[i])).getReasonC() ].lbd() << " vs " << lbd << endl;);
                 varsToBump.push(var(lastDecisionLevel[i])) ;
             }
         }
@@ -1301,8 +1301,8 @@ bool Solver::litRedundant(Riss::Lit p, uint32_t abstract_levels, unsigned int& d
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0) {
-        assert(reason(var(analyze_stack.last())) != CRef_Undef);
-        Clause& c = ca[reason(var(analyze_stack.last()))]; analyze_stack.pop();
+        assert( reason(var(analyze_stack.last())).getReasonC() != CRef_Undef);
+        Clause& c = ca[ reason(var(analyze_stack.last())).getReasonC() ]; analyze_stack.pop();
         if (c.size() == 2 && value(c[0]) == l_False) {
             assert(value(c[1]) == l_True);
             Lit tmp = c[0];
@@ -1314,7 +1314,7 @@ bool Solver::litRedundant(Riss::Lit p, uint32_t abstract_levels, unsigned int& d
         for (int i = 1; i < c.size(); i++) {
             Lit p  = c[i];
             if (!varFlags[var(p)].seen && level(var(p)) > 0) {
-                if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0) { // can be used for minimization
+                if ( reason(var(p)).getReasonC() != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0) { // can be used for minimization
                     varFlags[var(p)].seen = 1;
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
@@ -1356,11 +1356,11 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     for (int i = trail.size() - 1; i >= trail_lim[0]; i--) {
         Var x = var(trail[i]);
         if (varFlags[x].seen) {
-            if (reason(x) == CRef_Undef) {
+            if ( reason(x).getReasonC() == CRef_Undef) {
                 assert(level(x) > 0);
                 out_conflict.push(~trail[i]);
             } else {
-                Clause& c = ca[reason(x)];
+                Clause& c = ca[ reason(x).getReasonC() ];
                 //                for (int j = 1; j < c.size(); j++) Minisat (glucose 2.0) loop
                 // Bug in case of assumptions due to special data structures for Binary.
                 // Many thanks to Sam Bayless (sbayless@cs.ubc.ca) for discover this bug.
@@ -1709,7 +1709,7 @@ void Solver::counterImplicationRestart()
     for (int c = trail.size() - 1; c >= 0; c--) {
         int x = var(trail[c]);
         int lvl = level(x);
-        CRef r = reason(x);
+        CRef r = reason(x).getReasonC();
 
         if (r == CRef_Undef) {
             continue;
@@ -3683,8 +3683,11 @@ void Solver::relocAll(ClauseAllocator& to)
     for (int i = 0; i < trail.size(); i++) {
         Var v = var(trail[i]);
         if (level(v) == 0) { vardata[v].reason = CRef_Undef; }   // take care of reason clauses for literals at top-level
-        else if (reason(v) != CRef_Undef && (ca[reason(v)].reloced() || locked(ca[reason(v)]))) {
-            ca.reloc(vardata[v].reason, to);
+        else if ( !reason(v).isBinaryClause()
+	  && reason(v).getReasonC() != CRef_Undef 
+	  && (ca[ reason(v).getReasonC() ].reloced() || locked( ca[reason(v).getReasonC()] ))
+	) {
+            vardata[v].reason.setReason( ca.relocC(vardata[v].reason.getReasonC(), to) );
         }
 
     }
@@ -4023,7 +4026,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 DOUT(if (config.opt_rer_debug) {
                 cerr << "c trail: " ;
                 for (int i = 0 ; i < trail.size(); ++ i) {
-                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if (reason(var(trail[i])) == CRef_Undef) { cerr << "U"; } else { cerr << reason(var(trail[i])); }
+                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; 
+			if ( !reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; } 
+			else { 
+			  if ( !reason(var(trail[i])).isBinaryClause() ) cerr << reason(var(trail[i])).getReasonC(); 
+			  else cerr << "L" << reason(var(trail[i])).getReasonL(); 
+			}
                     } cerr << endl;
                     cerr << "c trail_lim: " << trail_lim << endl;
                     cerr << "c decision level: " << decisionLevel() << endl;
@@ -4040,8 +4048,8 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 rerOverheadTrailLits -= trail.size();
                 // detach all learned clauses from fused clauses
                 for (int i = 0; i < rerFuseClauses.size(); ++ i) {
-                    assert(rerFuseClauses[i] != reason(var(ca[rerFuseClauses[i]][0])) && "from a RER-CDCL point of view, these clauses cannot be reason clause");
-                    assert(rerFuseClauses[i] != reason(var(ca[rerFuseClauses[i]][1])) && "from a RER-CDCL point of view, these clauses cannot be reason clause");
+                    assert(rerFuseClauses[i] != reason(var(ca[rerFuseClauses[i]][0])).getReasonC() && "from a RER-CDCL point of view, these clauses cannot be reason clause");
+                    assert(rerFuseClauses[i] != reason(var(ca[rerFuseClauses[i]][1])).getReasonC() && "from a RER-CDCL point of view, these clauses cannot be reason clause");
                     // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
                     DOUT(if (config.opt_rer_debug) cerr << "c remove clause (" << i << ")[" << rerFuseClauses[i] << "] " << ca[ rerFuseClauses[i] ] << endl;);
                     removeClause(rerFuseClauses[i]); // drop this clause!
@@ -4141,7 +4149,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 cerr << endl << "c accepted current pattern with lits " << rerLits << " - start over" << endl << endl;
                 cerr << "c trail: " ;
                 for (int i = 0 ; i < trail.size(); ++ i) {
-                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if (reason(var(trail[i])) == CRef_Undef) { cerr << "U"; } else { cerr << reason(var(trail[i])); }
+                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; 
+			if ( !reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; } 
+			else { 
+			  if ( !reason(var(trail[i])).isBinaryClause() ) cerr << reason(var(trail[i])).getReasonC(); 
+			  else cerr << "L" << reason(var(trail[i])).getReasonL(); 
+			}
                     } cerr << endl;
                 });
                 resetRestrictedExtendedResolution(); // done with the current pattern
@@ -4264,8 +4277,8 @@ Solver::rerReturnType Solver::restrictedERITE(const Lit& previousFirst, const ve
     // detach all learned clauses from fused clauses
     {
         // its one clause here!
-        assert(rerFuseClauses[0] != reason(var(ca[rerFuseClauses[0]][0])) && "from a RER-CDCL point of view, these clauses cannot be reason clause");
-        assert(rerFuseClauses[0] != reason(var(ca[rerFuseClauses[0]][1])) && "from a RER-CDCL point of view, these clauses cannot be reason clause");
+        assert(rerFuseClauses[0] != reason(var(ca[rerFuseClauses[0]][0])).getReasonC() && "from a RER-CDCL point of view, these clauses cannot be reason clause");
+        assert(rerFuseClauses[0] != reason(var(ca[rerFuseClauses[0]][1])).getReasonC() && "from a RER-CDCL point of view, these clauses cannot be reason clause");
         // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
         DOUT(if (config.opt_rer_debug) cerr << "c remove clause (" << 0 << ")[" << rerFuseClauses[0] << "] " << ca[ rerFuseClauses[0] ] << endl;);
         removeClause(rerFuseClauses[0]); // drop this clause!
@@ -4826,7 +4839,12 @@ void Solver::printConflictTrail(CRef confl)
         cerr << "c conflict clause: " << ca[confl] << endl;
         cerr << "c trail: " ;
         for (int i = 0 ; i < trail.size(); ++ i) {
-            cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if (reason(var(trail[i])) == CRef_Undef) { cerr << "U"; } else { cerr << reason(var(trail[i])); }
+            cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; 
+	    if ( !reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; } 
+	    else { 
+	      if ( !reason(var(trail[i])).isBinaryClause() ) cerr << reason(var(trail[i])).getReasonC(); 
+	      else cerr << "L" << reason(var(trail[i])).getReasonL(); 
+	    }
         } cerr << endl;
     });
 }

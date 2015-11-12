@@ -715,10 +715,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::free(diff);
     }
 
-    void reloc(CRef& cr, ClauseAllocator& to)
+    /** reloc clause without modifying the reference directly */
+    CRef relocC(CRef cr, ClauseAllocator& to)
     {
         Clause& c = operator[](cr);
-        if (c.reloced()) { cr = c.relocation(); return; }
+        if (c.reloced()) { cr = c.relocation(); return cr; }
 
         cr = to.alloc(c, c.learnt());
 
@@ -736,6 +737,13 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].setLBD(c.lbd());
             to[cr].setCanBeDel(c.canBeDel());
         } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
+        
+        return cr;
+    }
+    
+    void reloc(CRef& cr, ClauseAllocator& to)
+    {
+	cr = relocC( cr, to );
     }
 
     // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3

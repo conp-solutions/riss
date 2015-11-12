@@ -231,6 +231,9 @@ class CoprocessorData
     // sort
     void sortClauseLists(bool alsoLearnts = false);
 
+    /** add all formulas back to the solver */
+    void reSetupSolver();
+    
 // delete timers
     /** gives back the current times, increases for the next technique */
     uint32_t getMyModTimer();
@@ -903,6 +906,143 @@ inline void CoprocessorData::cleanOccurrences()
     lit_occurrence_count.assign(0, nVars() * 2);
 }
 
+inline
+void CoprocessorData::reSetupSolver()
+{
+    assert(solver->decisionLevel() == 0 && "can re-setup solver only if it is at decision level 0!");
+    int kept_clauses = 0;
+
+    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
+    if (solver->trail_lim.size() > 0)
+        for (int i = 0 ; i < solver->trail_lim[0]; ++ i)
+            if (!solver->reason(var(solver->trail[i])).isBinaryClause() && solver->reason(var(solver->trail[i])).getReasonC() != CRef_Undef)
+                if (ca[ solver->reason(var(solver->trail[i])).getReasonC() ].can_be_deleted()) {
+                    solver->vardata[ var(solver->trail[i]) ].reason.setReason( CRef_Undef );
+                }
+
+    // give back into solver
+    for (int i = 0; i < solver->clauses.size(); ++i) {
+        const CRef cr = solver->clauses[i];
+        Clause& c = ca[cr];
+        assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
+        if (c.can_be_deleted()) {
+	    c.mark(1);
+	    ca.free(cr);
+        } else {
+            assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
+            if (c.size() > 1) {
+                if ( solver->qhead == 0 ) {  // do not change the clause, if nothing has been propagated yet
+                    solver->attachClause(cr);
+                    solver->clauses[kept_clauses++] = cr; // add original clauss back!
+                    continue;
+                }
+
+                // do not watch literals that are false!
+                int j = 1;
+                for (int k = 0 ; k < 2; ++ k) {   // ensure that the first two literals are undefined!
+                    if (solver->value(c[k]) == l_False) {
+                        for (; j < c.size() ; ++j)
+                            if (solver->value(c[j]) != l_False)
+                            { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+                    }
+                }
+
+                // reduct of clause is empty, or unit
+                if (solver->value(c[0]) == l_False) { setFailed(); return; }
+                else if (solver->value(c[1]) == l_False) {
+                    if (enqueue(c[0]) == l_False) {
+                        addCommentToProof("learnt unit during resetup solver");
+                        addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                    } else {
+                        c.set_delete(true);
+                    }
+                    if (solver->propagate() != CRef_Undef) { setFailed(); return; }
+                    c.set_delete(true);
+                } else {
+                    solver->attachClause(cr);
+                    solver->clauses[kept_clauses++] = cr; // add original clauss back!
+                }
+            } else {
+                if (solver->value(c[0]) == l_Undef){
+                    if (enqueue(c[0]) == l_False) {
+                        addCommentToProof("learnt unit during resetup solver");
+                        addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                        return;
+                    } else if (solver->value(c[0]) == l_False) {
+                        // assert( false && "This UNSAT case should be recognized before re-setup" );
+                        setFailed();
+                    }
+		}
+                c.set_delete(true);
+            }
+        }
+    }
+    int c_old = solver->clauses.size();
+    solver->clauses.shrink_(solver->clauses.size() - kept_clauses);
+
+    int learntToClause = 0;
+    kept_clauses = 0;
+    for (int i = 0; i < solver->learnts.size(); ++i) {
+        const CRef cr = solver->learnts[i];
+        Clause& c = ca[cr];
+        assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
+        if (c.can_be_deleted()) {
+            c.mark(1);
+	    ca.free(cr);
+            continue;
+        }
+        assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
+        if (c.learnt()) {
+            if (c.size() > 1) {
+                solver->learnts[kept_clauses++] = solver->learnts[i];
+            }
+        } else { // move subsuming clause from learnts to clauses
+            c.set_has_extra(true);
+            c.calcAbstraction();
+            learntToClause ++;
+            if (c.size() > 1) {
+                solver->clauses.push(cr);
+            }
+        }
+        assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
+        if (c.size() > 1) {
+            // do not watch literals that are false!
+            int j = 1;
+            for (int k = 0 ; k < 2; ++ k) {   // ensure that the first two literals are undefined!
+                if (solver->value(c[k]) == l_False) {
+                    for (; j < c.size() ; ++j)
+                        if (solver->value(c[j]) != l_False)
+                        { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+                }
+            }
+            // assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+
+            // reduct of clause is empty, or unit
+            if (solver->value(c[0]) == l_False) { setFailed(); return; }
+            else if (solver->value(c[1]) == l_False) {
+                addCommentToProof("learnt unit during resetup solver");
+                addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                if (enqueue(c[0]) == l_False) {
+                    return;
+                } 
+                if (solver->propagate() != CRef_Undef) { setFailed(); return; }
+                c.set_delete(true);
+            } else { solver->attachClause(cr); }
+        } else if (solver->value(c[0]) == l_Undef) {
+            if (enqueue(c[0]) == l_False) {
+                addCommentToProof("learnt unit during resetup solver");
+                addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                return;
+            }
+        } else if (solver->value(c[0]) == l_False) {
+            // assert( false && "This UNSAT case should be recognized before re-setup" );
+            setFailed();
+        }
+
+    }
+    solver->learnts.shrink_(solver->learnts.size() - kept_clauses);
+}
+
 
 inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
 {
@@ -1323,8 +1463,12 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
         Riss::Var v = var(solver->trail[i]);
         // FIXME TODO: there needs to be a better workaround for this!!
         if (solver->level(v) == 0) { solver->vardata[v].reason = Riss::CRef_Undef; }   // take care of reason clauses for literals at top-level
-        else if (solver->reason(v) != Riss::CRef_Undef && (ca[solver->reason(v)].reloced() || solver->locked(ca[solver->reason(v)]))) {
-            ca.reloc(solver->vardata[v].reason, to);
+        else if (
+	  ! solver->reason(v).isBinaryClause()
+	  && solver->reason(v).getReasonC() != Riss::CRef_Undef 
+	  && (ca[solver->reason(v).getReasonC() ].reloced() || solver->locked(ca[solver->reason(v).getReasonC() ]))
+	) {
+            solver->vardata[v].reason.setReason( ca.relocC(solver->vardata[v].reason.getReasonC() , to) ); // update reason
         }
     }
 
