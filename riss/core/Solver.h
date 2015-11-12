@@ -461,6 +461,7 @@ class Solver
     
     /** structure that allows to store the binary reason for a variable assignment implicitely*/
     struct ReasonStruct {
+
       unsigned data : 31;
       unsigned isBinary : 1;
       ReasonStruct() : data(0), isBinary(0) {}
@@ -495,12 +496,23 @@ class Solver
             , dependencyLevel(0)
             #endif
         {}
+        VarData(Lit r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
     };
 
   protected:
     static inline VarData mkVarData(CRef cr, int l)
     {
         VarData d(cr, l, lit_Undef, -1);
+        return d;
+    }
+    
+    static inline VarData mkVarData(Lit reasonLiteral, int l)
+    {
+        VarData d(reasonLiteral, l, lit_Undef, -1);
         return d;
     }
 
@@ -780,8 +792,11 @@ class Solver
     Lit      pickBranchLit();                                                          // Return the next decision variable.
     void     newDecisionLevel();                                                       // Begins a new decision level.
 
+    
     void     uncheckedEnqueue(Lit p, CRef from = CRef_Undef,                           // Enqueue a literal. Assumes value of literal is undefined.
                               bool addToProof = false, const unsigned dependencyLevel = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
+    void     uncheckedEnqueue(Lit p, Lit fromLit, bool addToProof = true, const unsigned dependencyLevel = 0); // same as the above method, but uses literal as the reason
+                              
     bool     enqueue(Lit p, CRef from = CRef_Undef);                                   // Test if fact 'p' contradicts current state, enqueue otherwise.
 
     CRef     propagate(bool duringAddingClauses = false);                              // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
@@ -793,6 +808,8 @@ class Solver
 
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
 
+    void updateMetricsDuringAnalyze( const Lit p, const CRef cr, Clause& c, bool& foundFirstLearnedClause, unsigned int& dependencyLevel ); /// update metrics based on the current clause we are using
+    
   public:
     /** Main solve method (assumptions given in 'assumptions')
      * @param preprocessCall control how to perform initialization and preprocessing
