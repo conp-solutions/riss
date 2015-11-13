@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <assert.h>
 #include <new>
+#include <string.h>
 
 #include "riss/mtl/IntTypes.h"
 #include "riss/mtl/XAlloc.h"
@@ -112,6 +113,13 @@ class vec
         data = tmpdata;
         sz   = tmpsz;
         cap  = tmpcap;
+    }
+    
+    /** assign the given element to all items of the vector 
+     * Note: uses memset
+     */
+    void assign(const T& ele) {
+      memset( data, ele, sizeof(ele) * sz );
     }
 };
 
