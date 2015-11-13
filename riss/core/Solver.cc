@@ -1320,14 +1320,18 @@ bool Solver::litRedundant(Riss::Lit p, uint32_t abstract_levels, unsigned int& d
 {
 #warning: implement dependencyLevel properly into analysis!
 
+    DOUT(if (config.opt_learn_debug) cerr << "c check redundancy for literal " << p << endl;);
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0) {
         assert( reason(var(analyze_stack.last())).isBinaryClause() || reason(var(analyze_stack.last())).getReasonC() != CRef_Undef); // a reason must exist
 	
 	if( reason(var(analyze_stack.last())).isBinaryClause() ) {
+
 	      // only use innermost part of below loops
 	      const Lit& p  = reason(var(analyze_stack.last())).getReasonL();
+	      analyze_stack.pop();
+	      
 	      if (!varFlags[var(p)].seen && level(var(p)) > 0) {
 		  if ( (reason(var(p)).isBinaryClause() || reason(var(p)).getReasonC() != CRef_Undef) && (abstractLevel(var(p)) & abstract_levels) != 0) { // can be used for minimization
 		      varFlags[var(p)].seen = 1;
@@ -1341,7 +1345,7 @@ bool Solver::litRedundant(Riss::Lit p, uint32_t abstract_levels, unsigned int& d
 		      return false;
 		  }
 	      }
-	  
+
 	} else {
 	  Clause& c = ca[ reason(var(analyze_stack.last())).getReasonC() ]; analyze_stack.pop();
 	  if (c.size() == 2 && value(c[0]) == l_False) {
