@@ -17,10 +17,10 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include <fstream>
 #include <algorithm>
 
-#include "classifier/CNFClassifier.h"
+#include "CNFClassifier.h"
 #include "classifier/WekaDataset.h"
 #include "classifier/Configurations.h"
-#include "classifier/Classifier.h"
+#include "Classifier.h"
 
 #include "riss/utils/System.h"
 #include "riss/utils/ParseUtils.h"
@@ -192,6 +192,7 @@ void dumpData()
 
 void computeExtraGraphFeatures(int argc, char** argv)
 {
+  
     string line = "";
     fileout = new ofstream();
     runtimesInfo = (argc == 1);
@@ -199,6 +200,7 @@ void computeExtraGraphFeatures(int argc, char** argv)
     cnffile = argv[1];
 
     CoreConfig coreConfig;
+   
     Solver S(&coreConfig);
 
     double initial_time = cpuTime();
@@ -250,7 +252,34 @@ void computeExtraGraphFeatures(int argc, char** argv)
             S.clauses.push(cr);
         }
     }
-
+    
+    
+/*static Solver for Comprehension
+ *
+    Solver M(&coreConfig);
+    
+    Var a = M.newVar(true,true,'a');
+    Var b = M.newVar(true,true,'b');
+    Var d = M.newVar(true,true,'d');
+    
+    vec<Lit> myps;
+    
+    
+    myps.push(mkLit(b, false));
+    CRef mycr = M.ca.alloc(myps,false);
+    M.clauses.push(mycr);
+    myps.clear();
+    
+     myps.push(mkLit(a, true));
+    mycr = M.ca.alloc(myps,false);
+    M.clauses.push(mycr);
+    myps.clear();
+    
+     myps.push(mkLit(d, true));
+    mycr = M.ca.alloc(myps,false);
+    M.clauses.push(mycr);
+    myps.clear();
+  */  
     cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
     cnfclassifier->setVerb(verb);
     cnfclassifier->setComputingClausesGraph(clausesf);
@@ -269,6 +298,7 @@ void computeExtraGraphFeatures(int argc, char** argv)
     }
     cnfclassifier->setComputingDerivative(derivative);
 
+    
     // in output features the actual calculation is done
     cnfclassifier->graphExtraFeatures(features); // also print the formula name!!
     
@@ -381,38 +411,13 @@ void printFeatures(int argc, char** argv)
 // Note that '_exit()' rather than 'exit()' has to be used. The reason is that 'exit()' calls
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
+
 void static SIGINT_exit(int signum)
 {
     printf("\n"); printf("c *** INTERRUPTED ***\n");
     _exit(1); // immediately exit!
     if (!receivedInterupt) { _exit(1); }
     else { receivedInterupt = true; }
-}
-
-
-
-void compareFormulas(int argc, char** argv) {
-  if( argc < 3 ) { printf("c ERROR! two files have to be specified to be compared"); exit(1); }
-  
-  gzFile in1 = gzopen(argv[1], "rb");
-  if (in1 == nullptr) {
-      printf("c ERROR! Could not open file: %s\n", argv[1]), exit(1);
-  } 
-  gzFile in2 = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[2], "rb");
-  if (in2 == nullptr) {
-      printf("c ERROR! Could not open file: %s\n", argv[2]), exit(1);
-  }
-  
-  CompareSolver c1;
-  parse_DIMACS(in1, c1);
-  CompareSolver c2;
-  parse_DIMACS(in2, c2);
-  
-  if( c1.equals( c2 ) ) {
-    cout << "c formulas are equal" << endl;
-  } else {
-    cout << "c formulas are not equal" << endl;
-  }
 }
 
 //=================================================================================================
@@ -459,7 +464,7 @@ int main(int argc, char** argv)
             printf("c |                                                                                                       |\n");
         }
 
-        configuration = new Configurations(configInfo, attrInfo);
+        
 
 	computeExtraGraphFeatures (argc, argv);
 

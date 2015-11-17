@@ -5,10 +5,10 @@
  *      Author: gardero
  */
 
-#include "classifier/BipartiteGraph.h"
-
+#include "BipartiteGraph.h"
+#include "iostream"
 BipartiteGraph::BipartiteGraph(int sizeB, int sizeW, bool computingDerivative):
-    nodeB(sizeB, 0), nodeW(sizeW)
+    nodeB(sizeB, 0), nodeW(sizeW), nodeBAdj(sizeB)
 {
     this->sizeB = sizeB;
     this->sizeW = sizeW;
@@ -21,7 +21,12 @@ BipartiteGraph::~BipartiteGraph()
 
 void BipartiteGraph::addEdgeFromB(int nodeBidx, int nodeWidx)
 {
+  
+    nodeBAdj[nodeBidx].push_back(nodeWidx);
     nodeB[nodeBidx]++;
+    
+    
+    
 }
 
 void BipartiteGraph::addEdgeFromW(int nodeWidx, int nodeBidx)
@@ -31,7 +36,9 @@ void BipartiteGraph::addEdgeFromW(int nodeWidx, int nodeBidx)
 
 void BipartiteGraph::addEdge(int nodeWidx, int nodeBidx)
 {
+
     addEdgeFromW(nodeWidx, nodeBidx);
+   
     addEdgeFromB(nodeBidx, nodeWidx);
 }
 

@@ -2,7 +2,7 @@
  Copyright (c) 2013, Norbert Manthey, All rights reserved.
  **************************************************************************************************/
 
-#include "classifier/CNFClassifier.h"
+#include "CNFClassifier.h"
 #include "riss/utils/System.h" // for cpuTime
 #include "coprocessor/CoprocessorTypes.h" // for binary implication graph
 #include <sstream>
@@ -157,7 +157,11 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
     double time1 = cpuTime();
     vector<int> clsSizes(10, 0);   // stores number of clauses of a given size (here, store for 1 to 8)
     // iterate over all clauses and parse all the literals
+    
+    
+    
     for (int i = 0; i < clauses.size(); ++i) {
+      
         //You should know the difference between Java References, C++ Pointers, C++ References and C++ copies.
         // Especially if you write your own methods and pass large objects that you want to modify, this makes a difference!
         const Clause& c = ca[clauses[i]];
@@ -167,11 +171,17 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         for (int j = 0; j < c.size(); ++j) {
             const Lit& l = c[j]; // for read access only, you could use a read-only reference of the type literal.
             const Lit cpl = ~l;  // build the complement of the literal
+           
             const Var v = var(l); // calculate a variable from the literal
             const bool isNegative = sign(l); // check the polarity of the literal
+	    
             if (isNegative) {
+	      
                 clausesVariablesN.addEdge(v, i);
+		
+		
             } else {
+	      
                 clausesVariablesP.addEdge(v, i);
             }
 
@@ -1165,6 +1175,7 @@ void CNFClassifier::symmetrycode(vector<double>& ret)
 
 void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 {
+  
     // graphs for feature calculation
     BipartiteGraph clausesVariablesP(clauses.size(), nVars, computingDerivative); // FIXME: norbert: you might not need all graphs at the same time. Since they consume memory, it might be good to destroy them, as soon as you do not need them any more, and to set them up as late as possible!
     BipartiteGraph clausesVariablesN(clauses.size(), nVars, computingDerivative); // FIXME: norbert: you might not need all graphs at the same time. Since they consume memory, it might be good to destroy them, as soon as you do not need them any more, and to set them up as late as possible!
@@ -1173,7 +1184,46 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     
     //   [a,b,c] [-b,-c] [b,-c]  => graph?
     // build single VIG graph
-    cerr << "Graph g();" << endl;
+    
+    Graph singleVIG(nVars, computingDerivative);
+    
+    
+    
+    for(int i = 0; i < nVars; i++){
+        vector<int> variablesinClauselN = clausesVariablesN.getAjacencyB(i);
+	vector<int> variablesinClauselP = clausesVariablesP.getAjacencyB(i);
+	vector<int> variablestostore;
+	
+	for(int j = 0; j < variablesinClauselN.size(); j++){
+	  bool mybool = false;
+	  for(int k = 0; k < variablestostore.size(); k++) if(variablestostore[k] == variablesinClauselN[j]) mybool = true ;
+	   
+	  if(!mybool) variablestostore.push_back(variablesinClauselN[j]); 
+	}
+	
+	for(int j = 0; j < variablesinClauselP.size(); j++){
+	  bool mybool = false;
+	  for(int k = 0; k < variablestostore.size(); k++) if(variablestostore[k] == variablesinClauselP[j]) mybool = true ;
+	   
+	  if(!mybool) variablestostore.push_back(variablesinClauselP[j]); 
+	}
+	
+    
+	for(int j = 0; j < variablestostore.size(); j++){
+
+	  for(int k = 0; k < variablestostore.size(); k++){
+	    if(variablestostore[j] == variablestostore[k]) continue;
+	    if(singleVIG.edgeexists(variablestostore[j],variablestostore[k])) continue;
+	  singleVIG.addUndirectedEdge(variablestostore[j], variablestostore[k]);
+	  }
+	  
+	}
+	
+      
+    
+    }
+      for(int x = 0; x < nVars; x++) cerr << singleVIG.getAdjacency(x)<<endl;
+   
     
     // graph feature code
     

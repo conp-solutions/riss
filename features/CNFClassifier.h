@@ -6,8 +6,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #define RISS_CNFCLASSIFIER_H
 
 #include "riss/core/Solver.h"
-#include "classifier/Graph.h"
-#include "classifier/BipartiteGraph.h"
+#include "Graph.h"
+#include "BipartiteGraph.h"
 
 // using namespace Riss;
 // using namespace std;

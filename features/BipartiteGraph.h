@@ -9,11 +9,11 @@
 
 #include <vector>
 #include "classifier/SequenceStatistics.h"
-#include "classifier/Graph.h"
+#include "Graph.h"
 
 /**
  * class representing a directed bipartite (Black and White nodes) graph.
- * Black nodes keep a counter to how many white nodes they are related.
+ * Black nodes keep a counter to how many and to which white nodes they are related.
  * White nodes keep the list of black nodes to which they are related.
  */
 class BipartiteGraph
@@ -21,7 +21,7 @@ class BipartiteGraph
   private:
     int sizeB, sizeW;
     std::vector<int> nodeB;
-    std::vector< std::vector<int> > nodeW;
+    std::vector< std::vector<int> > nodeW, nodeBAdj;
 
 
   public:
@@ -46,6 +46,12 @@ class BipartiteGraph
     const std::vector<int>& getAjacencyW(int indexW) const
     {
         return nodeW[indexW];
+    }
+    
+    
+    const std::vector<int>& getAjacencyB(int indexW) const
+    {
+        return nodeBAdj[indexW];
     }
 
 

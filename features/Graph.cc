@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 
-#include "classifier/Graph.h"
+#include "Graph.h"
 #include <math.h>
 #include <assert.h>
 #include <sstream>
@@ -260,4 +260,38 @@ uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
     intermediateSorts ++;
     
     return operations;
+}
+
+vector< int > Graph::getAdjacency(int adjnode)
+{
+ adjacencyList adj = node[adjnode];
+ 
+ 
+ 
+ vector<int> nodes;
+ 
+ for(int i = 0; i < adj.size(); i++){
+   edge edg = adj[i];
+   nodes.push_back(edg.first);
+ 
+  }
+  
+  return nodes;
+}
+
+bool Graph::edgeexists(int node1, int node2){
+
+  if (node1 > node2) { // always check the smaller node
+        int t = node2;
+        node2 = node1;
+        node1 = t;
+    }
+    
+   vector<int> adj = getAdjacency(node1);
+  
+   for(int i = 0; i < adj.size(); i++){
+   if(adj[i] == node2) return true;  
+  }
+  
+  return false;
 }
