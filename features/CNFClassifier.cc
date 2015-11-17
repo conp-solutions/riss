@@ -1214,7 +1214,9 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 	  for(int k = 0; k < variablestostore.size(); k++){
 	    if(variablestostore[j] == variablestostore[k]) continue;
 	    if(singleVIG.edgeexists(variablestostore[j],variablestostore[k])) continue;
-	  singleVIG.addUndirectedEdge(variablestostore[j], variablestostore[k]);
+	  singleVIG.addDirectedEdge(variablestostore[j], variablestostore[k], 1);
+	   if(singleVIG.edgeexists(variablestostore[k],variablestostore[j])) continue;
+	  singleVIG.addDirectedEdge(variablestostore[k], variablestostore[j], 1);
 	  }
 	  
 	}
@@ -1222,7 +1224,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
       
     
     }
-      for(int x = 0; x < nVars; x++) cerr << singleVIG.getAdjacency(x)<<endl;
+      for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjcency: "<<singleVIG.getAdjacency(x)<<endl;
    
     
     // graph feature code

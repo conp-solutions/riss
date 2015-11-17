@@ -281,12 +281,12 @@ vector< int > Graph::getAdjacency(int adjnode)
 
 bool Graph::edgeexists(int node1, int node2){
 
-  if (node1 > node2) { // always check the smaller node
+ /* if (node1 > node2) { // always check the smaller node
         int t = node2;
         node2 = node1;
         node1 = t;
     }
-    
+   */ 
    vector<int> adj = getAdjacency(node1);
   
    for(int i = 0; i < adj.size(); i++){
