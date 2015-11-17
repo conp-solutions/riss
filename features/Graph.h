@@ -36,7 +36,7 @@ class Graph
     uint64_t sortAdjacencyList(adjacencyList& aList);
 
   public:
-    bool edgeexists(int node1, int node2);
+    void completeSingleVIG();
     std::vector<int> getAdjacency(int adjnode);
     Graph(int nodes, bool computingDerivative);
     Graph(int nodes, bool merge, bool computingDerivative);

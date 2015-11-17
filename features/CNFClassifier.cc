@@ -1195,36 +1195,24 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 	vector<int> variablestostore;
 	
 	for(int j = 0; j < variablesinClauselN.size(); j++){
-	  bool mybool = false;
-	  for(int k = 0; k < variablestostore.size(); k++) if(variablestostore[k] == variablesinClauselN[j]) mybool = true ;
-	   
-	  if(!mybool) variablestostore.push_back(variablesinClauselN[j]); 
+	  variablestostore.push_back(variablesinClauselN[j]); 
 	}
 	
 	for(int j = 0; j < variablesinClauselP.size(); j++){
-	  bool mybool = false;
-	  for(int k = 0; k < variablestostore.size(); k++) if(variablestostore[k] == variablesinClauselP[j]) mybool = true ;
-	   
-	  if(!mybool) variablestostore.push_back(variablesinClauselP[j]); 
+	  variablestostore.push_back(variablesinClauselP[j]); 
 	}
 	
-    
 	for(int j = 0; j < variablestostore.size(); j++){
-
 	  for(int k = 0; k < variablestostore.size(); k++){
-	    if(variablestostore[j] == variablestostore[k]) continue;
-	    if(singleVIG.edgeexists(variablestostore[j],variablestostore[k])) continue;
-	  singleVIG.addDirectedEdge(variablestostore[j], variablestostore[k], 1);
-	   if(singleVIG.edgeexists(variablestostore[k],variablestostore[j])) continue;
-	  singleVIG.addDirectedEdge(variablestostore[k], variablestostore[j], 1);
+	  singleVIG.addUndirectedEdge(variablestostore[j], variablestostore[k], 1);
 	  }
-	  
-	}
-	
-      
-    
+	} 
     }
-      for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjcency: "<<singleVIG.getAdjacency(x)<<endl;
+    
+  singleVIG.completeSingleVIG();
+    
+    
+      for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
    
     
     // graph feature code

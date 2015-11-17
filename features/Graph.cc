@@ -264,10 +264,7 @@ uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
 
 vector< int > Graph::getAdjacency(int adjnode)
 {
- adjacencyList adj = node[adjnode];
- 
- 
- 
+ adjacencyList& adj = node[adjnode];
  vector<int> nodes;
  
  for(int i = 0; i < adj.size(); i++){
@@ -279,19 +276,11 @@ vector< int > Graph::getAdjacency(int adjnode)
   return nodes;
 }
 
-bool Graph::edgeexists(int node1, int node2){
-
- /* if (node1 > node2) { // always check the smaller node
-        int t = node2;
-        node2 = node1;
-        node1 = t;
-    }
-   */ 
-   vector<int> adj = getAdjacency(node1);
+void Graph::completeSingleVIG(){
   
-   for(int i = 0; i < adj.size(); i++){
-   if(adj[i] == node2) return true;  
+  for(int i = 0; i < node.size(); i++){
+  adjacencyList& adj = node[i];
+  sortAdjacencyList(adj);
   }
   
-  return false;
 }
