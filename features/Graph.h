@@ -54,6 +54,8 @@ class Graph
     uint64_t computeNmergeStatistics(int quantilesCount);
     uint64_t computeOnlyStatistics(int quantilesCount);
 
+    /** finalize adjacency lists after all nodes have been added to the graph */
+    void finalizeGraph();
 
     const SequenceStatistics& getDegreeStatistics() const
     {

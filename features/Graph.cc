@@ -55,6 +55,10 @@ Graph::~Graph()
 //   cerr << "c intermediate sorts: " << intermediateSorts << endl;
 }
 
+void Graph::finalizeGraph() {
+    
+}
+
 void Graph::setIntermediateSort(bool newValue)
 {
     intermediateSort = newValue;
@@ -105,6 +109,7 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
     if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
         sortAdjacencyList(node[nodeA]);
         sortSize[ nodeA ] *= 2;
+	nodeDeg[nodeA] = node[nodeA].size();
     }
 }
 
@@ -125,6 +130,7 @@ void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
         sortAdjacencyList(node[nodeA]);
         sortSize[ nodeA ] *= 2;
+	nodeDeg[nodeA] = node[nodeA].size();
     }
 }
 
@@ -246,18 +252,19 @@ uint64_t Graph::computeNmergeStatistics(int quantilesCount)
 
 uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
 {
+    if( aList.size() == 0 ) return 0; // early abort, there is nothing to be done for this list!
     uint64_t operations = 0;
+    
     sort(aList.begin(), aList.end(), nodesComparator);
     operations += aList.size() * log(aList.size());
     int kept = 0;
-    for (int j = 0; j < aList.size(); ++j) {
-     
+    for (int j = 1; j < aList.size(); ++j) { // start with second element, as the first element will be kept in all cases!
         if (aList[j].first != aList[kept].first) { aList[++kept] = aList[j]; }   // keep the next element
         else { aList[kept].second += aList[j].second; } // otherwise add the weights!
     }
     operations += aList.size();
-    if(aList.size()>0) aList.erase(aList.begin());
-    aList.resize(kept);   // save space!
+
+    if( kept < aList.size() ) aList.resize(kept + 1);   // save space!
 
     intermediateSorts ++;
     
@@ -281,8 +288,9 @@ vector<int> Graph::getAdjacency(int adjnode)
 void Graph::completeSingleVIG(){
   
   for(int i = 0; i < node.size(); i++){
-  adjacencyList& adj = node[i];
-  sortAdjacencyList(adj);
+    adjacencyList& adj = node[i];
+    sortAdjacencyList(adj);
+    nodeDeg[i] = node[i].size();
   }
   
 }

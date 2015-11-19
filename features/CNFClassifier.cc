@@ -1186,9 +1186,9 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     // build single VIG graph
     
     Graph singleVIG(nVars, computingDerivative);
-    //singleVIG.setIntermediateSort(false);
+    singleVIG.setIntermediateSort(true);
     
-    
+    // FIXME TODO: use the code from the method buildClausesAndVariablesGrapths to build the graph directly from the formula! do not use the two bipartiteGraph objects!
     for(int i = 0; i < nVars; i++){
         vector<int> variablesinClauselN = clausesVariablesN.getAjacencyB(i);
 	vector<int> variablesinClauselP = clausesVariablesP.getAjacencyB(i);
@@ -1212,9 +1212,14 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     
    //singleVIG.completeSingleVIG();
    
+   // without sorting
       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
    
-    
+   // after sorting
+      cerr << "c finalize lists:" << endl;
+      singleVIG.completeSingleVIG();
+      for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
+      
     // graph feature code
     
     
