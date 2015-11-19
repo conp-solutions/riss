@@ -251,10 +251,12 @@ uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
     operations += aList.size() * log(aList.size());
     int kept = 0;
     for (int j = 0; j < aList.size(); ++j) {
-        if (aList[j].first != aList[kept].first) { aList[kept++] = aList[j]; }   // keep the next element
+     
+        if (aList[j].first != aList[kept].first) { aList[++kept] = aList[j]; }   // keep the next element
         else { aList[kept].second += aList[j].second; } // otherwise add the weights!
     }
     operations += aList.size();
+    if(aList.size()>0) aList.erase(aList.begin());
     aList.resize(kept);   // save space!
 
     intermediateSorts ++;
@@ -262,7 +264,7 @@ uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
     return operations;
 }
 
-vector< int > Graph::getAdjacency(int adjnode)
+vector<int> Graph::getAdjacency(int adjnode)
 {
  adjacencyList& adj = node[adjnode];
  vector<int> nodes;

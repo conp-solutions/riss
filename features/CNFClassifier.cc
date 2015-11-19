@@ -1186,7 +1186,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     // build single VIG graph
     
     Graph singleVIG(nVars, computingDerivative);
-    
+    //singleVIG.setIntermediateSort(false);
     
     
     for(int i = 0; i < nVars; i++){
@@ -1201,17 +1201,17 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 	for(int j = 0; j < variablesinClauselP.size(); j++){
 	  variablestostore.push_back(variablesinClauselP[j]); 
 	}
-	
 	for(int j = 0; j < variablestostore.size(); j++){
+	  
 	  for(int k = 0; k < variablestostore.size(); k++){
-	  singleVIG.addUndirectedEdge(variablestostore[j], variablestostore[k], 1);
+	    
+	  singleVIG.addUndirectedEdge(variablestostore[j], variablestostore[k]);
 	  }
 	} 
     }
     
-  singleVIG.completeSingleVIG();
-    
-    
+   //singleVIG.completeSingleVIG();
+   
       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
    
     
