@@ -1188,11 +1188,13 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     Graph singleVIG(nVars, computingDerivative);
     singleVIG.setIntermediateSort(true);
     
+    double start = cpuTime();
     // FIXME TODO: use the code from the method buildClausesAndVariablesGrapths to build the graph directly from the formula! do not use the two bipartiteGraph objects!
+    vector<int> variablestostore;
     for(int i = 0; i < nVars; i++){
-        vector<int> variablesinClauselN = clausesVariablesN.getAjacencyB(i);
-	vector<int> variablesinClauselP = clausesVariablesP.getAjacencyB(i);
-	vector<int> variablestostore;
+        const vector<int>& variablesinClauselN = clausesVariablesN.getAjacencyB(i);
+	const vector<int>& variablesinClauselP = clausesVariablesP.getAjacencyB(i);
+	variablestostore.clear();
 	
 	for(int j = 0; j < variablesinClauselN.size(); j++){
 	  variablestostore.push_back(variablesinClauselN[j]); 
@@ -1209,16 +1211,18 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 	  }
 	} 
     }
+    double end = cpuTime();
+    cerr << "computation took " << end - start << " seconds" << endl;
     
    //singleVIG.completeSingleVIG();
    
    // without sorting
-      for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
+//       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
    
    // after sorting
-      cerr << "c finalize lists:" << endl;
+//       cerr << "c finalize lists:" << endl;
       singleVIG.completeSingleVIG();
-      for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
+//       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
       
     // graph feature code
     
