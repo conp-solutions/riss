@@ -56,7 +56,10 @@ Graph::~Graph()
 }
 
 void Graph::finalizeGraph() {
-    
+     for(int i = 0; i < node.size(); i++){
+    sortAdjacencyList(node[i]);                    //finalizeGraph
+    nodeDeg[i] = node[i].size();
+   }
 }
 
 void Graph::setIntermediateSort(bool newValue)
@@ -286,11 +289,42 @@ vector<int> Graph::getAdjacency(int adjnode)
 }
 
 void Graph::completeSingleVIG(){
+     
+   for(int j = size-2; j >= 0; j--){ //you dont have to check the last node
+     adjacencyList& adj = node[j];
+     for(int k = 0; k < adj.size(); k++) addDirectedEdge(adj[k].first, j, adj[k].second);
+     }
+    
+}
+
+u_int64_t Graph::getDiameter(){
+ 
+   u_int64_t diameter = 0;
+   u_int64_t tmp = 0;
+   vector<bool> nodes;
+   nodes.resize(size);
   
-  for(int i = 0; i < node.size(); i++){
-    adjacencyList& adj = node[i];
-    sortAdjacencyList(adj);
-    nodeDeg[i] = node[i].size();
+   for(int i = 0; i < size; ++i){
+   nodes.clear();
+   nodes[i] = true;
+   if(node[i].size() == 0) continue;
+   tmp = dfa(node[i],0, nodes);
+   if(tmp > diameter) diameter = tmp;
+     
   }
+ 
+ return diameter;
+}
+
+u_int64_t Graph::dfa(adjacencyList& adj, u_int64_t diam, vector<bool>& vec){
+  u_int64_t tmp;
+  for(int i = 0; i < adj.size(); i++){
+    if(!vec[i]){
+     vec[i] = true;
+     tmp=dfa(node[i],diam++, vec);
+     if(tmp>diam) diam = tmp;
+    }
+  }
+  return diam;
   
 }

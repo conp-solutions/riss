@@ -1184,7 +1184,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     
     //   [a,b,c] [-b,-c] [b,-c]  => graph?
     // build single VIG graph
-    
+    /*
     Graph singleVIG(nVars, computingDerivative);
     singleVIG.setIntermediateSort(true);
     
@@ -1223,10 +1223,45 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 //       cerr << "c finalize lists:" << endl;
       singleVIG.completeSingleVIG();
 //       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
+      */
+     vector<int> clsSizes(10, 0);
+    
+    Graph *vigGraph = nullptr;
+    if (computingVarGraph) { vigGraph = new Graph(nVars, computingDerivative); }
+    
+     for (int i = 0; i < clauses.size(); ++i) {
       
+        //You should know the difference between Java References, C++ Pointers, C++ References and C++ copies.
+        // Especially if you write your own methods and pass large objects that you want to modify, this makes a difference!
+        const Clause& c = ca[clauses[i]];
+        clsSizes[ c.size() + 1 < clsSizes.size() ? c.size() : clsSizes.size() - 1 ] ++; // cumulate number of occurrences of certain clause sizes
+
+        double wvariable = pow(2, -c.size());
+        for (int j = 0; j < c.size(); ++j) {
+            const Lit& l = c[j]; // for read access only, you could use a read-only reference of the type literal.
+            const Lit cpl = ~l;  // build the complement of the literal
+           
+            const Var v = var(l); // calculate a variable from the literal
+
+            // Adding edges for the variable graph
+            if (computingVarGraph) {
+                for (int k = j + 1; k < c.size(); ++k) {
+                    vigGraph->addDirectedEdge(v,   
+                                   var(c[k]), wvariable);//with undirected edges there would be problems finding features(e.g. diameter)
+                }
+            }
+
+            assert(var(~l) == var(l) && "the two variables have to be the same");
+        }
+
+    }
+    vigGraph->finalizeGraph(); //finalize
+    vigGraph->completeSingleVIG();//adding inverted edges
+    //for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
+    
     // graph feature code
     
-    
+    cerr<<vigGraph->getDiameter()<<endl;
     
 };
 

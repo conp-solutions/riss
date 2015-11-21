@@ -36,6 +36,8 @@ class Graph
     uint64_t sortAdjacencyList(adjacencyList& aList);
 
   public:
+    u_int64_t dfa(adjacencyList& adj, u_int64_t diam, std::vector<bool>& vec);
+    u_int64_t getDiameter();
     void completeSingleVIG();
     std::vector<int> getAdjacency(int adjnode);
     Graph(int nodes, bool computingDerivative);
