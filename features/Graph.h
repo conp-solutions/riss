@@ -31,13 +31,13 @@ class Graph
     bool intermediateSort;  // remove duplicates in adjacency lists already during the algorithm execution
     int intermediateSorts; // statistics
     bool addedDirectedEdge, addedUndirectedEdge; // bools to make sure in one graph not two different edge types have been added
-
+    std::vector<double> getDistances(int nod);
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
 
   public:
-    u_int64_t dfa(adjacencyList& adj, u_int64_t diam, std::vector<bool>& vec);
-    u_int64_t getDiameter();
+    double getRadius();
+    double getDiameter();
     void completeSingleVIG();
     std::vector<int> getAdjacency(int adjnode);
     Graph(int nodes, bool computingDerivative);

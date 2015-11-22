@@ -1247,7 +1247,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
             if (computingVarGraph) {
                 for (int k = j + 1; k < c.size(); ++k) {
                     vigGraph->addDirectedEdge(v,   
-                                   var(c[k]), wvariable);//with undirected edges there would be problems finding features(e.g. diameter)
+                                   var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
                 }
             }
 
@@ -1257,11 +1257,12 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     }
     vigGraph->finalizeGraph(); //finalize
     vigGraph->completeSingleVIG();//adding inverted edges
-    //for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
+  //  for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
     
     // graph feature code
     
-    cerr<<vigGraph->getDiameter()<<endl;
+   cerr << vigGraph->getRadius()<<endl;
+   cerr << vigGraph->getDiameter()<<endl;
     
 };
 

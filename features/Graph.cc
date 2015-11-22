@@ -297,34 +297,72 @@ void Graph::completeSingleVIG(){
     
 }
 
-u_int64_t Graph::getDiameter(){
- 
-   u_int64_t diameter = 0;
-   u_int64_t tmp = 0;
-   vector<bool> nodes;
-   nodes.resize(size);
+vector<double> Graph::getDistances(int nod){
+
+  vector<double> distance(size);
+  vector<bool> visited(size);
+  vector<int> nodestovisit;
+  adjacencyList& adj = node[nod];
+  double tmpdistance;
   
-   for(int i = 0; i < size; ++i){
-   nodes.clear();
-   nodes[i] = true;
-   if(node[i].size() == 0) continue;
-   tmp = dfa(node[i],0, nodes);
-   if(tmp > diameter) diameter = tmp;
-     
+  for(int x=0; x<size;x++)distance[x] = numeric_limits<double>::infinity();
+  
+  distance[nod] = 0;
+  visited[nod]=true;
+  
+  for(int i=0;i<adj.size();i++){
+    nodestovisit.push_back(adj[i].first);
+    visited[adj[i].first] = true;
+    distance[adj[i].first] = adj[i].second;
   }
- 
- return diameter;
+  
+  for(int k=0; k<nodestovisit.size();++k){
+    
+    tmpdistance = distance[nodestovisit[k]];
+    adjacencyList& adjNeighbor = node[nodestovisit[k]]; 
+     
+     for(int j=0;j<adjNeighbor.size();++j){
+       
+     if(distance[adjNeighbor[j].first] > tmpdistance+adjNeighbor[j].second) distance[adjNeighbor[j].first] = tmpdistance+adjNeighbor[j].second;
+     if(visited[adjNeighbor[j].first]) continue;
+        visited[adjNeighbor[j].first] = true;
+        nodestovisit.push_back(adjNeighbor[j].first);   
+    }
+        
+  }
+
+return distance;
 }
 
-u_int64_t Graph::dfa(adjacencyList& adj, u_int64_t diam, vector<bool>& vec){
-  u_int64_t tmp;
-  for(int i = 0; i < adj.size(); i++){
-    if(!vec[i]){
-     vec[i] = true;
-     tmp=dfa(node[i],diam++, vec);
-     if(tmp>diam) diam = tmp;
-    }
-  }
-  return diam;
+double Graph::getDiameter(){
+
+  vector<double> distance;
+  double diameter = 0;
   
+for(int i=0; i<size;++i){
+  distance = getDistances(i);
+  for(int j=0; j<distance.size();++j){
+    if(distance[j] == numeric_limits<double>::infinity()) continue;
+    if(distance[j] > diameter) diameter = distance[j];
+  }
+}  
+return diameter;  
+}
+
+double Graph::getRadius(){
+
+  vector<double> distance;
+  double radius = numeric_limits<double>::infinity();
+  double max;
+for(int i=0; i<size;++i){
+  distance = getDistances(i);
+  max = 0;
+  for(int j=0; j<distance.size();++j){
+    if(distance[j] == numeric_limits<double>::infinity()) continue;
+    if(distance[j] > max) max = distance[j];
+  }
+  if(max == 0) continue; //whats happening with nodes with no edges ? 
+  if(max < radius) radius = max;
+}  
+return radius;  
 }
