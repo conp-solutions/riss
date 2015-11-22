@@ -351,18 +351,27 @@ return diameter;
 
 double Graph::getRadius(){
 
-  vector<double> distance;
   double radius = numeric_limits<double>::infinity();
-  double max;
+  double ex;
 for(int i=0; i<size;++i){
-  distance = getDistances(i);
-  max = 0;
+  ex = getExzentricity(i);
+  if(ex == 0) continue; //whats happening with nodes with no edges ? getExzentricity = 0 or inf ? 
+  if(ex < radius) radius = ex;
+}  
+return radius;  
+}
+
+double Graph::getExzentricity(int nod){
+
+  vector<double> distance;
+  distance = getDistances(nod);
+  double max =0;
+  
   for(int j=0; j<distance.size();++j){
     if(distance[j] == numeric_limits<double>::infinity()) continue;
     if(distance[j] > max) max = distance[j];
   }
-  if(max == 0) continue; //whats happening with nodes with no edges ? 
-  if(max < radius) radius = max;
-}  
-return radius;  
+   
+  return max; 
+  
 }

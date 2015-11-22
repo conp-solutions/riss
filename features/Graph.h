@@ -36,6 +36,7 @@ class Graph
     uint64_t sortAdjacencyList(adjacencyList& aList);
 
   public:
+    double getExzentricity(int nod);
     double getRadius();
     double getDiameter();
     void completeSingleVIG();
