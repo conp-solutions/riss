@@ -12,6 +12,7 @@
 #include <iostream>
 #include <algorithm>
 #include "riss/mtl/Sort.h"
+#include "riss/core/SolverTypes.h"
 
 using namespace std;
 
@@ -299,8 +300,10 @@ void Graph::completeSingleVIG(){
 
 vector<double> Graph::getDistances(int nod){
 
+  Riss::MarkArray visited;
+  visited.create(size);
+  
   vector<double> distance(size);
-  vector<bool> visited(size);
   vector<int> nodestovisit;
   adjacencyList& adj = node[nod];
   double tmpdistance;
@@ -308,11 +311,11 @@ vector<double> Graph::getDistances(int nod){
   for(int x=0; x<size;x++)distance[x] = numeric_limits<double>::infinity();
   
   distance[nod] = 0;
-  visited[nod]=true;
+   visited.setCurrentStep(nod);
   
   for(int i=0;i<adj.size();i++){
     nodestovisit.push_back(adj[i].first);
-    visited[adj[i].first] = true;
+    visited.setCurrentStep(adj[i].first);
     distance[adj[i].first] = adj[i].second;
   }
   
@@ -324,8 +327,8 @@ vector<double> Graph::getDistances(int nod){
      for(int j=0;j<adjNeighbor.size();++j){
        
      if(distance[adjNeighbor[j].first] > tmpdistance+adjNeighbor[j].second) distance[adjNeighbor[j].first] = tmpdistance+adjNeighbor[j].second;
-     if(visited[adjNeighbor[j].first]) continue;
-        visited[adjNeighbor[j].first] = true;
+     if(visited.isCurrentStep(adjNeighbor[j].first)) continue;
+      visited.setCurrentStep(adjNeighbor[j].first);
         nodestovisit.push_back(adjNeighbor[j].first);   
     }
         
