@@ -308,18 +308,18 @@ vector<double> Graph::getDistances(int nod){
   adjacencyList& adj = node[nod];
   double tmpdistance;
   
-  for(int x=0; x<size;x++)distance[x] = numeric_limits<double>::infinity();
+  for(int x=0; x<size;x++)distance[x] = numeric_limits<double>::infinity(); //distance to all nodes = inf
   
   distance[nod] = 0;
    visited.setCurrentStep(nod);
   
-  for(int i=0;i<adj.size();i++){
+  for(int i=0;i<adj.size();i++){ //setting distance of neighbors
     nodestovisit.push_back(adj[i].first);
     visited.setCurrentStep(adj[i].first);
     distance[adj[i].first] = adj[i].second;
   }
   
-  for(int k=0; k<nodestovisit.size();++k){
+  for(int k=0; k<nodestovisit.size();++k){  //breadthfirstsearch algorithm to find the distance to all nodes
     
     tmpdistance = distance[nodestovisit[k]];
     adjacencyList& adjNeighbor = node[nodestovisit[k]]; 
@@ -337,17 +337,14 @@ vector<double> Graph::getDistances(int nod){
 return distance;
 }
 
-double Graph::getDiameter(){
+double Graph::getDiameter(){ //TODO: Elias: Maybe there are faster algorithms to find just the diameter/radius(without using the exzentricity of each node)
 
-  vector<double> distance;
+  double ex;
   double diameter = 0;
   
-for(int i=0; i<size;++i){
-  distance = getDistances(i);
-  for(int j=0; j<distance.size();++j){
-    if(distance[j] == numeric_limits<double>::infinity()) continue;
-    if(distance[j] > diameter) diameter = distance[j];
-  }
+for(int i=0; i<size;++i){ //getting the biggest exzentricity (=diameter)
+  ex = getExzentricity(i);
+  if(ex > diameter) diameter = ex;
 }  
 return diameter;  
 }
@@ -358,7 +355,7 @@ double Graph::getRadius(){
   double ex;
 for(int i=0; i<size;++i){
   ex = getExzentricity(i);
-  if(ex == 0) continue; //whats happening with nodes with no edges ? getExzentricity = 0 or inf ? 
+  if(ex == 0) continue; //TODO: Elias: whats happening with nodes with no edges ? getExzentricity = 0 or inf ? 
   if(ex < radius) radius = ex;
 }  
 return radius;  
@@ -377,4 +374,13 @@ double Graph::getExzentricity(int nod){
    
   return max; 
   
+}
+
+SequenceStatistics Graph::getExzentricityStatistics(){
+  
+   SequenceStatistics exzentricity;
+   
+   for(int i=0; i< size; ++i) exzentricity.addValue(getExzentricity(i));
+  
+   return exzentricity;
 }
