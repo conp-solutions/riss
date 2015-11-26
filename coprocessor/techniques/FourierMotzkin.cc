@@ -1299,6 +1299,7 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
             sort(cc);   // necessary in Coprocessor
             cards.push_back(CardC(cc, degree));   // add the constraint to the data base
             for (int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j) { leftHands[ toInt(cards[ cards.size() - 1 ].ll[j]) ].push_back(cards.size() - 1); }      // register card constraint in data structures
+            if( degree < origDegree ) cerr << "c found card constraint " << cc << "  <= " << degree << "     to " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
             DOUT(if (config.opt_semDebug) cerr << "c found card constraint " << cc << "  <= " << degree << endl;);
             intersection.nextStep();
             semExtendedCards ++; semExtendLits += (cc.size() - ca[ tmpA[i] ].size());   // stats
