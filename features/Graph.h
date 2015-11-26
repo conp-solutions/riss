@@ -9,6 +9,7 @@
 
 #include <vector>
 #include "classifier/SequenceStatistics.h"
+#include "riss/core/SolverTypes.h"
 
 // using namespace std;
 
@@ -25,6 +26,7 @@ class Graph
     std::vector<adjacencyList> node;
     std::vector<int> nodeDeg;
     // statistics variables
+    SequenceStatistics exzentricity;
     SequenceStatistics degreeStatistics;
     SequenceStatistics weightStatistics;
     bool mergeAtTheEnd; // do not detect duplicate entries during the creation of the graph
@@ -36,12 +38,15 @@ class Graph
     uint64_t sortAdjacencyList(adjacencyList& aList);
 
   public:
+    void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
+    bool thereisanedge(int nodeA, int nodeB);
+    std::vector<int> getArticulationPoints();
     SequenceStatistics getExzentricityStatistics();
     double getExzentricity(int nod);
     double getRadius();
     double getDiameter();
     void completeSingleVIG();
-    std::vector<int> getAdjacency(int adjnode);
+    std::vector<int> getAdjacency(int adjnode); 
     Graph(int nodes, bool computingDerivative);
     Graph(int nodes, bool merge, bool computingDerivative);
     virtual ~Graph();

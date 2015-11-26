@@ -20,7 +20,7 @@ Graph::Graph(int size, bool computingDerivative) :
     node(size),
     nodeDeg(size, 0),
     degreeStatistics(computingDerivative),
-    weightStatistics(computingDerivative, false)
+    weightStatistics(computingDerivative, false), exzentricity(computingDerivative)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -37,7 +37,7 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     node(size),
     nodeDeg(size, 0),
     degreeStatistics(computingDerivative),
-    weightStatistics(computingDerivative, false)
+    weightStatistics(computingDerivative, false), exzentricity(computingDerivative)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -302,7 +302,7 @@ vector<double> Graph::getDistances(int nod){
 
   Riss::MarkArray visited;
   visited.create(size);
-  
+  visited.nextStep();
   vector<double> distance(size);
   vector<int> nodestovisit;
   adjacencyList& adj = node[nod];
@@ -377,10 +377,90 @@ double Graph::getExzentricity(int nod){
 }
 
 SequenceStatistics Graph::getExzentricityStatistics(){
-  
-   SequenceStatistics exzentricity;
    
    for(int i=0; i< size; ++i) exzentricity.addValue(getExzentricity(i));
   
    return exzentricity;
+}
+
+vector<int> Graph::getArticulationPoints(){
+  
+  vector<int> articulationpoints;
+  Riss::MarkArray visited;
+  visited.create(size);
+  visited.nextStep();
+  vector<int> stack;
+  int tmp = 0; //if root is cut_vertex tmp>1 (more then one child in DFS tree)
+  
+  int rootnode = 0; //root node
+  
+  vector<int> adj = getAdjacency(rootnode);
+  visited.setCurrentStep(rootnode);
+  stack.push_back(rootnode);
+
+  for(int i =0; i< adj.size(); ++i){
+  if(visited.isCurrentStep(adj[i])) continue;
+    visited.setCurrentStep(adj[i]);
+    stack.push_back(adj[i]);
+    tmp++;
+
+    DepthFirstSearch(stack, visited, articulationpoints);
+  }
+  
+  if(tmp>1) articulationpoints.push_back(rootnode);
+
+  return articulationpoints;
+ 
+}
+
+void Graph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited, vector<int>& articulationspoints){
+
+int nod = stack.back();
+vector<int> adj = getAdjacency(nod);
+int tmpstacksize = stack.size();
+bool artic;
+
+  for(int i=0; i<adj.size(); ++i){
+   
+    if(visited.isCurrentStep(adj[i])) continue;
+    
+    stack.push_back(adj[i]);
+    visited.setCurrentStep(adj[i]);
+    DepthFirstSearch(stack, visited, articulationspoints);
+    
+    artic = true;
+    
+    for(int j=stack.size()-1; j >= tmpstacksize; --j){
+      
+     for(int k =0; k < tmpstacksize-1;k++){
+        if(thereisanedge(stack[k], stack[j])) artic = false;
+    }
+     if (artic) articulationspoints.push_back(stack[tmpstacksize-1]);
+     stack.pop_back();
+    }
+  }
+  
+}
+
+
+bool Graph::thereisanedge(int nodeA, int nodeB){
+
+  int tmp;
+  
+  if(nodeA > nodeB) {
+  tmp = nodeB;
+  nodeB = nodeA;
+  nodeA = tmp;    
+  }
+  
+  adjacencyList adj = node[nodeA];
+  
+  for(int i=0; i<adj.size(); ++i){
+  
+    if(adj[i].first == nodeB) return true;
+    
+  }
+  
+  return false;
+  
 }

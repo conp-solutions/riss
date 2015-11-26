@@ -1182,48 +1182,6 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 
     buildClausesAndVariablesGrapths(clausesVariablesP, clausesVariablesN, ret);
     
-    //   [a,b,c] [-b,-c] [b,-c]  => graph?
-    // build single VIG graph
-    /*
-    Graph singleVIG(nVars, computingDerivative);
-    singleVIG.setIntermediateSort(true);
-    
-    double start = cpuTime();
-    // FIXME TODO: use the code from the method buildClausesAndVariablesGrapths to build the graph directly from the formula! do not use the two bipartiteGraph objects!
-    vector<int> variablestostore;
-    for(int i = 0; i < nVars; i++){
-        const vector<int>& variablesinClauselN = clausesVariablesN.getAjacencyB(i);
-	const vector<int>& variablesinClauselP = clausesVariablesP.getAjacencyB(i);
-	variablestostore.clear();
-	
-	for(int j = 0; j < variablesinClauselN.size(); j++){
-	  variablestostore.push_back(variablesinClauselN[j]); 
-	}
-	
-	for(int j = 0; j < variablesinClauselP.size(); j++){
-	  variablestostore.push_back(variablesinClauselP[j]); 
-	}
-	for(int j = 0; j < variablestostore.size(); j++){
-	  
-	  for(int k = 0; k < variablestostore.size(); k++){
-	    
-	  singleVIG.addUndirectedEdge(variablestostore[j], variablestostore[k]);
-	  }
-	} 
-    }
-    double end = cpuTime();
-    cerr << "computation took " << end - start << " seconds" << endl;
-    
-   //singleVIG.completeSingleVIG();
-   
-   // without sorting
-//       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
-   
-   // after sorting
-//       cerr << "c finalize lists:" << endl;
-      singleVIG.completeSingleVIG();
-//       for(int x = 0; x < nVars; x++) cerr << "node: " << x << " Adjacency: "<< singleVIG.getAdjacency(x)<<endl;
-      */
      vector<int> clsSizes(10, 0);
     
     Graph *vigGraph = nullptr;
@@ -1259,11 +1217,9 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     vigGraph->completeSingleVIG();//adding inverted edges
   //  for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
     
-    // graph feature code
-    
-   cerr << vigGraph->getRadius()<<endl;
-   cerr << vigGraph->getDiameter()<<endl;
-    
+  //cerr << vigGraph->getRadius()<<endl;
+  //cerr << vigGraph->getDiameter()<<endl;
+  cerr<<vigGraph->getArticulationPoints()<<endl;
 };
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
