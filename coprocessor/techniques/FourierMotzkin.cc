@@ -568,9 +568,10 @@ bool FourierMotzkin::process()
                     rewrite[i] = keptCards; // memorize where this card has been put
                     if (i > keptCards) {   // only if its not the same position
                         cards[keptCards].swap(cards[i]);   // swap the two cards (not copy to not copy the memory!)
+                        cards[i].invalidate();             // descruct the constraint
                         DOUT(if (config.fm_debug_out > 2) cerr << "c moved index from " << i << " to " << keptCards << endl;);
-                        keptCards++; // increase number of kept cards
                     }
+                    keptCards++; // increase number of kept cards for each kept cardinality constraint
                 }
             }
             DOUT(if (config.fm_debug_out > 0) cerr << "c keep " << keptCards << " out of " << cards.size() << endl;);
@@ -1248,7 +1249,7 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
                     solver.cancelUntil(0);
                     if (!firstProbe && data.lits.size() == 0) { break; }   // intersection has been initialized, but became empty -> no commonly implied literal -> finished with the current constraint
                 } // end probing current combination
-
+		assert( solver.decisionLevel() == 0 && "has to be on level 0 at the end" );
                 if (! data.unlimited() && semSteps >= config.opt_semSearchLimit) { data.lits.clear(); break; }   // add no more extension!
                 bitField = nextNbitNumber(bitField);
                 LONG_INT tmp = 1, shift = cc.size();
@@ -1259,9 +1260,14 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
 
             semTotalProbes += probes; semTotalFailedProbes += failedProbes; // stats
             if (firstProbe && (probes == failedProbes)) {   // works only when nothing has been propagated yet! // TODO: what happens if this occurs after a literal has been added?
+	      assert( origCC.size() == cc.size() && "perform only on failing original constraint!" );
+	      assert( extendLit == lit_Undef && "cannot extend and reduce degree" );
+	      cerr << "c failed " << failedProbes << " out of " << probes << " during first iteration, with clause " <<  ca[ tmpA[i] ] << endl;
+	        // assert ( cc.size() == ca[ tmpA[i] ].size() && "works only if we did not add a literal before!" );
                 DOUT(if (config.opt_semDebug) cerr << "c none of the configurations succeeds -> decrease degree by one to " << degree - 1 << endl;);
-                degree --;    // decrease degree
-                semReducedDegrees ++; //stats
+		DOUT( for( int cci = 0 ; cci < cc.size(); ++ cci ) assert( solver.value( cc[cci] ) == l_Undef && "variables have to be undefined" ); );
+		degree --;    // decrease degree
+		semReducedDegrees ++; //stats
                 data.lits.clear();    // clear constraint and literals
                 break;        // TODO: could also continue here!
             }

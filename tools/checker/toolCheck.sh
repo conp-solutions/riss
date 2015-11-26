@@ -2,7 +2,7 @@ rm -f /tmp/verify_$$.cnf
 
 #echo "run $1 with $2" >> tmp.dat
 
-timeout 4 $1 $2 > /tmp/verify_$$.cnf 2> /tmp/verify2_$$.cnf;
+timeout 30 $1 $2 > /tmp/verify_$$.cnf 2> /tmp/verify2_$$.cnf;
 status=$?
 
 #echo "finish with state= $status" >> tmp.dat
@@ -41,7 +41,7 @@ else
      fi
 
 
-     timeout 4 ./lgl $2 2> /dev/null 1> /dev/null
+     timeout 30 ./lgl $2 2> /dev/null 1> /dev/null
      lstat=$?
 
      if [ "$status" -eq "124" ]

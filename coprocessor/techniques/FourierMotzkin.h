@@ -94,7 +94,7 @@ class FourierMotzkin : public Technique<FourierMotzkin>
         bool failed() const { return (((int)lr.size() + k) < 0) ; }
         bool taut() const { return k >= (int)ll.size(); } // assume no literal appears both in ll and lr
         bool invalid() const { return k == 0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
-        void invalidate() { k = 0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);}
+        void invalidate() { if( !invalid() ) { k = 0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);} }
         CardC() : k(0) {} // default constructor
         void swap(CardC& other)     /** swap with other constraint */
         {
