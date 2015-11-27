@@ -295,6 +295,8 @@ void Graph::completeSingleVIG(){
      adjacencyList& adj = node[j];
      for(int k = 0; k < adj.size(); k++) addDirectedEdge(adj[k].first, j, adj[k].second);
      }
+     
+     finalizeGraph(); //make sure that the graph is sorted
     
 }
 
@@ -363,9 +365,8 @@ return radius;
 
 double Graph::getExzentricity(int nod){
 
-  vector<double> distance;
-  distance = getDistances(nod);
-  double max =0;
+ const vector<double>& distance = getDistances(nod);
+ double max =0;
   
   for(int j=0; j<distance.size();++j){
     if(distance[j] == numeric_limits<double>::infinity()) continue;
@@ -394,7 +395,7 @@ vector<int> Graph::getArticulationPoints(){
   
   int rootnode = 0; //root node
   
-  vector<int> adj = getAdjacency(rootnode);
+  const vector<int>& adj = getAdjacency(rootnode);
   visited.setCurrentStep(rootnode);
   stack.push_back(rootnode);
 
@@ -416,7 +417,7 @@ vector<int> Graph::getArticulationPoints(){
 void Graph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited, vector<int>& articulationspoints){
 
 int nod = stack.back();
-vector<int> adj = getAdjacency(nod);
+const vector<int>& adj = getAdjacency(nod);
 int tmpstacksize = stack.size();
 bool artic;
 
@@ -443,24 +444,38 @@ bool artic;
 }
 
 
-bool Graph::thereisanedge(int nodeA, int nodeB){
+bool Graph::thereisanedge(int nodeA, int nodeB){ //TODO: Maybe check if Graph is finalized (+backedges added) [also in other methods]
 
-  int tmp;
   
-  if(nodeA > nodeB) {
-  tmp = nodeB;
-  nodeB = nodeA;
-  nodeA = tmp;    
-  }
-  
-  adjacencyList adj = node[nodeA];
+ const adjacencyList& adj = node[nodeA];
+ 
+ if(adj.size() < 64){ //linear search, faster von size < 256(?)
   
   for(int i=0; i<adj.size(); ++i){
   
     if(adj[i].first == nodeB) return true;
     
   }
-  
+ }
+ 
+ else{//binary search
+ int left = 0;
+ int right = adj.size()-1;
+ int middle;
+ 
+ while(left <= right){
+ 
+   middle = (left+right)/2;
+   
+   if(adj[middle].first==nodeB) return true;
+   
+   if(adj[middle].first > nodeB) right = middle-1;
+   else left = middle+1;
+   
+  }
+ }
+ 
+ 
   return false;
   
 }
