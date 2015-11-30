@@ -100,6 +100,8 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_hbr         ;
 
 
+    Riss::StringOption stepbystepoutput; // prefix of CNF filename to be printed after executing a given technique (adds technique to name, but not iteration)
+    
     Riss::StringOption opt_ptechs ;
     Riss::StringOption opt_itechs ;
 

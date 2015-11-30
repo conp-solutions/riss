@@ -280,6 +280,20 @@ class CoprocessorData
     /** careful, should not be altered other than be the Dense object */
     std::vector<Riss::Lit>& getUndo() { return undo; }
 
+    
+    /** print formula (DIMACs), and dense, if another filename is given */
+    void outputFormula(const char *file, const char *varMap = 0);
+    
+private:
+    /** write formula into file of file descriptor
+     * @param clausesOnly: will not print the cnf header (e.g. to print something before)
+     */
+    void printFormula(FILE* fd, bool clausesOnly = false);
+    inline void printClause(FILE * fd, Riss::CRef cr);
+    inline void printLit(FILE * fd, int l);
+  
+public:
+    
     // for DRUP / DRAT proofs
     #ifdef DRATPROOF
 

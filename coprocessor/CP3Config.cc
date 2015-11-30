@@ -109,6 +109,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_FM             (_cat2, "fm",            "Use the Fourier Motzkin transformation", false,                               optionListPtr, &opt_enabled),
     opt_hbr            (_cat2, "hbr",           "Use hyper binary resolution", false,                                          optionListPtr, &opt_enabled),
 
+    stepbystepoutput   (_cat2, "debugCNFbase",  "CNF filename prefix for step by step formulas", 0,                            optionListPtr, &opt_enabled),
+    
     opt_ptechs         (_cat2, "cp3_ptechs",    "techniques for preprocessing", 0,                                             optionListPtr, &opt_enabled),
     opt_itechs         (_cat2, "cp3_itechs",    "techniques for inprocessing",  0,                                             optionListPtr, &opt_inprocess),
 

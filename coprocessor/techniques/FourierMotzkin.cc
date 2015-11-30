@@ -105,6 +105,12 @@ bool FourierMotzkin::process()
         }
     }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP1.cnf").c_str(), 0 ); 
+      }
+    );
+    
     // have a slot per variable
     data.ma.resize(data.nVars() * 2);
 
@@ -242,6 +248,7 @@ bool FourierMotzkin::process()
         sort(data.lits);
         DOUT(if (config.fm_debug_out > 0) cerr << "c found AMO: " << data.lits << endl;);
         cards.push_back(data.lits);
+	if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
         if (cards.size() >= config.opt_fm_max_constraints) { break; }
 
         if (config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize(right) > 0) { heap.insert(toInt(right)); }         // this literal might have more cliques
@@ -330,6 +337,7 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 1) cerr << "c found AM2[" << foundAmts << "]: " << data.lits << endl;);
                     cards.push_back(CardC(data.lits));     // use default AMO constructor
                     cards.back().k = 2; // set k to be 2, since its an at-most-two constraint!
+                    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                     if (cards.size() >= config.opt_fm_max_constraints) { goto finishAMT; }
                 }
 
@@ -391,6 +399,12 @@ bool FourierMotzkin::process()
 
     }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterFindUnits.cnf").c_str(), 0); 
+      }
+    );
+    
     // perform merge
     if (config.opt_merge) {
         DOUT(if (config.fm_debug_out > 0) cerr << "c merge AMOs with " << cards.size() << " constraints ... " << endl;);
@@ -467,6 +481,7 @@ bool FourierMotzkin::process()
 
                     const int index = cards.size();
                     cards.push_back(CardC(data.lits));   // create AMO
+		    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                     for (int k = 0 ; k < data.lits.size(); ++ k) { leftHands[ toInt(data.lits[k]) ].push_back(index); }
                     if (cards.size() >= config.opt_fm_max_constraints) { break; }
                 }
@@ -482,23 +497,66 @@ bool FourierMotzkin::process()
     if (data.hasToPropagate())
         if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterMerge.cnf").c_str(), 0); 
+      }
+    );
+        
     // perform find 2product encoding
-    if (config.opt_fm_twoPr) { findTwoProduct(cards, big, leftHands); }
-
+    if (config.opt_fm_twoPr) {
+      
+      DOUT( 
+	if ( (const char*)config.stepbystepoutput != nullptr) {
+	  data.outputFormula( string( string(config.stepbystepoutput) + "-FM-after2Product.cnf").c_str(), 0); 
+	}
+      );
+      
+      findTwoProduct(cards, big, leftHands); 
+      
+    }
+    
     // semantic search
-    if (config.opt_fm_sem) { findCardsSemantic(cards, leftHands); }
+    if (config.opt_fm_sem) { 
+      findCardsSemantic(cards, leftHands); 
+      
+      DOUT( 
+	if ( (const char*)config.stepbystepoutput != nullptr) {
+	  data.outputFormula( string( string(config.stepbystepoutput) + "-FM-after2Product.cnf").c_str(), 0); 
+	}
+      );
+      
+    }
 
     if (!propagateCards(unitQueue, leftHands, rightHands, cards, inAmo)) { return modifiedFormula; }
     // propagate found units - if failure, skip next steps
     if (data.hasToPropagate())
         if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP2.cnf").c_str(), 0); 
+      }
+    );
+        
     // remove duplicate or subsumed AMOs!
     removeSubsumedAMOs(cards, leftHands);
+    
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterSubsumedAMO.cnf").c_str(), 0); 
+      }
+    );
 
     // try to deduce ALO constraints from a AMO-ALO matrix
     deduceALOfromAmoAloMatrix(cards, leftHands);
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterAloFromAloAmo.cnf").c_str(), 0); 
+      }
+    );
+    
     // set all variables that appeard in cardinality constraints, to collect clauses next
     data.ma.nextStep();
     for (int i = 0 ; i < cards.size(); ++ i) {
@@ -515,6 +573,7 @@ bool FourierMotzkin::process()
             if (data.ma.isCurrentStep(var(c[j]))) {    // a literal of this clause took part in an AMO
                 const int index = cards.size();
                 cards.push_back(CardC(c));
+		if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 DOUT(if (config.fm_debug_out > 1) cerr << "c clause " << c << " leads to card " << cards[cards.size() - 1 ].ll << " <= " << cards[cards.size() - 1 ].k << " + " << cards[cards.size() - 1 ].lr << endl;);
                 for (int j = 0 ; j < c.size(); ++ j) {
                     rightHands[toInt(c[j])].push_back(index);
@@ -555,6 +614,7 @@ bool FourierMotzkin::process()
     bool sizeAbort = false;
     vector<int> rewrite; // for garbage collection
     int validCards = cards.size(), invalidCards = 0;
+    int cardinalityIterations = 0;
     while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && !sizeAbort)) && !data.isInterupted()) {
         /** garbage collection */
         if (needsGarbageCollect == iter && invalidCards * 4 > validCards) {   // perform garbage collection only if at least 25% are garbage
@@ -570,6 +630,7 @@ bool FourierMotzkin::process()
                         cards[keptCards].swap(cards[i]);   // swap the two cards (not copy to not copy the memory!)
                         cards[i].invalidate();             // descruct the constraint
                         DOUT(if (config.fm_debug_out > 2) cerr << "c moved index from " << i << " to " << keptCards << endl;);
+			if( 59064 == keptCards ) cerr << "c moved constraint 59064 during garabge colelct from " << i << " : "  << cards[keptCards].ll << " <= " << cards[keptCards].k << " + " << cards[keptCards].lr << "   @ " << __LINE__ << endl;
                     }
                     keptCards++; // increase number of kept cards for each kept cardinality constraint
                 }
@@ -650,6 +711,7 @@ bool FourierMotzkin::process()
             cerr << endl;
         });
 
+	const int beforeTrailSize = solver.trail.size();
         for (int i = 0 ; i < leftHands[toInt(toEliminate)].size() && steps < fmLimit && !sizeAbort; ++ i) {   // since all cards are compared, be careful!
             steps ++;
             if (cards[leftHands[toInt(toEliminate)][i]].invalid()) {   // drop invalid constraints from list!
@@ -776,7 +838,7 @@ bool FourierMotzkin::process()
 
                 thisCard.k = card1.k + card2.k + extraK; // do not forget the extra cardinality value!
 
-                DOUT(if (config.fm_debug_out > 1) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
+                DOUT(if (config.fm_debug_out > 0) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
                      << "c from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
                      << "c and  " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;);
                 if (thisCard.taut()) {
@@ -819,17 +881,29 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new card is NEW amo - memorize it!" << endl;);
                     if (config.opt_newAmo) { newAMOs.push_back(index); }
                     newAmos ++;
+		    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 } else if (thisCard.alo() && config.opt_newAlo > 0) {
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new card is NEW alo - memorize it!" << endl;);
                     newAlos ++;
                     if (config.opt_newAmo) { newALOs.push_back(index); }
+                    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 }  else if (thisCard.alo() && config.opt_newAlk > 0) {
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new card is NEW alk - memorize it!" << endl;);
                     newAlks ++;
                     if (config.opt_newAmo) { newALKs.push_back(index); }
+                    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 }
             }
         }
+        
+        DOUT( 
+	  if( solver.trail.size() != beforeTrailSize ) {
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      stringstream s; s << iter;
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-iteration-" + s.str() + ".cnf").c_str(), 0); 
+	    }
+	  }
+	);
 
         // new constraints > removed constraints + grow -> drop the elimination again!
         if ((cards.size() - oldSize > leftHands[ toInt(toEliminate) ] .size() + rightHands[ toInt(toEliminate) ].size()  + config.opt_fmGrow)   // local increase to large
@@ -914,6 +988,12 @@ bool FourierMotzkin::process()
         // if found something, propagate!
         if (!propagateCards(unitQueue, leftHands, rightHands, cards, inAmo)) { return modifiedFormula; }
 
+        DOUT( 
+	    if ( false && (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP3.cnf").c_str(), 0); 
+	    }
+	);
+        
         DOUT(if (config.fm_debug_out > 3) {
         cerr << "c lists of all constraints after complete elimination step: " << endl;
         for (Var v = 0 ; v < data.nVars(); ++v) {
@@ -937,8 +1017,18 @@ bool FourierMotzkin::process()
 
     // add all the clauses, perform unit propagation afterwards
     if (data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0)) {
+      
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-10-beforeNewAMO.cnf").c_str(), 0); 
+	    }
+	);
+      
         big.recreate(ca, data.nVars(), data.getClauses());
         if (config.opt_newAmo > 1) { big.generateImplied(data); } // try to avoid adding redundant clauses!
+        
+	DOUT(if (config.fm_debug_out > 0) cerr << "c analyze new and rejected AMOs, actual card.constraints: " << cards.size() << " rejectedNew: " << rejectedNewAmos.size() << endl; );
+
         for (int p = 0; p < 2; ++ p) {
             // use both the list of newAMOs, and the rejected new amos!
             for (int i = 0 ; i < (p == 0 ? newAMOs.size() : rejectedNewAmos.size()) ; ++ i) {
@@ -947,6 +1037,7 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new AMO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;);
                     continue;
                 }
+                DOUT(if (config.fm_debug_out > 0) cerr << "c check clauses for AMO " << c.ll << " <= " << c.k << " + " << c.lr << "  card index: p: " << p << " index: " << (p == 0 ? newAMOs[i] : i )<< endl; );
                 for (int j = 0 ; j < c.ll.size(); ++ j) {
                     for (int k = j + 1; k < c.ll.size(); ++ k) {
                         bool present = false;
@@ -970,6 +1061,13 @@ bool FourierMotzkin::process()
                 unitQueue.clear();
             }
         }
+        
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-11-afterNewAMO.cnf").c_str(), 0); 
+	    }
+	);
+        
     }
 
     if (data.ok() && config.opt_newAlo > 0 && (newALOs.size() > 0 || rejectedNewAlos.size() > 0)) {
@@ -995,6 +1093,11 @@ bool FourierMotzkin::process()
                 }
             }
         }
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterNewALO.cnf").c_str(), 0); 
+	    }
+	);
     }
 
     if (data.ok() && config.opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0)) {
@@ -1030,12 +1133,25 @@ bool FourierMotzkin::process()
                 }
             }
         }
+        
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterNewALK.cnf").c_str(), 0); 
+	    }
+	);
+        
     }
 
     // propagate found units - if failure, skip next steps
     if (data.ok() && data.hasToPropagate())
         if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
 
+    DOUT(
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP4.cnf").c_str(), 0); 
+      }
+    );
+        
     fmTime = cpuTime() - fmTime;
 
     return modifiedFormula;
@@ -1298,6 +1414,10 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
         if (cc.size() > ca[ tmpA[i] ].size() || degree < origDegree) {   // if this constraint is not simply a clause, but something has been added or changed
             sort(cc);   // necessary in Coprocessor
             cards.push_back(CardC(cc, degree));   // add the constraint to the data base
+
+#warning remove after debug
+	    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
+	    
             for (int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j) { leftHands[ toInt(cards[ cards.size() - 1 ].ll[j]) ].push_back(cards.size() - 1); }      // register card constraint in data structures
             if( degree < origDegree ) cerr << "c found card constraint " << cc << "  <= " << degree << "     to " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
             DOUT(if (config.opt_semDebug) cerr << "c found card constraint " << cc << "  <= " << degree << endl;);
@@ -1612,7 +1732,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 
                 } // end for lits in B
                 // add the global set of lits as new AMO
-                if (data.lits.size() > 0) {   // if there is a global AMO
+                if (data.lits.size() > 1) {   // if there is a global AMO
                     sort(data.lits);
                     bool doUseConstraint = true;
                     // check for being redundant, or for containing units
@@ -1640,6 +1760,8 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
                                 leftHands[ toInt(data.lits[n]) ].push_back(cards.size());    // register new AMO in data structures
                             }
                             cards.push_back(CardC(data.lits));     // actually add new AMO
+			    #warning remove after debug
+	    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;		
                             twoPrAmos ++;
                             twoPrAmoLits += data.lits.size();
 

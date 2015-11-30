@@ -148,6 +148,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-XOR.cnf").c_str(), 0); );
         }
         data.checkGarbage(); // perform garbage collection
 
@@ -162,6 +163,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl; }
             if (status == l_Undef) { entailedRedundant.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-ENT.cnf").c_str(), 0); );
         }
         data.checkGarbage(); // perform garbage collection
 
@@ -175,6 +177,7 @@ lbool Preprocessor::performSimplification()
             resolving.process(false);
             if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
             DOUT(if (printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3')) printFormula("after TernResolve"););
+	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-3RES.cnf").c_str(), 0); );
         }
         if (! data.ok()) { break; }  // stop here already
 
@@ -192,6 +195,7 @@ lbool Preprocessor::performSimplification()
                 status = l_False;
             }
             data.checkGarbage(); // perform garbage collection
+	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-SUBSIMP.cnf").c_str(), 0); );
 
             DOUT(if (printSusi || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
             printFormula("after Susi");
@@ -209,6 +213,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-FM.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after FM"); scanCheck("after FM"); });
@@ -226,6 +231,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-REW.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after REW"); scanCheck("after REW"); });
@@ -243,6 +249,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-EE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after EE"); scanCheck("after EE"); });
@@ -259,6 +266,7 @@ lbool Preprocessor::performSimplification()
             if (status == l_Undef) { unhiding.process(); }
             if (config.opt_verbose > 1)  { printStatistics(cerr); unhiding.printStatistics(cerr); }
             if (!data.ok()) { status = l_False; }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-UNHIDE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (printUnhide || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g')) {
@@ -273,6 +281,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl; }
             if (status == l_Undef) { hte.process(data); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); hte.printStatistics(cerr); }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-HTE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after HTE");  scanCheck("after HTE"); });
@@ -289,6 +298,7 @@ lbool Preprocessor::performSimplification()
             if (!data.ok()) { status = l_False; }
             if (config.opt_verbose > 1)  { printStatistics(cerr); probing.printStatistics(cerr); }
 
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-PROBE.cnf").c_str(), 0); );
             DOUT(if (config.opt_debug) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); });
             DOUT(if (printProbe || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p')) {
             printFormula("after Probing");
@@ -303,6 +313,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl; }
             if (status == l_Undef) { status = bve.process(data); }   // can change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); bve.printStatistics(cerr); }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-BVE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after BVE");  scanCheck("after BVE"); });
@@ -318,6 +329,7 @@ lbool Preprocessor::performSimplification()
             if (status == l_Undef) { bva.process(); }
             if (config.opt_verbose > 1)  { printStatistics(cerr); bva.printStatistics(cerr); }
             if (!data.ok()) { status = l_False; }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-BVA.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after BVA");  scanCheck("after BVA"); });
@@ -332,6 +344,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl; }
             if (status == l_Undef) { bce.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); bce.printStatistics(cerr); }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-BCE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after BCE");  scanCheck("after BCE"); });
@@ -346,11 +359,12 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl; }
             if (status == l_Undef) { la.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); la.printStatistics(cerr); }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-LA.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after LA");  scanCheck("after LA"); });
             DOUT(if (printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'l')) {
-            printFormula("after BCE");
+            printFormula("after LA");
             });
         }
         if (! data.ok()) { break; }  // stop here already
@@ -360,6 +374,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl; }
             if (status == l_Undef) { cce.process(data); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); cce.printStatistics(cerr); }
+            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-CCE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after CCE");  scanCheck("after CCE"); });    // perform only if BCE finished the whole formula?!
@@ -374,7 +389,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") resolution asymmetric tautology elimination" << endl; }
             if (status == l_Undef) { rate.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); rate.printStatistics(cerr); }
-
+	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-RATE.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after RATE"); scanCheck("after RATE"); });    // perform only if BCE finished the whole formula?!
@@ -390,7 +405,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
             if (status == l_Undef) { hbr.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); hbr.printStatistics(cerr); }
-
+	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-HBR.cnf").c_str(), 0); );
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
@@ -406,6 +421,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_verbose > 0) { cerr << "c add2 ..." << endl; }
         resolving.process(true);
         if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
+        DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-ADD2.cnf").c_str(), 0); );
         DOUT(if (printAddRedBin || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a')) printFormula("after Add2"););
     }
 
