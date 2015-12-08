@@ -142,6 +142,13 @@ For more information use the "--help" parameter.
 
     bin/classifier <input.cnf>
 
+The parallel portfolio solver priss uses incarnations of riss and executes them in
+parallel. To obtain a version that executes exact copies of the solver, issue the 
+following call, and add the CNF formula as well. Furthermore, you might want to specify
+the number of used threads by adding "-threads=X"
+
+    bin/priss -ppconfig= -no-addSetup -no-pr -no-ps -psetup=PLAIN -pAllSetup=-independent
+
 
 ## Third party libraries
 
