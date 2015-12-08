@@ -26,7 +26,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_verbosePfolio("PFOLIO - PROOF", "ppv", "verbose pfolio execution", false, optionListPtr)
 
     , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64), optionListPtr)
-    , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
+    , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers(e.g. PLAIN)", 0, optionListPtr)
     , opt_incarnationSetups("PFOLIO - INIT", "pIncSetup", "incarnation configurations [N]confign[N+1]configN+1", 0, optionListPtr)
     , addExtraSetup("PFOLIO - INIT", "addSetup", "add pIncSetup configuration to preset (indepdently of preset)", true, optionListPtr)
     , opt_ppconfig("PFOLIO - INIT", "ppconfig", "the configuration to be used for the simplifier", 0, optionListPtr)

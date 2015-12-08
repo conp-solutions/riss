@@ -193,7 +193,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     int keep = 0;
     for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
         const Var v = var((*toSend)[i]);   // get variable to analyze
-        rejectSend = (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
+        rejectSend = false; // TODO: handle variables in clause! (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
 
         if (!rejectSend) { (*toSend)[keep++] = (*toSend)[i]; } // keep literal
         else { // otherwise check how to proceed with variable that is

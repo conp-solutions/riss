@@ -624,6 +624,7 @@ void PSolver::createThreadConfigs()
 
     if (defaultConfig.size() == 0) {
         for (int t = 0 ; t < threads; ++ t) {
+	    if( pfolioConfig.opt_verbosePfolio ) cerr << "c PFOLIO set incarnation presets or default presets" << endl;
             if (incarnationConfigs[t].size() == 0) {  // assign preset, if no cmdline was specified
                 configs[t].setPreset(Configs[t]);
                 ppconfigs[t].setPreset(Configs[t]);
@@ -633,6 +634,7 @@ void PSolver::createThreadConfigs()
             }                          // otherwise, use commandline configuration
         }
     } else if (defaultConfig == "BMC") {
+        if( pfolioConfig.opt_verbosePfolio ) cerr << "c PFOLIO set BMC presets" << endl;
         // thread 1 runs with empty (default) configurations
         if (threads > 1) { configs[1].setPreset("DECLEARN"); }
         if (threads > 2) { configs[2].setPreset("FASTRESTART"); }
@@ -642,6 +644,7 @@ void PSolver::createThreadConfigs()
             // configs[t].setPreset("-solververb=2"); // set all solvers very verbose
         }
     } else if (defaultConfig == "PLAIN") {
+        if( pfolioConfig.opt_verbosePfolio ) cerr << "c PFOLIO set PLAIN (no) presets" << endl;
         for (int t = 0 ; t < threads; ++ t) {
             configs[t].setPreset("");   // do not set anything
         }
@@ -977,6 +980,7 @@ void PSolver::createThreadConfigs()
 
     // add extra commands, even if a preset is used
     if (pfolioConfig.addExtraSetup) {
+        if( pfolioConfig.opt_verbosePfolio ) cerr << "c PFOLIO add default presets" << endl;
         // assign options from the commandline additionally to already set uptions
         for (int t = 0 ; t < threads; ++ t) {
             if (incarnationConfigs.size() > t && incarnationConfigs[t].size() > 0) {
@@ -988,6 +992,7 @@ void PSolver::createThreadConfigs()
 
     // assign common setup prefix
     if ((const char*)pfolioConfig.opt_allIncPresets != 0) {
+        if( pfolioConfig.opt_verbosePfolio ) cerr << "c PFOLIO add all inc presets" << endl;
         for (int t = 0 ; t < threads; ++ t) {
             configs[t].setPreset(string(pfolioConfig.opt_allIncPresets));
             ppconfigs[t].setPreset(string(pfolioConfig.opt_allIncPresets));

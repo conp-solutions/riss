@@ -541,18 +541,18 @@ class Solver
         unsigned decision: 1;
         unsigned seen: 1;
         unsigned extra: 2; // TODO: use for special variable (not in LBD) and do not touch!
-        unsigned addModels: 1; // possibly increased number of models, e.g. by running CCE, BCE, RAT
-        unsigned delModels: 1; // possibly decreased number of models, e.g. by running CLE, BCM, RATM
+        unsigned modifiedPositive: 1; // modified the models of the positive literal of this variable
+        unsigned modifiedNegative: 1; // modified the models of the negative literal of this variable
         unsigned frozen: 1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
         #ifdef PCASSO
         unsigned varPT: 16; // partition tree level for this variable
         #endif
-        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), addModels(0), delModels(0), frozen(0)
+        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), modifiedPositive(0), modifiedNegative(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
         {}
-        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), addModels(0), delModels(0), frozen(0)
+        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), modifiedPositive(0), modifiedNegative(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
@@ -1484,8 +1484,8 @@ class Solver
 
         bool canBeReceived(const Var& v) const
         {
-            return (!varInfo[v].addModels || receiveInc)   // if the variable has been modified and models have been added
-                   && (!varInfo[v].delModels || receiveDec);  // or models have been deleted
+            return (!varInfo[v].modifiedPositive || receiveInc)   // if the variable has been modified and models have been added
+                   && (!varInfo[v].modifiedNegative || receiveDec);  // or models have been deleted
         }
 
         void setDependency(const Var& v, const int& dep)
