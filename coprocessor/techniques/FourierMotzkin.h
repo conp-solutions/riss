@@ -83,7 +83,6 @@ class FourierMotzkin : public Technique<FourierMotzkin>
       // implement ID system for FM proofs
       int getNextID() {
 	static int currentID = 0;
-// 	assert( currentID != 30921 && "hit the constraint that should be found" );
 	return currentID ++;
       }
       

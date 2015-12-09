@@ -249,7 +249,6 @@ bool FourierMotzkin::process()
         DOUT(if (config.fm_debug_out > 0) cerr << "c found AMO: " << data.lits << endl;);
         cards.push_back(data.lits);
 	if( config.opt_fm_prooftrace ) cerr << "c FM proof (AMO) add " << cards[ cards.size() - 1 ].getID() << " [" << cards[ cards.size() - 1 ].getParentL() << " , " << cards[ cards.size() - 1 ].getParentR() << "] : " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
-	if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
         if (cards.size() >= config.opt_fm_max_constraints) { break; }
 
         if (config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize(right) > 0) { heap.insert(toInt(right)); }         // this literal might have more cliques
@@ -339,7 +338,6 @@ bool FourierMotzkin::process()
                     cards.push_back(CardC(data.lits));     // use default AMO constructor
                     cards.back().k = 2; // set k to be 2, since its an at-most-two constraint!
                     if( config.opt_fm_prooftrace ) cerr << "c FM proof (AM2) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
-                    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                     if (cards.size() >= config.opt_fm_max_constraints) { goto finishAMT; }
                 }
 
@@ -485,7 +483,6 @@ bool FourierMotzkin::process()
                     cards.push_back(CardC(data.lits));   // create AMO
 		    cards[ cards.size() - 1 ].setParents( cards[leftHands[toInt(pl)][i]].getID(), cards[leftHands[toInt(nl)][j]].getID() ); // set the parents of the constraint to reconstruct the proof
 		    if( config.opt_fm_prooftrace ) cerr << "c FM proof (MERGE) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
-		    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                     for (int k = 0 ; k < data.lits.size(); ++ k) { leftHands[ toInt(data.lits[k]) ].push_back(index); }
                     if (cards.size() >= config.opt_fm_max_constraints) { break; }
                 }
@@ -578,7 +575,6 @@ bool FourierMotzkin::process()
                 const int index = cards.size();
                 cards.push_back(CardC(c));
 		if( config.opt_fm_prooftrace ) cerr << "c FM proof (UseClause) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
-		if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 DOUT(if (config.fm_debug_out > 1) cerr << "c clause " << c << " leads to card " << cards[cards.size() - 1 ].ll << " <= " << cards[cards.size() - 1 ].k << " + " << cards[cards.size() - 1 ].lr << endl;);
                 for (int j = 0 ; j < c.size(); ++ j) {
                     rightHands[toInt(c[j])].push_back(index);
@@ -635,7 +631,6 @@ bool FourierMotzkin::process()
                         cards[keptCards].swap(cards[i]);   // swap the two cards (not copy to not copy the memory!)
                         cards[i].invalidate();             // descruct the constraint
                         DOUT(if (config.fm_debug_out > 2) cerr << "c moved index from " << i << " to " << keptCards << endl;);
-			if( 59064 == keptCards ) cerr << "c moved constraint 59064 during garabge colelct from " << i << " : "  << cards[keptCards].ll << " <= " << cards[keptCards].k << " + " << cards[keptCards].lr << "   @ " << __LINE__ << endl;
                     }
                     keptCards++; // increase number of kept cards for each kept cardinality constraint
                 }
@@ -889,17 +884,14 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new card is NEW amo - memorize it!" << endl;);
                     if (config.opt_newAmo) { newAMOs.push_back(index); }
                     newAmos ++;
-		    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 } else if (thisCard.alo() && config.opt_newAlo > 0) {
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new card is NEW alo - memorize it!" << endl;);
                     newAlos ++;
                     if (config.opt_newAmo) { newALOs.push_back(index); }
-                    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 }  else if (thisCard.alo() && config.opt_newAlk > 0) {
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new card is NEW alk - memorize it!" << endl;);
                     newAlks ++;
                     if (config.opt_newAmo) { newALKs.push_back(index); }
-                    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
                 }
             }
         }
@@ -1489,9 +1481,6 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
             sort(cc);   // necessary in Coprocessor
             cards.push_back(CardC(cc, degree));   // add the constraint to the data base
 	    if( config.opt_fm_prooftrace ) cerr << "c FM proof (FindSem) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
-#warning remove after debug
-	    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;
-	    
             for (int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j) { leftHands[ toInt(cards[ cards.size() - 1 ].ll[j]) ].push_back(cards.size() - 1); }      // register card constraint in data structures
             if( degree < origDegree ) cerr << "c found card constraint " << cc << "  <= " << degree << "     to " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
             DOUT(if (config.opt_semDebug) cerr << "c found card constraint " << cc << "  <= " << degree << endl;);
@@ -1835,8 +1824,6 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
                             }
                             cards.push_back(CardC(data.lits));     // actually add new AMO
 			    if( config.opt_fm_prooftrace ) cerr << "c FM proof (2Prod) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
-			    #warning remove after debug
-	    if( 199198 == cards.size() ) cerr << "c found constraint 59064 "  << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << "   @ " << __LINE__ << endl;		
                             twoPrAmos ++;
                             twoPrAmoLits += data.lits.size();
 
