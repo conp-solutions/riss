@@ -437,6 +437,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_newAlk      ;
     Riss::BoolOption opt_checkSub   ;
     Riss::BoolOption opt_rem_first  ;
+    Riss::BoolOption opt_fm_garbageColelct ;
+    Riss::BoolOption opt_fm_prooftrace ;
+    Riss::IntOption opt_fm_printtrace ;
     Riss::IntOption opt_minCardClauseSize;
     Riss::IntOption opt_maxCardClauseSize;
     Riss::IntOption opt_maxCardSize      ;
