@@ -171,7 +171,7 @@ bool Config::addPreset(const std::string& optionSet)
     } else if (optionSet == "INCSOLVE") {
         parseOptions("-rmf -sInterval=16 -lbdIgnLA -var-decay-b=0.85 -var-decay-e=0.85 -irlevel=1024 -rlevel=2 -incResCnt=3", false);
     }  else if (optionSet == "INCSIMP") {
-        parseOptions("-enabled_cp3:-subsimp:-fm:-no-cp3_fm_vMulAMO:-unhide:-cp3_uhdIters=5:-cp3_uhdEE:-cp3_uhdTrans:-xor:-no-xorFindSubs:-xorEncSize=3:-xorLimit=100000:-no-xorKeepUsed:-cp3_iters=2:-no-randInp:-cp3_inp_cons=50000:-cp3_iinp_cons=1000000", false);
+        parseOptions("-enabled_cp3:-subsimp:-fm:-no-cp3_fm_vMulAMO:-unhide:-cp3_uhdIters=5:-cp3_uhdEE:-cp3_uhdTrans:-xor:-no-xorFindSubs:-xorEncSize=3:-xorLimit=100000:-no-xorKeepUsed:-cp3_iters=2:-no-randInp:-cp3_inp_cons=50000:-cp3_iinp_cons=1000000:-inprocess", false);
     } else if (optionSet == "PPMAXSAT2015") {
         parseOptions("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bce-bcm -cp3_iters=2 -rlevel=2", false);
     } else if (optionSet == "CORESIZE2") {
