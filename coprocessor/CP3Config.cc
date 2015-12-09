@@ -109,6 +109,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_FM             (_cat2, "fm",            "Use the Fourier Motzkin transformation", false,                               optionListPtr, &opt_enabled),
     opt_hbr            (_cat2, "hbr",           "Use hyper binary resolution", false,                                          optionListPtr, &opt_enabled),
 
+    stepbystepoutput   (_cat2, "debugCNFbase",  "CNF filename prefix for step by step formulas", 0,                            optionListPtr, &opt_enabled),
+    
     opt_ptechs         (_cat2, "cp3_ptechs",    "techniques for preprocessing", 0,                                             optionListPtr, &opt_enabled),
     opt_itechs         (_cat2, "cp3_itechs",    "techniques for inprocessing",  0,                                             optionListPtr, &opt_inprocess),
 
@@ -421,7 +423,9 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_newAlk             (_cat_fm, "cp3_fm_newAlk",         "create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)",  2, IntRange(0, 2),       optionListPtr, &opt_FM),
     opt_checkSub           (_cat_fm, "cp3_fm_newSub",         "check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true,                                    optionListPtr, &opt_FM),
     opt_rem_first          (_cat_fm, "cp3_fm_1st",            "extract first AMO candidate, or last AMO candidate", false,                                                               optionListPtr, &opt_FM),
-
+    opt_fm_garbageColelct  (_cat_fm, "cp3_fm_gc",             "perform garbage collection during FM", true,                                                                              optionListPtr, &opt_FM),
+    opt_fm_prooftrace      (_cat_fm, "cp3_fm_proof",          "prints FM proof steps", false,                                                                                            optionListPtr, &opt_FM),
+    opt_fm_printtrace      (_cat_fm, "cp3_fm_printproof",     "print FM proof steps (0=off,1=ids,2=formula constraints,3=all constraints) use -no-cp3_fm_gc", 0, IntRange(0, 3),         optionListPtr, &opt_FM),
     opt_minCardClauseSize  (_cat_fm, "card_minC",             "min clause size to find cards", 3, IntRange(2, INT32_MAX),                                      optionListPtr, &opt_FM),
     opt_maxCardClauseSize  (_cat_fm, "card_maxC",             "max clause size to find cards", 6, IntRange(2, INT32_MAX),                                      optionListPtr, &opt_FM),
     opt_maxCardSize        (_cat_fm, "card_max",              "max card size that will be looked for", 12, IntRange(2, INT32_MAX),                             optionListPtr, &opt_FM),

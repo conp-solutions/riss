@@ -105,6 +105,12 @@ bool FourierMotzkin::process()
         }
     }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP1.cnf").c_str(), 0 ); 
+      }
+    );
+    
     // have a slot per variable
     data.ma.resize(data.nVars() * 2);
 
@@ -242,6 +248,7 @@ bool FourierMotzkin::process()
         sort(data.lits);
         DOUT(if (config.fm_debug_out > 0) cerr << "c found AMO: " << data.lits << endl;);
         cards.push_back(data.lits);
+	if( config.opt_fm_prooftrace ) cerr << "c FM proof (AMO) add " << cards[ cards.size() - 1 ].getID() << " [" << cards[ cards.size() - 1 ].getParentL() << " , " << cards[ cards.size() - 1 ].getParentR() << "] : " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
         if (cards.size() >= config.opt_fm_max_constraints) { break; }
 
         if (config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize(right) > 0) { heap.insert(toInt(right)); }         // this literal might have more cliques
@@ -330,6 +337,7 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 1) cerr << "c found AM2[" << foundAmts << "]: " << data.lits << endl;);
                     cards.push_back(CardC(data.lits));     // use default AMO constructor
                     cards.back().k = 2; // set k to be 2, since its an at-most-two constraint!
+                    if( config.opt_fm_prooftrace ) cerr << "c FM proof (AM2) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
                     if (cards.size() >= config.opt_fm_max_constraints) { goto finishAMT; }
                 }
 
@@ -391,6 +399,12 @@ bool FourierMotzkin::process()
 
     }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterFindUnits.cnf").c_str(), 0); 
+      }
+    );
+    
     // perform merge
     if (config.opt_merge) {
         DOUT(if (config.fm_debug_out > 0) cerr << "c merge AMOs with " << cards.size() << " constraints ... " << endl;);
@@ -467,6 +481,8 @@ bool FourierMotzkin::process()
 
                     const int index = cards.size();
                     cards.push_back(CardC(data.lits));   // create AMO
+		    cards[ cards.size() - 1 ].setParents( cards[leftHands[toInt(pl)][i]].getID(), cards[leftHands[toInt(nl)][j]].getID() ); // set the parents of the constraint to reconstruct the proof
+		    if( config.opt_fm_prooftrace ) cerr << "c FM proof (MERGE) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
                     for (int k = 0 ; k < data.lits.size(); ++ k) { leftHands[ toInt(data.lits[k]) ].push_back(index); }
                     if (cards.size() >= config.opt_fm_max_constraints) { break; }
                 }
@@ -482,23 +498,66 @@ bool FourierMotzkin::process()
     if (data.hasToPropagate())
         if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterMerge.cnf").c_str(), 0); 
+      }
+    );
+        
     // perform find 2product encoding
-    if (config.opt_fm_twoPr) { findTwoProduct(cards, big, leftHands); }
-
+    if (config.opt_fm_twoPr) {
+      
+      DOUT( 
+	if ( (const char*)config.stepbystepoutput != nullptr) {
+	  data.outputFormula( string( string(config.stepbystepoutput) + "-FM-after2Product.cnf").c_str(), 0); 
+	}
+      );
+      
+      findTwoProduct(cards, big, leftHands); 
+      
+    }
+    
     // semantic search
-    if (config.opt_fm_sem) { findCardsSemantic(cards, leftHands); }
+    if (config.opt_fm_sem) { 
+      findCardsSemantic(cards, leftHands); 
+      
+      DOUT( 
+	if ( (const char*)config.stepbystepoutput != nullptr) {
+	  data.outputFormula( string( string(config.stepbystepoutput) + "-FM-after2Product.cnf").c_str(), 0); 
+	}
+      );
+      
+    }
 
     if (!propagateCards(unitQueue, leftHands, rightHands, cards, inAmo)) { return modifiedFormula; }
     // propagate found units - if failure, skip next steps
     if (data.hasToPropagate())
         if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP2.cnf").c_str(), 0); 
+      }
+    );
+        
     // remove duplicate or subsumed AMOs!
     removeSubsumedAMOs(cards, leftHands);
+    
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterSubsumedAMO.cnf").c_str(), 0); 
+      }
+    );
 
     // try to deduce ALO constraints from a AMO-ALO matrix
     deduceALOfromAmoAloMatrix(cards, leftHands);
 
+    DOUT( 
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterAloFromAloAmo.cnf").c_str(), 0); 
+      }
+    );
+    
     // set all variables that appeard in cardinality constraints, to collect clauses next
     data.ma.nextStep();
     for (int i = 0 ; i < cards.size(); ++ i) {
@@ -515,6 +574,7 @@ bool FourierMotzkin::process()
             if (data.ma.isCurrentStep(var(c[j]))) {    // a literal of this clause took part in an AMO
                 const int index = cards.size();
                 cards.push_back(CardC(c));
+		if( config.opt_fm_prooftrace ) cerr << "c FM proof (UseClause) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
                 DOUT(if (config.fm_debug_out > 1) cerr << "c clause " << c << " leads to card " << cards[cards.size() - 1 ].ll << " <= " << cards[cards.size() - 1 ].k << " + " << cards[cards.size() - 1 ].lr << endl;);
                 for (int j = 0 ; j < c.size(); ++ j) {
                     rightHands[toInt(c[j])].push_back(index);
@@ -555,9 +615,10 @@ bool FourierMotzkin::process()
     bool sizeAbort = false;
     vector<int> rewrite; // for garbage collection
     int validCards = cards.size(), invalidCards = 0;
+    int cardinalityIterations = 0;
     while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && !sizeAbort)) && !data.isInterupted()) {
         /** garbage collection */
-        if (needsGarbageCollect == iter && invalidCards * 4 > validCards) {   // perform garbage collection only if at least 25% are garbage
+        if (config.opt_fm_garbageColelct && needsGarbageCollect == iter && invalidCards * 4 > validCards) {   // perform garbage collection only if at least 25% are garbage
             DOUT(if (config.fm_debug_out > 0) cerr << "c fm garbage collect" << endl;);
             garbageCollects ++;
             rewrite.assign(cards.size(), -1);   // vector that memorizes new position
@@ -568,9 +629,10 @@ bool FourierMotzkin::process()
                     rewrite[i] = keptCards; // memorize where this card has been put
                     if (i > keptCards) {   // only if its not the same position
                         cards[keptCards].swap(cards[i]);   // swap the two cards (not copy to not copy the memory!)
+                        cards[i].invalidate();             // descruct the constraint
                         DOUT(if (config.fm_debug_out > 2) cerr << "c moved index from " << i << " to " << keptCards << endl;);
-                        keptCards++; // increase number of kept cards
                     }
+                    keptCards++; // increase number of kept cards for each kept cardinality constraint
                 }
             }
             DOUT(if (config.fm_debug_out > 0) cerr << "c keep " << keptCards << " out of " << cards.size() << endl;);
@@ -649,6 +711,7 @@ bool FourierMotzkin::process()
             cerr << endl;
         });
 
+	const int beforeTrailSize = solver.trail.size();
         for (int i = 0 ; i < leftHands[toInt(toEliminate)].size() && steps < fmLimit && !sizeAbort; ++ i) {   // since all cards are compared, be careful!
             steps ++;
             if (cards[leftHands[toInt(toEliminate)][i]].invalid()) {   // drop invalid constraints from list!
@@ -687,6 +750,7 @@ bool FourierMotzkin::process()
 
                 bool hasDuplicates = false; // if true, then the resulting constraint is invalid!
                 CardC& thisCard = cards[ index ];
+		thisCard.setParents(  card1.getID(), card2.getID() ); // set parents
                 int extraK = 0; // if during reasoning the K value needs to be adopted
                 for (int p = 0 ; p < 2; ++ p) {
                     // first half
@@ -775,7 +839,9 @@ bool FourierMotzkin::process()
 
                 thisCard.k = card1.k + card2.k + extraK; // do not forget the extra cardinality value!
 
-                DOUT(if (config.fm_debug_out > 1) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
+                if( config.opt_fm_prooftrace ) cerr << "c FM proof (FM) add " << thisCard.getID() << " [" << thisCard.getParentL() << " , " << thisCard.getParentR() << "] : " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << endl;
+                
+                DOUT(if (config.fm_debug_out > 0) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
                      << "c from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
                      << "c and  " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;);
                 if (thisCard.taut()) {
@@ -829,6 +895,15 @@ bool FourierMotzkin::process()
                 }
             }
         }
+        
+        DOUT( 
+	  if( solver.trail.size() != beforeTrailSize ) {
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      stringstream s; s << iter;
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-iteration-" + s.str() + ".cnf").c_str(), 0); 
+	    }
+	  }
+	);
 
         // new constraints > removed constraints + grow -> drop the elimination again!
         if ((cards.size() - oldSize > leftHands[ toInt(toEliminate) ] .size() + rightHands[ toInt(toEliminate) ].size()  + config.opt_fmGrow)   // local increase to large
@@ -913,6 +988,12 @@ bool FourierMotzkin::process()
         // if found something, propagate!
         if (!propagateCards(unitQueue, leftHands, rightHands, cards, inAmo)) { return modifiedFormula; }
 
+        DOUT( 
+	    if ( false && (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP3.cnf").c_str(), 0); 
+	    }
+	);
+        
         DOUT(if (config.fm_debug_out > 3) {
         cerr << "c lists of all constraints after complete elimination step: " << endl;
         for (Var v = 0 ; v < data.nVars(); ++v) {
@@ -936,8 +1017,18 @@ bool FourierMotzkin::process()
 
     // add all the clauses, perform unit propagation afterwards
     if (data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0)) {
+      
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-10-beforeNewAMO.cnf").c_str(), 0); 
+	    }
+	);
+      
         big.recreate(ca, data.nVars(), data.getClauses());
         if (config.opt_newAmo > 1) { big.generateImplied(data); } // try to avoid adding redundant clauses!
+        
+	DOUT(if (config.fm_debug_out > 0) cerr << "c analyze new and rejected AMOs, actual card.constraints: " << cards.size() << " rejectedNew: " << rejectedNewAmos.size() << endl; );
+
         for (int p = 0; p < 2; ++ p) {
             // use both the list of newAMOs, and the rejected new amos!
             for (int i = 0 ; i < (p == 0 ? newAMOs.size() : rejectedNewAmos.size()) ; ++ i) {
@@ -946,6 +1037,7 @@ bool FourierMotzkin::process()
                     DOUT(if (config.fm_debug_out > 1) cerr << "c new AMO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;);
                     continue;
                 }
+                DOUT(if (config.fm_debug_out > 0) cerr << "c check clauses for AMO " << c.ll << " <= " << c.k << " + " << c.lr << "  card index: p: " << p << " index: " << (p == 0 ? newAMOs[i] : i )<< endl; );
                 for (int j = 0 ; j < c.ll.size(); ++ j) {
                     for (int k = j + 1; k < c.ll.size(); ++ k) {
                         bool present = false;
@@ -969,6 +1061,13 @@ bool FourierMotzkin::process()
                 unitQueue.clear();
             }
         }
+        
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-11-afterNewAMO.cnf").c_str(), 0); 
+	    }
+	);
+        
     }
 
     if (data.ok() && config.opt_newAlo > 0 && (newALOs.size() > 0 || rejectedNewAlos.size() > 0)) {
@@ -994,6 +1093,11 @@ bool FourierMotzkin::process()
                 }
             }
         }
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterNewALO.cnf").c_str(), 0); 
+	    }
+	);
     }
 
     if (data.ok() && config.opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0)) {
@@ -1029,12 +1133,80 @@ bool FourierMotzkin::process()
                 }
             }
         }
+        
+        DOUT( 
+	    if ( (const char*)config.stepbystepoutput != nullptr) {
+	      data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterNewALK.cnf").c_str(), 0); 
+	    }
+	);
+        
     }
 
+    if( config.opt_fm_printtrace != 0 ) {
+      MarkArray depends;
+      depends.resize( cards.back().getID() + 1);
+      vector<int> basis;
+      vector<int> idMap( cards.back().getID() + 1); // store for each ID the position in the cards vector
+      
+      // store for each ID the position in the cards vector
+      for( int i = 0 ; i < cards.size(); ++ i ) idMap[ cards[i].getID() ] = i;
+      
+      for( int i = 0 ; i < cards.size(); ++ i ) {
+	depends.nextStep();basis.clear();
+	// collect all constraints for the current constraint
+	CardC& thisCard = cards[ i ];
+	if( thisCard.getParentL() != -1 || thisCard.getParentR() != -1 ) {
+	  basis.push_back( idMap[thisCard.getParentL()] );
+	  basis.push_back( idMap[thisCard.getParentR()] );
+	  depends.setCurrentStep( thisCard.getParentL() );
+	  depends.setCurrentStep( thisCard.getParentR() );
+	}
+	for( int j = 0 ; j < basis.size(); ++ j ) {
+	  CardC& d = cards[ basis[j] ];
+	  if( d.getParentL() != -1 || d.getParentR() != -1 ) {
+	    if( ! depends.isCurrentStep(d.getParentL()) ) {
+	      basis.push_back(    idMap[d.getParentL()] );
+	      depends.setCurrentStep(   d.getParentL() );
+	    }
+	    if( ! depends.isCurrentStep(d.getParentR()) ) {
+	      basis.push_back( idMap[   d.getParentR() ] );
+	      depends.setCurrentStep(   d.getParentR() );
+	    }
+	  }
+	}
+	int formulaConstraints = 0;
+	for( int j = 0 ; j < basis.size(); ++ j ) {
+	    CardC& c = cards[ basis[j] ];  
+	    if( c.getParentL() == -1 && c.getParentR() == -1 ) formulaConstraints ++;
+	}
+	cerr << "c constraint " << thisCard.getID() << " depends on " << basis.size() << " (" << formulaConstraints << ") constraints" << endl;
+	if( config.opt_fm_printtrace > 1 ) {
+	 cerr << thisCard.getID() << " [" << thisCard.getParentL() << " , " << thisCard.getParentR() << "] : " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << endl; 
+	 for( int j = 0 ; j < basis.size(); ++ j ) {
+	    CardC& c = cards[ basis[j] ];  
+	    if( config.opt_fm_printtrace > 2 ) { // print all constraints
+	      cerr << "      " << c.getID() << " : " << c.ll << " <= " << c.k << " + " << c.lr << endl; 
+	    } else {
+	      if( c.getParentL() == -1 && c.getParentR() == -1 ) { // print only constraints from original formula
+		cerr << "      " << c.getID() << " : " << c.ll << " <= " << c.k << " + " << c.lr << endl; 
+	      }
+	    }
+	 }
+	 cerr << endl;
+	}
+      }
+    }
+    
     // propagate found units - if failure, skip next steps
     if (data.ok() && data.hasToPropagate())
         if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
 
+    DOUT(
+      if ( (const char*)config.stepbystepoutput != nullptr) {
+	data.outputFormula( string( string(config.stepbystepoutput) + "-FM-afterUP4.cnf").c_str(), 0); 
+      }
+    );
+        
     fmTime = cpuTime() - fmTime;
 
     return modifiedFormula;
@@ -1182,7 +1354,8 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
         intersection.nextStep();  // markArray the remembers the literals for the intersection
 
         DOUT(if (config.opt_semDebug) cerr << endl << endl << "c start with card constraint " << cc << " <= " << degree  << "  --- by clause [" << tmpA[i] << "] " << c << endl;);
-
+	data.lits.clear(); // when starting with a constraint, clear the list before!
+	
         do {  // try to extend the card constraint with new literals by unit propagation
 
             if (cc.size() > USEABLE_BITS) {
@@ -1201,10 +1374,12 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
 
 //      if( config.opt_semDebug ) cerr << "c start with number " << bitField << " for assign - bits ..." << endl;
             int probes = 0, failedProbes = 0; // stats for number of propagations and failed propagations (to detect unsat)
+            bool inStepLimit = true;
             while (true) {    // find another k-bit number, until all possible combinations inside the range have been tested
                 if (firstIteration || (bitField & 1 != 0)) {   // consider this combination if its either the first iteration, or if the least siginificant bit is set
 //      if( config.opt_semDebug ) cerr << "c probe " << probes << "  with bitfield " << bitField << " and with trail: " << solver.trail << endl;
                     solver.newDecisionLevel(); // go to decision level 1!
+		    assert( solver.trail.size() == solver.qhead && "should not propagate more than required" );
                     for (int j = 0 ; j < cc.size(); ++ j) {     // add all literals where a bit in "bitField" is set
                         const LONG_INT testPos = cc.size() - j - 1; // to hit least significant bit more easily
                         if ((bitField & (1ull << testPos)) != 0ull) {   // if the right bit is set
@@ -1214,10 +1389,10 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
                         }
                     }
                     probes ++;  // count number of propagations
-//      if( config.opt_semDebug ) cerr << "c call propagate [" << bitField << "] " << probes << " with decL " << solver.decisionLevel() << " and trail size " << solver.trail.size() << endl;
+                    DOUT( if( config.opt_semDebug ) cerr << "c call propagate [" << bitField << "] " << probes << " (fail:" << failedProbes << ") first: " << firstProbe << " : with decL " << solver.decisionLevel() << " and trail size " << solver.trail.size() << endl; );
                     CRef confl = solver.propagate(); // propagate, check for conflict -- attention, ca.alloc can be called here!
                     semSteps += solver.trail.size() - solver.trail_lim[0];  // appeoximate propagation effort
-                    DOUT(if (config.opt_semDebug) cerr << "c propagate [ " << confl << " ] implied " << solver.trail << endl;);
+                    DOUT(if (config.opt_semDebug && false) cerr << "c propagate [ " << confl << " ] implied " << solver.trail << endl;);
                     if (confl == CRef_Undef) {   // no conflict -> build intersection
                         const int startTrail = solver.trail_lim[0];
                         data.lits.clear(); // literals can be removed, because intersection is still in markArray
@@ -1235,10 +1410,10 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
                         }
                         intersection.nextStep(); // update markArray to new intersection
                         for (int j = 0 ; j < data.lits.size(); ++ j) { intersection.setCurrentStep(toInt(data.lits[j])); }       // set flag for all literals in the "new" intersection
-                        DOUT(if (config.opt_semDebug) cerr << "c kept " << data.lits.size() << " literals in the intersection: " << data.lits << endl;);
+                        DOUT(if (false && config.opt_semDebug) cerr << "c kept " << data.lits.size() << " literals in the intersection: " << data.lits << endl;);
 
                     } else {
-                        DOUT(if (config.opt_semDebug) cerr << "c probe failed" << endl;);
+                        DOUT(if (config.opt_semDebug) cerr << "c probe failed with conflict " << ca[confl] << endl;);
                         if (degree == 1) {
                             static bool didit = false;
                             if (!didit) { cerr << "c found a failed literal! use it!" << endl; didit = true; }
@@ -1246,28 +1421,41 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
                         failedProbes ++;  // conflict -> everything is implied -> no intersection to be done!
                     }
                     solver.cancelUntil(0);
-                    if (!firstProbe && data.lits.size() == 0) { break; }   // intersection has been initialized, but became empty -> no commonly implied literal -> finished with the current constraint
-                } // end probing current combination
-
-                if (! data.unlimited() && semSteps >= config.opt_semSearchLimit) { data.lits.clear(); break; }   // add no more extension!
+                    if (!firstProbe && data.lits.size() == 0) { 
+		      DOUT(if (config.opt_semDebug) cerr << "c stop, as we have an empty list of literals after and we are not at the first successful probe any more" << endl;);
+		      break;
+		    }   // intersection has been initialized, but became empty -> no commonly implied literal -> finished with the current constraint
+                } else {// end probing current combination
+		  DOUT(if (config.opt_semDebug) cerr << "c skip current bit field, as it is not the first iteration, and the least significant bit is not set" << endl;);
+		}
+		assert( solver.decisionLevel() == 0 && "has to be on level 0 at the end" );
+                if (! data.unlimited() && semSteps >= config.opt_semSearchLimit) { 
+		  DOUT(if (config.opt_semDebug) cerr << "c interrupt as we reached step limit" << endl;);
+		  data.lits.clear(); inStepLimit = false; break; 
+		}   // add no more extension!
                 bitField = nextNbitNumber(bitField);
                 LONG_INT tmp = 1, shift = cc.size();
                 tmp = (tmp << shift);
-//        if( config.opt_semDebug ) cerr << "c continue with bitfield " << bitField  << "( cmp. to. " << ( (LONG_INT)1 << (LONG_INT)cc.size()) << " == " << tmp << ") and cc.size: " << cc.size() << endl;
+                DOUT( if( config.opt_semDebug ) cerr << "c continue with bitfield " << bitField  << "( cmp. to. " << ( (LONG_INT)1 << (LONG_INT)cc.size()) << " == " << tmp << ") and cc.size: " << cc.size() << endl; );
                 if (bitField >= tmp) { break; }
             }
 
             semTotalProbes += probes; semTotalFailedProbes += failedProbes; // stats
-            if (firstProbe && (probes == failedProbes)) {   // works only when nothing has been propagated yet! // TODO: what happens if this occurs after a literal has been added?
+            if (inStepLimit && firstProbe && probes > 0 && (probes == failedProbes)) {   // works only when nothing has been propagated yet! // TODO: what happens if this occurs after a literal has been added?
+	      assert( origCC.size() == cc.size() && "perform only on failing original constraint!" );
+	      assert( extendLit == lit_Undef && "cannot extend and reduce degree" );
+	      cerr << "c failed " << failedProbes << " out of " << probes << " during first iteration, with clause " <<  ca[ tmpA[i] ] << endl;
+	        // assert ( cc.size() == ca[ tmpA[i] ].size() && "works only if we did not add a literal before!" );
                 DOUT(if (config.opt_semDebug) cerr << "c none of the configurations succeeds -> decrease degree by one to " << degree - 1 << endl;);
-                degree --;    // decrease degree
-                semReducedDegrees ++; //stats
+		DOUT( for( int cci = 0 ; cci < cc.size(); ++ cci ) assert( solver.value( cc[cci] ) == l_Undef && "variables have to be undefined" ); );
+		degree --;    // decrease degree
+		semReducedDegrees ++; //stats
                 data.lits.clear();    // clear constraint and literals
                 break;        // TODO: could also continue here!
             }
 
             // if the intersection of all of those is not empty, choose one literal (heuristically), and add it to the constraint -> next iteration!
-            if (data.lits.size() != 0) {
+            if (inStepLimit && data.lits.size() != 0)  {
                 extendLit = data.lits[0];
                 cc.push_back(~extendLit);   // add complement of current literal to card constraint
                 intersection.reset(toInt(~extendLit));    // the complement is blocked, since it is inside CC now
@@ -1292,7 +1480,9 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
         if (cc.size() > ca[ tmpA[i] ].size() || degree < origDegree) {   // if this constraint is not simply a clause, but something has been added or changed
             sort(cc);   // necessary in Coprocessor
             cards.push_back(CardC(cc, degree));   // add the constraint to the data base
+	    if( config.opt_fm_prooftrace ) cerr << "c FM proof (FindSem) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
             for (int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j) { leftHands[ toInt(cards[ cards.size() - 1 ].ll[j]) ].push_back(cards.size() - 1); }      // register card constraint in data structures
+            if( degree < origDegree ) cerr << "c found card constraint " << cc << "  <= " << degree << "     to " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
             DOUT(if (config.opt_semDebug) cerr << "c found card constraint " << cc << "  <= " << degree << endl;);
             intersection.nextStep();
             semExtendedCards ++; semExtendLits += (cc.size() - ca[ tmpA[i] ].size());   // stats
@@ -1605,7 +1795,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 
                 } // end for lits in B
                 // add the global set of lits as new AMO
-                if (data.lits.size() > 0) {   // if there is a global AMO
+                if (data.lits.size() > 1) {   // if there is a global AMO
                     sort(data.lits);
                     bool doUseConstraint = true;
                     // check for being redundant, or for containing units
@@ -1633,6 +1823,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
                                 leftHands[ toInt(data.lits[n]) ].push_back(cards.size());    // register new AMO in data structures
                             }
                             cards.push_back(CardC(data.lits));     // actually add new AMO
+			    if( config.opt_fm_prooftrace ) cerr << "c FM proof (2Prod) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
                             twoPrAmos ++;
                             twoPrAmoLits += data.lits.size();
 
