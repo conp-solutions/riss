@@ -1077,8 +1077,7 @@ bool PSolver::initializeThreads()
         communicators[i]->sendRatio = pfolioConfig.opt_sendRatio;
         communicators[i]->doBumpClauseActivity = pfolioConfig.opt_doBumpClauseActivity;
 
-        communicators[i]->sendIncModel = pfolioConfig.opt_sendIncModel;
-        communicators[i]->sendDecModel = pfolioConfig.opt_sendDecModel;
+        communicators[i]->checkLiterals = pfolioConfig.opt_checkLiterals;
         communicators[i]->useDynamicLimits = pfolioConfig.opt_useDynamicLimits;
         communicators[i]->sendEquivalences = pfolioConfig.opt_sendEquivalences;
         // could set receiveEquivalences here, but that should be more up to the actual solver configurations

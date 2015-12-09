@@ -60,8 +60,7 @@ class PfolioConfig : public Config
     DoubleOption opt_sendRatio;             // How big should the ratio of send clauses be?
     BoolOption opt_doBumpClauseActivity;    // Should the activity of a received clause be increased from 0 to current activity
 
-    BoolOption opt_sendIncModel;            // allow sending with variables where the number of models potentially increased
-    BoolOption opt_sendDecModel;            // allow sending with variables where the number of models potentially deecreased
+    BoolOption opt_checkLiterals;           // control allowing sending and receiving information based on literal instead of variables
     BoolOption opt_useDynamicLimits;        // use dynamic limits for clause sharing
     BoolOption opt_sendEquivalences;        // send info about equivalences
 

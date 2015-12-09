@@ -42,8 +42,7 @@ void Solver::setCommunication(Communicator* comm)
     communicationClient.sizeChange = communication->sizeChange;
     communicationClient.lbdChange = communication->lbdChange;
     communicationClient.sendRatio = communication->sendRatio;
-    communicationClient.sendIncModel = communication->sendIncModel; // allow sending with variables where the number of models potentially increased
-    communicationClient.sendDecModel = communication->sendDecModel; // allow sending with variables where the number of models potentially decreased (soundness, be careful here!)
+    communicationClient.checkLiterals = communication->checkLiterals; // allow sending with literals/variables (to check whether sound wrt inprocessing)
     communicationClient.useDynamicLimits = communicationClient.useDynamicLimits || communication->useDynamicLimits; // one of the two overwrites the other
     communicationClient.receiveEE = communication->receiveEqiuvalences;
 
@@ -193,21 +192,24 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     int keep = 0;
     for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
         const Var v = var((*toSend)[i]);   // get variable to analyze
-        rejectSend = false; // TODO: handle variables in clause! (!communicationClient.sendDecModel && varFlags[v].delModels) || (!communicationClient.sendIncModel && varFlags[v].addModels);
-
-        if (!rejectSend) { (*toSend)[keep++] = (*toSend)[i]; } // keep literal
+        rejectSend = false; // TODO: handle variables in clause! 
+        if( varFlags[v].modifiedPositiveModels || varFlags[v].modifiedNegativeModels ) rejectSend = true; // we modified models with this literal
+        if( v >= communication->getFormulaVariables() ) rejectSend = true;                                         // checks whether a variable is too high (not in the original formula)
+        if (!rejectSend) {  } // keep literal
         else { // otherwise check how to proceed with variable that is
-            if (multiUnits || equivalences) { continue; } // jump over this literal, so that it is not shared
+            if (multiUnits || equivalences) { 
+	      (*toSend)[keep++] = (*toSend)[i];
+	      continue;
+	    } // jump over this literal, so that it is not shared
             else { break; }   // do not share a clause with that literal
         }
-#warning: check here, whether the clause contains a variable that is too high, and hence should not be sent (could be done via above flags)
     }
-    if (rejectSend && !multiUnits && !equivalences) {
+    
+    if (rejectSend && !multiUnits && !equivalences) { // do nothing here, as there are variables in the clause that should not be sent
         return 0;
-    }  // do nothing here, as there are variables in the clause that should not be sent
-    else {
-        if (keep <= 1 && equivalences) { return 0; }      // do not share equivalence of one literal
-        else if (keep == 0 && multiUnits) {    // do not share "no" units
+    } else {
+        if (keep <= 1 && equivalences) { return 0; }  // do not share equivalence of one literal
+        else if (keep == 0 && multiUnits) {           // do not share "no" units
             return 0;
         }
     }
@@ -247,7 +249,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
 
 
     #ifdef PCASSO
-    VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
+    VariableInformation vi(varFlags, communicationClient.checkLiterals);    // setup variable information object
     communication->addClause(*toSend, toSendSize, dependencyLevel, vi, multiUnits, equivalences);
     #else
     communication->addClause(*toSend, toSendSize, multiUnits, equivalences);
@@ -265,7 +267,7 @@ communication->nrReceiveAttempts ++;
 // not at level 0? nothing to do
 if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 
-    VariableInformation vi(varFlags, communicationClient.sendIncModel, communicationClient.sendDecModel);    // setup variable information object
+    VariableInformation vi(varFlags, communicationClient.checkLiterals);    // setup variable information object
     communicationClient.receiveClauses.clear();  // prepare for receive
     communicationClient.receivedUnits.clear();
     communicationClient.receivedEquivalences.clear();

@@ -47,8 +47,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_sendRatio("SEND",   "sendRatio",   "", 0.1, DoubleRange(0, true, 1, true), optionListPtr)
 
     , opt_doBumpClauseActivity("SEND", "bumpSentCA", "bump activity of received clauses", false, optionListPtr)
-    , opt_sendIncModel("SEND", "sendIncModel", "allow sending with variables where the number of models potentially increased", true, optionListPtr)
-    , opt_sendDecModel("SEND", "sendDecModel", "llow sending with variables where the number of models potentially deecreased", false, optionListPtr)
+    , opt_checkLiterals("SEND", "checkLits", "control allowing sending and receiving information based on literal instead of variables", true, optionListPtr)
     , opt_useDynamicLimits("SEND", "dynLimits", "update sharing limits dynamically", false, optionListPtr)
     , opt_sendEquivalences("SEND", "shareEE", "share equivalent literals", true, optionListPtr)
 

@@ -541,18 +541,18 @@ class Solver
         unsigned decision: 1;
         unsigned seen: 1;
         unsigned extra: 2; // TODO: use for special variable (not in LBD) and do not touch!
-        unsigned modifiedPositive: 1; // modified the models of the positive literal of this variable
-        unsigned modifiedNegative: 1; // modified the models of the negative literal of this variable
+        unsigned modifiedPositiveModels: 1; // modified the models of the positive literal of this variable
+        unsigned modifiedNegativeModels: 1; // modified the models of the negative literal of this variable
         unsigned frozen: 1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
         #ifdef PCASSO
         unsigned varPT: 16; // partition tree level for this variable
         #endif
-        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), modifiedPositive(0), modifiedNegative(0), frozen(0)
+        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), modifiedPositiveModels(0), modifiedNegativeModels(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
         {}
-        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), modifiedPositive(0), modifiedNegative(0), frozen(0)
+        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), modifiedPositiveModels(0), modifiedNegativeModels(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
@@ -1458,8 +1458,7 @@ class Solver
         float lbdChange;                           /// How fast should lbd send limit be adopted?
         float sendRatio;                           /// How big should the ratio of send clauses be?
 
-        bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
-        bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
+        bool checkLiterals;                        /// control allowing sending and receiving information based on literal instead of variables
         bool useDynamicLimits;                     /// update sharing limits dynamically
         bool sendAll;                              /// ignore sharing limits
         bool receiveAll;                           /// ignore limits for reception
@@ -1470,24 +1469,28 @@ class Solver
         CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false),
             refineReceived(false), resendRefined(false), doReceive(true), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
-            sendIncModel(false), sendDecModel(false), useDynamicLimits(false), sendAll(false), receiveAll(false), keepLonger(false), lbdFactor(0) {}
+            checkLiterals(true), useDynamicLimits(false), sendAll(false), receiveAll(false), keepLonger(false), lbdFactor(0) {}
     } communicationClient;
 
     class VariableInformation
     {
         vec<VarFlags>& varInfo;
-        bool receiveInc;  // allow working with variables where the number of models increased
-        bool receiveDec;  // allow working with variable where the number decreased
+        bool receiveUseLit;  // allow working with variables where the number of models increased
       public:
-        VariableInformation(vec<VarFlags>& _varInfo, bool _receiveAdd, bool _receiveDel)
-            : varInfo(_varInfo), receiveDec(_receiveDel), receiveInc(_receiveAdd) {}
+        VariableInformation(vec<VarFlags>& _varInfo, bool checkLits)
+            : varInfo(_varInfo), receiveUseLit(checkLits) {}
 
-        bool canBeReceived(const Var& v) const
+        /** check based on the variable flags whether a certain literal is allowed to be received */
+        bool canBeReceived(const Lit& l) const
         {
-            return (!varInfo[v].modifiedPositive || receiveInc)   // if the variable has been modified and models have been added
-                   && (!varInfo[v].modifiedNegative || receiveDec);  // or models have been deleted
+	  const Var v = var(l);
+	  if( receiveUseLit ) { 
+	    if ( sign(l) ) return varInfo[v].modifiedNegativeModels;
+	    else  return varInfo[v].modifiedPositiveModels;
+	  } else return varInfo[v].modifiedNegativeModels || varInfo[v].modifiedPositiveModels;
         }
 
+        /** set dependency of a variable */
         void setDependency(const Var& v, const int& dep)
         {
             #ifdef PCASSO
