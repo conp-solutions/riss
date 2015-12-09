@@ -22,6 +22,7 @@ typedef std::vector<edge> adjacencyList;
 class Graph
 {
   private:
+    void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
     int size;
     std::vector<adjacencyList> node;
     std::vector<int> nodeDeg;
@@ -36,8 +37,10 @@ class Graph
     std::vector<double> getDistances(int nod);
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
+    void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
 
   public:
+    int gettreewidth();
     void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
     bool thereisanedge(int nodeA, int nodeB);
     std::vector<int> getArticulationPoints();

@@ -449,7 +449,7 @@ bool Graph::thereisanedge(int nodeA, int nodeB){ //TODO: Maybe check if Graph is
   
  const adjacencyList& adj = node[nodeA];
  
- if(adj.size() < 64){ //linear search, faster von size < 256(?)
+ if(adj.size() < 64){ //linear search, faster von size < 64(?) TODO: Find bordervalue(binarysearch faster then linearsearch)
   
   for(int i=0; i<adj.size(); ++i){
   
@@ -478,4 +478,92 @@ bool Graph::thereisanedge(int nodeA, int nodeB){ //TODO: Maybe check if Graph is
  
   return false;
   
+}
+
+int Graph::gettreewidth(){ 
+    
+  vector< pair< vector<int>, vector<int> > > bags;
+  Riss::MarkArray visited;
+  visited.create(size);
+  visited.nextStep();
+  vector<int> bagsizes;
+  int tmpbagsize;
+  int treewidth = numeric_limits<double>::infinity();
+  
+  for(int i=0; i< node.size(); ++i){
+  
+    visited.setCurrentStep(i);
+    bags.clear();
+    
+    bags.push_back(pair<vector<int>,vector<int>>());
+    bags.back().first.push_back(i);
+    findtree(bags, visited);    
+    
+    
+    tmpbagsize = 0;
+    for(int k=0; k<bags.size(); k++){
+      
+      if(tmpbagsize < bags[k].first.size()) tmpbagsize = bags[k].first.size();
+      
+    }
+    
+    if(tmpbagsize <= 3) return tmpbagsize-1;
+    
+    bagsizes.push_back(tmpbagsize);
+    
+  }
+  
+  for(int j=0; j<bagsizes.size(); ++j){
+  
+    if(treewidth > bagsizes[j]) treewidth = bagsizes[j];
+    
+  }
+  
+  return treewidth-1;
+  
+}
+
+void Graph::findtree(vector< pair< vector<int>, vector<int> > >& bags, Riss::MarkArray& visited){
+  
+  int actualnode = bags.back().first.back();
+  const adjacencyList& adj = node[actualnode];
+  
+  for(int i=0; i<adj.size(); ++i){
+  
+    controllbagsandadd(bags, visited);
+    
+    if(visited.isCurrentStep(adj[i].first)) continue;
+    
+    visited.setCurrentStep(adj[i].first);
+    bags.back().first.push_back(adj[i].first);
+    
+    findtree(bags, visited);
+    }
+  
+}
+
+void Graph::controllbagsandadd(vector< pair< vector<int>, vector<int> > >& bags, Riss::MarkArray& visited){
+
+  pair<vector<int>,vector<int>> bagtocontroll;
+  
+  bool stayinbag;
+  
+  for(int i = 0; i< bags.back().first.size(); ++i){
+  
+    stayinbag = false;
+    const adjacencyList& adj = node[bags.back().first[i]];
+    
+    for(int j=0; j<adj.size(); ++j){
+    
+      if(!visited.isCurrentStep(adj[j].first)) stayinbag = true; continue; 
+      
+    }
+    
+    if(stayinbag) bagtocontroll.first.push_back(bags.back().first[i]);
+    
+  }
+  
+  bags.push_back(bagtocontroll);
+  
+   
 }
