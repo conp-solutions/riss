@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/XAlloc.h"
 #include "riss/mtl/Vec.h"
+#include "riss/mtl/HPVec.h"
 
 #include <iostream>
 namespace Riss

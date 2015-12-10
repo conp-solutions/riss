@@ -843,7 +843,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 template<class Idx, class Vec, class Deleted>
 class OccLists
 {
-    vec<Vec>  occs;
+    HugePageVec<Vec>  occs; // use huge pages to store the list of watch lists
     vec<char> dirty;
     vec<Idx>  dirties;
     Deleted   deleted;

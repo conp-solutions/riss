@@ -32,6 +32,7 @@ namespace Riss
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 
   
@@ -76,6 +77,25 @@ void free_huge_pages(void *ptr)
   // The memory was allocated via malloc()
   // and must be deallocated via free()
   free(real_ptr);
+}
+
+/** simple realloc with alloc, memcpy, free. Native realloc might be more efficient */
+static inline
+void *realloc_huge_pages(void *ptr, size_t size) {
+  // simply allocate without memcpy
+  if (ptr == NULL) return malloc_huge_pages(size);
+  
+  // Get new memory area
+  void* newMemory = malloc_huge_pages(size);
+  // Get pointer to size information
+  void *real_ptr = (char *)ptr - HUGE_PAGE_SIZE;
+  // Read the original allocation size
+  size_t real_size = *((size_t *)real_ptr);
+  assert( ALIGN_TO_PAGE_SIZE(size + HUGE_PAGE_SIZE) >= real_size && "memcpy should stay in bounds" );
+  // Copy the content of the old area into the new area
+  memcpy(newMemory, ptr, real_size );
+  // Free the old memory
+  free_huge_pages(ptr);
 }
 
 //=================================================================================================
