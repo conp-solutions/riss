@@ -541,27 +541,27 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -keepWorst=0.01"), false);
     
 } else if (optionSet == "bioinfo") {
-        parseOptions(std::string("", false); // TODO configuration line is too long, will not be used as a preset!
+        parseOptions(std::string("", false) ); // TODO configuration line is too long, will not be used as a preset!
 } else if (optionSet == "bits") {
-        parseOptions(std::string("-K=0.8 -szLBDQueue=248 -rem-lsf=0.333333 -rem-lsi=4.92762e-06 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-pol=4 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -rsw-iinc=1.45474 -clsActB=1 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -sscheDConflicts=978404991 -learnDecMS=30 -incResAct=50706301 -incResCnt=473655483", false);
+        parseOptions(std::string("-K=0.8 -szLBDQueue=248 -rem-lsf=0.333333 -rem-lsi=4.92762e-06 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-pol=4 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -rsw-iinc=1.45474 -clsActB=1 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -sscheDConflicts=978404991 -learnDecMS=30 -incResAct=50706301 -incResCnt=473655483", false) );
 } else if (optionSet == "community1") {
-        parseOptions(std::string("-K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-pol=1 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.766171 -reduce-frac=0.5 -no-updLearnAct -actStart=1024 -actDec=1.05263 -rMax=393403024", false);
+        parseOptions(std::string("-K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-pol=1 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.766171 -reduce-frac=0.5 -no-updLearnAct -actStart=1024 -actDec=1.05263 -rMax=393403024", false) );
 } else if (optionSet == "community2") {
-        parseOptions(std::string("-K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -maxlearnts=432281422 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-act=4 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -incResPol=179061136", false); 
+        parseOptions(std::string("-K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -maxlearnts=432281422 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-act=4 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -incResPol=179061136", false) ); 
 } else if (optionSet == "hgen") {
-        parseOptions(std::string("-K=0.8 -R=1.15563 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -maxlearnts=358452683 -minSizeMinimizingClause=475586193 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-d=86198632 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false);
+        parseOptions(std::string("-K=0.8 -R=1.15563 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -maxlearnts=358452683 -minSizeMinimizingClause=475586193 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-d=86198632 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false) );
 } else if (optionSet == "hitag2 ") {
-        parseOptions(std::string("-K=0.8 -sbr=1095963480 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false);
+        parseOptions(std::string("-K=0.8 -sbr=1095963480 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false) );
 } else if (optionSet == "N-N-N") {
-        parseOptions(std::string("-K=0.8 -lpd=1030 -incReduceDB=435311378 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asc=37676665 -rem-asi=1.1 -var-decay-b=0.0882012 -var-decay-e=0.95 -cla-decay=0.999 -ccmin-mode=0 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -r-min-noBlock=792 -dynLimits -prob-step-width=456144523 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false);
+        parseOptions(std::string("-K=0.8 -lpd=1030 -incReduceDB=435311378 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asc=37676665 -rem-asi=1.1 -var-decay-b=0.0882012 -var-decay-e=0.95 -cla-decay=0.999 -ccmin-mode=0 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -r-min-noBlock=792 -dynLimits -prob-step-width=456144523 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false) );
 } else if (optionSet == "nossum--sha1") {
-        parseOptions(std::string("", false);  // TODO configuration line is too long, will not be used as a preset!
+        parseOptions(std::string("", false) );  // TODO configuration line is too long, will not be used as a preset!
 } else if (optionSet == "planning") {
-        parseOptions(std::string(" -K=0.8 -sbr=643353723 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asc=110201572 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -rnd-seed=7.18571e+07 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.831167 -reduce-frac=0.5 -actIncMode=3 -actStart=1024 -actDec=1.05263 -rMax=4717388 -rMaxInc=4.49565 -sscheInc=1.19546 -rer", false);
+        parseOptions(std::string(" -K=0.8 -sbr=643353723 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asc=110201572 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -rnd-seed=7.18571e+07 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.831167 -reduce-frac=0.5 -actIncMode=3 -actStart=1024 -actDec=1.05263 -rMax=4717388 -rMaxInc=4.49565 -sscheInc=1.19546 -rer", false) );
 } else if (optionSet == "SGI-unsat") {
-        parseOptions(std::string(" -K=0.8 -lbdupd=0 -quickRed -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.999863 -cla-decay=0.999 -phase-saving=0 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -rMaxInc=14.1326", false);
+        parseOptions(std::string(" -K=0.8 -lbdupd=0 -quickRed -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.999863 -cla-decay=0.999 -phase-saving=0 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -rMaxInc=14.1326", false) );
 } else if (optionSet == "synthesis-AES") {
-        parseOptions(std::string(" -K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -var-decay-i=0.000401703 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false);
+        parseOptions(std::string(" -K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -var-decay-i=0.000401703 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false) );
 }
     
     else {
