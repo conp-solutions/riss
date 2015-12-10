@@ -1444,7 +1444,7 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
             if (inStepLimit && firstProbe && probes > 0 && (probes == failedProbes)) {   // works only when nothing has been propagated yet! // TODO: what happens if this occurs after a literal has been added?
 	      assert( origCC.size() == cc.size() && "perform only on failing original constraint!" );
 	      assert( extendLit == lit_Undef && "cannot extend and reduce degree" );
-	      cerr << "c failed " << failedProbes << " out of " << probes << " during first iteration, with clause " <<  ca[ tmpA[i] ] << endl;
+// 	      cerr << "c failed " << failedProbes << " out of " << probes << " during first iteration, with clause " <<  ca[ tmpA[i] ] << endl;
 	        // assert ( cc.size() == ca[ tmpA[i] ].size() && "works only if we did not add a literal before!" );
                 DOUT(if (config.opt_semDebug) cerr << "c none of the configurations succeeds -> decrease degree by one to " << degree - 1 << endl;);
 		DOUT( for( int cci = 0 ; cci < cc.size(); ++ cci ) assert( solver.value( cc[cci] ) == l_Undef && "variables have to be undefined" ); );
@@ -1482,7 +1482,7 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
             cards.push_back(CardC(cc, degree));   // add the constraint to the data base
 	    if( config.opt_fm_prooftrace ) cerr << "c FM proof (FindSem) add " << cards.back().getID() << " [" << cards.back().getParentL() << " , " << cards.back().getParentR() << "] : " << cards.back().ll << " <= " << cards.back().k << " + " << cards.back().lr << endl;
             for (int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j) { leftHands[ toInt(cards[ cards.size() - 1 ].ll[j]) ].push_back(cards.size() - 1); }      // register card constraint in data structures
-            if( degree < origDegree ) cerr << "c found card constraint " << cc << "  <= " << degree << "     to " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
+//             if( degree < origDegree ) cerr << "c found card constraint " << cc << "  <= " << degree << "     to " << cards[ cards.size() - 1 ].ll << " <= " << cards[ cards.size() - 1 ].k << " + " << cards[ cards.size() - 1 ].lr << endl;
             DOUT(if (config.opt_semDebug) cerr << "c found card constraint " << cc << "  <= " << degree << endl;);
             intersection.nextStep();
             semExtendedCards ++; semExtendLits += (cc.size() - ca[ tmpA[i] ].size());   // stats
