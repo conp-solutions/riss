@@ -45,8 +45,8 @@ class HugePageVec
     int cap;
 
     // Don't allow copying (error prone):
-    vec<T>&  operator = (vec<T>& other) { assert(0); return *this; }
-    HugePageVec(vec<T>& other) { assert(0); }
+    vec<T>&  operator = (HugePageVec<T>& other) { assert(0); return *this; }
+    HugePageVec(HugePageVec<T>& other) { assert(0); }
 
     // Helpers for calculating next capacity:
     static inline int  imax(int x, int y) { int mask = (y - x) >> (sizeof(int) * 8 - 1); return (x & mask) + (y & (~mask)); }
@@ -93,8 +93,8 @@ class HugePageVec
     T&       operator [](int index)       { assert(0 <= index && index < sz); return data[index]; }
 
     // Duplicatation (preferred instead):
-    void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; }  }
-    void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
+    void copyTo(HugePageVec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; }  }
+    void moveTo(HugePageVec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */
     void fitSize() {
@@ -103,7 +103,7 @@ class HugePageVec
     }
 
     /** swap content of two vectors */
-    void swap(vec< T >& other)
+    void swap(HugePageVec< T >& other)
     {
         T*  tmpdata = other.data;
         const int tmpsz   = other.sz;
