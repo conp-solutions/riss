@@ -1604,7 +1604,7 @@ void Solver::reduceDB()
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
     
     if( true ) {
-	double avgAct = 0, stddevAct = 0, avgLBD = 0, stddevLBD = 0;
+	double avgAct = 0, stddevAct = 0, avgLBD = 0, stddevLBD = 0, avgSIZE = 0, stddevSIZE = 0;
 	double count = 0;
 	for( int i = 0 ; i < learnts.size(); ++ i ) { // calc avg and stddev incrementally in one round
 	  Clause& c = ca[ learnts[i] ];
@@ -1616,11 +1616,15 @@ void Solver::reduceDB()
 	    const double deltaLBD = c.lbd() - avgLBD;
 	    avgLBD = avgLBD + deltaLBD / count;
 	    stddevLBD = stddevLBD + deltaLBD * (c.lbd() - avgLBD); 
+	    const double deltaSIZE = c.size() - avgSIZE;
+	    avgSIZE = avgSIZE + deltaSIZE / count;
+	    stddevSIZE = stddevSIZE + deltaSIZE * (c.size() - avgSIZE); 
 	  }
 	}
         stddevAct = (count > 1) ? stddevAct / (count - 1) : 0.0;
 	stddevLBD = (count > 1) ? stddevLBD / (count - 1) : 0.0;
-	cerr << "c learnt activities: avgActivity: " << avgAct << " stddevActivity: " << stddevAct << " avgLBD: " << avgLBD << " stddevLBD: " << stddevLBD << endl;
+	stddevSIZE = (count > 1) ? stddevSIZE / (count - 1) : 0.0;
+	cerr << "c learnts data: avgActivity: " << avgAct << " stddevActivity: " << stddevAct << " avgLBD: " << avgLBD << " stddevLBD: " << stddevLBD  << " avgSIZE: " << avgSIZE << " stddevSIZE: " << stddevSIZE << endl;
     }
     
     if (! activityBasedRemoval ) { sort(learnts, reduceDB_lbd_lt(ca)); }   // sort size 2 and lbd 2 to the back!
