@@ -497,15 +497,66 @@ int Graph::gettreewidth(){
 }
 
 bool Graph::improved_recursive_treewidth(int k){
+  
+  bool check, tbool;
+  
    if(node.size() <= k+1) return true;
+   
   else if(k<= 0.25*node.size() || k>= 0.4203*node.size()){
      vector<vector<int>> sets  = getSets(k+1);
-     for(int i=0; i<sets.size(); ++i){
      
+     for(int i=0; i<sets.size(); ++i){
+     vector<vector<int>> components = getConnectedComponents(sets[i]);
+     check = true;
+       for(int j=0;j<components.size();++j){
        
-       
+	 if(components[j] > (node.size() - sets[i].size +1)/2) check = false;
+	 
+      }
+      
+      if(check) tbool = true;
+
+      for(int j=0;j<components.size();++j){
+      
+	tbool = (tbool || (recursive_treewidth <= k));
+	
+      }
+      
+      if(tbool) return true;
+      
     }
   }
+  else{
+  
+    vector<vector<int>> sets  = getSets(0.4203*node.size());
+    
+    for(int i=0; i<sets.size(); ++i){
+     vector<vector<int>> components = getConnectedComponents(sets[i]);
+     check = true;
+       for(int j=0;j<components.size();++j){
+       
+	 if(components[j] > (node.size() - sets[i].size +1)/2) check = false;
+	 
+      }
+      
+      if(check){
+      
+	Graph *Graph_plus = new Graph(sets[i].size(), true);
+	
+	Riss::MarkArray visited;
+        visited.create(node.size());
+        visited.nextStep();
+	for(int a=0; a<sets[i].size(); a++) visited.setCurrentStep(sets[i][a]); //dont look at nodes, that are in the set
+	
+	for(int b = 0; b <sets[i].size();b++){
+	
+	  
+	}
+	
+      }
+    
+  }
+ }
   
   return false;
 }
@@ -549,11 +600,6 @@ componentnodes.clear();
 
 return components;
 
-}
-
-bool Graph::containingNumberofVertices(vector<int>){
-  
-  return;
 }
 
 vector<vector<int>> Graph::getSets(int k){
