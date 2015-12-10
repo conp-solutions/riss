@@ -22,6 +22,11 @@ typedef std::vector<edge> adjacencyList;
 class Graph
 {
   private:
+    std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
+    void getallcombinations(std::vector<int>& set,std::vector<std::vector<int>>& sets, int k, int position);
+    bool improved_recursive_treewidth(int k);
+    void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
+    std::vector<std::vector<int>> getSets(int k);
     void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
     int size;
     std::vector<adjacencyList> node;
@@ -37,7 +42,7 @@ class Graph
     std::vector<double> getDistances(int nod);
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
-    void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
+   
 
   public:
     int gettreewidth();

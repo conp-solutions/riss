@@ -480,21 +480,129 @@ bool Graph::thereisanedge(int nodeA, int nodeB){ //TODO: Maybe check if Graph is
   
 }
 
+int Graph::gettreewidth(){
+
+  bool check = false;
+  int k = 0;
+  
+  while(!check){
+  
+    k++;
+    check = improved_recursive_treewidth(k);
+    
+  }
+  
+  return k;
+  
+}
+
+bool Graph::improved_recursive_treewidth(int k){
+   if(node.size() <= k+1) return true;
+  else if(k<= 0.25*node.size() || k>= 0.4203*node.size()){
+     vector<vector<int>> sets  = getSets(k+1);
+     for(int i=0; i<sets.size(); ++i){
+     
+       
+       
+    }
+  }
+  
+  return false;
+}
+
+vector<vector<int>> Graph::getConnectedComponents(const vector<int>& set){ //connected components without set
+
+Riss::MarkArray visited;
+visited.create(node.size());
+visited.nextStep();
+vector<int> componentnodes;
+vector<vector<int>> components;
+
+for(int a=0; a<set.size(); a++) visited.setCurrentStep(set[a]); //dont look at nodes, that are in the set
+
+for(int k=0; k<visited.size(); k++){
+
+if(visited.isCurrentStep(k)) continue;  
+
+componentnodes.push_back(set[k]);
+visited.setCurrentStep(set[k]);
+
+for(int i=0; i<componentnodes.size(); ++i){
+
+ const adjacencyList& adj=node[componentnodes[i]];
+  
+  
+  for(int j=0; j<adj.size();++j){
+    
+        if(visited.isCurrentStep(adj[i].first)) continue;    
+        componentnodes.push_back(adj[j].first);
+	visited.setCurrentStep(adj[i].first);
+    
+  }
+  
+}
+
+components.push_back(componentnodes);
+componentnodes.clear();
+
+}
+
+return components;
+
+}
+
+bool Graph::containingNumberofVertices(vector<int>){
+  
+  return;
+}
+
+vector<vector<int>> Graph::getSets(int k){
+  vector<vector<int>> sets;
+  vector<int> set;
+  
+  for(int i=0;i<node.size()-k;i++){
+    set.push_back(node[i].first);
+    k--;
+    for(int j=1; i+j<=node.size()-k;++j){
+    getallcombinations(set, sets, k-1, i+j);
+    }
+  }
+  
+  return sets;
+}
+
+void Graph::getallcombinations(vector<int> set,vector<vector<int>>& sets, int k, int position){
+  
+    set.push_back(node[position].first);
+    
+    if(k>0){
+    for(int i=1;node.size()-position-k>=i;++i){
+    getallcombinations(set, sets, k-1, position+i);
+    }
+   }
+   else sets.push_back(set);
+  
+}
+
+
+/*
 int Graph::gettreewidth(){ 
     
   vector< pair< vector<int>, vector<int> > > bags;
   Riss::MarkArray visited;
   visited.create(size);
-  visited.nextStep();
+  
   vector<int> bagsizes;
   int tmpbagsize;
-  int treewidth = numeric_limits<double>::infinity();
+  int treewidth = numeric_limits<int>::max();
   
   for(int i=0; i< node.size(); ++i){
-  
+    
+    if(node[i].empty()) continue;
+    
+    visited.nextStep();
     visited.setCurrentStep(i);
     bags.clear();
-    
     bags.push_back(pair<vector<int>,vector<int>>());
     bags.back().first.push_back(i);
     findtree(bags, visited);    
@@ -504,17 +612,17 @@ int Graph::gettreewidth(){
     for(int k=0; k<bags.size(); k++){
       
       if(tmpbagsize < bags[k].first.size()) tmpbagsize = bags[k].first.size();
-      
+    
     }
     
-    if(tmpbagsize <= 3) return tmpbagsize-1;
+    if(tmpbagsize <= 2) return 1;
     
     bagsizes.push_back(tmpbagsize);
     
   }
   
   for(int j=0; j<bagsizes.size(); ++j){
-  
+    
     if(treewidth > bagsizes[j]) treewidth = bagsizes[j];
     
   }
@@ -567,3 +675,4 @@ void Graph::controllbagsandadd(vector< pair< vector<int>, vector<int> > >& bags,
   
    
 }
+*/
