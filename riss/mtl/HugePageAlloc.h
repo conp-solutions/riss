@@ -35,73 +35,77 @@ namespace Riss
 #include <string.h>
 #include <sys/mman.h>
 #include <stdio.h>
-  
-  #define HUGE_PAGE_SIZE (2 * 1024 * 1024)
+
+#define HUGE_PAGE_SIZE (2 * 1024 * 1024)
 #define ALIGN_TO_PAGE_SIZE(x) \
-(((x) + HUGE_PAGE_SIZE - 1) / HUGE_PAGE_SIZE * HUGE_PAGE_SIZE)
+    (((x) + HUGE_PAGE_SIZE - 1) / HUGE_PAGE_SIZE * HUGE_PAGE_SIZE)
 
 static inline
 void *malloc_huge_pages(size_t size)
 {
-  // Use 1 extra page to store allocation metadata
-  size_t real_size = ALIGN_TO_PAGE_SIZE(size + HUGE_PAGE_SIZE);
-  char *ptr = (char *)mmap(NULL, real_size, PROT_READ | PROT_WRITE,
-  MAP_PRIVATE | MAP_ANONYMOUS |
-  MAP_POPULATE | MAP_HUGETLB, -1, 0);
-  if (ptr == MAP_FAILED) {
-    // The mmap() call failed. Try to malloc instead
-    ptr = (char *)malloc(real_size);
-    if (ptr == NULL) throw OutOfMemoryException(); // indicate that there is no memory left
-    real_size = 0;
-  }
-  // Save real_size since mmunmap() requires a size parameter
-  *((size_t *)ptr) = real_size; // write allocated size
-  *((size_t *)ptr+1) = size;    // write requested size in next element
-  // Skip the page with metadata
-  return ptr + HUGE_PAGE_SIZE;
+    // Use 1 extra page to store allocation metadata
+    size_t real_size = ALIGN_TO_PAGE_SIZE(size + HUGE_PAGE_SIZE);
+    char *ptr = (char *)mmap(NULL, real_size, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS |
+                             MAP_POPULATE | MAP_HUGETLB, -1, 0);
+    if (ptr == MAP_FAILED) {
+        // The mmap() call failed. Try to malloc instead
+        ptr = (char *)malloc(real_size);
+        if (ptr == NULL) { throw OutOfMemoryException(); } // indicate that there is no memory left
+        real_size = 0;
+    }
+    // Save real_size since mmunmap() requires a size parameter
+    *((size_t *)ptr) = real_size; // write allocated size
+    *((size_t *)ptr + 1) = size;  // write requested size in next element
+    // Skip the page with metadata
+    return ptr + HUGE_PAGE_SIZE;
 }
 
 static inline
 void free_huge_pages(void *ptr)
 {
-  if (ptr == NULL) return;
-  // Jump back to the page with metadata
-  void *real_ptr = (char *)ptr - HUGE_PAGE_SIZE;
-  // Read the original allocation size
-  size_t real_size = *((size_t *)real_ptr);
-  assert(real_size % HUGE_PAGE_SIZE == 0);
-  assert( (real_size == 0 || real_size >= *((size_t *)real_ptr+1)) && "bytes for all pages have to be larger than the actual amount of allocated memory" );
-  
-  if (real_size != 0)
-  // The memory was allocated via mmap()
-  // and must be deallocated via munmap()
-  munmap(real_ptr, real_size);
-  else
-  // The memory was allocated via malloc()
-  // and must be deallocated via free()
-  free(real_ptr);
+    if (ptr == NULL) { return; }
+    // Jump back to the page with metadata
+    void *real_ptr = (char *)ptr - HUGE_PAGE_SIZE;
+    // Read the original allocation size
+    size_t real_size = *((size_t *)real_ptr);
+    assert(real_size % HUGE_PAGE_SIZE == 0);
+    assert((real_size == 0 || real_size >= *((size_t *)real_ptr + 1)) && "bytes for all pages have to be larger than the actual amount of allocated memory");
+
+    if (real_size != 0)
+        // The memory was allocated via mmap()
+        // and must be deallocated via munmap()
+    {
+        munmap(real_ptr, real_size);
+    } else
+        // The memory was allocated via malloc()
+        // and must be deallocated via free()
+    {
+        free(real_ptr);
+    }
 }
 
 /** simple realloc with alloc, memcpy, free. Native realloc might be more efficient */
 static inline
-void *realloc_huge_pages(void *ptr, size_t size) {
-  // simply allocate without memcpy
-  if (ptr == nullptr) return malloc_huge_pages(size);
-  
-  // Get new memory area
-  void* newMemory = malloc_huge_pages(size);
-  // Get pointer to size information
-  void *real_ptr = (char *)ptr - HUGE_PAGE_SIZE;
-  // Read the original allocation size
-  size_t real_size =    *((size_t *)real_ptr);
-  size_t request_size = *((size_t *)real_ptr+1);
-  assert( ALIGN_TO_PAGE_SIZE(size + HUGE_PAGE_SIZE) >= real_size && "memcpy should stay in bounds" );
-  // Copy the content of the old area into the new area
-  memcpy(newMemory, ptr, request_size );
-  // Free the old memory
-  free_huge_pages(ptr);
-  // Return the pointer to the new memory location
-  return newMemory;
+void *realloc_huge_pages(void *ptr, size_t size)
+{
+    // simply allocate without memcpy
+    if (ptr == nullptr) { return malloc_huge_pages(size); }
+
+    // Get new memory area
+    void* newMemory = malloc_huge_pages(size);
+    // Get pointer to size information
+    void *real_ptr = (char *)ptr - HUGE_PAGE_SIZE;
+    // Read the original allocation size
+    size_t real_size =    *((size_t *)real_ptr);
+    size_t request_size = *((size_t *)real_ptr + 1);
+    assert(ALIGN_TO_PAGE_SIZE(size + HUGE_PAGE_SIZE) >= real_size && "memcpy should stay in bounds");
+    // Copy the content of the old area into the new area
+    memcpy(newMemory, ptr, request_size);
+    // Free the old memory
+    free_huge_pages(ptr);
+    // Return the pointer to the new memory location
+    return newMemory;
 }
 
 //=================================================================================================

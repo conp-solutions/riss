@@ -189,7 +189,7 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
         mapping = _mapping;
         trail = _trail;
 
-#if 0
+        #if 0
         #ifndef NDEBUG
         // validate mapping in debug mode
         for (Var var = 0; var < mapping.size(); ++var) {
@@ -202,7 +202,7 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
             }
         }
         #endif
-#endif
+        #endif
     }
     // update current mapping
     else {
@@ -234,17 +234,17 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
     forward.resize(highestVar + 1);
 
     // "to" is the variable in the compressed formula and "from" the name in the original formula
-    if( forward.size() != 0 ) {
-      for (Var from = 0, to = 0; from < mapping.size(); ++from) {
-	  // we found a variable in the old formula that is not a unit in the compressed
-	  // store the inverse direction in the forward map (to -> from) and increment
-	  // the "to" variable to write the next non-unit mapping to the next position
-	  if (mapping[from] != UNIT ) {
-	      assert( ( (forward.size() == 0 && to == 0) || to < forward.size()) && "Compressed variable name must not be larger than forward mapping");
+    if (forward.size() != 0) {
+        for (Var from = 0, to = 0; from < mapping.size(); ++from) {
+            // we found a variable in the old formula that is not a unit in the compressed
+            // store the inverse direction in the forward map (to -> from) and increment
+            // the "to" variable to write the next non-unit mapping to the next position
+            if (mapping[from] != UNIT) {
+                assert(((forward.size() == 0 && to == 0) || to < forward.size()) && "Compressed variable name must not be larger than forward mapping");
 
-	      forward[to++] = from;
-	  }
-      }
+                forward[to++] = from;
+            }
+        }
     }
 }
 

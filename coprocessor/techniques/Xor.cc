@@ -226,7 +226,7 @@ bool XorReasoning::process()
         }
 
     }
-    
+
     if (config.opt_xor_checkNewSubsume) {   // check whether newly added clauses subsume other clauses
         checkReaddedSubsumption();
     }
@@ -235,7 +235,7 @@ bool XorReasoning::process()
     if (!propagate(unitQueue, data.ma, occs, xorList)) {
         data.setFailed(); goto finishedGauss;
     }
-    
+
     ee.applyEquivalencesToFormula(data);
 
     if (config.opt_xor_setPolarity != 0) {

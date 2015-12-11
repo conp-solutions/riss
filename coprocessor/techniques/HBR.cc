@@ -37,7 +37,7 @@ bool HyperBinaryResolution::hyperBinaryResolution()
     data.clss.clear(); // clear list of clauses
     for (int i = 0 ; i < data.getClauses().size(); ++i) {
         const Clause& c = ca[ data.getClauses()[i] ];
-        if ( c.size() >= 3 && !c.can_be_deleted() ) { data.clss.push_back(data.getClauses()[i]); }
+        if (c.size() >= 3 && !c.can_be_deleted()) { data.clss.push_back(data.getClauses()[i]); }
     }
 
     // mark all literals
@@ -83,7 +83,7 @@ bool HyperBinaryResolution::hyperBinaryResolution()
         for (int i = 0; i < data.clss.size() && (data.unlimited() || config.hbrLimit > hbrSteps) && !data.isInterupted(); ++i) {
             const Clause& c = ca[ data.clss[i] ];
             hbrSteps ++;
-            if ( c.size() < 3 || c.can_be_deleted() ) { continue; }  // delete this pointer from the current version of the clss vector, if the clause is binary now, of can be deleted
+            if (c.size() < 3 || c.can_be_deleted()) { continue; }    // delete this pointer from the current version of the clss vector, if the clause is binary now, of can be deleted
             data.clss [keptClauses ++ ] = data.clss[i];              // move the current pointer forward, if there is a gap
             if (c.size() > config.opt_hbr_maxCsize) { continue; }
 

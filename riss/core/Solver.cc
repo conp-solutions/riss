@@ -242,7 +242,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , sharingTimePoint(config.sharingType)
 
     , enumerationClient(this)
-    
+
     , useNaiveBacktracking(config.opt_dpll)
 {
     // EMA for dynamic restart schedules
@@ -347,9 +347,9 @@ Var Solver::newVar(bool sign, bool dvar, char type)
         reverseMinimization.assigns.push(l_Undef);
         reverseMinimization.trail.capacity(v + 1);
     }
-    
+
     // space for replacement info
-    assert( v == eqInfo.replacedBy.size() && "new variables have to match the size" );
+    assert(v == eqInfo.replacedBy.size() && "new variables have to match the size");
     eqInfo.replacedBy.push(mkLit(v, false));
 
     if (config.opt_litPairDecisions > 0) {
@@ -386,7 +386,7 @@ void Solver::reserveVars(Var v)
         reverseMinimization.trail.capacity(v + 1);
     }
 
-    eqInfo.replacedBy.capacity( v+1 );
+    eqInfo.replacedBy.capacity(v + 1);
 
     if (config.opt_litPairDecisions > 0) { decisionLiteralPairs.capacity(2 * v); }  // create sufficient capacity
 
@@ -798,7 +798,7 @@ void Solver::cancelUntil(int level)
             Var      x  = var(trail[c]);
             varFlags [x].assigns = l_Undef;
             vardata [x].dom = lit_Undef; // reset dominator
-            vardata [x].reason.setReason( CRef_Undef ); // TODO for performance this is not necessary, but for assertions and all that!
+            vardata [x].reason.setReason(CRef_Undef);   // TODO for performance this is not necessary, but for assertions and all that!
             if (searchconfiguration.phase_saving > 1  || ((searchconfiguration.phase_saving == 1) && c > trail_lim.last())) {   // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
                 varFlags[x].polarity = sign(trail[c]);
             }
@@ -880,12 +880,12 @@ Lit Solver::pickBranchLit()
 
     // first path is usually chosen, one if
     if (next != var_Undef && !posInAllClauses && !negInAllClauses) {
-	bool assignFalse = varFlags[next].polarity;           // usual phase saving
-        if( decisionLevel() < config.opt_phase_bit_level ) {  // bit phase saving
-	  assignFalse = curr_restarts >> ( decisionLevel() % config.opt_phase_bit_number ) & 1;
-	  if( config.opt_phase_bit_invert ) assignFalse = !assignFalse;
-	}
-        return mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : assignFalse );
+        bool assignFalse = varFlags[next].polarity;           // usual phase saving
+        if (decisionLevel() < config.opt_phase_bit_level) {   // bit phase saving
+            assignFalse = curr_restarts >> (decisionLevel() % config.opt_phase_bit_number) & 1;
+            if (config.opt_phase_bit_invert) { assignFalse = !assignFalse; }
+        }
+        return mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : assignFalse);
     } else {
         return next == var_Undef ? lit_Undef :
                (posInAllClauses ? mkLit(next, false) : mkLit(next, true));
@@ -893,54 +893,54 @@ Lit Solver::pickBranchLit()
 }
 
 
-void Solver::updateMetricsDuringAnalyze( const Lit p, const CRef cr, Clause& c, bool& foundFirstLearnedClause, unsigned& dependencyLevel )
+void Solver::updateMetricsDuringAnalyze(const Lit p, const CRef cr, Clause& c, bool& foundFirstLearnedClause, unsigned& dependencyLevel)
 {
-        // Special case for binary clauses
-        // The first one has to be SAT
-        if (p != lit_Undef && c.size() == 2 && value(c[0]) == l_False) {
-            assert(value(c[1]) == l_True);
-            Lit tmp = c[0];
-            c[0] =  c[1], c[1] = tmp;
+    // Special case for binary clauses
+    // The first one has to be SAT
+    if (p != lit_Undef && c.size() == 2 && value(c[0]) == l_False) {
+        assert(value(c[1]) == l_True);
+        Lit tmp = c[0];
+        c[0] =  c[1], c[1] = tmp;
+    }
+    if (sharingTimePoint == 2 && (c.learnt() || c.isCoreClause()) && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
+        #ifdef PCASSO
+        updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
+        #else
+        updateSleep(&c, c.size());
+        #endif
+        c.setUsedInAnalyze();
+    }
+    if (!foundFirstLearnedClause) {  // dynamic adoption only until first learned clause!
+        if (c.learnt()) {
+            if (config.opt_cls_act_bump_mode == 0) { claBumpActivity(c); }
+            else { clssToBump.push(cr); }
         }
-	if (sharingTimePoint == 2 && (c.learnt() || c.isCoreClause()) && !c.wasUsedInAnalyze()) {   // share clauses only, if they are used during resolutions in conflict analysis
-            #ifdef PCASSO
-            updateSleep(&c, c.size(), c.getPTLevel());  // share clause including level information
-            #else
-            updateSleep(&c, c.size());
-            #endif
-            c.setUsedInAnalyze();
-        }
-        if (!foundFirstLearnedClause) {  // dynamic adoption only until first learned clause!
-            if (c.learnt()) {
-                if (config.opt_cls_act_bump_mode == 0) { claBumpActivity(c); }
-                else { clssToBump.push(cr); }
-            }
 
-            if (config.opt_update_lbd == 1) {    // update lbd during analysis, if allowed
-                if (c.learnt()  && c.lbd() > 2) {
-                    unsigned int nblevels = computeLBD(c, c.size());
-                    if (nblevels + 1 < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
-                        if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
-                            c.setCanBeDel(false);
-                        }
-                        // seems to be interesting : keep it for the next round
-                        c.setLBD(nblevels); // Update it
-                        if (c.lbd() < lbd_core_threshold) { // turn learned clause into core clause and keep it for ever
-                            // move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
-                            clauses.push(cr);
-                            c.learnt(false);
-                            // to prevent learnt clauses participated in revert conflict analyses
-                            // from being dropped immediately (by fast-paced periodic clause database reduction)
-                            // they are marked as protected
-                            c.setCoreClause(true);
-                        }
+        if (config.opt_update_lbd == 1) {    // update lbd during analysis, if allowed
+            if (c.learnt()  && c.lbd() > 2) {
+                unsigned int nblevels = computeLBD(c, c.size());
+                if (nblevels + 1 < c.lbd() || config.opt_lbd_inc) {  // improve the LBD (either LBD decreased,or option is set)
+                    if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
+                        c.setCanBeDel(false);
+                    }
+                    // seems to be interesting : keep it for the next round
+                    c.setLBD(nblevels); // Update it
+                    if (c.lbd() < lbd_core_threshold) { // turn learned clause into core clause and keep it for ever
+                        // move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
+                        clauses.push(cr);
+                        c.learnt(false);
+                        // to prevent learnt clauses participated in revert conflict analyses
+                        // from being dropped immediately (by fast-paced periodic clause database reduction)
+                        // they are marked as protected
+                        c.setCoreClause(true);
                     }
                 }
             }
         }
-        #ifdef PCASSO // if resolution is done, then take also care of the participating clause!
-        dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
-        #endif
+    }
+    #ifdef PCASSO // if resolution is done, then take also care of the participating clause!
+    dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
+    #endif
 
 }
 
@@ -979,8 +979,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
     varsToBump.clear(); clssToBump.clear(); // store info for bumping
 
-    Solver::ReasonStruct currentReason( confl );
-    
+    Solver::ReasonStruct currentReason(confl);
+
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
@@ -988,17 +988,17 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
     do {
         DOUT(if (config.opt_learn_debug) cerr << "c enter loop with lit " << p << endl;);
-        
-	int clauseSize = 2, clauseReductSize = 2;
-	Clause* c = 0;
-	if( ! currentReason.isBinaryClause() ) {
-	  c = & ca[currentReason.getReasonC()];
-	  clauseSize = c->size();
-	  clauseReductSize = c->size();
-	  DOUT(if (config.opt_rer_debug) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << currentReason.getReasonC() << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;);
-	  updateMetricsDuringAnalyze( p, currentReason.getReasonC(), *c, foundFirstLearnedClause, dependencyLevel ); // process the learned clause
-	}
-	
+
+        int clauseSize = 2, clauseReductSize = 2;
+        Clause* c = 0;
+        if (! currentReason.isBinaryClause()) {
+            c = & ca[currentReason.getReasonC()];
+            clauseSize = c->size();
+            clauseReductSize = c->size();
+            DOUT(if (config.opt_rer_debug) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << currentReason.getReasonC() << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;);
+            updateMetricsDuringAnalyze(p, currentReason.getReasonC(), *c, foundFirstLearnedClause, dependencyLevel);   // process the learned clause
+        }
+
         for (int j = (p == lit_Undef) ? 0 : 1; j < clauseSize; j++) {
             const Lit& q = currentReason.isBinaryClause() ? currentReason.getReasonL() : (*c)[j]; // get reason literal
             DOUT(if (config.opt_learn_debug) cerr << "c level for " << q << " is " << level(var(q)) << endl;);
@@ -1011,16 +1011,16 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                     pathC++;
                     #ifdef UPDATEVARACTIVITY
                     if (!foundFirstLearnedClause && config.opt_updateLearnAct) {  // should be set similar to no_LBD as its used this way in the hack solver
-		        if( ! reason(var(q)).isBinaryClause() ) {
-			  const CRef& r = reason(var(q)).getReasonC();
-			  // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-			  // VSIDS scores of variables at the current decision level is aditionally
-			  // bumped if they are propagated by core learnt clauses (similar to glucose)
-			  if (r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause())) { // either core clause, as some learnt clauses are moved ) {
-			      DOUT(if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl;);
-			      lastDecisionLevel.push(q);
-			  }
-			}
+                        if (! reason(var(q)).isBinaryClause()) {
+                            const CRef& r = reason(var(q)).getReasonC();
+                            // UPDATEVARACTIVITY trick (see competition'09 companion paper)
+                            // VSIDS scores of variables at the current decision level is aditionally
+                            // bumped if they are propagated by core learnt clauses (similar to glucose)
+                            if (r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause())) { // either core clause, as some learnt clauses are moved ) {
+                                DOUT(if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl;);
+                                lastDecisionLevel.push(q);
+                            }
+                        }
                     }
                     #endif
 
@@ -1035,7 +1035,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                     pathLimit = 1; // store that the current learnt clause is a biasserting clause!
                 }
             }
-            if( currentReason.isBinaryClause() ) break; // only one iteration!
+            if (currentReason.isBinaryClause()) { break; }  // only one iteration!
         }
 
         // OTFSS is possible here
@@ -1157,7 +1157,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
             for (i = j = 1; i < out_learnt.size(); i++) {
                 minimize_dependencyLevel = dependencyLevel;
-                if ( reason(var(out_learnt[i])).getReasonC() == CRef_Undef) {
+                if (reason(var(out_learnt[i])).getReasonC() == CRef_Undef) {
                     out_learnt[j++] = out_learnt[i]; // keep, since we cannot resolve on decisino literals
                 } else if (!litRedundant(out_learnt[i], abstract_level, dependencyLevel)) {
                     dependencyLevel = minimize_dependencyLevel; // not minimized, thus, keep the old value
@@ -1169,19 +1169,19 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             for (i = j = 1; i < out_learnt.size(); i++) {
                 Var x = var(out_learnt[i]);
 
-#ifdef PCASSO
-		assert( ! reason(x).isBinaryClause() && "pcasso does not support implicit binary clause reasons" );
-#endif
-		
+                #ifdef PCASSO
+                assert(! reason(x).isBinaryClause() && "pcasso does not support implicit binary clause reasons");
+                #endif
+
                 if (!reason(x).isBinaryClause() && reason(x).getReasonC() == CRef_Undef) {
                     out_learnt[j++] = out_learnt[i];
-                } else if( reason(x).isBinaryClause() ) { // handle case with binary clause
-		  const Lit reasonLit = reason( x ).getReasonL();
-                  if (! varFlags[var(reasonLit)].seen && level(var(reasonLit)) > 0) {
-                    out_learnt[j++] = out_learnt[i];
-                    break;
-                  }                  
-		} else {
+                } else if (reason(x).isBinaryClause()) {  // handle case with binary clause
+                    const Lit reasonLit = reason(x).getReasonL();
+                    if (! varFlags[var(reasonLit)].seen && level(var(reasonLit)) > 0) {
+                        out_learnt[j++] = out_learnt[i];
+                        break;
+                    }
+                } else {
                     Clause& c = ca[reason(var(out_learnt[i])).getReasonC()];
                     int k = ((c.size() == 2) ? 0 : 1); // bugfix by Siert Wieringa
                     for (; k < c.size(); k++) {
@@ -1324,56 +1324,56 @@ bool Solver::litRedundant(Riss::Lit p, uint32_t abstract_levels, unsigned int& d
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0) {
-        assert( reason(var(analyze_stack.last())).isBinaryClause() || reason(var(analyze_stack.last())).getReasonC() != CRef_Undef); // a reason must exist
-	
-	if( reason(var(analyze_stack.last())).isBinaryClause() ) {
+        assert(reason(var(analyze_stack.last())).isBinaryClause() || reason(var(analyze_stack.last())).getReasonC() != CRef_Undef);  // a reason must exist
 
-	      // only use innermost part of below loops
-	      const Lit& p  = reason(var(analyze_stack.last())).getReasonL();
-	      analyze_stack.pop();
-	      
-	      if (!varFlags[var(p)].seen && level(var(p)) > 0) {
-		  if ( (reason(var(p)).isBinaryClause() || reason(var(p)).getReasonC() != CRef_Undef) && (abstractLevel(var(p)) & abstract_levels) != 0) { // can be used for minimization
-		      varFlags[var(p)].seen = 1;
-		      analyze_stack.push(p);
-		      analyze_toclear.push(p);
-		  } else {
-		      for (int j = top; j < analyze_toclear.size(); j++) {
-			  varFlags[var(analyze_toclear[j])].seen = 0;
-		      }
-		      analyze_toclear.shrink_(analyze_toclear.size() - top);
-		      return false;
-		  }
-	      }
+        if (reason(var(analyze_stack.last())).isBinaryClause()) {
 
-	} else {
-	  Clause& c = ca[ reason(var(analyze_stack.last())).getReasonC() ]; analyze_stack.pop();
-	  if (c.size() == 2 && value(c[0]) == l_False) {
-	      assert(value(c[1]) == l_True);
-	      Lit tmp = c[0];
-	      c[0] =  c[1], c[1] = tmp;
-	  }
-	  #ifdef PCASSO // if minimization is done, then take also care of the participating clause!
-	  dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
-	  #endif
-	  for (int i = 1; i < c.size(); i++) {
-	      Lit p  = c[i];
-	      if (!varFlags[var(p)].seen && level(var(p)) > 0) {
-		  if ( (reason(var(p)).isBinaryClause() || reason(var(p)).getReasonC() != CRef_Undef) && (abstractLevel(var(p)) & abstract_levels) != 0) { // can be used for minimization
-		      varFlags[var(p)].seen = 1;
-		      analyze_stack.push(p);
-		      analyze_toclear.push(p);
-		  } else {
-		      for (int j = top; j < analyze_toclear.size(); j++) {
-			  varFlags[var(analyze_toclear[j])].seen = 0;
-		      }
-		      analyze_toclear.shrink_(analyze_toclear.size() - top);
-		      return false;
-		  }
-	      }
-	  }
-	}
-	
+            // only use innermost part of below loops
+            const Lit& p  = reason(var(analyze_stack.last())).getReasonL();
+            analyze_stack.pop();
+
+            if (!varFlags[var(p)].seen && level(var(p)) > 0) {
+                if ((reason(var(p)).isBinaryClause() || reason(var(p)).getReasonC() != CRef_Undef) && (abstractLevel(var(p)) & abstract_levels) != 0) {  // can be used for minimization
+                    varFlags[var(p)].seen = 1;
+                    analyze_stack.push(p);
+                    analyze_toclear.push(p);
+                } else {
+                    for (int j = top; j < analyze_toclear.size(); j++) {
+                        varFlags[var(analyze_toclear[j])].seen = 0;
+                    }
+                    analyze_toclear.shrink_(analyze_toclear.size() - top);
+                    return false;
+                }
+            }
+
+        } else {
+            Clause& c = ca[ reason(var(analyze_stack.last())).getReasonC() ]; analyze_stack.pop();
+            if (c.size() == 2 && value(c[0]) == l_False) {
+                assert(value(c[1]) == l_True);
+                Lit tmp = c[0];
+                c[0] =  c[1], c[1] = tmp;
+            }
+            #ifdef PCASSO // if minimization is done, then take also care of the participating clause!
+            dependencyLevel = dependencyLevel >= c.getPTLevel() ? dependencyLevel : c.getPTLevel();
+            #endif
+            for (int i = 1; i < c.size(); i++) {
+                Lit p  = c[i];
+                if (!varFlags[var(p)].seen && level(var(p)) > 0) {
+                    if ((reason(var(p)).isBinaryClause() || reason(var(p)).getReasonC() != CRef_Undef) && (abstractLevel(var(p)) & abstract_levels) != 0) {  // can be used for minimization
+                        varFlags[var(p)].seen = 1;
+                        analyze_stack.push(p);
+                        analyze_toclear.push(p);
+                    } else {
+                        for (int j = top; j < analyze_toclear.size(); j++) {
+                            varFlags[var(analyze_toclear[j])].seen = 0;
+                        }
+                        analyze_toclear.shrink_(analyze_toclear.size() - top);
+                        return false;
+                    }
+                }
+            }
+        }
+
 
     }
 
@@ -1404,7 +1404,7 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     for (int i = trail.size() - 1; i >= trail_lim[0]; i--) {
         Var x = var(trail[i]);
         if (varFlags[x].seen) {
-            if ( reason(x).getReasonC() == CRef_Undef) {
+            if (reason(x).getReasonC() == CRef_Undef) {
                 assert(level(x) > 0);
                 out_conflict.push(~trail[i]);
             } else {
@@ -1520,7 +1520,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                     }
                     confl = i->cref(); // store intermediate conflict to be evaluated later
                 } else if (value(imp) == l_Undef) { // enqueue the implied literal
-		    uncheckedEnqueue(imp, p, duringAddingClauses); // the reason why the literal "imp" is implied is the literal "p" (which is currently propagated)
+                    uncheckedEnqueue(imp, p, duringAddingClauses); // the reason why the literal "imp" is implied is the literal "p" (which is currently propagated)
                 }
                 *j++ = *i++; // keep the element in the list
                 continue;
@@ -1676,44 +1676,43 @@ void Solver::reduceDB()
 
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
 
-    if (! activityBasedRemoval ) { sort(learnts, reduceDB_lbd_lt(ca)); }   // sort size 2 and lbd 2 to the back!
-    else { 
-      
-      // automatically choose between activity and LBD based removal!
-      bool useAct = true;
-      if( config.opt_avg_size_lbd_ratio != 0 ) { // only perform, if operation is allowed
-	  double avgLBD = 0, stddevLBD = 0, avgSIZE = 0, stddevSIZE = 0;
-	  double count = 0;
-	  for( int i = 0 ; i < learnts.size(); ++ i ) { // calc avg and stddev incrementally in one round
-	    Clause& c = ca[ learnts[i] ];
-	    if( c.mark() == 0 && c.learnt() ) {
-	      count ++;
-	      const double deltaLBD = c.lbd() - avgLBD;
-	      avgLBD = avgLBD + deltaLBD / count;
-	      stddevLBD = stddevLBD + deltaLBD * (c.lbd() - avgLBD); 
-	      const double deltaSIZE = c.size() - avgSIZE;
-	      avgSIZE = avgSIZE + deltaSIZE / count;
-	      stddevSIZE = stddevSIZE + deltaSIZE * (c.size() - avgSIZE); 
-	    }
-	  }
-	  stddevLBD = (count > 1) ? stddevLBD / (count - 1) : 0.0;
-	  stddevSIZE = (count > 1) ? stddevSIZE / (count - 1) : 0.0;
-	  
-	  // choose value based on ratio. negative ratio means that comparison is in the oposite direction
-	  useAct = false;
-	  if( config.opt_avg_size_lbd_ratio > 0 && stddevLBD * config.opt_avg_size_lbd_ratio > stddevSIZE ) {
-	    useAct = true;
-	  }
-	  else if ( config.opt_avg_size_lbd_ratio < 0 && stddevLBD * -config.opt_avg_size_lbd_ratio < stddevSIZE ) {
-	    useAct = true;
-	  }
-	  
-      }      
-      if( useAct ) sort(learnts, reduceDB_act_lt(ca));
-      else sort(learnts, reduceDB_lbd_lt(ca));
-    } 
-    
-    
+    if (! activityBasedRemoval) { sort(learnts, reduceDB_lbd_lt(ca)); }    // sort size 2 and lbd 2 to the back!
+    else {
+
+        // automatically choose between activity and LBD based removal!
+        bool useAct = true;
+        if (config.opt_avg_size_lbd_ratio != 0) {  // only perform, if operation is allowed
+            double avgLBD = 0, stddevLBD = 0, avgSIZE = 0, stddevSIZE = 0;
+            double count = 0;
+            for (int i = 0 ; i < learnts.size(); ++ i) {  // calc avg and stddev incrementally in one round
+                Clause& c = ca[ learnts[i] ];
+                if (c.mark() == 0 && c.learnt()) {
+                    count ++;
+                    const double deltaLBD = c.lbd() - avgLBD;
+                    avgLBD = avgLBD + deltaLBD / count;
+                    stddevLBD = stddevLBD + deltaLBD * (c.lbd() - avgLBD);
+                    const double deltaSIZE = c.size() - avgSIZE;
+                    avgSIZE = avgSIZE + deltaSIZE / count;
+                    stddevSIZE = stddevSIZE + deltaSIZE * (c.size() - avgSIZE);
+                }
+            }
+            stddevLBD = (count > 1) ? stddevLBD / (count - 1) : 0.0;
+            stddevSIZE = (count > 1) ? stddevSIZE / (count - 1) : 0.0;
+
+            // choose value based on ratio. negative ratio means that comparison is in the oposite direction
+            useAct = false;
+            if (config.opt_avg_size_lbd_ratio > 0 && stddevLBD * config.opt_avg_size_lbd_ratio > stddevSIZE) {
+                useAct = true;
+            } else if (config.opt_avg_size_lbd_ratio < 0 && stddevLBD * -config.opt_avg_size_lbd_ratio < stddevSIZE) {
+                useAct = true;
+            }
+
+        }
+        if (useAct) { sort(learnts, reduceDB_act_lt(ca)); }
+        else { sort(learnts, reduceDB_lbd_lt(ca)); }
+    }
+
+
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
     if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
     // Useless :-)
@@ -2028,27 +2027,28 @@ int Solver::probingLiteral(Lit v)
 
 void Solver::enableDPLL()
 {
-  useNaiveBacktracking = true;
+    useNaiveBacktracking = true;
 }
 
 
-lbool Solver::dpllBacktracking() {
-  if( decisionLevel() == 0 ) return l_False; // no more search space left
-  assert( trail_lim.size() > 0 && "there are decisions that can be undone" );
-  const Lit impliedLit = ~ trail [ trail_lim[ trail_lim.size() - 1 ] ];
-  DOUT(if (config.opt_learn_debug || config.opt_printDecisions > 0) cerr << "c DPLL backtracking: add " << impliedLit << " for backtracking (was decision " << ~impliedLit << "@" << decisionLevel() << ")" << endl;);
-  cancelUntil( decisionLevel() - 1 );          // undo last level
-  uncheckedEnqueue( impliedLit, CRef_Undef );  // add the complement of the highest decision as implied literal (yet without reason clause)
-  return l_Undef;
+lbool Solver::dpllBacktracking()
+{
+    if (decisionLevel() == 0) { return l_False; }  // no more search space left
+    assert(trail_lim.size() > 0 && "there are decisions that can be undone");
+    const Lit impliedLit = ~ trail [ trail_lim[ trail_lim.size() - 1 ] ];
+    DOUT(if (config.opt_learn_debug || config.opt_printDecisions > 0) cerr << "c DPLL backtracking: add " << impliedLit << " for backtracking (was decision " << ~impliedLit << "@" << decisionLevel() << ")" << endl;);
+    cancelUntil(decisionLevel() - 1);            // undo last level
+    uncheckedEnqueue(impliedLit, CRef_Undef);    // add the complement of the highest decision as implied literal (yet without reason clause)
+    return l_Undef;
 }
 
 lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause)
 {
     // run naive backtracking (dpll)
-    if( useNaiveBacktracking ) {
-      return dpllBacktracking();
+    if (useNaiveBacktracking) {
+        return dpllBacktracking();
     }
-    
+
     int backtrack_level;
     unsigned int nblevels;
     learnt_clause.clear();
@@ -2145,10 +2145,10 @@ Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
                     DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted continue with search " << endl;);
                     return lit_Undef;
                 } else if (res == EnumerationClient::stop) {
-		    DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted to return SAT in search method (oneModel)" << endl;);
+                    DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted to return SAT in search method (oneModel)" << endl;);
                     returnValue = l_True;
                     return lit_Error;
-		} else {
+                } else {
                     DOUT(if (config.opt_printDecisions > 1) cerr << "c enumeration opted and unhandled result " << endl;);
                     assert(false && "this case should not be reached");
                     returnValue = l_Undef;
@@ -2454,10 +2454,10 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
         bool newModel = master->addModel(clientID, solver->model, modelhash, & blockingClause, &solver->trail);
         if (newModel) { foundModels ++; }
         else { duplicateModels ++; }
-        
-        if (projectionType == BACKTRACKING) solver->enableDPLL();
-        
-        assert( integrateBlockingClause && "communication with master does not change search space of client" );
+
+        if (projectionType == BACKTRACKING) { solver->enableDPLL(); }
+
+        assert(integrateBlockingClause && "communication with master does not change search space of client");
     } else {
         // model minimization is independent of enumeration type (TODO: analyze whether minimization works under projection at all ... )
         if (modelSize == blockingClause.size()) {  // we did not (successfully) minimize the projection clause, hence, the projection model was not moved to minimized clause
@@ -2499,28 +2499,28 @@ Solver::EnumerationClient::processCurrentModel(Lit& nextDecision)
         }
     }
 
-    assert( (integrateBlockingClause || master->usesProjection() ) && "we only changed the search space if we use projection" );
-    
+    assert((integrateBlockingClause || master->usesProjection()) && "we only changed the search space if we use projection");
+
     // add blocking clause to this solver without disturbing its search too much
-    if( !solver->useNaiveBacktracking ) {
-      if (integrateBlockingClause) {
-	  bool moreModelsPossible = integrateClause(blockingClause, maxLevel, max2Level);
-	  if (moreModelsPossible == CRef_Error) {
-	      cerr << "c stop after client found all models" << endl;
-	      master->notifyReachedAllModels();
-	      return stop;
-	  }
-      }
+    if (!solver->useNaiveBacktracking) {
+        if (integrateBlockingClause) {
+            bool moreModelsPossible = integrateClause(blockingClause, maxLevel, max2Level);
+            if (moreModelsPossible == CRef_Error) {
+                cerr << "c stop after client found all models" << endl;
+                master->notifyReachedAllModels();
+                return stop;
+            }
+        }
     } else {
-      if (master->usesProjection()) {
-	// not yet implemented - apply naive backtracking in a way that the current model (under projection) cannot be found again during search
-	assert( false && "not implemented yet" );
-	cerr << "c WARNING: cannot (yet) use projection-enumeration and naive backtracking together - abort" << endl;
-	exit(1);
-      } else {
-	// simply perform backtracking
-	solver->dpllBacktracking();
-      }
+        if (master->usesProjection()) {
+            // not yet implemented - apply naive backtracking in a way that the current model (under projection) cannot be found again during search
+            assert(false && "not implemented yet");
+            cerr << "c WARNING: cannot (yet) use projection-enumeration and naive backtracking together - abort" << endl;
+            exit(1);
+        } else {
+            // simply perform backtracking
+            solver->dpllBacktracking();
+        }
     }
 
     bool enoughModels = master->foundEnoughModels();
@@ -2715,8 +2715,8 @@ void Solver::clauseRemoval()
 
 bool Solver::handleRestarts(int& nof_conflicts, const int conflictC)
 {
-    if( useNaiveBacktracking ) return false; // if we run DPLL style search, we should not perform restarts, as we would redo the whole search
-  
+    if (useNaiveBacktracking) { return false; }  // if we run DPLL style search, we should not perform restarts, as we would redo the whole search
+
     // handle restart heuristic switching first
     if (restartSwitchSchedule.heuristicSwitching()) {  // heuristic switching is enabled
         if (restartSwitchSchedule.reachedIntervalLimit(conflicts)) {    // we reached the limit
@@ -3483,14 +3483,14 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         if (config.opt_uhdProbe > 2) { big->sort(nVars()); }     // sort all the lists once
     }
 
-    DOUT( if (config.opt_learn_debug) {
-        cerr << "c solver state after preprocessing" << endl;
-        cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts decision vars: " << order_heap.size() << endl;
+    DOUT(if (config.opt_learn_debug) {
+    cerr << "c solver state after preprocessing" << endl;
+    cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts decision vars: " << order_heap.size() << endl;
         cerr << "c units: " ; for (int i = 0 ; i < trail.size(); ++ i) { cerr << " " << trail[i]; } cerr << endl;
         cerr << "c clauses: " << endl; for (int i = 0 ; i < clauses.size(); ++ i) { cerr << "c [" << clauses[i] << "]m: " << ca[clauses[i]].mark() << " == " << ca[clauses[i]] << endl; }
         cerr << "c assumptions: "; for (int i = 0 ; i < assumptions.size(); ++ i) { cerr << " " << assumptions[i]; } cerr << endl;
         cerr << "c solve with " << config.presetConfig() << endl;
-    } );
+    });
 
     //
     // Search:
@@ -3626,13 +3626,13 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         }
 
         if (coprocessor != nullptr && (useCoprocessorPP || useCoprocessorIP)) {
-	        coprocessor->extendModel(model);
-	    }
+            coprocessor->extendModel(model);
+        }
 
     } else if (status == l_False && conflict.size() == 0) {
         ok = false;
     }
-    
+
     assert((status != l_Undef || !withinBudget() || asynch_interrupt) && "unknown should not happen here if there was no interrupt");
 
     cancelUntil(0);
@@ -3792,11 +3792,11 @@ void Solver::relocAll(ClauseAllocator& to)
     for (int i = 0; i < trail.size(); i++) {
         Var v = var(trail[i]);
         if (level(v) == 0) { vardata[v].reason = CRef_Undef; }   // take care of reason clauses for literals at top-level
-        else if ( !reason(v).isBinaryClause()
-	  && reason(v).getReasonC() != CRef_Undef 
-	  && (ca[ reason(v).getReasonC() ].reloced() || locked( ca[reason(v).getReasonC()] ))
-	) {
-            vardata[v].reason.setReason( ca.relocC(vardata[v].reason.getReasonC(), to) );
+        else if (!reason(v).isBinaryClause()
+                 && reason(v).getReasonC() != CRef_Undef
+                 && (ca[ reason(v).getReasonC() ].reloced() || locked(ca[reason(v).getReasonC()]))
+                ) {
+            vardata[v].reason.setReason(ca.relocC(vardata[v].reason.getReasonC(), to));
         }
 
     }
@@ -4135,12 +4135,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 DOUT(if (config.opt_rer_debug) {
                 cerr << "c trail: " ;
                 for (int i = 0 ; i < trail.size(); ++ i) {
-                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; 
-			if ( !reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; } 
-			else { 
-			  if ( !reason(var(trail[i])).isBinaryClause() ) cerr << reason(var(trail[i])).getReasonC(); 
-			  else cerr << "L" << reason(var(trail[i])).getReasonL(); 
-			}
+                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?";
+                        if (!reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; }
+                        else {
+                            if (!reason(var(trail[i])).isBinaryClause()) { cerr << reason(var(trail[i])).getReasonC(); }
+                            else { cerr << "L" << reason(var(trail[i])).getReasonL(); }
+                        }
                     } cerr << endl;
                     cerr << "c trail_lim: " << trail_lim << endl;
                     cerr << "c decision level: " << decisionLevel() << endl;
@@ -4258,12 +4258,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 cerr << endl << "c accepted current pattern with lits " << rerLits << " - start over" << endl << endl;
                 cerr << "c trail: " ;
                 for (int i = 0 ; i < trail.size(); ++ i) {
-                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; 
-			if ( !reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; } 
-			else { 
-			  if ( !reason(var(trail[i])).isBinaryClause() ) cerr << reason(var(trail[i])).getReasonC(); 
-			  else cerr << "L" << reason(var(trail[i])).getReasonL(); 
-			}
+                        cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?";
+                        if (!reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; }
+                        else {
+                            if (!reason(var(trail[i])).isBinaryClause()) { cerr << reason(var(trail[i])).getReasonC(); }
+                            else { cerr << "L" << reason(var(trail[i])).getReasonL(); }
+                        }
                     } cerr << endl;
                 });
                 resetRestrictedExtendedResolution(); // done with the current pattern
@@ -4948,12 +4948,12 @@ void Solver::printConflictTrail(CRef confl)
         cerr << "c conflict clause: " << ca[confl] << endl;
         cerr << "c trail: " ;
         for (int i = 0 ; i < trail.size(); ++ i) {
-            cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; 
-	    if ( !reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; } 
-	    else { 
-	      if ( !reason(var(trail[i])).isBinaryClause() ) cerr << reason(var(trail[i])).getReasonC(); 
-	      else cerr << "L" << reason(var(trail[i])).getReasonL(); 
-	    }
+            cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?";
+            if (!reason(var(trail[i])).isBinaryClause() && reason(var(trail[i])).getReasonC() == CRef_Undef) { cerr << "U"; }
+            else {
+                if (!reason(var(trail[i])).isBinaryClause()) { cerr << reason(var(trail[i])).getReasonC(); }
+                else { cerr << "L" << reason(var(trail[i])).getReasonL(); }
+            }
         } cerr << endl;
     });
 }

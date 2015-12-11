@@ -97,9 +97,10 @@ class HugePageVec
     void moveTo(HugePageVec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */
-    void fitSize() {
-      cap = sz;
-      data = (T*)realloc_huge_pages(data, (cap) * sizeof(T));
+    void fitSize()
+    {
+        cap = sz;
+        data = (T*)realloc_huge_pages(data, (cap) * sizeof(T));
     }
 
     /** swap content of two vectors */
@@ -115,12 +116,13 @@ class HugePageVec
         sz   = tmpsz;
         cap  = tmpcap;
     }
-    
-    /** assign the given element to all items of the vector 
+
+    /** assign the given element to all items of the vector
      * Note: uses memset
      */
-    void assign(const T& ele) {
-      memset( data, ele, sizeof(ele) * sz );
+    void assign(const T& ele)
+    {
+        memset(data, ele, sizeof(ele) * sz);
     }
 };
 

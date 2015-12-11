@@ -159,9 +159,9 @@ int main(int argc, char** argv)
             fprintf(pcsFile, "# PCS Information for riss (core) %s  %s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
             // ::printOptions(pcsFile, opt_tuneLevel,opt_tuneGranularity); // do not print the global options, as those are usually not relevant for tuning
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
-            coreConfig->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);
+            coreConfig->printOptions(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
-            cp3config->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);
+            cp3config->printOptions(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
 //             fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
 //             ::printOptionsDependencies(pcsFile, opt_tuneLevel);

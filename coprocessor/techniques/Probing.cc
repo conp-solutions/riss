@@ -119,10 +119,10 @@ bool Probing::process()
         cleanSolver();
 
         #ifndef NDEBUG
-        for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { 
-	  DOUT( if ( config.pr_debug_out > 2 ) cerr << "c add clause to all data structures " << data.getClauses()[i] << endl; );
-	  data.addClause(data.getClauses()[i], config.pr_debug_out > 0); 
-	}     // incorporate new clauses into the solver
+        for (int i = beforeClauses; i < data.getClauses().size(); ++ i) {
+            DOUT(if (config.pr_debug_out > 2) cerr << "c add clause to all data structures " << data.getClauses()[i] << endl;);
+            data.addClause(data.getClauses()[i], config.pr_debug_out > 0);
+        }     // incorporate new clauses into the solver
         #else
         for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i]); }     // incorporate new clauses into the solver
         #endif
@@ -322,7 +322,7 @@ CRef Probing::prPropagate(bool doDouble)
                     }
                     // a new clause is required
                     CRef cr2 = ca.alloc(solver.oc, clearnt);  // add the new clause - now all references could be invalid!
-		    cerr << "c add clause [" << cr2 << "] : " << ca[cr2] << endl;
+                    cerr << "c add clause [" << cr2 << "] : " << ca[cr2] << endl;
                     if (clearnt) { ca[cr2].setLBD(1); solver.learnts.push(cr2); ca[cr2].activity() = cactivity; }
                     else { solver.clauses.push(cr2); }
                     solver.clssToBump.push(cr2); // add clause to solver lazily!
@@ -361,8 +361,8 @@ bool Probing::prAnalyze(CRef confl)
     unsigned uips = 0;
     unsigned loops = 0;
 
-    Solver::ReasonStruct reason( confl );
-    
+    Solver::ReasonStruct reason(confl);
+
     // Generate conflict clause:
     //
     data.lits.clear();
@@ -378,7 +378,7 @@ bool Probing::prAnalyze(CRef confl)
 
     do {
         DOUT(if (config.pr_debug_out > 3) cerr << "c next conflict [" << reason.getReasonC() << "] with pathC= " << pathC << " and level " << solver.decisionLevel() << endl;);
-        assert(  reason.getReasonC() != CRef_Undef); // (otherwise should be UIP)
+        assert(reason.getReasonC() != CRef_Undef);   // (otherwise should be UIP)
 
         DOUT(if (config.pr_debug_out > 3) {
         cerr << "c use for resolution " ;

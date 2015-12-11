@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 {
 
 #warning sharing with inprocessing: store for each variable whether it has been touched (by RAT) positively, or negatively, and also use the same polarity when blocking clause receiving - proof by tobias.
-  
+
     setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
     // Extra options:
     //

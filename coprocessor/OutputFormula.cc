@@ -16,7 +16,7 @@ namespace Coprocessor
 
 void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
-    data.outputFormula(file,varMap);
+    data.outputFormula(file, varMap);
 }
 
 void CoprocessorData::outputFormula(const char *file, const char *varMap)
@@ -63,9 +63,9 @@ void CoprocessorData::printFormula(FILE * fd, bool clausesOnly)
 
     int nCls = 0;
     for (int i = 0; i < clauses.size(); ++i) {
-      nCls = solver->ca[clauses[i]].can_be_deleted() ? nCls : nCls + 1 ;
+        nCls = solver->ca[clauses[i]].can_be_deleted() ? nCls : nCls + 1 ;
     }
-    
+
     if (! clausesOnly) {   // calc and print header if necessary
         // count level 0 assignments
         int level0 = 0;
@@ -75,7 +75,7 @@ void CoprocessorData::printFormula(FILE * fd, bool clausesOnly)
             }
         }
         // print header, if activated
-        fprintf(fd, "p cnf %u %i\n", (solver->nVars()) , level0 + nCls );
+        fprintf(fd, "p cnf %u %i\n", (solver->nVars()) , level0 + nCls);
     }
     // print assignments
     for (int i = 0; i < trail.size(); ++i) {
@@ -86,7 +86,7 @@ void CoprocessorData::printFormula(FILE * fd, bool clausesOnly)
     }
     // print clauses
     for (int i = 0; i < clauses.size(); ++i) {
-      if( ! solver->ca[clauses[i]].can_be_deleted() ) printClause(fd, clauses[i]);
+        if (! solver->ca[clauses[i]].can_be_deleted()) { printClause(fd, clauses[i]); }
     }
 }
 

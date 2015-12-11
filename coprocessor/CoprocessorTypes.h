@@ -233,7 +233,7 @@ class CoprocessorData
 
     /** add all formulas back to the solver */
     void reSetupSolver();
-    
+
 // delete timers
     /** gives back the current times, increases for the next technique */
     uint32_t getMyModTimer();
@@ -283,20 +283,20 @@ class CoprocessorData
     /** careful, should not be altered other than be the Dense object */
     std::vector<Riss::Lit>& getUndo() { return undo; }
 
-    
+
     /** print formula (DIMACs), and dense, if another filename is given */
     void outputFormula(const char *file, const char *varMap = 0);
-    
-private:
+
+  private:
     /** write formula into file of file descriptor
      * @param clausesOnly: will not print the cnf header (e.g. to print something before)
      */
     void printFormula(FILE* fd, bool clausesOnly = false);
     inline void printClause(FILE * fd, Riss::CRef cr);
     inline void printLit(FILE * fd, int l);
-  
-public:
-    
+
+  public:
+
     // for DRUP / DRAT proofs
     #ifdef DRATPROOF
 
@@ -602,7 +602,7 @@ inline CoprocessorData::CoprocessorData(Riss::ClauseAllocator& _ca, Riss::Solver
     , currentlyInprocessing(false)
     , debugging(_debug)
     , lastCompressUndoLits(-1)
-    //, decompressedUndoLits(-1)
+      //, decompressedUndoLits(-1)
     , log(_log)
 {
 }
@@ -705,9 +705,9 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
 
         solver->rebuildOrderHeap();
 
-	// resize the renaming vector
-	solver->eqInfo.replacedBy.shrink_( solver->eqInfo.replacedBy.size() - solver->nVars() );
-	
+        // resize the renaming vector
+        solver->eqInfo.replacedBy.shrink_(solver->eqInfo.replacedBy.size() - solver->nVars());
+
         // set cp3 variable representation!
         numberOfVars = solver->nVars();
         lit_occurrence_count.resize(nVars() * 2);
@@ -931,7 +931,7 @@ void CoprocessorData::reSetupSolver()
         for (int i = 0 ; i < solver->trail_lim[0]; ++ i)
             if (!solver->reason(var(solver->trail[i])).isBinaryClause() && solver->reason(var(solver->trail[i])).getReasonC() != CRef_Undef)
                 if (ca[ solver->reason(var(solver->trail[i])).getReasonC() ].can_be_deleted()) {
-                    solver->vardata[ var(solver->trail[i]) ].reason.setReason( CRef_Undef );
+                    solver->vardata[ var(solver->trail[i]) ].reason.setReason(CRef_Undef);
                 }
 
     // give back into solver
@@ -940,12 +940,12 @@ void CoprocessorData::reSetupSolver()
         Clause& c = ca[cr];
         assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
         if (c.can_be_deleted()) {
-	    c.mark(1);
-	    ca.free(cr);
+            c.mark(1);
+            ca.free(cr);
         } else {
             assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
             if (c.size() > 1) {
-                if ( solver->qhead == 0 ) {  // do not change the clause, if nothing has been propagated yet
+                if (solver->qhead == 0) {    // do not change the clause, if nothing has been propagated yet
                     solver->attachClause(cr);
                     solver->clauses[kept_clauses++] = cr; // add original clauss back!
                     continue;
@@ -977,7 +977,7 @@ void CoprocessorData::reSetupSolver()
                     solver->clauses[kept_clauses++] = cr; // add original clauss back!
                 }
             } else {
-                if (solver->value(c[0]) == l_Undef){
+                if (solver->value(c[0]) == l_Undef) {
                     if (enqueue(c[0]) == l_False) {
                         addCommentToProof("learnt unit during resetup solver");
                         addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
@@ -986,7 +986,7 @@ void CoprocessorData::reSetupSolver()
                         // assert( false && "This UNSAT case should be recognized before re-setup" );
                         setFailed();
                     }
-		}
+                }
                 c.set_delete(true);
             }
         }
@@ -1002,7 +1002,7 @@ void CoprocessorData::reSetupSolver()
         assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
         if (c.can_be_deleted()) {
             c.mark(1);
-	    ca.free(cr);
+            ca.free(cr);
             continue;
         }
         assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
@@ -1038,7 +1038,7 @@ void CoprocessorData::reSetupSolver()
                 addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
                 if (enqueue(c[0]) == l_False) {
                     return;
-                } 
+                }
                 if (solver->propagate() != CRef_Undef) { setFailed(); return; }
                 c.set_delete(true);
             } else { solver->attachClause(cr); }
@@ -1478,11 +1478,11 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
         // FIXME TODO: there needs to be a better workaround for this!!
         if (solver->level(v) == 0) { solver->vardata[v].reason = Riss::CRef_Undef; }   // take care of reason clauses for literals at top-level
         else if (
-	  ! solver->reason(v).isBinaryClause()
-	  && solver->reason(v).getReasonC() != Riss::CRef_Undef 
-	  && (ca[solver->reason(v).getReasonC() ].reloced() || solver->locked(ca[solver->reason(v).getReasonC() ]))
-	) {
-            solver->vardata[v].reason.setReason( ca.relocC(solver->vardata[v].reason.getReasonC() , to) ); // update reason
+            ! solver->reason(v).isBinaryClause()
+            && solver->reason(v).getReasonC() != Riss::CRef_Undef
+            && (ca[solver->reason(v).getReasonC() ].reloced() || solver->locked(ca[solver->reason(v).getReasonC() ]))
+        ) {
+            solver->vardata[v].reason.setReason(ca.relocC(solver->vardata[v].reason.getReasonC() , to));   // update reason
         }
     }
 

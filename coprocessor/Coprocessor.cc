@@ -118,10 +118,10 @@ lbool Preprocessor::performSimplification()
     for (int ppIteration = 0; ppIteration < (data.isInprocessing() ? 1 : config.opt_simplifyRounds); ++ ppIteration) {
 
 //      cerr << "c EE replacements: " << endl;
-// 	for ( Var v = 0 ; v < data.nVars(); ++ v ) {
-// 	  if( v != var(data.replacedBy() [ v ]) ) cerr << "c " << v << " <-> " << var(data.replacedBy() [ v ]) << endl;
-// 	}
-      
+//  for ( Var v = 0 ; v < data.nVars(); ++ v ) {
+//    if( v != var(data.replacedBy() [ v ]) ) cerr << "c " << v << " <-> " << var(data.replacedBy() [ v ]) << endl;
+//  }
+
         if (data.isInterupted()) { break; }  // stop here due to signal
 
         double iterTime = cpuTime();
@@ -148,7 +148,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-XOR.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-XOR.cnf").c_str(), 0););
         }
         data.checkGarbage(); // perform garbage collection
 
@@ -163,7 +163,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl; }
             if (status == l_Undef) { entailedRedundant.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-ENT.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-ENT.cnf").c_str(), 0););
         }
         data.checkGarbage(); // perform garbage collection
 
@@ -177,7 +177,7 @@ lbool Preprocessor::performSimplification()
             resolving.process(false);
             if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
             DOUT(if (printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3')) printFormula("after TernResolve"););
-	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-3RES.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-3RES.cnf").c_str(), 0););
         }
         if (! data.ok()) { break; }  // stop here already
 
@@ -195,7 +195,7 @@ lbool Preprocessor::performSimplification()
                 status = l_False;
             }
             data.checkGarbage(); // perform garbage collection
-	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-SUBSIMP.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-SUBSIMP.cnf").c_str(), 0););
 
             DOUT(if (printSusi || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
             printFormula("after Susi");
@@ -213,7 +213,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-FM.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-FM.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after FM"); scanCheck("after FM"); });
@@ -231,7 +231,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-REW.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-REW.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after REW"); scanCheck("after REW"); });
@@ -249,7 +249,7 @@ lbool Preprocessor::performSimplification()
             if (! data.ok()) {
                 status = l_False;
             }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-EE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-EE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after EE"); scanCheck("after EE"); });
@@ -266,7 +266,7 @@ lbool Preprocessor::performSimplification()
             if (status == l_Undef) { unhiding.process(); }
             if (config.opt_verbose > 1)  { printStatistics(cerr); unhiding.printStatistics(cerr); }
             if (!data.ok()) { status = l_False; }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-UNHIDE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-UNHIDE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (printUnhide || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g')) {
@@ -281,7 +281,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl; }
             if (status == l_Undef) { hte.process(data); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); hte.printStatistics(cerr); }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-HTE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-HTE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after HTE");  scanCheck("after HTE"); });
@@ -298,7 +298,7 @@ lbool Preprocessor::performSimplification()
             if (!data.ok()) { status = l_False; }
             if (config.opt_verbose > 1)  { printStatistics(cerr); probing.printStatistics(cerr); }
 
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-PROBE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-PROBE.cnf").c_str(), 0););
             DOUT(if (config.opt_debug) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); });
             DOUT(if (printProbe || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p')) {
             printFormula("after Probing");
@@ -313,7 +313,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl; }
             if (status == l_Undef) { status = bve.process(data); }   // can change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); bve.printStatistics(cerr); }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-BVE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-BVE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after BVE");  scanCheck("after BVE"); });
@@ -329,7 +329,7 @@ lbool Preprocessor::performSimplification()
             if (status == l_Undef) { bva.process(); }
             if (config.opt_verbose > 1)  { printStatistics(cerr); bva.printStatistics(cerr); }
             if (!data.ok()) { status = l_False; }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-BVA.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-BVA.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug) { checkLists("after BVA");  scanCheck("after BVA"); });
@@ -344,7 +344,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl; }
             if (status == l_Undef) { bce.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); bce.printStatistics(cerr); }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-BCE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-BCE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after BCE");  scanCheck("after BCE"); });
@@ -359,7 +359,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl; }
             if (status == l_Undef) { la.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); la.printStatistics(cerr); }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-LA.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-LA.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after LA");  scanCheck("after LA"); });
@@ -374,7 +374,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl; }
             if (status == l_Undef) { cce.process(data); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); cce.printStatistics(cerr); }
-            DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-CCE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-CCE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after CCE");  scanCheck("after CCE"); });    // perform only if BCE finished the whole formula?!
@@ -389,7 +389,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") resolution asymmetric tautology elimination" << endl; }
             if (status == l_Undef) { rate.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); rate.printStatistics(cerr); }
-	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-RATE.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-RATE.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after RATE"); scanCheck("after RATE"); });    // perform only if BCE finished the whole formula?!
@@ -405,7 +405,7 @@ lbool Preprocessor::performSimplification()
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
             if (status == l_Undef) { hbr.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); hbr.printStatistics(cerr); }
-	    DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-HBR.cnf").c_str(), 0); );
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-HBR.cnf").c_str(), 0););
             data.checkGarbage(); // perform garbage collection
 
             DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
@@ -421,7 +421,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_verbose > 0) { cerr << "c add2 ..." << endl; }
         resolving.process(true);
         if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
-        DOUT( if ( (const char*)config.stepbystepoutput != nullptr) outputFormula( string( string(config.stepbystepoutput) + "-ADD2.cnf").c_str(), 0); );
+        DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-ADD2.cnf").c_str(), 0););
         DOUT(if (printAddRedBin || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a')) printFormula("after Add2"););
     }
 
@@ -1168,13 +1168,13 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
     // get back the old number of variables inside the model, to be able to unshuffle!
     if (formulaVariables != - 1 && formulaVariables < model.size()) {
-        DOUT( cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl; );
+        DOUT(cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl;);
         model.shrink_(model.size() - formulaVariables);
-        DOUT( cerr << "c model size afterwards: " << model.size() << endl; );
+        DOUT(cerr << "c model size afterwards: " << model.size() << endl;);
     }
-    if (config.opt_shuffle) { 
-      DOUT( cerr << "c unshuffle model " << model.size() << endl; );
-      unshuffle(model); 
+    if (config.opt_shuffle) {
+        DOUT(cerr << "c unshuffle model " << model.size() << endl;);
+        unshuffle(model);
     }
 }
 
@@ -1338,7 +1338,7 @@ void Preprocessor::cleanSolver()
 
 void Preprocessor::reSetupSolver()
 {
-  data.reSetupSolver();
+    data.reSetupSolver();
 }
 
 void Preprocessor::shuffle()
@@ -1348,7 +1348,7 @@ void Preprocessor::shuffle()
     // clear all assignments, to not being forced of keeping track of shuffled trail
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
         solver->varFlags[ var(solver->trail[i]) ].assigns = l_Undef;
-	solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
+        solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
     }
     solver->qhead = 0;
     solver->realHead = 0;
@@ -1358,10 +1358,10 @@ void Preprocessor::shuffle()
     shuffleVariable = data.nVars();
     shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca); // TODO: should also copy all other variable flags over!
 
-    for (Var v = 0 ; v < data.nVars(); ++ v ) {
-      assert( data.value(v) == l_Undef && "during shuffling no variable can have a value" );
+    for (Var v = 0 ; v < data.nVars(); ++ v) {
+        assert(data.value(v) == l_Undef && "during shuffling no variable can have a value");
     }
-    
+
     // set all assignments according to the trail!
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
         solver->varFlags[ var(solver->trail[i]) ].assigns = sign(solver->trail[i]) ? l_False : l_True;
@@ -1439,7 +1439,7 @@ void Preprocessor::printFormula(const string& headline)
     cerr << "==================== " << endl;
     cerr << " actual formula to be copied: " << endl;
     for (int i = 0 ; i < data.getTrail().size() && !data.isInterupted(); ++ i) {
-      cerr << data.getTrail()[i] << " 0" << endl;
+        cerr << data.getTrail()[i] << " 0" << endl;
     }
     for (int i = 0 ; i < data.getClauses().size() && !data.isInterupted(); ++ i) {
         if (ca[  data.getClauses()[i] ].can_be_deleted() || ca[  data.getClauses()[i] ].learnt()) { continue; }
@@ -1460,11 +1460,11 @@ bool Preprocessor::checkLists(const string& headline)
             for (int i = 0 ; i < data.list(l).size(); ++ i) {
                 for (int j = i + 1 ; j < data.list(l).size(); ++ j) {
                     if (data.list(l)[i] == data.list(l)[j]) {
-		        if(! ca[ data.list(l)[i] ].can_be_deleted() ) {
-			  ret = true;
-			  cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
-			  assert( false && "fix duplicates!" );
-			}
+                        if (! ca[ data.list(l)[i] ].can_be_deleted()) {
+                            ret = true;
+                            cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
+                            assert(false && "fix duplicates!");
+                        }
                     }
                 }
             }

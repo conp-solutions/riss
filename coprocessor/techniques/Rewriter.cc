@@ -510,11 +510,11 @@ bool Rewriter::rewriteAMO()
                     const int index = amos.size();
                     amos.push_back(vector<Lit>());
                     for (int j = 0 ; j < c.size(); ++ j) {
-			if(config.opt_rew_once && data.ma.isCurrentStep(var(c[j])) ) continue; // do not allow duplicates
+                        if (config.opt_rew_once && data.ma.isCurrentStep(var(c[j]))) { continue; } // do not allow duplicates
                         amos[index].push_back(c[j]);   // store AMO
                         data.ma.setCurrentStep(var(c[j]));    // block theses variables for future AMOs
                     }
-                    DOUT(if (config.rew_debug_out > 0) cerr << "c store AMO[" << amos.size()-1 << "] (actually ExO): " << amos[amos.size()-1] << endl;);
+                    DOUT(if (config.rew_debug_out > 0) cerr << "c store AMO[" << amos.size() - 1 << "] (actually ExO): " << amos[amos.size() - 1] << endl;);
                     maxAmo = maxAmo >= c.size() ? maxAmo : c.size();
                 }
             }
@@ -629,7 +629,7 @@ bool Rewriter::rewriteAMO()
             }
 
             for (int i = 0 ; i < data.lits.size(); ++ i) {
-		assert( ( !config.opt_rew_once || ! data.ma.isCurrentStep(var(data.lits[i])) ) && "no duplicates!" );
+                assert((!config.opt_rew_once || ! data.ma.isCurrentStep(var(data.lits[i]))) && "no duplicates!");
                 data.ma.setCurrentStep(var(data.lits[i]));
             }
 
@@ -665,7 +665,7 @@ bool Rewriter::rewriteAMO()
             DOUT(if (config.rew_debug_out > 0) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << " amo:" << amo << endl;);
 
             for (int j = 0 ; j < amo.size(); ++ j) {
-                assert( (!config.opt_rew_once || !data.ma.isCurrentStep(var(amo[j])) ) && "touch variable only once during one iteration!");
+                assert((!config.opt_rew_once || !data.ma.isCurrentStep(var(amo[j]))) && "touch variable only once during one iteration!");
                 data.ma.setCurrentStep(var(amo[j]));   // for debug only!
             }
 
@@ -679,9 +679,9 @@ bool Rewriter::rewriteAMO()
             }
 
             // resize internal structures
-            inAmo.resize( data.nVars() * 2 );
-	    rewHeap.addNewElement(data.nVars() * 2);
-            
+            inAmo.resize(data.nVars() * 2);
+            rewHeap.addNewElement(data.nVars() * 2);
+
             // find all AMO binary clauses, and replace them with smaller variables!
             inAmo.nextStep();
             for (int j = 0 ; j < amo.size(); ++ j) {
@@ -997,8 +997,8 @@ Var Rewriter::nextVariable(char type)
 {
     Var nextVar = data.nextFreshVariable(type);
 
-    assert( var(data.replacedBy()[nextVar] ) == nextVar && "replacement of new variables should be equivalent to themselves" );
-    
+    assert(var(data.replacedBy()[nextVar]) == nextVar && "replacement of new variables should be equivalent to themselves");
+
     // enlarge own structures
     rewHeap.addNewElement(data.nVars());
 
