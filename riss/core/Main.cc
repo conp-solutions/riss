@@ -156,7 +156,7 @@ int main(int argc, char** argv)
         // print pcs information into file
         if (0 != (const char*)opt_tuneFile) {
             FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
-            fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
+            fprintf(pcsFile, "# PCS Information for riss (core) %s  %s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
             // ::printOptions(pcsFile, opt_tuneLevel,opt_tuneGranularity); // do not print the global options, as those are usually not relevant for tuning
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
             coreConfig->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);

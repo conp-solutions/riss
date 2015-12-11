@@ -399,16 +399,23 @@ class IntOption : public Option
 	  int dist = value < 16 ? 1 : ( value < 16000 ? 64 : 512 ); // smarter way to initialize the initial diff value
 	  if( addedValues < granularity) values[ addedValues++ ] = defaultValue;
 	  while( addedValues < granularity ) {
-	    if( value + dist <= range.end ) values[ addedValues++ ] = value + dist;
-	    if( addedValues < granularity && value - dist >= range.end ) values[ addedValues++ ] = value - dist;
+	    if( value + dist > value && value + dist <= range.end ) values[ addedValues++ ] = value + dist;
+	    if( addedValues < granularity && value - dist >= range.begin ) values[ addedValues++ ] = value - dist;
 	    dist = dist * 4;
+	    if( value - dist < value && value + dist > range.end && value - dist < range.begin ) break; // stop if there cannot be more values!
 	  }
 	  sort( values, addedValues );
 	  int j = 0;
+	  assert( values[0] >= range.begin && values[0] <= range.end && "stay in bound" );
 	  for( int i = 1 ; i < addedValues; ++ i ) {
-	    if( values[i] != values[j] ) values[++j] = values[i];
+	    if( values[i] != values[j] ) {
+	      assert( values[i] >= range.begin && values[i] <= range.end && "stay in bound" );
+	      values[++j] = values[i];
+	    }
 	  }
-	  assert( j > 0 && "there has to be at least one option" );
+	  j++;
+	  assert( addedValues > 0 && "there has to be at least one option" );
+	  assert( j <= addedValues && j <= granularity && "collected values hae to stay in bounds" );
 	  for( int i = 0 ; i < j; ++ i ) {
 	    if ( i != 0 )  fprintf(pcsFile, ",");
 	    fprintf(pcsFile, "%d", values[i] );
@@ -555,16 +562,23 @@ class Int64Option : public Option
 	  int64_t dist = value < 16 ? 1 : ( value < 16000 ? 64 : 512 ); // smarter way to initialize the initial diff value
 	  if( addedValues < granularity) values[ addedValues++ ] = defaultValue;
 	  while( addedValues < granularity ) {
-	    if( value + dist <= range.end ) values[ addedValues++ ] = value + dist;
-	    if( addedValues < granularity && value - dist >= range.end ) values[ addedValues++ ] = value - dist;
+	    if( value + dist > value && value + dist <= range.end ) values[ addedValues++ ] = value + dist;
+	    if( addedValues < granularity && value - dist >= range.begin ) values[ addedValues++ ] = value - dist;
 	    dist = dist * 4;
+	    if( value - dist < value && value + dist > range.end && value - dist < range.begin ) break; // stop if there cannot be more values!
 	  }
 	  sort( values, addedValues );
 	  int j = 0;
+	  assert( values[0] >= range.begin && values[0] <= range.end && "stay in bound" );
 	  for( int i = 1 ; i < addedValues; ++ i ) {
-	    if( values[i] != values[j] ) values[++j] = values[i];
+	    if( values[i] != values[j] ) {
+	      assert( values[i] >= range.begin && values[i] <= range.end && "stay in bound" );
+	      values[++j] = values[i];
+	    }
 	  }
-	  assert( j > 0 && "there has to be at least one option" );
+	  j++;
+	  assert( addedValues > 0 && "there has to be at least one option" );
+	  assert( j <= addedValues && j <= granularity && "collected values hae to stay in bounds" );
 	  for( int i = 0 ; i < j; ++ i ) {
 	    if ( i != 0 )  fprintf(pcsFile, ",");
 	    fprintf(pcsFile, "%ld", values[i] );
