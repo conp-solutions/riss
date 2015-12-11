@@ -281,7 +281,7 @@ class DoubleOption : public Option
 	    if( v != range.begin + badd ) fprintf(pcsFile, "," ); // print comma, if there will be more and we printed one item already
 	    fprintf(pcsFile, "%lf", v); // print current value
 	  }
-	  fprintf(pcsFile, "} [%lf]    # %s\n", defaultValue, description);
+	  fprintf(pcsFile, "} [%lf]    # %s\n", value, description);
 	}
     }
 
