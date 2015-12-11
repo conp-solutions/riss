@@ -53,7 +53,7 @@ class RegionAllocator
     ~RegionAllocator()
     {
         if (memory != nullptr) {
-            free_huge_pages(memory);
+            ::free(memory);
         }
     }
 
@@ -86,12 +86,12 @@ class RegionAllocator
     void fitSize()
     {
         cap = sz;                                      // reduce capacity to the number of currently used elements
-        memory = (T*)realloc_huge_pages(memory, sizeof(T) * cap); // free resources
+        memory = (T*)::realloc(memory, sizeof(T) * cap); // free resources
     }
 
     void     moveTo(RegionAllocator& to)
     {
-        if (to.memory != nullptr) { free_huge_pages(to.memory); }
+        if (to.memory != nullptr) { ::free(to.memory); }
         to.memory = memory;
         to.sz = sz;
         to.cap = cap;
@@ -115,7 +115,7 @@ class RegionAllocator
     {
         sz = 0; wasted_ = 0;
         if (clean) {   // free used resources
-            if (memory != nullptr) { free_huge_pages(memory); memory = nullptr; }
+            if (memory != nullptr) { ::free(memory); memory = nullptr; }
             cap = 0;
         }
     }
@@ -142,7 +142,7 @@ void RegionAllocator<T>::capacity(uint32_t min_cap)
     // printf(" .. (%p) cap = %u\n", this, cap);
 
     assert(cap > 0);
-    memory = (T*)realloc_huge_pages(memory, sizeof(T) * cap);
+    memory = (T*)::realloc(memory, sizeof(T) * cap);
 }
 
 
