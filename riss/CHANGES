@@ -1,5 +1,7 @@
 # ChangeLog for riss
 
+## v5.2.0
+
  * print PCS always uses current value of printed option
  * allow to decide whether LBD or activity should be used for clause removal
  * use binary clause reason structure, handles binary reasons implicitely

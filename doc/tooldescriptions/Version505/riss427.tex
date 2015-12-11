@@ -1,0 +1,168 @@
+\documentclass[conference]{IEEEtran}
+% packages
+\usepackage{xspace}
+\usepackage{hyperref}
+
+%  commands
+\newcommand{\todo}[1]{$\langle\!\langle$\marginpar[\raggedleft$\triangleright\triangleright\triangleright$]{$\triangleleft\triangleleft\triangleleft$}\textsf{#1}$\rangle\!\rangle$}
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+\def\ea{\,et\,al.\ }
+
+\begin{document}
+	
+% paper title
+\title{Riss 4.27}
+
+% author names and affiliations
+% use a multiple column layout for up to three different
+% affiliations
+\author{\IEEEauthorblockN{Norbert Manthey}
+\IEEEauthorblockA{Knowledge Representation and Reasoning Group\\TU Dresden, Germany}
+}
+
+\maketitle
+
+\def\coprocessor{\textsc{Coprocessor}\xspace}
+\def\glucose{\textsc{Glucose~2.2}\xspace}
+\def\minisat{\textsc{Minisat~2.2}\xspace}
+\def\riss{\textsc{Riss}\xspace}
+
+% the abstract is optional
+\begin{abstract}
+The solver \textsc{Riss} combines the improved Minisat-style solving engine of \glucose with a state-of-the-art preprocessor \textsc{Coprocessor} and adds further modifications to the search process. 
+\end{abstract}
+
+\section{Introduction}
+
+The CDCL solver \riss in version 4.27 was first build on the \textsc{Minisat} search engine~\cite{EenS:2003}, and next incorporated the improvements that have been proposed for \glucose ~\cite{AudemardS:2009,Audemard:2012:RRS:2405292.2405308}. 
+Afterwards, more search algorithm extensions have been added. 
+\riss is equipped with the preprocessor \textsc{Coprocessor}~\cite{Manthey:2012}, 
+that implements most of the recently published formula simplification techniques, ready to be used as inprocessing as well by taking care of learned clauses. 
+The aim of the solver is to provide a huge portfolio of options on the one hand, to be able to adopt to new SAT applications, with an efficient implementation on the other hand. 
+
+\section{Main Techniques}
+
+\riss uses the modifications of the CDCL algorithm that are proposed in~\cite{cdclExtensions}, namely \emph{local look-ahead}, \emph{all-unit-UIP learning} and \emph{on-the-fly probing}. 
+An additional learned clause minimization technique, based on \emph{hidden literal elimination} is added. 
+Another addition to the solver is the ability to perform \emph{restricted extended resolution} (RER) during search as described by Audemard\ea~\cite{AudemardKS:2010}. 
+However, the used implementation differs to reduce the overhead of the procedure: introduced variables are not deleted, and new learned clauses are only rewritten with the most recent extension of a literal. 
+During unit propagation, \emph{lazy hyper binary resolution}~\cite{precosat} can be used, and \emph{on-the-fly clause improvement}~\cite{Han:2009:OCI:1575471.1575499} is available during conflict analysis. 
+During learning, usual first-UIP clauses can be learned~\cite{MoskeviczMZZM:2001}, but alternatively the first \emph{bi-asserting} clause can be learned instead~\cite{PipatsrisawatD:2008}. 
+For large learned clauses with a high LBD value, a so called \emph{decision clause} is learned, which simply negates the current decision literals~\cite{treengeling2013}, because this clause is assumed to be removed from the formula again soon. 
+The activity decay for variables that are used in clause learning steps can be adopted dynamically, similarly to the method used in \textsc{Glucose 2.3}~\cite{glucose23}. 
+When learned clauses are removed again, then the set of the heuristically worst clauses can be kept. 
+Finally, the algorithm proposed by Wieringa~\cite{DBLP:conf/sat/WieringaH13} to strengthen learned clauses in parallel to the actual CDCL search has been sequentialized, so that search can be interleaved with such an clause strengthening technique.
+
+For the initialization of the activities of variables, as well as the polarities for polarity caching~\cite{Pipatsrisawat:2007:LCC:1768142.1768170}, several opportunities are offered, among them the \emph{Jeroslow-Wang} heuristic~\cite{DBLP:journals/amai/JeroslowW90}. 
+For scheduling restarts, the scheme presented for \glucose is used by default, but also the \emph{geometric series} of \textsc{Minisat} can be used~\cite{EenS:2003}, or the \textsc{Luby} series~\cite{luby}. 
+\emph{Partial restart} are also available~\cite{DBLP:journals/jsat/TakRH11}.
+
+The built-in preprocessor \coprocessor incorporates the following formula simplification techniques:
+Unit Propagation, Subsumption, Strengthening (also called self-subsuming resolution) -- where for small clauses all subsuming resolvents can be produced, 
+{(Bounded) Variable Elimination} ({BVE})~\cite{EenB:2005} combined with Blocked Clause Elimination (BCE)~\cite{JarvisaloBH:2010}, 
+{(Bounded) Variable Addition} ({BVA})~\cite{MantheyHB:2012}, 
+{Probing}~\cite{LynceJM:2003}, 
+{Clause Vivification}~\cite{Piette:2008:VPC:1567281.1567396}, 
+{Covered Clause Elimination}~\cite{HeuleJB10b}, 
+{Hidden Tautology Elimination}~\cite{HeuleJB10}, 
+{Equivalent Literal Substitution}~\cite{ee-withSCC}, 
+{Unhiding} ({Unhide})~\cite{DBLP:conf/sat/HeuleJB11}, 
+{Adding Binary Resolvents}~\cite{Wei:2002:ARW:647489.727142}, 
+a 2SAT algorithm~\cite{DBLP:conf/aaai/Val00}, and a walksat implementation~\cite{DBLP:conf/aaai/SelmanKC94}. 
+The preprocessor furthermore supports parallel subsumption, strengthening and variable elimination~\cite{GebhardManthey:KI:2013}. 
+
+Since the last version of \riss~\cite{riss3g}, the following simplification techniques have been added:
+The implementation of Unhide now supports finding equivalent literals and can remove redundant binary clauses. 
+\emph{Structural hashing} is performed during equivalent literal elimination~\cite{DBLP:conf/dac/KuehlmannK97}, and the \emph{Tarjan} algorithm to find strongly connected components in the binary implication graph is now implemented iteratively. 
+The \emph{Fourier-Motzkin method} (FM) for reasoning on cardinality constraints, similar to the procedure by Biere~\cite{treengeling2013}, is used as a preprocessing step, where the cardinality constraints can be extracted syntactically for degrees less than 3, and for higher degrees a semantic method based on unit propagation is used~\cite{lazyCard}. 
+Furthermore, an algorithm is embedded, which is able to derive new clauses from a special set of cardinality constraints: when at-most-one constraints for rows, and at-least-one constraints for columns encode a possibly over constraint matching problem, then the at-least-one constraints for the rows can are deduced and added in form of clauses. 
+Another deduction systems that is stronger than resolution is available in \coprocessor: by retrieving \textsc{XOR} gates from the CNF, with the help of the Gaussian elimination equivalent literals and unit clauses can be found. 
+The elimination of \emph{resolution asymmetric tautologies} is implemented in a first naive version, which performs the same steps as the theoretical description: building the resolvent and testing this resolvent for being an asymmetric tautology by running full unit propagation~\cite{JarvisaloHB:2012}. 
+For an extension $x \leftrightarrow (a \land b)$, BVA also replaces the disjunction $(\overline{a} \lor \overline{b})$ in the formula with $\overline{x}$, and adds the full extension. 
+Furthermore, BVA can be search for other gate types than \textsc{AND}-gates: \textsc{XOR}-gates and \textsc{If-Then-Else}-gates can be used additionally. 
+Finally, the counter technique of \emph{covered literal addition}~\cite{HeuleJB10b}, which is used to eliminate covered clauses, is added to \coprocessor: during the computation of \emph{BCE}, \emph{covered literal elimination} (CLE) is performed~\cite{MantheyP:KI:2014}, which removes literals from a clause, if these literals can be added by \emph{covered literal addition} again~\cite{HeuleJB10b}. 
+
+\riss is able to output proofs for unsatisfiable formulas in the DRUP format~\cite{Goldberg:2003:VPU:789083.1022836,drup}, also when look-ahead or the all-units-learning modifications are enabled. 
+Furthermore, most of the techniques inside \coprocessor are able to produce proofs. 
+If a technique introduces fresh variables or cannot be simulated by unit propagation (easily), DRAT proofs are printed instead~\cite{drat}, as required for example by RER, BVA or CLE. 
+Inside the solver the generated proof can be verified during its construction. 
+Techniques that do not support producing proofs yet are Gaussian elimination and FM. 
+Furthermore, for some probing based simplification techniques proofs are not produced. 
+For more details on the generation of proofs and simplification techniques see~\cite{MantheyP:KI:2014}.
+
+\section{Main Parameters}
+
+\riss offers all the parameters that are available in \glucose. 
+Furthermore, all the techniques that are mentioned above can be enabled or disabled, and the number of execution steps per technique can be limited, as well as variants can be produced. 
+The total number of parameters for the solver is 486, where 190 of these parameters are Boolean, and the remaining parameters have either floating point or integer domains. 
+% A parameter specification for almost the full parameter set, as well as a smaller specification that can be used to effectively tune the solver is part of the source code of the solver. 
+% These specifications can be used for the configuration tools \textsc{SMAC} and \textsc{ParamILS}~\cite{SMAC}.
+
+For the SAT Competition 2014 the formula size limits for the formula simplification techniques have been set, so that these techniques do not consume too much run time.
+Next, a set of well performing techniques was determined by a local-search like selection procedure. 
+Based with this configuration, the parameters for the search algorithm have been tuned. 
+Finally, the search configuration has been combined with the techniques of the formula simplification. 
+
+\section{Special Algorithms, Data Structures, and Other Features}
+
+In \glucose, binary clauses are handled specially during propagation: both literals of the clause can be retrieved from the watch list, so that the actual clause is not touched. 
+Therefore, \glucose introduces an extra watch list for binary clauses. 
+\riss keeps all clauses in a single watch list, but applies that same idea by modifying the elements in the watch list so that they know whether the watched clause is binary or not. 
+This modification reduces the memory consumption of the solver. 
+Another reduction of the memory consumption is achieved by merging multiple bit arrays into a single array and using bit operations. 
+Especially when new variables are introduced by BVA or RER, the memory fragmentation is lower with this modification. 
+
+% \coprocessor provides a front-end to perform BVA on QBF formulas. 
+% The resulting tool is called \textsc{QProcessor}, and simply uses the implemented CNF technique for the CNF formula of a QBF formula. 
+% Furhtermore, \textsc{Mprocessor}, which is another front end of \coprocessor, allows to simplify MaxSAT CNF formulas with all the available techniques according to the ideas presented in~\cite{DBLP:conf/lpar/BelovMM13}. 
+
+\section{Implementation details}
+
+\riss and \coprocessor are implemented in \CC. 
+All simplification techniques inside \coprocessor are implemented in separate classes to increase the structure of the code. 
+% The unused additions to the CDCL algorithm are not compiled into the binary.
+ 
+\section{SAT Competition 2013 Specifics}
+
+\riss is submitted as a 64-bit binary to the SAT and SAT+UNSAT tracks for the categories Application and Crafted. 
+The compilation uses the flag ``-O3''. 
+
+The submitted configuration of \textsc{Riss 4.27} uses the following techniques, where FM and variable renaming is disabled for the certified unsatisfiable tracks:
+%
+BVE, 
+FM, 
+five iterations of UNHIDE,
+CLE 
+and variable renaming to compact the representation of the formula during search. 
+
+Furthermore, the version \textsc{DRAT} uses the same configuration as \textsc{Riss3g}~\cite{riss3g} for all application tracks and crafted tracks, because the used techniques 
+BVE, BVA, Unhide, and Local Look-Ahead, support the DRAT proof format. 
+
+\section{Availability}
+
+\riss, as well as the formula simplifier \coprocessor are available  for research. 
+The collection additionally contains the parallel search space splitting SAT solver \textsc{Pcasso}, 
+the portfolio SAT solver \textsc{Priss} that can produce DRUP proofs~\cite{HeuleMP:2014}, 
+and a CNF feature extraction.
+The framework can be downloaded from \url{http://tools.computational-logic.org}.
+
+\section*{Acknowledgment}
+The author would like to thank the developers of \glucose and \minisat. 
+Furthermore, many thanks go to Marijn Heule for discussions on the proof formats DRUP and DRAT, as well as to Armin Biere for discussions on formula simplification techniques. 
+The computational resources to develop, evaluate and configure the SAT solver have been provided by the BWGrid \cite{bwgrid} project and the ZIH of TU Dresden. 
+
+
+
+% \bigskip
+% What should not be in the system description:
+% \begin{enumerate}
+%   \item Basic definitions related to SAT. (However, any formal notations used in the description should be defined.)
+%   \item Empirical results on the solver's performance.
+% \end{enumerate}
+% 
+\bibliographystyle{IEEEtran}
+\bibliography{local}
+
+\end{document}
+
+

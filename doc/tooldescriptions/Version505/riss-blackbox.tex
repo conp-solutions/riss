@@ -1,0 +1,104 @@
+\documentclass[conference]{IEEEtran}
+% packages
+\usepackage{xspace}
+\usepackage{hyperref}
+
+%  commands
+\newcommand{\todo}[1]{$\langle\!\langle$\marginpar[\raggedleft$\triangleright\triangleright\triangleright$]{$\triangleleft\triangleleft\triangleleft$}\textsf{#1}$\rangle\!\rangle$}
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+\def\ea{\,et\,al.\ }
+
+\begin{document}
+	
+% paper title
+\title{Riss 4.27 BlackBox}
+
+% author names and affiliations
+% use a multiple column layout for up to three different
+% affiliations
+\author{\IEEEauthorblockN{Enrique Matos Alfonso and Norbert Manthey}
+\IEEEauthorblockA{Knowledge Representation and Reasoning Group\\TU Dresden, Germany}
+}
+
+\maketitle
+
+\def\coprocessor{\textsc{Coprocessor}\xspace}
+\def\glucose{\textsc{Glucose~2.2}\xspace}
+\def\minisat{\textsc{Minisat~2.2}\xspace}
+\def\riss{\textsc{Riss}\xspace}
+
+% the abstract is optional
+\begin{abstract}
+The solver \textsc{Riss} BlackBox  uses the highly configurable SAT solver \riss in version 4.27 as the base solver and selects a configuration per input formula. 
+For this process, a large set of CNF features is computed. 
+Then, a set of random decision forests, one forest for each configuration, selects a predefined configuration of the solver. 
+\end{abstract}
+
+\section{Introduction}
+
+Motivated by the tool \textsc{SATzilla}~\cite{Xu:2008:SPA:1622673.1622687} and by the fact that application formulas and crafted formulas contain structure we decided to classify the formulas and map the classes to solver configurations. 
+With \riss in version 4.27~\cite{riss427} a solver is available that is not only competitive in its default configuration, but that furthermore offers plenty of techniques that are especially good in solving formulas that cannot be solved by the robust default configuration. 
+However, these specialized techniques might consume too much run time on too many formulas, so that choosing among the available techniques or solver configurations is the better choice. 
+A more detailed explanation is provided in~\cite{blackbox}. 
+
+\section{Main Techniques}
+
+The configurations of \riss have been preset, such that the combined solver can solve a huge amount of formulas in a timeout of one hour on the used computing resources. 
+
+The extracted features originate from sequences that can be extracted from the degrees of the nodes in a graph. 
+The used graphs are for example the clause-variable graph, the variable-clause graph (both for positive and negative literals). 
+Furthermore, we consider the binary implication graph, and the graphs that are build based on \textsc{AND}-gates, partially represented \textsc{AND}-gates as well as \textsc{Exactly One}-constraints. 
+Further sequences are created based on the clause size, the \textsc{RW}-heuristic~\cite{march10-ahmed,AF10-ahmed}, and a symmetry approximation similar to the coloring idea in~\cite{AloulRMS:2002}. 
+Then, for each sequence the mean, minimum, max, standard deviation, the value rate, mode and the entropy is considered as a feature. 
+Furthermore, we use the values of the 25\,\% and the 75\,\% quantile. 
+Finally, for each sequence we compute its derivation, and use the same statistical values of the derivation as features as well. 
+Instead of measuring the run time to construct each feature, we use counters that are incremented for each major calculation step, so that their value stays independent from the used architecture, but correlate with the run time. 
+
+With these features we trained a classifier that returns the most promising configuration. 
+The classifier uses a random decision forest for each configuration, and returns the configuration where the probability of an correct answer is most likely. 
+If no configuration is predicted by the classifier, the configuration that performed best on all training instances is used, because this configuration is assumed to be most robust. 
+
+\section{Main Parameters}
+
+\riss \textsc{BlackBox} does not offer any parameters, because the configuration of the SAT solver is chosen automatically. 
+However, during training the classifier and for extracting the features, several options are available, namely which features to compute, how to label a configuration as \texttt{good} for a certain configuration, and how to set up and train the classifier.
+
+\section{Special Algorithms, Data Structures, and Other Features}
+
+The implementation of the feature extraction aims at being as fast as possible. 
+Therefore, we trade space for time by not checking the duplicate entries in the adjacency lists of the constructed graphs. 
+Only after the graph has been constructed completely we eliminate these duplicates by sorting the list and iterating over the list exactly once. 
+This way, much more memory is used, but only a single cleanup and sort operation is required for each list. 
+
+\section{Implementation details}
+
+The feature extraction, as well as the communication with the classifier is implemented into \riss. 
+For the machine learning part we use \textsc{Weka}~\cite{Hall:2009:WDM:1656274.1656278} as external tool, which is not part of the solver framework itself. 
+ 
+\section{SAT Competition 2013 Specifics}
+
+\riss \textsc{BlackBox} is submitted as a 64-bit binary to the SAT and SAT+UNSAT tracks for the categories Application and Crafted. 
+The extracted features do not include the graph based features of the clause graph, the resolution graph, and the clause-variable graph. 
+The compilation uses the flag ``-O3''. 
+
+Since not all techniques of \riss are able to produce DRAT proofs~\cite{Hall:2009:WDM:1656274.1656278}, for the certified unsatisfiability tracks these configurations are excluded from the portfolio. 
+Since \riss default configuration is also not able to produce DRAT proofs, the used fall-back configuration is the most robust configuration which can produce DRAT proofs. 
+
+\section{Availability}
+
+The feature extraction and classification code is part of \riss, which is available for research. 
+The tool can be downloaded from \url{http://tools.computational-logic.org}. 
+The machine learning tool \textsc{Weka} is not part of the framework, because it is   available under the \textsc{GPL}. 
+
+\section*{Acknowledgment}
+The authors would like to thank the developers of \textsc{Weka} for providing an easy entry to machine learning. 
+Furthermore, the authors thank the ZIH of TU Dresden for providing the computational resources for setting up and evaluating the solver configurations for this solver, and training the classifier. 
+
+\newpage
+
+\bibliographystyle{IEEEtran}
+\bibliography{local}
+
+\end{document}
+
+
