@@ -1080,7 +1080,8 @@ void LookaheadSplitting::constraintResolvent(const vec<Lit>& t)
     for (int i = 1; i < t.size(); i++) {
         //if(binVarScore[var(t[i])]==0){
         if (value(var(t[i])) != l_Undef    // only check for the reason clause if it exists
-                && ca[reason(var(t[i]))].size() >= clauseLimit) { // check if value is not already in trail //reason clause for propagated literal..... if its size is greater than 2 ... then we add a binary learnt clause
+	  && 
+	  ( reason(var(t[i])).isBinaryClause() || ca[ reason(var(t[i])).getReasonC() ].size() >= clauseLimit ) ) { // check if value is not already in trail //reason clause for propagated literal..... if its size is greater than 2 ... then we add a binary learnt clause
             clause.clear();
             clause.push(~t[0]);
             clause.push(t[i]);

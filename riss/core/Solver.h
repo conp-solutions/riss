@@ -458,8 +458,29 @@ class Solver
     // Helper structures:
     //
   public:
+    
+    /** structure that allows to store the binary reason for a variable assignment implicitely*/
+    struct ReasonStruct {
+
+      unsigned data : 31;
+      unsigned isBinary : 1;
+      ReasonStruct() : data(0), isBinary(0) {}
+      
+      ReasonStruct(const CRef& cr) : data(cr), isBinary(0) {}
+      ReasonStruct(const Lit& l) : data( toInt(l) ), isBinary(1) {}
+      
+      void setReason(const CRef cr) { data = cr; isBinary = 0; }
+      void setReason(const Lit l) { data = toInt(l); isBinary = 1; }
+      
+      CRef getReasonC() const { return data; }
+      Lit getReasonL() const { return toLit(data); }
+      
+      bool isBinaryClause() const { return isBinary; }
+    };
+    
     struct VarData {
-        CRef reason; int level;
+        ReasonStruct reason; // new reason struct
+	int level;
         Lit dom;
         int32_t position; /// for hack
         #ifdef PCASSO
@@ -475,12 +496,23 @@ class Solver
             , dependencyLevel(0)
             #endif
         {}
+        VarData(Lit r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
     };
 
   protected:
     static inline VarData mkVarData(CRef cr, int l)
     {
         VarData d(cr, l, lit_Undef, -1);
+        return d;
+    }
+    
+    static inline VarData mkVarData(Lit reasonLiteral, int l)
+    {
+        VarData d(reasonLiteral, l, lit_Undef, -1);
         return d;
     }
 
@@ -760,8 +792,11 @@ class Solver
     Lit      pickBranchLit();                                                          // Return the next decision variable.
     void     newDecisionLevel();                                                       // Begins a new decision level.
 
+    
     void     uncheckedEnqueue(Lit p, CRef from = CRef_Undef,                           // Enqueue a literal. Assumes value of literal is undefined.
                               bool addToProof = false, const unsigned dependencyLevel = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
+    void     uncheckedEnqueue(Lit p, Lit fromLit, bool addToProof = true, const unsigned dependencyLevel = 0); // same as the above method, but uses literal as the reason
+                              
     bool     enqueue(Lit p, CRef from = CRef_Undef);                                   // Test if fact 'p' contradicts current state, enqueue otherwise.
 
     CRef     propagate(bool duringAddingClauses = false);                              // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
@@ -773,6 +808,8 @@ class Solver
 
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
 
+    void updateMetricsDuringAnalyze( const Lit p, const CRef cr, Clause& c, bool& foundFirstLearnedClause, unsigned int& dependencyLevel ); /// update metrics based on the current clause we are using
+    
   public:
     /** Main solve method (assumptions given in 'assumptions')
      * @param preprocessCall control how to perform initialization and preprocessing
@@ -832,7 +869,8 @@ class Solver
     //
     int      decisionLevel()      const;     // Gives the current decisionlevel.
     uint32_t abstractLevel(Var x) const;     // Used to represent an abstraction of sets of decision levels.
-    CRef     reason(Var x) const;
+    ReasonStruct& reason(Var x);
+    const ReasonStruct& reason(Var x) const ;
     int      level(Var x) const;
     double   progressEstimate()      const;  // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget()      const;
@@ -1638,7 +1676,9 @@ class Solver
 //=================================================================================================
 // Implementation of inline methods:
 
-inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
+inline Solver::ReasonStruct& Solver::reason(Var x)       { return vardata[x].reason; }
+inline const Solver::ReasonStruct& Solver::reason(Var x) const { return vardata[x].reason; }
+
 inline int  Solver::level(Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x)
@@ -1702,12 +1742,21 @@ inline bool     Solver::addClause(Lit p, Lit q, Lit r)   { add_tmp.clear(); add_
 inline bool     Solver::locked(const Clause& c) const
 {
     if (c.size() > 2) {
-        return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
+        return value(c[0]) == l_True
+          && ! reason(var(c[0])).isBinaryClause()
+          && reason(var(c[0])).getReasonC() != CRef_Undef 
+          && ca.lea( reason(var(c[0])).getReasonC() ) == &c;
     }
     return
-        (value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c)
+        (value(c[0]) == l_True 
+        && ! reason(var(c[0])).isBinaryClause()
+        && reason(var(c[0])).getReasonC() != CRef_Undef 
+        && ca.lea( reason(var(c[0])).getReasonC() ) == &c)
         ||
-        (value(c[1]) == l_True && reason(var(c[1])) != CRef_Undef && ca.lea(reason(var(c[1]))) == &c);
+        (value(c[1]) == l_True 
+        && ! reason(var(c[1])).isBinaryClause()
+        && reason(var(c[1])).getReasonC() != CRef_Undef 
+        && ca.lea( reason(var(c[1])).getReasonC()  ) == &c);
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size());}
 

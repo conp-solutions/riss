@@ -21,7 +21,7 @@ param="-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -cp3_fm_vMulAMO -unhide 
 # run riss without printing a proof
 #gdb --args ./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? 
 echo "c call: ./riss $1 -mem-lim=2048 $param"
-./faultyRiss510 $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? #> /dev/null 2> /dev/null
+./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? #> /dev/null 2> /dev/null
 #./pcasso $1 -mem-lim=2048 $param #> /dev/null 2> /dev/null
 status=$?
 cat /tmp/riss-out-$$

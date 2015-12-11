@@ -198,11 +198,13 @@ void ExperimentalTechniques::reSetupSolver()
     assert(solver.decisionLevel() == 0 && "solver can be re-setup only at level 0!");
     // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
     if (solver.trail_lim.size() > 0)
-        for (int i = 0 ; i < solver.trail_lim[0]; ++ i)
-            if (solver.reason(var(solver.trail[i])) != CRef_Undef)
-                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted()) {
-                    solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
+        for (int i = 0 ; i < solver.trail_lim[0]; ++ i) {
+	  Solver::ReasonStruct& reason = solver.reason(var(solver.trail[i]));
+            if (! reason.isBinaryClause() && reason.getReasonC() != CRef_Undef)
+                if (ca[ reason.getReasonC() ].can_be_deleted()) {
+                    reason.setReason( CRef_Undef );
                 }
+	}
 
     // give back into solver
     for (int p = 0 ; p < 1; ++ p) {   // do not use learned clauses, because they might be dropped without any notice later again

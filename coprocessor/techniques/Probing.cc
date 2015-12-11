@@ -361,6 +361,8 @@ bool Probing::prAnalyze(CRef confl)
     unsigned uips = 0;
     unsigned loops = 0;
 
+    Solver::ReasonStruct reason( confl );
+    
     // Generate conflict clause:
     //
     data.lits.clear();
@@ -369,26 +371,26 @@ bool Probing::prAnalyze(CRef confl)
     int index   = solver.trail.size() - 1;
 
     DOUT(if (config.pr_debug_out > 2) {
-    for (int i = 0 ; i < ca[confl].size(); ++ i) {
-            assert(solver.varFlags[ var(ca[confl][i]) ].seen == 0 && "value cannot be true!");
+    for (int i = 0 ; i < ca[ reason.getReasonC() ].size(); ++ i) {
+            assert(solver.varFlags[ var(ca[reason.getReasonC()][i]) ].seen == 0 && "value cannot be true!");
         }
     });
 
     do {
-        DOUT(if (config.pr_debug_out > 3) cerr << "c next conflict [" << confl << "] with pathC= " << pathC << " and level " << solver.decisionLevel() << endl;);
-        assert(confl != CRef_Undef); // (otherwise should be UIP)
+        DOUT(if (config.pr_debug_out > 3) cerr << "c next conflict [" << reason.getReasonC() << "] with pathC= " << pathC << " and level " << solver.decisionLevel() << endl;);
+        assert(  reason.getReasonC() != CRef_Undef); // (otherwise should be UIP)
 
         DOUT(if (config.pr_debug_out > 3) {
         cerr << "c use for resolution " ;
-        for (int i = 0 ; i < ca[confl].size(); ++ i) { cerr << " " << ca[confl][i] << "@" << solver.level(var(ca[confl][i])) ; }
+        for (int i = 0 ; i < ca[reason.getReasonC()].size(); ++ i) { cerr << " " << ca[reason.getReasonC()][i] << "@" << solver.level(var(ca[reason.getReasonC()][i])) ; }
             cerr << endl;
         });
 
         loops ++;
         // take care of level 2 decision!
-        if (confl != CRef_Undef) {
+        if (reason.getReasonC() != CRef_Undef) {
 
-            Clause& c = ca[confl];
+            Clause& c = ca[reason.getReasonC()];
 
             // Special case for binary clauses
             // The first one has to be SAT
@@ -420,7 +422,7 @@ bool Probing::prAnalyze(CRef confl)
         // Select next clause to look at:
         while (!solver.varFlags[var(solver.trail[index--])].seen) ;
         p     = solver.trail[index + 1];
-        confl = solver.reason(var(p));
+        reason = solver.reason(var(p));
         assert(solver.varFlags[var(p)].seen == 1 && "this variable should have been inside the clause");
         solver.varFlags[var(p)].seen = 0;
         DOUT(if (config.pr_debug_out > 2) cerr << "c reset seen INT for " << var(p) + 1 << endl;);
@@ -774,97 +776,7 @@ void Probing::cleanSolver()
 
 void Probing::reSetupSolver()
 {
-
-    DOUT(if (config.pr_debug_out > 1) {
-    cerr << "c formula before resetup: " << endl;
-    for (int i = 0 ; i < solver.clauses.size(); ++ i) {
-            const CRef cr = solver.clauses[i];
-            const Clause& c = ca[cr];
-            if (c.can_be_deleted()) { continue; }
-            cerr << "[" << cr << "] : " << c << endl;
-        }
-    });
-
-    assert(solver.decisionLevel() == 0 && "solver can be re-setup only at level 0!");
-    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
-    if (solver.trail_lim.size() > 0)
-        for (int i = 0 ; i < solver.trail_lim[0]; ++ i)
-            if (solver.reason(var(solver.trail[i])) != CRef_Undef)
-                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted()) {
-                    solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
-                }
-
-    // give back into solver
-    for (int p = 0 ; p < 2; ++ p) {
-        vec<CRef>& clauses = (p == 0 ? solver.clauses : solver.learnts);
-        for (int i = 0; i < clauses.size(); ++i) {
-            const CRef cr = clauses[i];
-            Clause& c = ca[cr];
-            assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
-            if (!c.can_be_deleted()) {   // all clauses are neccesary for re-setup!
-                assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
-                if (c.size() > 1) {
-                    DOUT(if (config.pr_debug_out > 1) cerr << "c resetup clause [" << i << "](" << cr << ")" << c << endl;);
-                    // do not watch literals that are false!
-                    int j = 1;
-                    for (int k = 0 ; k < 2; ++ k) {   // ensure that the first two literals are undefined!
-                        if (solver.value(c[k]) == l_False) {
-                            for (; j < c.size() ; ++j)
-                                if (solver.value(c[j]) != l_False)
-                                { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
-                        }
-                    }
-                    // assert( (solver.value( c[0] ) != l_False || solver.value( c[1] ) != l_False) && "Cannot watch falsified literals" );
-
-                    // reduct of clause is empty, or unit
-                    if (solver.value(c[0]) == l_False) { data.setFailed(); return; }
-                    else if (solver.value(c[1]) == l_False) {
-                        if (data.enqueue(c[0]) == l_False) {
-                            DOUT(if (config.pr_debug_out > 2) cerr  << "enqueing " << c[0] << " failed." << endl;);
-                            return;
-                        } else {
-                            DOUT(if (config.pr_debug_out > 2) cerr << "enqueued " << c[0] << " successfully" << endl;);
-                            c.set_delete(true);
-                        }
-                        if (solver.propagate() != CRef_Undef) { data.setFailed(); return; }
-                        c.set_delete(true);
-                    } else { solver.attachClause(cr); }
-                } else if (solver.value(c[0]) == l_Undef)
-                    if (data.enqueue(c[0]) == l_False) { return; }
-                    else if (solver.value(c[0]) == l_False) {
-                        // assert( false && "This UNSAT case should be recognized before re-setup" );
-                        data.setFailed();
-                    }
-            }
-        }
-    }
-
-
-    if (false) {
-        cerr << "c trail before probing: ";
-        for (int i = 0 ; i < solver.trail.size(); ++i) {
-            cerr << solver.trail[i] << " " ;
-        }
-        cerr << endl;
-
-        if (true) {
-            cerr << "formula: " << endl;
-            for (int i = 0 ; i < data.getClauses().size(); ++ i)
-                if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
-            for (int i = 0 ; i < data.getLEarnts().size(); ++ i)
-                if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
-        }
-
-        cerr << "c watch lists: " << endl;
-        for (int v = 0; v < solver.nVars(); v++)
-            for (int s = 0; s < 2; s++) {
-                const Lit l = mkLit(v, s == 0 ? false : true);
-                cerr << "c watch for " << l << endl;
-                for (int i = 0; i < solver.watches[ l ].size(); ++ i) {
-                    cerr << ca[solver.watches[l][i].cref()] << endl;
-                }
-            }
-    }
+    data.reSetupSolver();
 }
 
 

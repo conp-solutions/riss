@@ -1,6 +1,7 @@
-/*******************************************************************************************[Vec.h]
+/*****************************************************************************************[HPVec.h]
 Copyright (c) 2003-2007, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
+Copyright (c) 2015, Norbert Manthey
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -18,34 +19,34 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef RISS_Minisat_Vec_h
-#define RISS_Minisat_Vec_h
+#ifndef RISS_HUGEPAGEVEC_h
+#define RISS_HUGEPAGEVEC_h
 
 #include <assert.h>
 #include <new>
 #include <string.h>
 
 #include "riss/mtl/IntTypes.h"
-#include "riss/mtl/XAlloc.h"
+#include "riss/mtl/HugePageAlloc.h"
 
 namespace Riss
 {
 
 //=================================================================================================
-// Automatically resizable arrays
+// Automatically resizable arrays, relying on huge pages
 //
 // NOTE! Don't use this std::vector on datatypes that cannot be re-located in memory (with realloc)
 
 template<class T>
-class vec
+class HugePageVec
 {
     T*  data;
     int sz;
     int cap;
 
     // Don't allow copying (error prone):
-    vec<T>&  operator = (vec<T>& other) { assert(0); return *this; }
-    vec(vec<T>& other) { assert(0); }
+    vec<T>&  operator = (HugePageVec<T>& other) { assert(0); return *this; }
+    HugePageVec(HugePageVec<T>& other) { assert(0); }
 
     // Helpers for calculating next capacity:
     static inline int  imax(int x, int y) { int mask = (y - x) >> (sizeof(int) * 8 - 1); return (x & mask) + (y & (~mask)); }
@@ -54,10 +55,10 @@ class vec
 
   public:
     // Constructors:
-    vec()                       : data(nullptr) , sz(0)   , cap(0)    { }
-    explicit vec(int size)      : data(nullptr) , sz(0)   , cap(0)    { growTo(size); }
-    vec(int size, const T& pad) : data(nullptr) , sz(0)   , cap(0)    { growTo(size, pad); }
-    ~vec()                                                          { clear(true); }
+    HugePageVec()                       : data(nullptr) , sz(0)   , cap(0)    { }
+    explicit HugePageVec(int size)      : data(nullptr) , sz(0)   , cap(0)    { growTo(size); }
+    HugePageVec(int size, const T& pad) : data(nullptr) , sz(0)   , cap(0)    { growTo(size, pad); }
+    ~HugePageVec()                                                          { clear(true); }
 
     // Pointer to first element:
     operator T*       (void)           { return data; }
@@ -92,17 +93,17 @@ class vec
     T&       operator [](int index)       { assert(0 <= index && index < sz); return data[index]; }
 
     // Duplicatation (preferred instead):
-    void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; }  }
-    void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
+    void copyTo(HugePageVec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; }  }
+    void moveTo(HugePageVec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */
     void fitSize() {
       cap = sz;
-      data = (T*)::realloc(data, (cap) * sizeof(T));
+      data = (T*)realloc_huge_pages(data, (cap) * sizeof(T));
     }
 
     /** swap content of two vectors */
-    void swap(vec< T >& other)
+    void swap(HugePageVec< T >& other)
     {
         T*  tmpdata = other.data;
         const int tmpsz   = other.sz;
@@ -125,18 +126,18 @@ class vec
 
 
 template<class T>
-void vec<T>::capacity(int min_cap)
+void HugePageVec<T>::capacity(int min_cap)
 {
     if (cap >= min_cap) { return; }
     int add = imax((min_cap - cap + 1) & ~1, ((cap >> 1) + 2) & ~1);   // NOTE: grow by approximately 3/2
-    if (add > INT_MAX - cap || ((data = (T*)::realloc(data, (cap += add) * sizeof(T))) == nullptr) && errno == ENOMEM) {
+    if (add > INT_MAX - cap || ((data = (T*)realloc_huge_pages(data, (cap += add) * sizeof(T))) == nullptr) && errno == ENOMEM) {
         throw OutOfMemoryException();
     }
 }
 
 
 template<class T>
-void vec<T>::growTo(int size, const T& pad)
+void HugePageVec<T>::growTo(int size, const T& pad)
 {
     if (sz >= size) { return; }
     capacity(size);
@@ -146,7 +147,7 @@ void vec<T>::growTo(int size, const T& pad)
 
 
 template<class T>
-void vec<T>::growTo(int size)
+void HugePageVec<T>::growTo(int size)
 {
     if (sz >= size) { return; }
     capacity(size);
@@ -156,12 +157,12 @@ void vec<T>::growTo(int size)
 
 
 template<class T>
-void vec<T>::clear(bool dealloc)
+void HugePageVec<T>::clear(bool dealloc)
 {
     if (data != nullptr) {
         for (int i = 0; i < sz; i++) { data[i].~T(); }
         sz = 0;
-        if (dealloc) { free(data), data = nullptr, cap = 0; }
+        if (dealloc) { free_huge_pages(data), data = nullptr, cap = 0; }
     }
 }
 

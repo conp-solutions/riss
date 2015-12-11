@@ -300,7 +300,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
                         pathC++;
                         #ifdef UPDATEVARACTIVITY
                         // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-                        if ((reason(var(q)) != CRef_Undef)  && ca[reason(var(q))].learnt()) {
+                        if ((reason(var(q)).getReasonC() != CRef_Undef)  && ca[reason(var(q)).getReasonC() ].learnt()) {
                             lastDecisionLevel.push(q);
                         }
                         #endif
@@ -338,7 +338,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         // Select next clause to look at:
         while (!varFlags[var(trail[index--])].seen);
         p     = trail[index + 1];
-        confl = reason(var(p));
+        confl = reason(var(p)).getReasonC();
         varFlags[var(p)].seen = 0;
         pathC--;
 
@@ -371,7 +371,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
             abstract_level |= abstractLevel(var(out_learnt[i]));    // (maintain an abstraction of levels involved in conflict)
         }
         for (i = j = 1; i < out_learnt.size(); i++)
-            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level)) {
+            if (reason(var(out_learnt[i])).getReasonC() == CRef_Undef || !litRedundant(out_learnt[i], abstract_level)) {
                 out_learnt[j++] = out_learnt[i];
             }
 
@@ -393,10 +393,10 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         for (i = j = 1; i < out_learnt.size(); i++) {
             Var x = var(out_learnt[i]);
 
-            if (reason(x) == CRef_Undef /*|| (vardata[x].pt_level > PTLevel)*/) { // Davide> If not safe, the literal cannot be removed if its level is bigger than the clause to be learnt ( EDITED )
+            if (reason(x).getReasonC() == CRef_Undef /*|| (vardata[x].pt_level > PTLevel)*/) { // Davide> If not safe, the literal cannot be removed if its level is bigger than the clause to be learnt ( EDITED )
                 out_learnt[j++] = out_learnt[i];
             } else {
-                Clause& c = ca[reason(x)];
+                Clause& c = ca[reason(x).getReasonC()];
                 if (c.getPTLevel() <= PTLevel) { // Davide> the clause is safe
                     for (int k = 1; k < c.size(); k++)
                         if (!varFlags[var(c[k])].seen)
@@ -542,7 +542,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
     if (lastDecisionLevel.size() > 0) {
         for (int i = 0; i < lastDecisionLevel.size(); i++) {
-            if (ca[reason(var(lastDecisionLevel[i]))].lbd() < lbd) {
+            if (ca[reason(var(lastDecisionLevel[i])).getReasonC() ].lbd() < lbd) {
                 varBumpActivity(var(lastDecisionLevel[i]));
             }
         }
@@ -746,8 +746,8 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0) {
-        assert(reason(var(analyze_stack.last())) != CRef_Undef);
-        Clause& c = ca[reason(var(analyze_stack.last()))];
+        assert(reason(var(analyze_stack.last())).getReasonC() != CRef_Undef);
+        Clause& c = ca[ reason(var(analyze_stack.last())).getReasonC() ];
         //CRef cr = reason(var(analyze_stack.last()));
         analyze_stack.pop();
         if (c.size() == 2 && value(c[0]) == l_False) {
@@ -759,7 +759,7 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
         for (int i = 1; i < c.size(); i++) {
             Lit p  = c[i];
             if (!varFlags[var(p)].seen && level(var(p)) > 0) {
-                if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0) {
+                if (reason(var(p)).getReasonC() != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0) {
                     varFlags[var(p)].seen = 1;
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
