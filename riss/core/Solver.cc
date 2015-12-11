@@ -1602,34 +1602,45 @@ void Solver::reduceDB()
     }
 
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
-    
-    if( true ) {
-	double avgAct = 0, stddevAct = 0, avgLBD = 0, stddevLBD = 0, avgSIZE = 0, stddevSIZE = 0;
-	double count = 0;
-	for( int i = 0 ; i < learnts.size(); ++ i ) { // calc avg and stddev incrementally in one round
-	  Clause& c = ca[ learnts[i] ];
-	  if( c.mark() == 0 && c.learnt() ) {
-	    count ++;
-	    const double deltaAct = c.activity() - avgAct;
-	    avgAct = avgAct + deltaAct / count;
-	    stddevAct = stddevAct + deltaAct * (c.activity() - avgAct); 
-	    const double deltaLBD = c.lbd() - avgLBD;
-	    avgLBD = avgLBD + deltaLBD / count;
-	    stddevLBD = stddevLBD + deltaLBD * (c.lbd() - avgLBD); 
-	    const double deltaSIZE = c.size() - avgSIZE;
-	    avgSIZE = avgSIZE + deltaSIZE / count;
-	    stddevSIZE = stddevSIZE + deltaSIZE * (c.size() - avgSIZE); 
-	  }
-	}
-        stddevAct = (count > 1) ? stddevAct / (count - 1) : 0.0;
-	stddevLBD = (count > 1) ? stddevLBD / (count - 1) : 0.0;
-	stddevSIZE = (count > 1) ? stddevSIZE / (count - 1) : 0.0;
-	cerr << "c learnts data: avgActivity: " << avgAct << " stddevActivity: " << stddevAct << " avgLBD: " << avgLBD << " stddevLBD: " << stddevLBD  << " avgSIZE: " << avgSIZE << " stddevSIZE: " << stddevSIZE << endl;
-    }
-    
-    if (! activityBasedRemoval ) { sort(learnts, reduceDB_lbd_lt(ca)); }   // sort size 2 and lbd 2 to the back!
-    else { sort(learnts, reduceDB_act_lt(ca)); }  // sort size 2 
 
+    if (! activityBasedRemoval ) { sort(learnts, reduceDB_lbd_lt(ca)); }   // sort size 2 and lbd 2 to the back!
+    else { 
+      
+      // automatically choose between activity and LBD based removal!
+      bool useAct = true;
+      if( config.opt_avg_size_lbd_ratio != 0 ) { // only perform, if operation is allowed
+	  double avgLBD = 0, stddevLBD = 0, avgSIZE = 0, stddevSIZE = 0;
+	  double count = 0;
+	  for( int i = 0 ; i < learnts.size(); ++ i ) { // calc avg and stddev incrementally in one round
+	    Clause& c = ca[ learnts[i] ];
+	    if( c.mark() == 0 && c.learnt() ) {
+	      count ++;
+	      const double deltaLBD = c.lbd() - avgLBD;
+	      avgLBD = avgLBD + deltaLBD / count;
+	      stddevLBD = stddevLBD + deltaLBD * (c.lbd() - avgLBD); 
+	      const double deltaSIZE = c.size() - avgSIZE;
+	      avgSIZE = avgSIZE + deltaSIZE / count;
+	      stddevSIZE = stddevSIZE + deltaSIZE * (c.size() - avgSIZE); 
+	    }
+	  }
+	  stddevLBD = (count > 1) ? stddevLBD / (count - 1) : 0.0;
+	  stddevSIZE = (count > 1) ? stddevSIZE / (count - 1) : 0.0;
+	  
+	  // choose value based on ratio. negative ratio means that comparison is in the oposite direction
+	  useAct = false;
+	  if( config.opt_avg_size_lbd_ratio > 0 && stddevLBD * config.opt_avg_size_lbd_ratio > stddevSIZE ) {
+	    useAct = true;
+	  }
+	  else if ( config.opt_avg_size_lbd_ratio < 0 && stddevLBD * -config.opt_avg_size_lbd_ratio < stddevSIZE ) {
+	    useAct = true;
+	  }
+	  
+      }      
+      if( useAct ) sort(learnts, reduceDB_act_lt(ca));
+      else sort(learnts, reduceDB_lbd_lt(ca));
+    } 
+    
+    
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
     if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
     // Useless :-)

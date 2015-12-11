@@ -144,6 +144,7 @@ class CoreConfig : public Config
     IntOption     opt_cir_bump;
 
     BoolOption   opt_act_based;
+    DoubleOption opt_avg_size_lbd_ratio;
     IntOption    opt_lbd_core_thresh;
     DoubleOption opt_l_red_frac;
     IntOption    opt_keep_permanent_size;

@@ -125,16 +125,16 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_var_act_bump_mode       (_cs,    "varActB",              "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2),                 optionListPtr),
     opt_cls_act_bump_mode       (_cs,    "clsActB",              "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
 
-    opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences", true,                                                                             optionListPtr),
-    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse)", 1, IntRange(0, 2) ,                                                     optionListPtr),
-    opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
-    opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
-    opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
-    opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away", false,                                                              optionListPtr),
-    opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits", false,                                                                                     optionListPtr),
-    opt_keepLonger              ("CLAUSE SHARING", "keepLonger", "keep clauses for at least one remove round", false,                                                                     optionListPtr),
-    opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio", 0, DoubleRange(-10, true, 1, true), optionListPtr),
-    opt_useOriginal             ("CLAUSE SHARING", "independent",  "work on parsed formula (ignore global simplification, sharing currently unsound)", false,                               optionListPtr),
+    opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences #NoAutoT", true,                                                                             optionListPtr),
+    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse) #NoAutoT", 1, IntRange(0, 2) ,                                                     optionListPtr),
+    opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes #NoAutoT", false,                                                                             optionListPtr),
+    opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification) #NoAutoT", false,                                                                         optionListPtr),
+    opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again #NoAutoT", false,                                                                                    optionListPtr),
+    opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away #NoAutoT", false,                                                              optionListPtr),
+    opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits #NoAutoT", false,                                                                                     optionListPtr),
+    opt_keepLonger              ("CLAUSE SHARING", "keepLonger", "keep clauses for at least one remove round #NoAutoT", false,                                                                     optionListPtr),
+    opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio #NoAutoT", 0, DoubleRange(-10, true, 1, true), optionListPtr),
+    opt_useOriginal             ("CLAUSE SHARING", "independent",  "work on parsed formula (ignore global simplification, sharing currently unsound) #NoAutoT", false,                             optionListPtr),
 
     opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
 
@@ -143,10 +143,11 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
     opt_cir_bump            ("cir-minisat", "cir-bump",          "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX),                         optionListPtr),
 
-    opt_act_based           ("999HACK",     "act-based",         "use activity for learned clauses", false,                                                                               optionListPtr),
-    opt_lbd_core_thresh     ("999HACK",     "lbd-core-th",       "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX),                                 optionListPtr),
-    opt_l_red_frac          ("999HACK",     "reduce-frac",       "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, 1, false),                   optionListPtr),
-    opt_keep_permanent_size ("999HACK",     "size-core",         "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX),                                optionListPtr),
+    opt_act_based           ("999HACK",     "act-based",          "use activity for learned clauses", false,                                                                               optionListPtr),
+    opt_avg_size_lbd_ratio  ("999HACK",     "act-lbd-size-ratio", "still use LBD for removal, if stddevLBD * X < stddevSize (if X is negative, invert comparison)", 0, DoubleRange(-10, true, 10, true), optionListPtr, &opt_act_based),
+    opt_lbd_core_thresh     ("999HACK",     "lbd-core-th",        "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX),                                 optionListPtr),
+    opt_l_red_frac          ("999HACK",     "reduce-frac",        "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, 1, false),                   optionListPtr),
+    opt_keep_permanent_size ("999HACK",     "size-core",          "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX),                                optionListPtr),
 
     opt_updateLearnAct      (_cm,           "updLearnAct",       "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true,                                             optionListPtr),
 
