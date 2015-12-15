@@ -499,18 +499,22 @@ int Graph::gettreewidth(){
 bool Graph::improved_recursive_treewidth(int k){
   
   bool check, tbool;
+  vector<int> nodes;
+  vector<int> empty_vec;
+  
+  for(int a=0; a<node.size(); ++a) nodes.push_back(a);
   
    if(node.size() <= k+1) return true;
    
   else if(k<= 0.25*node.size() || k>= 0.4203*node.size()){
-     vector<vector<int>> sets  = getSets(k+1);
+     vector<vector<int>> sets  = getSets(nodes, k+1);
      
      for(int i=0; i<sets.size(); ++i){
      vector<vector<int>> components = getConnectedComponents(sets[i]);
      check = true;
        for(int j=0;j<components.size();++j){
        
-	 if(components[j] > (node.size() - sets[i].size +1)/2) check = false;
+	 if(components[j].size() > (node.size() - sets[i].size() +1)/2) check = false;
 	 
       }
       
@@ -518,7 +522,7 @@ bool Graph::improved_recursive_treewidth(int k){
 
       for(int j=0;j<components.size();++j){
       
-	tbool = (tbool || (recursive_treewidth <= k));
+	tbool = (tbool || (recursive_treewidth(empty_vec,components[j]) <= k));
 	
       }
       
@@ -528,14 +532,14 @@ bool Graph::improved_recursive_treewidth(int k){
   }
   else{
   
-    vector<vector<int>> sets  = getSets(0.4203*node.size());
+    vector<vector<int>> sets  = getSets(nodes, 0.4203*node.size());
     
     for(int i=0; i<sets.size(); ++i){
      vector<vector<int>> components = getConnectedComponents(sets[i]);
      check = true;
        for(int j=0;j<components.size();++j){
        
-	 if(components[j] > (node.size() - sets[i].size +1)/2) check = false;
+	 if(components[j].size() > (node.size() - sets[i].size() +1)/2) check = false;
 	 
       }
       
@@ -543,15 +547,16 @@ bool Graph::improved_recursive_treewidth(int k){
       
 	Graph *Graph_plus = new Graph(sets[i].size(), true);
 	
-	Riss::MarkArray visited;
-        visited.create(node.size());
-        visited.nextStep();
-	for(int a=0; a<sets[i].size(); a++) visited.setCurrentStep(sets[i][a]); //dont look at nodes, that are in the set
+	tbool = Graph_plus->improved_recursive_treewidth(k);
 	
-	for(int b = 0; b <sets[i].size();b++){
+	vector<vector<int>> components = getConnectedComponents(sets[i]);
 	
-	  
+	for(int j=0; j<components.size(); ++j){
+	
+	 tbool = (tbool || (recursive_treewidth(empty_vec,components[j]) <= k));
 	}
+	
+	if(tbool) return true;
 	
       }
     
@@ -559,6 +564,125 @@ bool Graph::improved_recursive_treewidth(int k){
  }
   
   return false;
+}
+
+int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& component){
+
+  vector<int> newcomponent, newLset;
+  newLset = Lset;
+  bool toadd;
+  int tmp;
+  Riss::MarkArray visited;
+  visited.create(node.size());
+  visited.nextStep();
+  
+  if(component.size() == 1){
+    
+    int Q = 0;
+    bool wbool, vbool;
+    
+     for(int i = 0 ; i< node.size(); ++i){
+     toadd = true;
+     
+      if(i == component[0]) toadd = false; continue;
+      for(int j =0; j< Lset[j]; ++j) if(i == Lset[j]) toadd = false; break;
+     
+       if(toadd) newcomponent.push_back(i);
+       }
+       
+       vector<vector<int>> G = getConnectedComponents(newcomponent);
+       
+       for(int w=0; w<newcomponent.size();++w){
+        
+	 if(visited.isCurrentStep(newcomponent[w])) continue;
+	 
+	 const adjacencyList& adj = node[w];
+	 for(int k =0; k< adj.size(); ++k){
+	 
+	   for(int x =0; x < G.size(); ++x){
+	     wbool =false;
+	     vbool =false;
+	    for(int y =0; y< G[x].size(); ++y){
+	      if(component[0] == G[x][y]) vbool = true;
+	      if(adj[k].first == G[x][y]) wbool = true;
+	      if(!visited.isCurrentStep(newcomponent[w])){
+	      
+		visited.setCurrentStep(newcomponent[w]);
+		Q++;
+	      }
+	    }
+	     
+	  }
+	}
+      }
+      
+      return Q;
+      
+   }
+   
+   int Opt = numeric_limits<int>::max();
+   
+   vector<vector<int>> sets  = getSets(component, component.size()/2);
+   
+   for(int k =0; k< sets.size(); ++k){
+   
+     int v1 = recursive_treewidth(Lset ,sets[k]);
+     tmp = v1;
+     
+     for(int i = 0 ; i< component.size(); ++i){
+     toadd = true;
+      for(int j =0; j< sets[k].size(); ++j){
+	if(component[i] == sets[k][j]) toadd = false; break; 
+        newLset.push_back(sets[k][j]);
+	
+      }
+      if(toadd) newcomponent.push_back(i);
+       }
+     
+     
+     int v2 = recursive_treewidth(newLset, newcomponent);
+     
+     if(v2 > v1) tmp = v2;
+     if(tmp < Opt) Opt = tmp;
+     
+  }
+  
+  return Opt;
+  
+}
+
+void Graph::compute_G_plus(Graph*& Graph_plus ,const vector<int>& set){
+
+  vector<vector<int>> connected = getConnectedComponents(set);
+	
+	int node1, node2;
+	bool nod1, nod2;
+	
+	
+	for(int j = 0; j < set.size(); ++j){
+	  node1 = set[j];
+	  const adjacencyList& adj1 =node[node1];
+	  for(int k = set.size() -1; k > j; ++k){
+	    
+	    node2 = set[k];
+	    const adjacencyList& adj2 =node[node2];
+	    
+	    for(int l =0; l < connected.size(); ++l){
+	      nod1 = false;
+	      nod2 = false;
+	     for(int m=0; m < connected[l].size(); ++m){
+	       for(int n=0; n < adj1.size(); ++n) if(m == adj1[n].first) nod1 = true;
+	       for(int n=0; n < adj2.size(); ++n) if(m == adj2[n].first) nod2 = true;
+	       if(nod1 && nod2) Graph_plus->addUndirectedEdge(j,k);
+	       
+	    }
+	      
+	    }
+	    
+	  }
+	  
+	}
+  
 }
 
 vector<vector<int>> Graph::getConnectedComponents(const vector<int>& set){ //connected components without set
@@ -602,28 +726,28 @@ return components;
 
 }
 
-vector<vector<int>> Graph::getSets(int k){
+vector<vector<int>> Graph::getSets(const vector<int>& nodes, int k){
   vector<vector<int>> sets;
   vector<int> set;
   
-  for(int i=0;i<node.size()-k;i++){
-    set.push_back(node[i].first);
+  for(int i=0;i<nodes.size()-k;i++){
+    set.push_back(nodes[i]);
     k--;
-    for(int j=1; i+j<=node.size()-k;++j){
-    getallcombinations(set, sets, k-1, i+j);
+    for(int j=1; i+j<=nodes.size()-k;++j){
+    getallcombinations(nodes ,set, sets, k-1, i+j);
     }
   }
   
   return sets;
 }
 
-void Graph::getallcombinations(vector<int> set,vector<vector<int>>& sets, int k, int position){
+void Graph::getallcombinations(const vector<int>& nodes,vector<int> set,vector<vector<int>>& sets, int k, int position){
   
-    set.push_back(node[position].first);
+    set.push_back(nodes[position]);
     
     if(k>0){
-    for(int i=1;node.size()-position-k>=i;++i){
-    getallcombinations(set, sets, k-1, position+i);
+    for(int i=1;nodes.size()-position-k>=i;++i){
+    getallcombinations(nodes, set, sets, k-1, position+i);
     }
    }
    else sets.push_back(set);

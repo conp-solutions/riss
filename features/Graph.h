@@ -22,11 +22,13 @@ typedef std::vector<edge> adjacencyList;
 class Graph
 {
   private:
+    int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
+    void compute_G_plus(Graph*& Graph_plus, const std::vector<int>& set);
     std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
-    void getallcombinations(std::vector<int>& set,std::vector<std::vector<int>>& sets, int k, int position);
+    void getallcombinations(const std::vector<int>& nodes,std::vector<int> set,std::vector<std::vector<int>>& sets, int k, int position);
     bool improved_recursive_treewidth(int k);
     void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
-    std::vector<std::vector<int>> getSets(int k);
+    std::vector<std::vector<int>> getSets(const std::vector<int>& nodes, int k);
     void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
     int size;
     std::vector<adjacencyList> node;
