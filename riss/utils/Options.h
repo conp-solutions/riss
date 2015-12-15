@@ -52,7 +52,7 @@ extern void configCall(int argc, char** argv, std::stringstream& s);
 // print global options in PCS file format into the given File
 extern void printOptions(FILE* pcsFile, int printLevel = -1, int granularity = 0);
 /// print option dependencies in PCS file format into the given File, add #NoAutoT to the description if an option should be excluded
-extern void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
+extern void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity);
 
 /**
 * Options is an abstract class that gives the interface for all types options:
@@ -125,28 +125,28 @@ class Option
         else { return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled(); }
     }
 
-    virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
+    virtual bool canPrintOppositeOfDefault(int granularity) = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
 
     /// print the option (besides debug, can be overwritten by specific types, useful for strings)
     virtual bool wouldPrintOption() const { return description != 0 && 0 == strstr(description, "#NoAutoT"); }
 
-    void printOptionsDependencies(FILE* pcsFile, int printLevel)
+    void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }  // do not print this option, as its dependency is too deep
         if (dependOnNonDefaultOf == 0) { return; } // no dependency
-        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }     // cannot express opposite value of dependency-parent
+        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault(granularity)) { return; }     // cannot express opposite value of dependency-parent
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }                                             // do not print the parameter, if its is related to debug output
         if (strstr(dependOnNonDefaultOf->name, "debug") != 0 || strstr(dependOnNonDefaultOf->description, "debug") != 0) { return; } // do not print the parameter, if its parent is related to debug output
         if (!wouldPrintOption()) { return; }  // do not print this option
         if (!dependOnNonDefaultOf->wouldPrintOption()) { return; }  // do not print parent option
 
         char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
-        dependOnNonDefaultOf->getNonDefaultString(defaultAsString, 2047);
+        dependOnNonDefaultOf->getNonDefaultString(granularity,defaultAsString, 2047);
         assert(strlen(defaultAsString) < 2047 && "memory overflow");
         fprintf(pcsFile, "%s   | %s in {%s} #  only active, if %s has not its default value \n", name, dependOnNonDefaultOf->name, defaultAsString, dependOnNonDefaultOf->name);
     }
 
-    virtual void getNonDefaultString(char* buffer, int size) = 0;   // convert the default value into a string
+    virtual void getNonDefaultString(int granularity, char* buffer, int size) = 0;   // convert the default value into a string
 
     friend  bool parseOptions(int& argc, char** argv, bool strict);
     friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
@@ -277,17 +277,20 @@ class DoubleOption : public Option
         } else { // print linear distributed sampling for double option
             fprintf(pcsFile, "%s  {", name); // print name
             double diff = (endValue - (range.begin + badd)) / (double)granularity;
+	    bool hitDefault = false;
             for (double v = range.begin + badd; v <= endValue; v += diff) {
                 if (v != range.begin + badd) { fprintf(pcsFile, ","); }   // print comma, if there will be more and we printed one item already
                 fprintf(pcsFile, "%lf", v); // print current value
+		if( v == defaultValue ) hitDefault = true;
             }
+            if( ! hitDefault ) fprintf(pcsFile, ",%lf", defaultValue); // print default value of option as well!
             fprintf(pcsFile, "} [%lf]    # %s\n", value, description);
         }
     }
 
-    virtual bool canPrintOppositeOfDefault() { return false; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return false; }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
         // snprintf(buffer, size, "%lf", defaultValue); // could only print the default value
         return;
@@ -383,17 +386,8 @@ class IntOption : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel, int granularity)
-    {
-        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
-        if (! wouldPrintOption()) { return; }   // do not print option?
-
-        // print only, if there is a default
-        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        if (granularity != 0) {
-            fprintf(pcsFile, "%s  {", name);
-            int values[granularity];
+    void fillGranularityDomain(int granularity, std::vector<int>& values) {
+	    values.resize( granularity );
             int addedValues = 0;
             values[ addedValues++ ] = value;
             int dist = value < 16 ? 1 : (value < 16000 ? 64 : 512);   // smarter way to initialize the initial diff value
@@ -404,7 +398,8 @@ class IntOption : public Option
                 dist = dist * 4;
                 if (value - dist < value && value + dist > range.end && value - dist < range.begin) { break; }  // stop if there cannot be more values!
             }
-            sort(values, addedValues);
+            values.resize( addedValues );
+            sort(values);
             int j = 0;
             assert(values[0] >= range.begin && values[0] <= range.end && "stay in bound");
             for (int i = 1 ; i < addedValues; ++ i) {
@@ -416,7 +411,22 @@ class IntOption : public Option
             j++;
             assert(addedValues > 0 && "there has to be at least one option");
             assert(j <= addedValues && j <= granularity && "collected values hae to stay in bounds");
-            for (int i = 0 ; i < j; ++ i) {
+	    values.resize( j );
+    }
+    
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+        if (granularity != 0) {
+            fprintf(pcsFile, "%s  {", name);
+            std::vector<int> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
                 if (i != 0) { fprintf(pcsFile, ","); }
                 fprintf(pcsFile, "%d", values[i]);
             }
@@ -436,12 +446,25 @@ class IntOption : public Option
         }
     }
 
-    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return granularity != 0 || ((range.end - range.begin <= 16) && range.end - range.begin > 1); }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
-
-        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+	if (granularity != 0) {
+            std::vector<int> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
+		if (values[i] == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%d", values[i]);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i + 1 < values.size() && values[i+1] != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        } else if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
             for (int i = range.begin ; i <= range.end; ++ i) {
                 if (i == defaultValue) { continue; } // do not print default value
                 snprintf(buffer, size, "%d", i);  // convert value
@@ -545,18 +568,8 @@ class Int64Option : public Option
         #endif
     }
 
-    void printOptions(FILE* pcsFile, int printLevel, int granularity)
-    {
-        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
-        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
-        if (! wouldPrintOption()) { return; }   // do not print option?
-
-        // print only, if there is a default
-        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-
-        if (granularity != 0) {
-            fprintf(pcsFile, "%s  {", name);
-            int64_t values[granularity];
+    void fillGranularityDomain(int granularity, std::vector<int64_t>& values) {
+	    values.resize( granularity );
             int addedValues = 0;
             values[ addedValues++ ] = value;
             int64_t dist = value < 16 ? 1 : (value < 16000 ? 64 : 512);   // smarter way to initialize the initial diff value
@@ -567,7 +580,8 @@ class Int64Option : public Option
                 dist = dist * 4;
                 if (value - dist < value && value + dist > range.end && value - dist < range.begin) { break; }  // stop if there cannot be more values!
             }
-            sort(values, addedValues);
+            values.resize( addedValues );
+            sort(values);
             int j = 0;
             assert(values[0] >= range.begin && values[0] <= range.end && "stay in bound");
             for (int i = 1 ; i < addedValues; ++ i) {
@@ -579,7 +593,23 @@ class Int64Option : public Option
             j++;
             assert(addedValues > 0 && "there has to be at least one option");
             assert(j <= addedValues && j <= granularity && "collected values hae to stay in bounds");
-            for (int i = 0 ; i < j; ++ i) {
+	    values.resize( j );
+    }
+    
+    void printOptions(FILE* pcsFile, int printLevel, int granularity)
+    {
+        if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
+        if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }  // do not print the parameter, if its related to debug output
+        if (! wouldPrintOption()) { return; }   // do not print option?
+
+        // print only, if there is a default
+        // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
+
+        if (granularity != 0) {
+            fprintf(pcsFile, "%s  {", name);
+            std::vector<int64_t> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
                 if (i != 0) { fprintf(pcsFile, ","); }
                 fprintf(pcsFile, "%ld", values[i]);
             }
@@ -599,12 +629,25 @@ class Int64Option : public Option
         }
     }
 
-    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return granularity != 0 || ((range.end - range.begin <= 16) && range.end - range.begin > 1); }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
-
-        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+      if (granularity != 0) {
+            std::vector<int64_t> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
+		if (values[i] == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%ld", values[i]);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i + 1 < values.size() && values[i+1] != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        } else if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
             for (int64_t  i = range.begin ; i <= range.end; ++ i) {
                 if (i == defaultValue) { continue; } // do not print default value
                 snprintf(buffer, size, "%ld", i);  // convert value
@@ -716,9 +759,9 @@ class StringOption : public Option
         return Option::wouldPrintOption();    // if the string has an default value, still check the global criterion
     }
 
-    virtual bool canPrintOppositeOfDefault() { return false; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return false; }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
         if (defaultValue == 0) { buffer[0] = 0; }
         else {
@@ -804,9 +847,9 @@ class BoolOption : public Option
         fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, value ? "yes" : "no", description);
     }
 
-    virtual bool canPrintOppositeOfDefault() { return true; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return true; }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
         assert(size > 3 && "cannot print values otherwise");
         strncpy(buffer, !defaultValue ? "yes" : "no", size);

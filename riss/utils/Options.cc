@@ -135,7 +135,7 @@ void Riss::printOptions(FILE* pcsFile, int printLevel, int granularity)
     }
 }
 
-void Riss::printOptionsDependencies(FILE* pcsFile, int printLevel)
+void Riss::printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity)
 {
     sort(Option::getOptionList(), Option::OptionLt());
 
@@ -161,7 +161,7 @@ void Riss::printOptionsDependencies(FILE* pcsFile, int printLevel)
         }
 
         // print the actual option
-        Option::getOptionList()[i]->printOptionsDependencies(pcsFile, printLevel);
+        Option::getOptionList()[i]->printOptionsDependencies(pcsFile, printLevel, granularity);
 
         // set prev values, so that print is nicer
         prev_cat  = Option::getOptionList()[i]->category;

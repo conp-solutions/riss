@@ -166,9 +166,9 @@ int main(int argc, char** argv)
 //             fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
 //             ::printOptionsDependencies(pcsFile, opt_tuneLevel);
             fprintf(pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
-            coreConfig->printOptionsDependencies(pcsFile, opt_tuneLevel);
+            coreConfig->printOptionsDependencies(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
-            cp3config->printOptionsDependencies(pcsFile, opt_tuneLevel);
+            cp3config->printOptionsDependencies(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fclose(pcsFile);
             exit(0);
         }

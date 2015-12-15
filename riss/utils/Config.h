@@ -70,7 +70,7 @@ class Config
     void printOptions(FILE* pcsFile, int printLevel, int granularity);
 
     /** print dependencies of the options that belong to this configuration */
-    void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
+    void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity);
 
     /** set all options back to their default value */
     void reset();
@@ -727,7 +727,7 @@ void Config::printOptions(FILE* pcsFile, int printLevel, int granularity)
 }
 
 inline
-void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
+void Config::printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity)
 {
     sort((*optionListPtr), Option::OptionLt());
 
@@ -753,7 +753,7 @@ void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
         }
 
         // print the actual option
-        (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel);
+        (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel, granularity);
 
         // set prev values, so that print is nicer
         prev_cat  = (*optionListPtr)[i]->category;
