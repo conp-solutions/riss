@@ -1220,7 +1220,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
   //cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
   //cerr<<vigGraph->getArticulationPoints()<<endl;
-    cerr<<vigGraph->gettreewidth()<<endl;
+  cerr<<vigGraph->gettreewidth()<<endl;
 };
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)

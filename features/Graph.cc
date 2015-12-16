@@ -484,16 +484,23 @@ int Graph::gettreewidth(){
 
   bool check = false;
   int k = 0;
+  vector<int> empty_vec, nodes;
   
+  for(int a=0; a<node.size(); ++a) nodes.push_back(a);
+  
+  int tw = recursive_treewidth(empty_vec, nodes);
+  /*
   while(!check){
-  
+ 
     k++;
     check = improved_recursive_treewidth(k);
     
   }
   
   return k;
+  */
   
+  return tw;
 }
 
 bool Graph::improved_recursive_treewidth(int k){
@@ -502,32 +509,36 @@ bool Graph::improved_recursive_treewidth(int k){
   vector<int> nodes;
   vector<int> empty_vec;
   
+  
   for(int a=0; a<node.size(); ++a) nodes.push_back(a);
   
    if(node.size() <= k+1) return true;
    
-  else if(k<= 0.25*node.size() || k>= 0.4203*node.size()){
-     vector<vector<int>> sets  = getSets(nodes, k+1);
+   
+   if((k<= 0.25*node.size()) | (k>= 0.4203*node.size())){
      
+     vector<vector<int>> sets  = getSets(nodes, k+1);
      for(int i=0; i<sets.size(); ++i){
-     vector<vector<int>> components = getConnectedComponents(sets[i]);
-     check = true;
-       for(int j=0;j<components.size();++j){
        
-	 if(components[j].size() > (node.size() - sets[i].size() +1)/2) check = false;
+     vector<vector<int>> components = getConnectedComponents(sets[i]);
+     
+     check = true;
+     
+       for(int j=0;j<components.size();++j){
+		
+	 if(components[j].size() > ((node.size() - sets[i].size() +1)/2)) check = false;
 	 
       }
-      
-      if(check) tbool = true;
-
+      if(check){ 
+      tbool = true;
       for(int j=0;j<components.size();++j){
       
-	tbool = (tbool || (recursive_treewidth(empty_vec,components[j]) <= k));
+	tbool = (tbool | (recursive_treewidth(empty_vec,components[j]) <= k));
 	
       }
-      
+     
       if(tbool) return true;
-      
+      }
     }
   }
   else{
@@ -570,7 +581,7 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
 
   vector<int> newcomponent, newLset;
   newLset = Lset;
-  bool toadd;
+  bool toadd, addtonewLset;
   int tmp;
   Riss::MarkArray visited;
   visited.create(node.size());
@@ -584,36 +595,42 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
      for(int i = 0 ; i< node.size(); ++i){
      toadd = true;
      
-      if(i == component[0]) toadd = false; continue;
-      for(int j =0; j< Lset[j]; ++j) if(i == Lset[j]) toadd = false; break;
-     
-       if(toadd) newcomponent.push_back(i);
+      if(i == component[0]) continue;
+      for(int j =0; j< Lset.size(); ++j){
+	if(i == Lset[j]) toadd = false; 
+      }
+      if(toadd) newcomponent.push_back(i);
        }
-       
+      
        vector<vector<int>> G = getConnectedComponents(newcomponent);
        
        for(int w=0; w<newcomponent.size();++w){
-        
+       
 	 if(visited.isCurrentStep(newcomponent[w])) continue;
 	 
-	 const adjacencyList& adj = node[w];
-	 for(int k =0; k< adj.size(); ++k){
+	 const adjacencyList& adj = node[newcomponent[w]];
 	 
-	   for(int x =0; x < G.size(); ++x){
+	 for(int x =0; x < G.size(); ++x){
+	   
+	   if(visited.isCurrentStep(newcomponent[w])) break;
+	   
 	     wbool =false;
 	     vbool =false;
 	    for(int y =0; y< G[x].size(); ++y){
-	      if(component[0] == G[x][y]) vbool = true;
-	      if(adj[k].first == G[x][y]) wbool = true;
-	      if(!visited.isCurrentStep(newcomponent[w])){
-	      
-		visited.setCurrentStep(newcomponent[w]);
-		Q++;
+	    if(component[0] == G[x][y]) vbool = true; 
+	    }
+	    if(vbool){
+	    for(int y =0; y< G[x].size(); ++y){
+	      for(int k =0; k< adj.size(); ++k){
+	    if(adj[k].first == G[x][y]) wbool = true;
 	      }
 	    }
-	     
-	  }
+	    if(wbool) Q++; visited.setCurrentStep(newcomponent[w]);
+	   }
+	   
+	   
 	}
+	 
       }
       
       return Q;
@@ -632,15 +649,22 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
      for(int i = 0 ; i< component.size(); ++i){
      toadd = true;
       for(int j =0; j< sets[k].size(); ++j){
-	if(component[i] == sets[k][j]) toadd = false; break; 
-        newLset.push_back(sets[k][j]);
+	addtonewLset = true;
+	for(int m=0; m< newLset.size();++m){
+	  if(newLset[m] == sets[k][j]) addtonewLset = false;   
+	}
+	if(addtonewLset) newLset.push_back(sets[k][j]);
 	
+	if(component[i] == sets[k][j]) toadd = false;  
+        	
       }
-      if(toadd) newcomponent.push_back(i);
+      if(toadd) newcomponent.push_back(component[i]);
        }
      
-     
      int v2 = recursive_treewidth(newLset, newcomponent);
+     
+     newLset = Lset;
+     newcomponent.clear();
      
      if(v2 > v1) tmp = v2;
      if(tmp < Opt) Opt = tmp;
@@ -693,14 +717,14 @@ visited.nextStep();
 vector<int> componentnodes;
 vector<vector<int>> components;
 
-for(int a=0; a<set.size(); a++) visited.setCurrentStep(set[a]); //dont look at nodes, that are in the set
+for(int a=0; a<set.size(); a++) visited.setCurrentStep(set[a]); //dont look at nodes, that are in the set 
 
-for(int k=0; k<visited.size(); k++){
+for(int k=0; k<node.size(); k++){
 
 if(visited.isCurrentStep(k)) continue;  
 
-componentnodes.push_back(set[k]);
-visited.setCurrentStep(set[k]);
+componentnodes.push_back(k);
+visited.setCurrentStep(k);
 
 for(int i=0; i<componentnodes.size(); ++i){
 
@@ -709,9 +733,9 @@ for(int i=0; i<componentnodes.size(); ++i){
   
   for(int j=0; j<adj.size();++j){
     
-        if(visited.isCurrentStep(adj[i].first)) continue;    
+        if(visited.isCurrentStep(adj[j].first)) continue;    
         componentnodes.push_back(adj[j].first);
-	visited.setCurrentStep(adj[i].first);
+	visited.setCurrentStep(adj[j].first);
     
   }
   
@@ -730,12 +754,18 @@ vector<vector<int>> Graph::getSets(const vector<int>& nodes, int k){
   vector<vector<int>> sets;
   vector<int> set;
   
-  for(int i=0;i<nodes.size()-k;i++){
+  for(int i=0;i<nodes.size()-(k-1);i++){
+  
     set.push_back(nodes[i]);
-    k--;
-    for(int j=1; i+j<=nodes.size()-k;++j){
-    getallcombinations(nodes ,set, sets, k-1, i+j);
+    
+    if(k==1) sets.push_back(set);
+    else{
+    for(int j = i+1; j<=nodes.size()-(k-1);++j){
+     
+    getallcombinations(nodes ,set, sets, k-2, j);
     }
+    }
+    set.pop_back();
   }
   
   return sets;
@@ -746,7 +776,9 @@ void Graph::getallcombinations(const vector<int>& nodes,vector<int> set,vector<v
     set.push_back(nodes[position]);
     
     if(k>0){
+      
     for(int i=1;nodes.size()-position-k>=i;++i){
+      
     getallcombinations(nodes, set, sets, k-1, position+i);
     }
    }
