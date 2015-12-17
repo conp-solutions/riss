@@ -253,7 +253,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     communication->addClause(*toSend, toSendSize, dependencyLevel, vi, multiUnits, equivalences);
     #else
     communication->addClause(*toSend, toSendSize, multiUnits, equivalences);
-    if( toSendSize == 0 ) cerr << "c send clause of size 0, multiUnit: " << multiUnits << " eqs: " << equivalences << endl;
+    if( toSendSize == 0 ) cerr << "c send clause of size 0 (" << toSendSize << "), multiUnit: " << multiUnits << " eqs: " << equivalences << endl;
     #endif
     if (! equivalences && !multiUnits) {  // update limits only if a clause was sent
         updateDynamicLimits(false); // a clause could be send
