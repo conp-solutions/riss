@@ -1995,6 +1995,7 @@ lbool Solver::receiveInformation()
         conflict.clear();
         return l_False;
     }
+    return l_True;
 }
 
 Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
@@ -2163,7 +2164,10 @@ lbool Solver::search(int nof_conflicts)
             if (!withinBudget()) { return l_Undef; }   // check whether we can still do conflicts
 
             lbool receiveResult = receiveInformation();
-            if (receiveResult != l_True) { return receiveResult; }
+            if (receiveResult != l_True) { 
+	      cerr << "c interrupt search due to result of receiving information (" << receiveResult<< ")" << endl;
+	      return receiveResult; 
+	    }
 
             // Perform clause database reduction !
             //

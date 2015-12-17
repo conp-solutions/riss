@@ -253,6 +253,7 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     communication->addClause(*toSend, toSendSize, dependencyLevel, vi, multiUnits, equivalences);
     #else
     communication->addClause(*toSend, toSendSize, multiUnits, equivalences);
+    if( toSendSize == 0 ) cerr << "c send clause of size 0, multiUnit: " << multiUnits << " eqs: " << equivalences << endl;
     #endif
     if (! equivalences && !multiUnits) {  // update limits only if a clause was sent
         updateDynamicLimits(false); // a clause could be send
@@ -291,6 +292,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 //                 assert(false && "take care to set the unsatPTlevel correctly!");
 #warning take care to set the unsatPTlevel correctly! for upward sharing!
                 #endif
+	      std::cerr << "c value of literal " << unit << " is already fixed to wrong value" << std::endl;
                 return 1;
             } else if (value(unit) == l_Undef) {
                 #ifdef PCASSO
@@ -298,6 +300,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 #else
                 uncheckedEnqueue(unit); // enqueue unit
                 #endif
+		std::cerr << "c propagating literal " << unit << " leads to conflict" << std::endl;
                 if (propagate() != CRef_Undef) { return 1; }  // report conflict, if necessary
             }
         }
@@ -319,7 +322,10 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
     }
 
     if (qhead < trail.size()) {                 // if we have something to be propagated
-        if (propagate() != CRef_Undef) { return 1; }  // return the error, if there was an error
+        if (propagate() != CRef_Undef) { 
+	  std::cerr << "c final propagation fails" << std::endl;
+	  return 1;
+	}  // return the error, if there was an error
     }
 
     for (unsigned i = 0 ; i < communicationClient.receiveClauses.size(); ++ i) {
@@ -327,7 +333,7 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
 
         if (c.size() < 2) {
             if (c.size() == 0) {
-//                 std::cerr << "c empty clause has been shared!" << std::endl;
+                std::cerr << "c empty clause has been shared!" << std::endl;
                 ok = false; return 1;
             }
             // has to be unit clause!
@@ -336,10 +342,11 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 uncheckedEnqueue(c[0]);
                 ok = (propagate() == CRef_Undef);
                 if (!ok) {   // adding this clause failed?
-//        std::cerr << "c adding received clause failed" << std::endl;
+                    std::cerr << "c adding received clause that is unit failed" << std::endl;
                     return 1;
                 }
             } else if (value(c[0]) == l_False) {
+	        std::cerr << "c adding received clause failed" << std::endl;
                 ok = false; return 1;
             }
             // in case of SAT simply mark the clause as being irrelevant
@@ -409,16 +416,23 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
                 }
 
                 communication->nrReceivedCls ++;
-                if (c.size() == 0) { ok = false; return 1; }
+                if (c.size() == 0) { 
+		  std::cerr << "c adding received reduced clause is empty" << std::endl;
+		  ok = false; return 1; 
+		}
                 else if (c.size() == 1) {
                     addUnitToProof(c[0]); // add the clause to the proof
                     if (value(c[0]) == l_Undef) { uncheckedEnqueue(c[0]); }
                     else if (value(c[0]) == l_False) {
+		      std::cerr << "c adding received reduced clause is falsified" << std::endl;
                         ok = false; return 1;
                     }
                     c.mark();
                     ok = (propagate() == CRef_Undef);
-                    if (!ok) { return 1; }
+                    if (!ok) { 
+		      std::cerr << "c adding received reduced unit clause failed" << std::endl;
+		      return 1; 
+		    }
                 } else { // attach the clause, if its not a unit clause!
                     addToProof(ca[communicationClient.receiveClauses[i]]);   // the shared clause stays in the solver, hence add this clause to the proof!
                     learnts.push(communicationClient.receiveClauses[i]);
@@ -436,7 +450,10 @@ if (decisionLevel() != 0) { return 0; }   // receive clauses only at level 0!
             }
         }
         if (qhead < trail.size()) {                 // if we have something to be propagated
-            if (propagate() != CRef_Undef) { return 1; }  // return the error, if there was an error
+            if (propagate() != CRef_Undef) { 
+	      std::cerr << "c final reduced propagation failed" << std::endl;
+	      return 1;
+	    }  // return the error, if there was an error
         }
     }
 }
