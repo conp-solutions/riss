@@ -22,6 +22,7 @@ typedef std::vector<edge> adjacencyList;
 class Graph
 {
   private:
+    void doPageRank();
     int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
     void compute_G_plus(Graph*& Graph_plus, const std::vector<int>& set);
     std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
@@ -45,8 +46,10 @@ class Graph
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
    
+    std::vector<double> pagerank;
 
   public:
+    double getPageRank(int node);
     int gettreewidth();
     void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
     bool thereisanedge(int nodeA, int nodeB);

@@ -1220,13 +1220,13 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
   //cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
   //cerr<<vigGraph->getArticulationPoints()<<endl;
-  cerr<<vigGraph->gettreewidth()<<endl;
+  //cerr<<vigGraph->gettreewidth()<<endl;
+  //cerr<<vigGraph->getPageRank(0)<<endl;
 };
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 {
     uint64_t operations = 0; // number of operations to compute features;
-
 
     // TODO should return the vector of features. If possible, the features should range between 0 and 1 - all the graph features could be scaled down by number of variables, number of clauses or some other measure
 

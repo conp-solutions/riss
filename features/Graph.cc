@@ -17,6 +17,7 @@
 using namespace std;
 
 Graph::Graph(int size, bool computingDerivative) :
+    pagerank(size),
     node(size),
     nodeDeg(size, 0),
     degreeStatistics(computingDerivative),
@@ -34,6 +35,7 @@ Graph::Graph(int size, bool computingDerivative) :
 }
 
 Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
+    pagerank(size),
     node(size),
     nodeDeg(size, 0),
     degreeStatistics(computingDerivative),
@@ -488,8 +490,8 @@ int Graph::gettreewidth(){
   
   for(int a=0; a<node.size(); ++a) nodes.push_back(a);
   
-  int tw = recursive_treewidth(empty_vec, nodes);
-  /*
+  //int tw = recursive_treewidth(empty_vec, nodes);
+  
   while(!check){
  
     k++;
@@ -498,9 +500,9 @@ int Graph::gettreewidth(){
   }
   
   return k;
-  */
   
-  return tw;
+  
+ // return tw;
 }
 
 bool Graph::improved_recursive_treewidth(int k){
@@ -525,18 +527,17 @@ bool Graph::improved_recursive_treewidth(int k){
      check = true;
      
        for(int j=0;j<components.size();++j){
-		
+		 
 	 if(components[j].size() > ((node.size() - sets[i].size() +1)/2)) check = false;
 	 
       }
       if(check){ 
       tbool = true;
-      for(int j=0;j<components.size();++j){
-      
-	tbool = (tbool | (recursive_treewidth(empty_vec,components[j]) <= k));
+      for(int n=0;n<components.size();++n){
+    
+	tbool = (tbool | (recursive_treewidth(empty_vec,components[n]) <= k));
 	
       }
-     
       if(tbool) return true;
       }
     }
@@ -786,95 +787,51 @@ void Graph::getallcombinations(const vector<int>& nodes,vector<int> set,vector<v
   
 }
 
+double Graph::getPageRank(int node){
+  
+double pgrnk;  
 
-/*
-int Graph::gettreewidth(){ 
-    
-  vector< pair< vector<int>, vector<int> > > bags;
-  Riss::MarkArray visited;
-  visited.create(size);
+if(pagerank[node] == 0){
+
+ for(int i=0; i<10; ++i) doPageRank(); //ten iterationsteps
   
-  vector<int> bagsizes;
-  int tmpbagsize;
-  int treewidth = numeric_limits<int>::max();
+}
+
+if(node > this->node.size()-1){
+
+  cerr <<"node out of scope"<<endl;
+  return 0;
   
-  for(int i=0; i< node.size(); ++i){
+}
+
+pgrnk = pagerank[node];
+
+return pgrnk;  
+  
+}
+
+void Graph::doPageRank(){
+
+  double d = 0.85;
+  int neighbors_neighbor;
+ 
+  double pgrnk, pgrnk_neighbor;
+  
+  for(int i =0; i < pagerank.size(); ++i) pagerank[i] = 1; //setting each pagerank to 1 (= startvalue)
+  
+  
+  for(int i =0; i < pagerank.size(); ++i){
+  
+    pgrnk = 0;
     
-    if(node[i].empty()) continue;
-    
-    visited.nextStep();
-    visited.setCurrentStep(i);
-    bags.clear();
-    bags.push_back(pair<vector<int>,vector<int>>());
-    bags.back().first.push_back(i);
-    findtree(bags, visited);    
-    
-    
-    tmpbagsize = 0;
-    for(int k=0; k<bags.size(); k++){
+    for(int j=0; j<node[i].size(); ++j){
       
-      if(tmpbagsize < bags[k].first.size()) tmpbagsize = bags[k].first.size();
-    
+     pgrnk_neighbor = pagerank[node[i][j].first];
+     neighbors_neighbor = nodeDeg[node[i][j].first];
+      pgrnk += (pgrnk_neighbor/neighbors_neighbor);
     }
     
-    if(tmpbagsize <= 2) return 1;
-    
-    bagsizes.push_back(tmpbagsize);
-    
+     pagerank[i] = pgrnk*d + (1-d);
   }
   
-  for(int j=0; j<bagsizes.size(); ++j){
-    
-    if(treewidth > bagsizes[j]) treewidth = bagsizes[j];
-    
-  }
-  
-  return treewidth-1;
-  
 }
-
-void Graph::findtree(vector< pair< vector<int>, vector<int> > >& bags, Riss::MarkArray& visited){
-  
-  int actualnode = bags.back().first.back();
-  const adjacencyList& adj = node[actualnode];
-  
-  for(int i=0; i<adj.size(); ++i){
-  
-    controllbagsandadd(bags, visited);
-    
-    if(visited.isCurrentStep(adj[i].first)) continue;
-    
-    visited.setCurrentStep(adj[i].first);
-    bags.back().first.push_back(adj[i].first);
-    
-    findtree(bags, visited);
-    }
-  
-}
-
-void Graph::controllbagsandadd(vector< pair< vector<int>, vector<int> > >& bags, Riss::MarkArray& visited){
-
-  pair<vector<int>,vector<int>> bagtocontroll;
-  
-  bool stayinbag;
-  
-  for(int i = 0; i< bags.back().first.size(); ++i){
-  
-    stayinbag = false;
-    const adjacencyList& adj = node[bags.back().first[i]];
-    
-    for(int j=0; j<adj.size(); ++j){
-    
-      if(!visited.isCurrentStep(adj[j].first)) stayinbag = true; continue; 
-      
-    }
-    
-    if(stayinbag) bagtocontroll.first.push_back(bags.back().first[i]);
-    
-  }
-  
-  bags.push_back(bagtocontroll);
-  
-   
-}
-*/
