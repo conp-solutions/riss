@@ -35,7 +35,9 @@ class Graph
     std::vector<adjacencyList> node;
     std::vector<int> nodeDeg;
     // statistics variables
-    SequenceStatistics exzentricity;
+    SequenceStatistics articulationpointsStatistics;
+    SequenceStatistics pagerankStatistics;
+    SequenceStatistics exzentricityStatistics;
     SequenceStatistics degreeStatistics;
     SequenceStatistics weightStatistics;
     bool mergeAtTheEnd; // do not detect duplicate entries during the creation of the graph
@@ -47,6 +49,7 @@ class Graph
     uint64_t sortAdjacencyList(adjacencyList& aList);
    
     std::vector<double> pagerank;
+    std::vector<int> articulationpoints;
 
   public:
     double getPageRank(int node);
@@ -54,7 +57,6 @@ class Graph
     void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
     bool thereisanedge(int nodeA, int nodeB);
     std::vector<int> getArticulationPoints();
-    SequenceStatistics getExzentricityStatistics();
     double getExzentricity(int nod);
     double getRadius();
     double getDiameter();
@@ -87,6 +89,21 @@ class Graph
     const SequenceStatistics& getWeightStatistics() const
     {
         return weightStatistics;
+    }
+    
+    const SequenceStatistics& getArticulationpointsStatistics() const
+    {
+        return articulationpointsStatistics;
+    }
+    
+    const SequenceStatistics& getPagerankStatistics() const
+    {
+        return pagerankStatistics;
+    }
+    
+    const SequenceStatistics& getExzentricityStatistics() const
+    {
+       return exzentricityStatistics;
     }
 };
 

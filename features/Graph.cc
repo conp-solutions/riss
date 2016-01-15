@@ -21,7 +21,10 @@ Graph::Graph(int size, bool computingDerivative) :
     node(size),
     nodeDeg(size, 0),
     degreeStatistics(computingDerivative),
-    weightStatistics(computingDerivative, false), exzentricity(computingDerivative)
+    weightStatistics(computingDerivative, false), 
+    exzentricityStatistics(computingDerivative),
+    pagerankStatistics(computingDerivative),
+    articulationpointsStatistics(computingDerivative)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -39,7 +42,10 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     node(size),
     nodeDeg(size, 0),
     degreeStatistics(computingDerivative),
-    weightStatistics(computingDerivative, false), exzentricity(computingDerivative)
+    weightStatistics(computingDerivative, false), 
+    exzentricityStatistics(computingDerivative),
+    pagerankStatistics(computingDerivative),
+    articulationpointsStatistics(computingDerivative)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -198,6 +204,19 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
     operations += size;
     operations += degreeStatistics.compute(quantilesCount);
     //  degreeStatistics.tostdio();
+    
+     // Statistics for the exzentricity 
+   for(int i=0; i< size; ++i) exzentricityStatistics.addValue(getExzentricity(i));
+     operations += exzentricityStatistics.compute(quantilesCount);
+   
+   // Statistics for the pagerank 
+   for(int i=0; i< size; ++i) pagerankStatistics.addValue(getPageRank(i));
+     operations += pagerankStatistics.compute(quantilesCount);
+   
+   // Statistics for the articulationpoints
+   for(int i=0; i< articulationpoints.size(); ++i) articulationpointsStatistics.addValue(articulationpoints[i]);
+     operations += articulationpointsStatistics.compute(quantilesCount);
+ 
     // Statistics for the weights
     int j;
     for (i = 0; i < size; ++i) {
@@ -379,16 +398,8 @@ double Graph::getExzentricity(int nod){
   
 }
 
-SequenceStatistics Graph::getExzentricityStatistics(){
-   
-   for(int i=0; i< size; ++i) exzentricity.addValue(getExzentricity(i));
-  
-   return exzentricity;
-}
-
 vector<int> Graph::getArticulationPoints(){
   
-  vector<int> articulationpoints;
   Riss::MarkArray visited;
   visited.create(size);
   visited.nextStep();
@@ -410,8 +421,10 @@ vector<int> Graph::getArticulationPoints(){
     DepthFirstSearch(stack, visited, articulationpoints);
   }
   
-  if(tmp>1) articulationpoints.push_back(rootnode);
-
+  if(tmp>1){
+    articulationpoints.push_back(rootnode);
+    
+  }
   return articulationpoints;
  
 }
@@ -438,7 +451,9 @@ bool artic;
      for(int k =0; k < tmpstacksize-1;k++){
         if(thereisanedge(stack[k], stack[j])) artic = false;
     }
-     if (artic) articulationspoints.push_back(stack[tmpstacksize-1]);
+     if (artic){ 
+       articulationspoints.push_back(stack[tmpstacksize-1]);
+       }
      stack.pop_back();
     }
   }
@@ -797,13 +812,6 @@ if(pagerank[node] == 0){
   
 }
 
-if(node > this->node.size()-1){
-
-  cerr <<"node out of scope"<<endl;
-  return 0;
-  
-}
-
 pgrnk = pagerank[node];
 
 return pgrnk;  
@@ -832,6 +840,7 @@ void Graph::doPageRank(){
     }
     
      pagerank[i] = pgrnk*d + (1-d);
+     
   }
   
 }
