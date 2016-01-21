@@ -74,7 +74,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_learntsize_adjust_inc   (_cred, "rem-asi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
     opt_max_learnts             (_cred, "maxlearnts",            "number of learnt clauses to initialize geometric/static removal", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
 
-    opt_dpll                    (_cm, "dpll",                    "Perform DPLL instead of CDCL (no restarts, no learning)", false,                                                        optionListPtr),
+    opt_dpll                    (_cm, "dpll",                    "Perform DPLL instead of CDCL (no restarts, no learning) #NoAutoT", false,                                                        optionListPtr),
 
     opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
     opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),
@@ -136,7 +136,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio #NoAutoT", 0, DoubleRange(-10, true, 1, true), optionListPtr),
     opt_useOriginal             ("CLAUSE SHARING", "independent",  "work on parsed formula (ignore global simplification, sharing currently unsound) #NoAutoT", false,                             optionListPtr),
 
-    opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
+    opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied  #NoAutoT", false,                                           optionListPtr),
 
     opt_probing_step_width  ("MiPiSAT",     "prob-step-width",   "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX),              optionListPtr),
     opt_probing_limit       ("MiPiSAT",     "prob-limit",        "Limit how many variables with highest activity should be probed", 32, IntRange(1, INT32_MAX),                           optionListPtr),
@@ -196,7 +196,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_laBound        ("CORE -- LOCAL LOOK AHEAD", "hlabound",     "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX),                      optionListPtr, &localLookAhead),
     opt_laTopUnit      ("CORE -- LOCAL LOOK AHEAD", "hlaTop",       "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr, &localLookAhead),
 
-    opt_hpushUnit       (_misc, "delay-units", "does not propagate unit clauses until solving is initialized", false,        optionListPtr),
+    opt_hpushUnit       (_misc, "delay-units", "does not propagate unit clauses until solving is initialized  #NoAutoT", false,        optionListPtr),
     opt_simplifyInterval(_misc, "sInterval",  "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr),
 
  opt_otfss ("SEARCH -- OTFSS", "otfss", "perform otfss during conflict analysis", false, optionListPtr ),
@@ -263,18 +263,18 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                             optionListPtr),
     opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                  optionListPtr),
 
-    opt_usePPpp(_misc, "usePP",         "use preprocessor for preprocessing", true,                                                                                   optionListPtr),
-    opt_usePPip(_misc, "useIP",         "use preprocessor for inprocessing", true,                                                                                    optionListPtr),
+    opt_usePPpp(_misc, "usePP",         "use preprocessor for preprocessing #NoAutoT", true,                                                                                   optionListPtr),
+    opt_usePPip(_misc, "useIP",         "use preprocessor for inprocessing #NoAutoT", true,                                                                                    optionListPtr),
 
     //
     // for incremental solving
     //
-    resetActEvery       ("CORE -- INCREMENTAL", "incResAct", "when incrementally called, reset activity every X calls (0=off)",                    0, IntRange(0, INT32_MAX) , optionListPtr),
-    resetPolEvery       ("CORE -- INCREMENTAL", "incResPol", "when incrementally called, reset polarities every X calls (0=off)",                  0, IntRange(0, INT32_MAX) , optionListPtr),
-    intenseCleaningEvery("CORE -- INCREMENTAL", "incClean",  "when incrementally called, extra clean learnt data base every X calls (0=off)",      0, IntRange(0, INT32_MAX) , optionListPtr),
-    incKeepSize         ("CORE -- INCREMENTAL", "incClSize", "keep size for extra cleaning (any higher is dropped)",                               5, IntRange(1, INT32_MAX) , optionListPtr),
-    incKeepLBD          ("CORE -- INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)",                               10, IntRange(1, INT32_MAX) , optionListPtr),
-    opt_reset_counters  ("CORE -- INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)",                                  100000, IntRange(0, INT32_MAX) , optionListPtr)
+    resetActEvery       ("CORE -- INCREMENTAL", "incResAct", "when incrementally called, reset activity every X calls (0=off)  #NoAutoT",                    0, IntRange(0, INT32_MAX) , optionListPtr),
+    resetPolEvery       ("CORE -- INCREMENTAL", "incResPol", "when incrementally called, reset polarities every X calls (0=off)  #NoAutoT",                  0, IntRange(0, INT32_MAX) , optionListPtr),
+    intenseCleaningEvery("CORE -- INCREMENTAL", "incClean",  "when incrementally called, extra clean learnt data base every X calls (0=off)  #NoAutoT",      0, IntRange(0, INT32_MAX) , optionListPtr),
+    incKeepSize         ("CORE -- INCREMENTAL", "incClSize", "keep size for extra cleaning (any higher is dropped)  #NoAutoT",                               5, IntRange(1, INT32_MAX) , optionListPtr),
+    incKeepLBD          ("CORE -- INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)  #NoAutoT",                               10, IntRange(1, INT32_MAX) , optionListPtr),
+    opt_reset_counters  ("CORE -- INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)  #NoAutoT",                                  100000, IntRange(0, INT32_MAX) , optionListPtr)
 {
     if (defaultPreset.size() != 0) { setPreset(defaultPreset); }    // set configuration options immediately
 }
