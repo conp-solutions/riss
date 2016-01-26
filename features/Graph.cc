@@ -13,6 +13,9 @@
 #include <algorithm>
 #include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
+#include <iterator>
+
+
 
 using namespace std;
 
@@ -24,7 +27,7 @@ Graph::Graph(int size, bool computingDerivative) :
     weightStatistics(computingDerivative, false), 
     exzentricityStatistics(computingDerivative),
     pagerankStatistics(computingDerivative),
-    articulationpointsStatistics(computingDerivative)
+    articulationpointsStatistics(computingDerivative) 
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -35,6 +38,7 @@ Graph::Graph(int size, bool computingDerivative) :
     intermediateSorts = 0;
     for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
     sortSize.resize(size, 4);      // re-sort after 16 elements
+    narity.resize(size, 0); 
 }
 
 Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
@@ -55,6 +59,7 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     intermediateSort = true;
     intermediateSorts = 0;
     sortSize.resize(size, 4);      // re-sort after 16 elements
+    narity.resize(size, 0); 
     for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
 }
 
@@ -93,6 +98,17 @@ int Graph::getDegree(int node)
     return this->nodeDeg[node];
 }
 
+double Graph::arity(int x) {     
+		assert(x>=0 && x<= size-1); 
+		return narity[x]; 
+	}
+	
+double Graph::arity() {     
+  double arit = 0;
+		for(int i = 0; i<narity.size(); i++) arit+=narity[i];
+		return arit;
+	}
+
 void Graph::addUndirectedEdge(int nodeA, int nodeB)
 {
     addUndirectedEdge(nodeA, nodeB, 1);
@@ -118,6 +134,8 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
     node[nodeA].push_back(p); // add only in one list, do newer add directed and undirected edges
     nodeDeg[nodeA]++;
     nodeDeg[nodeB]++;
+    narity[nodeA] += aweight;
+    narity[nodeB] += aweight;
     if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
         sortAdjacencyList(node[nodeA]);
         sortSize[ nodeA ] *= 2;
@@ -139,6 +157,8 @@ void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     edge p(nodeB, aweight);
     node[nodeA].push_back(p);
     nodeDeg[nodeA]++;
+    narity[nodeA] += aweight;
+    narity[nodeB] += aweight;
     if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
         sortAdjacencyList(node[nodeA]);
         sortSize[ nodeA ] *= 2;
@@ -208,15 +228,19 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
      // Statistics for the exzentricity 
    for(int i=0; i< size; ++i) exzentricityStatistics.addValue(getExzentricity(i));
      operations += exzentricityStatistics.compute(quantilesCount);
+
    
    // Statistics for the pagerank 
    for(int i=0; i< size; ++i) pagerankStatistics.addValue(getPageRank(i));
      operations += pagerankStatistics.compute(quantilesCount);
    
    // Statistics for the articulationpoints
-   for(int i=0; i< articulationpoints.size(); ++i) articulationpointsStatistics.addValue(articulationpoints[i]);
+   for(int i=0; i< articulationpoints.size(); ++i){
+     getArticulationPoints();
+     articulationpointsStatistics.addValue(articulationpoints[i]);
+   }
      operations += articulationpointsStatistics.compute(quantilesCount);
- 
+     operations += articulationpoints.size();
     // Statistics for the weights
     int j;
     for (i = 0; i < size; ++i) {
@@ -319,6 +343,19 @@ void Graph::completeSingleVIG(){
      
      finalizeGraph(); //make sure that the graph is sorted
     
+}
+
+double Graph::getWeight(int nodeA, int nodeB){
+ double weight = 0;
+ 
+ for(int i =0; i<node[nodeA].size(); i++){
+ 
+   if(node[nodeA][i].first == nodeB) weight = node[nodeA][i].second; break;
+   
+}
+   
+  
+  return weight;
 }
 
 vector<double> Graph::getDistances(int nod){

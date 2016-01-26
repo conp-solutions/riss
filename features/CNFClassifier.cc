@@ -8,7 +8,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
-
+#include "community.h"
 #include <limits.h>
 #include <math.h>
 
@@ -1222,6 +1222,24 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
   //cerr<<vigGraph->getArticulationPoints()<<endl;
   //cerr<<vigGraph->gettreewidth()<<endl;
   //cerr<<vigGraph->getPageRank(0)<<endl;
+    
+    Community c(vigGraph);
+    double modularity;
+			cerr << "Computing COMMUNITY Structure (VIG)" << endl;
+	
+		
+		modularity = c.compute_modularity_GFA(precision);
+		cerr<<"he"<<endl;
+		c.compute_communities();
+
+		
+			cerr << "modularity = " << modularity << endl;
+			cerr << "communities = " << (int)c.ncomm << endl;
+			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/vigGraph->getSize() << endl;
+			cerr << "iterations = " << c.iterations << endl;
+			cerr << "------------" << endl;
+		
+	
 };
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)

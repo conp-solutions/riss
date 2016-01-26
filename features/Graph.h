@@ -6,12 +6,14 @@
  */
 #ifndef RISS_GRAPH_H_
 #define RISS_GRAPH_H_
-
+#include <iterator>
+#include <iostream>
 #include <vector>
 #include "classifier/SequenceStatistics.h"
 #include "riss/core/SolverTypes.h"
+#include <set>
 
-// using namespace std;
+//using namespace std;
 
 typedef std::pair<int, double> edge;
 typedef std::vector<edge> adjacencyList;
@@ -50,8 +52,12 @@ class Graph
    
     std::vector<double> pagerank;
     std::vector<int> articulationpoints;
+    std::vector <double> narity;     
 
   public:
+    double getWeight(int nodeA, int nodeB);
+    double arity(int x);
+    double arity();
     double getPageRank(int node);
     int gettreewidth();
     void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
@@ -81,6 +87,8 @@ class Graph
     /** finalize adjacency lists after all nodes have been added to the graph */
     void finalizeGraph();
 
+    int getSize(){return size;}
+    
     const SequenceStatistics& getDegreeStatistics() const
     {
         return degreeStatistics;
@@ -105,6 +113,143 @@ class Graph
     {
        return exzentricityStatistics;
     }
+    
+    
+   //--------------- ITERATOR ON EDGES --------------------------------------------------
+
+	typedef struct {int orig; int dest; double weight;} edgeNewDef; 
+    
+  class EdgeIter;                          // Iterator to traverse all EDGES of the Graph
+  friend class EdgeIter;
+	
+  class EdgeIter : public std::iterator<std::input_iterator_tag, edgeNewDef> {
+		Graph &g;
+	        std::vector<int>::iterator it;
+		int node;
+		Graph::edgeNewDef e;
+
+	public:
+                
+		EdgeIter(Graph &x) : g(x){}
+		EdgeIter(Graph &x, std::vector<int>::iterator y, int n): g(x), it(y), node(n) {
+		  };
+
+		EdgeIter (const EdgeIter &x) : g(x.g), it(x.it), node(x.node) {}
+
+		EdgeIter& operator++() {
+			assert(node >= 0 && node < g.size);
+			assert(node < g.size-1 || it != g.getAdjacency(node).end()); 
+			do {
+				if (++it == g.getAdjacency(node).end() && node < g.size-1) {
+					do {
+						node++; 
+						it = g.getAdjacency(node).begin(); 
+						
+					}
+					while (it == g.getAdjacency(node).end() && node < g.size-1); //skip nodes without neighs
+				}
+			}
+			while (!(it == g.getAdjacency(node).end() && node == g.size-1)   //skip when orig > dest
+				&& node > *it);
+			return *this;
+		}
+		EdgeIter& operator++(int) {
+			EdgeIter clone(*this);
+			assert(node >= 0 && node < g.size);
+			assert(node < g.size-1 || it != g.getAdjacency(node).end()); 
+			do {
+				if (++it == g.getAdjacency(node).end() && node < g.size-1) {
+					do {
+						node++; 
+						it = g.getAdjacency(node).begin(); 
+					}
+					while (it == g.getAdjacency(node).end() && node < g.size-1); //skip nodes without neighs
+				}
+			}
+			while (!(it == g.getAdjacency(node).end() && node == g.size-1)   //skip when orig > dest
+				&& node > *it);
+			return *this;
+		}
+
+		bool operator==(const EdgeIter &rhs) {return it==rhs.it;}
+		bool operator!=(const EdgeIter &rhs) {return it!=rhs.it;}
+
+		Graph::edgeNewDef& operator*() {
+			std::cerr<<"ENTER *\n";
+			e.orig = node; 
+			e.dest = *it; 
+			e.weight = g.getWeight(node, *it); 
+			return e;
+		}
+		Graph::edgeNewDef *operator->() {
+		 
+			e.orig = node; 
+			e.dest = *it; 
+			std::cerr <<*it<<std::endl;
+			std::cerr <<e.orig<<std::endl;
+			e.weight = g.getWeight(node, *it); 
+			 std::cerr <<e.weight<<std::endl;
+			return &e;
+		}
+	};
+
+	EdgeIter begin() {
+		int node = 0;
+		while (getAdjacency(node).size()==0 && node < size) node++;
+		
+		return EdgeIter(*this, getAdjacency(node).begin(), node);  
+	// First neight of first node
+	}
+
+	EdgeIter end() {
+		return EdgeIter(*this, getAdjacency(size-1).end(), size);  
+	// Last neight of last node
+	}
+    
+    //--------------- ITERATOR ON NEIGHBORS --------------------------------------------------
+
+	class NeighIter : public std::vector<int>::iterator {
+	        Graph &g;
+		std::vector<int>::iterator it;
+		Graph::edgeNewDef e;
+		int nod;
+		
+	public:
+               
+	    	NeighIter(std::vector<int>::iterator x, int node, Graph &y) : g(y), it(x){
+		  nod = node;
+		}
+		
+		Graph::edgeNewDef *operator->() {
+			e.dest = *it; 
+			e.weight = g.getWeight(nod, *it); 
+			return &e;
+		}
+		NeighIter& operator++() {
+			++it;
+			return *this;
+		}
+		NeighIter& operator++(int) {
+			it++;
+			return *this;
+		}
+		bool operator==(const NeighIter& x) {return it==x.it;}
+		bool operator!=(const NeighIter& x) {return it!=x.it;}
+	};
+
+	NeighIter begin(int x) { 
+	        
+		assert(x>=0 && x<= size-1); 
+		return NeighIter(getAdjacency(x).begin(), x, *this); 
+	}
+
+	NeighIter end(int x) {
+	  
+		assert(x>=0 && x<= size-1); 
+		return NeighIter(getAdjacency(x).end(), x, *this); 
+	}
+
+    
 };
 
 #endif /* GRAPH_H_ */
