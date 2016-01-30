@@ -27,18 +27,17 @@ You should have received a copy of the GNU Lesser General Public License
 along with GraphFeatSAT. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Graph.h"
 #include <vector>
 #include <stack>
 #ifndef VECTOR
-#include "Graph.h"
+
 #endif
 #include <algorithm>
 #include <stdio.h> 
 
 #ifndef COMMUNITY_H
 #define COMMUNITY_H
-
-extern bool verbose;
 
 using namespace std;
 
@@ -123,11 +122,13 @@ double modularity() {
 	  //assert(it->orig >= 0 && it->orig < n2c.size());
 		//assert(it->dest >= 0 && it->dest < n2c.size());
 	
+	
 		if (n2c[it->orig] == n2c[it->dest]){ 
-		  cerr<<"geht"<<endl;
-		w += it->weight; 
+		 	w += it->weight; 
 		}
 	}
+	
+	cerr<<"ok"<<endl;
 
 	for (int i=0; i<g->getSize(); i++)
 		aritym[n2c[i]] += g->arity(i);  

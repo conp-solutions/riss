@@ -327,6 +327,7 @@ vector<int> Graph::getAdjacency(int adjnode)
  
  for(int i = 0; i < adj.size(); i++){
    edge edg = adj[i];
+   
    nodes.push_back(edg.first);
  
   }
