@@ -128,11 +128,12 @@ double modularity() {
 		}
 	}
 	
-	cerr<<"ok"<<endl;
-
+	
 	for (int i=0; i<g->getSize(); i++)
 		aritym[n2c[i]] += g->arity(i);  
 
+	
+	
 	for (int i=0; i<g->getSize(); i++)
 		arity += aritym[i] * aritym[i] / g->arity() / g->arity();
 
@@ -147,7 +148,8 @@ bool one_level() {
 // Given a graf "g" and a partition "n2c", improves the partition by moving nodes from one 
 // partition to another. Modifies "arity" and "n2c". Returns "true" if partition changed.
 //-------------------------------------------------------------------------------------------
-	bool improved = false, changed;
+	
+  bool improved = false, changed;
 	vector<int> random_order(g->getSize());
 
 	for (int i=0 ; i<random_order.size(); i++)
@@ -160,6 +162,7 @@ bool one_level() {
 		iterations++;
 		shuffle(random_order);
 		changed = false;
+		
 		for (int naux=0; naux<g->getSize(); naux++) {
 			int n = random_order[naux];
 
@@ -201,6 +204,7 @@ bool one_level() {
 		}
 	}
 	while (changed);
+	
 	return (improved);
 }
 

@@ -346,19 +346,6 @@ void Graph::completeSingleVIG(){
     
 }
 
-double Graph::getWeight(int nodeA, int nodeB){
- double weight = 0;
- 
- for(int i =0; i<node[nodeA].size(); i++){
- 
-   if(node[nodeA][i].first == nodeB) weight = node[nodeA][i].second; break;
-   
-}
-   
-  
-  return weight;
-}
-
 vector<double> Graph::getDistances(int nod){
 
   Riss::MarkArray visited;

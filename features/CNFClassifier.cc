@@ -1229,7 +1229,6 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 	
 		
 		modularity = c.compute_modularity_GFA(precision);
-		cerr<<"he"<<endl;
 		c.compute_communities();
 
 		
