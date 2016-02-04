@@ -55,8 +55,6 @@ class CNFClassifier
 
     /** tries to extract xor gates, and lists them according as sequence (not sure how to really do this) */
     void extractXorFeatures(const std::vector<std::vector<Riss::CRef> >& litToClsMap, std::vector<double>& ret);
-
-    std::pair<double,double> regresion(std::vector <std::pair <double,double> > &v);
     
   public:
     CNFClassifier(Riss::ClauseAllocator& _ca, Riss::vec<Riss::CRef>& _clauses, int _nVars);

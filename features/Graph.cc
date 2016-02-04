@@ -10,9 +10,12 @@
 #include <assert.h>
 #include <sstream>
 #include <iostream>
+#include "community.h"
+#include "dimension.h"
 #include <algorithm>
 #include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
+
 #include <iterator>
 
 
@@ -867,5 +870,55 @@ void Graph::doPageRank(){
      pagerank[i] = pgrnk*d + (1-d);
      
   }
+  
+}
+
+void Graph::getCommunities(double precision){
+
+  Community c(this);
+    double modularity;
+			cerr << "Computing COMMUNITY Structure (VIG)" << endl;
+	
+		
+		modularity = c.compute_modularity_GFA(precision);
+		c.compute_communities();
+
+		
+			cerr << "modularity = " << modularity << endl;
+			cerr << "communities = " << (int)c.ncomm << endl;
+			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/getSize() << endl;
+			cerr << "iterations = " << c.iterations << endl;
+			cerr << "------------" << endl;
+  
+}
+
+void Graph::getDimension(){
+
+   int minx = 0;
+    int maxx2 = 6;
+    vector<int> needed;
+    vector <pair <double,double> > v1;
+    vector <pair <double,double> > v2;
+    pair <double,double> polreg = make_pair(-1,-1);
+    pair <double,double> expreg = make_pair(-1,-1);
+    
+			cerr << "Computing SELF-SIMILAR Structure (VIG)" << endl;
+			
+                needed = computeNeeded(this);
+		
+		for(int i=1; i<needed.size(); i++){
+			if(i>=minx && i<=maxx2){
+				v1.push_back(pair<double,double>(log(i), log(needed[i])));
+				v2.push_back(pair<double,double>((double)i, log(needed[i])));	
+			}
+		}
+		
+		polreg = regresion(v1);
+		expreg = regresion(v2);
+		
+		
+	    		cerr << "dimension = " << -polreg.first << endl;
+			cerr << "decay = " << -expreg.first << endl;
+			cerr << "------------" << endl;
   
 }

@@ -8,8 +8,8 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
-#include "community.h"
-#include "dimension.h"
+
+
 #include <limits.h>
 #include <math.h>
 
@@ -1224,72 +1224,15 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
   //cerr<<vigGraph->gettreewidth()<<endl;
   //cerr<<vigGraph->getPageRank(0)<<endl;
     
-    Community c(vigGraph);
-    double modularity;
-			cerr << "Computing COMMUNITY Structure (VIG)" << endl;
-	
-		
-		modularity = c.compute_modularity_GFA(precision);
-		c.compute_communities();
-
-		
-			cerr << "modularity = " << modularity << endl;
-			cerr << "communities = " << (int)c.ncomm << endl;
-			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/vigGraph->getSize() << endl;
-			cerr << "iterations = " << c.iterations << endl;
-			cerr << "------------" << endl;
-		
-	
-    /*
-    int minx = 0;
-    int maxx2 = 6;
-    vector<int> needed;
-    vector <pair <double,double> > v1;
-    vector <pair <double,double> > v2;
-    pair <double,double> polreg = make_pair(-1,-1);
-    pair <double,double> expreg = make_pair(-1,-1);
     
-			cerr << "Computing SELF-SIMILAR Structure (VIG)" << endl;
-			
-                needed = computeNeeded(vigGraph);
-		
-		for(int i=1; i<needed.size(); i++){
-			if(i>=minx && i<=maxx2){
-				v1.push_back(pair<double,double>(log(i), log(needed[i])));
-				v2.push_back(pair<double,double>((double)i, log(needed[i])));	
-			}
-		}
-		
-		polreg = regresion(v1);
-		expreg = regresion(v2);
-		
-		
-	    		cerr << "dimension = " << -polreg.first << endl;
-			cerr << "decay = " << -expreg.first << endl;
-			cerr << "------------" << endl;
+  //vigGraph->getCommunities(0.000001); //TODO: take a look at the precision
+    vigGraph->getDimension();	
+    /*
+   
 		*/
 };
 
-pair< double, double > CNFClassifier::regresion(vector< pair< double, double > >& v)
-{
-//-----------------------------------------------------------------------------
-//Given a vector of points, computes the alpha and beta of a regression
-//-----------------------------------------------------------------------------
-  double Sx = 0, Sy = 0, Sxx = 0, Syy = 0, Sxy = 0;
-  for (vector<pair <double,double> >::iterator it=v.begin(); it != v.end(); it++) {
-    double x = it->first;
-    double y = it->second;
-    Sx += x;
-    Sy += y;
-    Sxx += x * x;
-    Syy += y * y;
-    Sxy += x * y;
-  }
-  
-  double alpha = (Sx * Sy - v.size() * Sxy)/( Sx * Sx - v.size() * Sxx);
-  double beta = Sy / v.size() - alpha * Sx / v.size();
-  return pair <double,double>(alpha,beta);
-}
+
 
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)

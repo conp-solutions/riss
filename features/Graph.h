@@ -52,9 +52,13 @@ class Graph
    
     std::vector<double> pagerank;
     std::vector<int> articulationpoints;
-    std::vector <double> narity;     
+    std::vector <double> narity;  
+    
+    int precision;
 
   public:
+    void getCommunities(double precision);
+    void getDimension();
     double getWeight(int nodeA, int nodeB);
     double arity(int x);
     double arity();
@@ -76,7 +80,7 @@ class Graph
     void addDirectedEdge(int nodeA, int nodeB, double weight);
     uint64_t addAndCountUndirectedEdge(int nodeA, int nodeB, double weight);
     int getDegree(int node);
-
+    
     std::vector<int> sortSize;  // for each adjacencyList store the size when its re-sorted
     void setIntermediateSort(bool newValue);
 
@@ -113,6 +117,32 @@ class Graph
     {
        return exzentricityStatistics;
     }
+    
+     //--------------- TOOL FOR COMPUTING DIMENSIONS --------------------------------------------------
+     
+    std::pair< double, double > regresion(std::vector< std::pair< double, double > >& v)
+{
+//-----------------------------------------------------------------------------
+//Given a vector of points, computes the alpha and beta of a regression
+//-----------------------------------------------------------------------------
+  double Sx = 0, Sy = 0, Sxx = 0, Syy = 0, Sxy = 0;
+  for (std::vector<std::pair <double,double> >::iterator it=v.begin(); it != v.end(); it++) {
+    double x = it->first;
+    double y = it->second;
+    Sx += x;
+    Sy += y;
+    Sxx += x * x;
+    Syy += y * y;
+    Sxy += x * y;
+  }
+  
+  double alpha = (Sx * Sy - v.size() * Sxy)/( Sx * Sx - v.size() * Sxx);
+  double beta = Sy / v.size() - alpha * Sx / v.size();
+  return std::pair <double,double>(alpha,beta);
+}
+
+    
+    
     
     
    //--------------- ITERATOR ON EDGES --------------------------------------------------
@@ -252,8 +282,8 @@ class Graph
 		  
 		return NeighIter(node[x].end()); 
 	}
-
-    
+	
+	
 };
 
 #endif /* GRAPH_H_ */
