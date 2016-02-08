@@ -1040,7 +1040,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
         // OTFSS is possible here
         if (!foundFirstLearnedClause && currentSize + 1 == clauseReductSize) {  // OTFSS, but on the reduct!
-            if (config.opt_otfss && (!c->learnt()  // apply otfss only for clauses that are considered to be interesting!
+            if (c != 0 && config.opt_otfss && (!c->learnt()  // apply otfss only for clauses that are considered to be interesting!
                                      || (config.opt_otfssL && c->learnt() && c->lbd() <= config.opt_otfssMaxLBD))) {
                 #ifdef PCASSO
 #warning add dependency to otfss info
@@ -1179,7 +1179,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
                     const Lit reasonLit = reason(x).getReasonL();
                     if (! varFlags[var(reasonLit)].seen && level(var(reasonLit)) > 0) {
                         out_learnt[j++] = out_learnt[i];
-                        break;
                     }
                 } else {
                     Clause& c = ca[reason(var(out_learnt[i])).getReasonC()];
@@ -1714,9 +1713,9 @@ void Solver::reduceDB()
 
 
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
-    if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
+    if (learnts.size() > 0 && ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
     // Useless :-)
-    if (ca[learnts.last()].lbd() <= 5)  { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
+    if (learnts.size() > 0 && ca[learnts.last()].lbd() <= 5)  { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
 
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
@@ -1817,26 +1816,49 @@ void Solver::counterImplicationRestart()
     for (int c = trail.size() - 1; c >= 0; c--) {
         int x = var(trail[c]);
         int lvl = level(x);
-        CRef r = reason(x).getReasonC();
+	
+	if( reason(x).isBinaryClause() ) {
+	  
+	  Var cl[2]; // pseudo clause structure for simple code
+	  cl[0] = x;
+	  cl[1] = var( reason(x).getReasonL() );
 
-        if (r == CRef_Undef) {
-            continue;
-        }
+	  // loop over reason clause
+	  for (int j = 0; j < 2; j++) {
+	      Var v = cl[j];
 
-        Clause& cl = ca[r];
+	      if (level(v) != lvl) {
+		  implied_num[x]++;
+	      }
+	  }
 
-        // loop over reason clause
-        for (int j = 0; j < cl.size(); j++) {
-            int v = var(cl[j]);
+	  if (max_imp < implied_num[x]) {
+	      max_imp = implied_num[x];
+	  }
+	  
+	} else {
+	  CRef r = reason(x).getReasonC();
 
-            if (level(v) != lvl) {
-                implied_num[x]++;
-            }
-        }
+	  if (r == CRef_Undef) {
+	      continue;
+	  }
 
-        if (max_imp < implied_num[x]) {
-            max_imp = implied_num[x];
-        }
+	  Clause& cl = ca[r];
+
+	  // loop over reason clause
+	  for (int j = 0; j < cl.size(); j++) {
+	      int v = var(cl[j]);
+
+	      if (level(v) != lvl) {
+		  implied_num[x]++;
+	      }
+	  }
+
+	  if (max_imp < implied_num[x]) {
+	      max_imp = implied_num[x];
+	  }
+        
+	}
     }
 
     for (int c = trail.size() - 1; c >= 0; c--) {

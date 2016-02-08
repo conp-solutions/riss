@@ -33,7 +33,7 @@ SMAC=./configurators/smac-v2.04.01-master-415/smac
 #SCENARIOFILE=./scenarios/regressiontests-5s-1h.txt
 SCENARIOFILE=./scenarios/CSSC-SWV-GZIP-15s-3h.txt
 #SCENARIOFILE=./scenarios/CNFUZZ-15s-3h.txt   # instances without SAT data
-WALLCLOCKLIMIT=4000
+WALLCLOCKLIMIT=8000
 SMACMODE=ROAR   # ROAD or SMAC
 
 
@@ -49,13 +49,15 @@ echo "run configuration fixing in dir $DIRNAME with PCS file $PARAMFILE and $FIX
 echo "SMAC run parameters: scenario: $SCENARIOFILE wall clock: $WALLCLOCKLIMIT mode: $SMACMODE"
 for (( i=1; i <= $FIXATTEMPTS; i++ ))
 do
-  echo "fix iteration $i"
+  # generate new random number
+  NUMRUN=`date +%s | rev | cut -c1-7 | rev`
+  echo "fix iteration $i  -- numRun: $NUMRUN"
   date 
 
 	# go to base directory (again)
 	cd $PWD
-	# call smac (again)
-	$SMAC --numRun 123456 --wallClockLimit $WALLCLOCKLIMIT --doValidation false --abortOnCrash true --executionMode $SMACMODE --scenarioFile $SCENARIOFILE --algo "ruby ../scripts/generic_silent_solver_wrapper.rb $DIRNAME" --paramfile $PARAMFILE > $SMACOUTPUT  2> $SMACERROR
+	# call smac (again, with a different random seed)
+	$SMAC --numRun $NUMRUN --wallClockLimit $WALLCLOCKLIMIT --doValidation false --abortOnCrash true --executionMode $SMACMODE --scenarioFile $SCENARIOFILE --algo "ruby ../scripts/generic_silent_solver_wrapper.rb $DIRNAME" --paramfile $PARAMFILE > $SMACOUTPUT  2> $SMACERROR
 	smacexitcode=$?
 
 	#echo "smac exited with $?"
@@ -66,7 +68,7 @@ do
 
 	# check for error
 	#echo "grep for bug"
-	grep "Target Algorithm Run Reported Crashed" $SMACERROR  # > /dev/null
+	grep "Target Algorithm Run Reported Crashed (NR: $NUMRUN)" $SMACERROR  # > /dev/null
 	foundNoError=$?
 	#echo "found error: $foundNoError"
 

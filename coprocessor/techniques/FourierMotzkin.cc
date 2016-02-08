@@ -1144,9 +1144,9 @@ bool FourierMotzkin::process()
 
     if (config.opt_fm_printtrace != 0) {
         MarkArray depends;
-        depends.resize(cards.back().getID() + 1);
+        depends.resize(cards.size() == 0 ? 1 : cards.back().getID() + 1);
         vector<int> basis;
-        vector<int> idMap(cards.back().getID() + 1);  // store for each ID the position in the cards vector
+        vector<int> idMap(cards.size() == 0 ? 1 : cards.back().getID() + 1);  // store for each ID the position in the cards vector
 
         // store for each ID the position in the cards vector
         for (int i = 0 ; i < cards.size(); ++ i) { idMap[ cards[i].getID() ] = i; }

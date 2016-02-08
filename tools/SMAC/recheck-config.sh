@@ -12,7 +12,7 @@
 file=$1
 shift
 
-echo "./riss -checkModel -config= `python ./mapCSSCparams.py $*` $file "
+echo "./riss -checkModel -config= $file `python ./mapCSSCparams.py $*` "
 
-./riss -checkModel -config= `python ./mapCSSCparams.py $*` $file 
+./riss -checkModel -config= $file `python ./mapCSSCparams.py $*`
 exit $?
