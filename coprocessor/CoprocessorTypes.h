@@ -696,11 +696,9 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
     }
     if (final == true) {
 
-        // std::cerr << "c compress variables to " << to+1 << std::endl;
-//     solver->assigns.shrink( solver->assigns.size() - to - 1);
+//         std::cerr << "c compress variables to " << to+1 << std::endl;
         solver->vardata.shrink_(solver->vardata.size() - to - 1);
         solver->activity.shrink_(solver->activity.size() - to - 1);
-//    solver->seen.shrink( solver->seen.size() - to - 1);
         solver->varFlags.shrink_(solver->varFlags.size() - to - 1);
 
         solver->rebuildOrderHeap();

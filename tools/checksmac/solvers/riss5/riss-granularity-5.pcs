@@ -1,3 +1,11 @@
+#
+#
+# modified for finding bugs:
+#  1) inprocess is always enabled
+#  2) enabled_cp3 is always enabled
+#
+
+
 # PCS Information for riss (core) 5.2.1  v5.2.0-3-gf479b22 
 #
 #
@@ -280,8 +288,8 @@ inc-inp  {yes,no} [no]     # increase technique limits per inprocess step
 randInp  {yes,no} [yes]     # Randomize Inprocessing
 cp3_randomized  {yes,no} [no]     # Steps withing preprocessing techniques are executed in random order
 cp3_limited  {yes,no} [yes]     # Limits for preprocessing techniques
-inprocess  {yes,no} [no]     # Use CP3 for inprocessing
-enabled_cp3  {yes,no} [no]     # Use CP3
+inprocess  {yes} [yes]     # Use CP3 for inprocessing
+enabled_cp3  {yes} [yes]     # Use CP3
 
 cp3_viv_lits  {14999488,15000000,15000512,15002048} [15000000]    # total literal limit to enable VIVIFICATION
 cp3_viv_cls  {9999488,10000000,10000512,10002048} [10000000]    # clause limit to enable VIVIFICATION
@@ -1334,9 +1342,6 @@ xorSetPol   | xor in {yes} #  only active, if xor has not its default value
 
 
 
-# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1120.cnf within timeout 0.06, (minimized with double)
-# full faulty call: { cp3_rew_minA=2, enabled_cp3=yes, naive_strength=yes, rew=yes } # reduced faulty configuration  (for simpler debugging)
-{ enabled_cp3=yes, naive_strength=yes, rew=yes } # reduced excludable faulty configuration 
 # found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1070.cnf within timeout 0.216, (minimized with double)
 # full faulty call: { enabled_cp3=yes, la=yes, la-cla=no } # reduced faulty configuration  (for simpler debugging)
 { enabled_cp3=yes, la=yes, la-cla=no } # reduced excludable faulty configuration 
@@ -1348,9 +1353,6 @@ xorSetPol   | xor in {yes} #  only active, if xor has not its default value
 # found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1084.cnf within timeout 0.024, (minimized with double)
 # full faulty call: { cp3_rew_imp=yes, enabled_cp3=yes, rew=yes } # reduced faulty configuration  (for simpler debugging)
 { cp3_rew_imp=yes, enabled_cp3=yes, rew=yes } # reduced excludable faulty configuration 
-# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1075.cnf within timeout 7.528, (minimized with double)
-# full faulty call: { alluiphack=1, ics=yes, longConflict=yes, lpd=16, minSizeMinimizingClause=286, otfss=yes, remtype=1, rer=yes, rer-e=yes, rfirst=36, rinc=800000.200000, rnd-freq=0.200000, rnd-seed=36659301.200001, rtype=1, sUHLElbd=5, sUHLEsize=16, size-core=16, updLearnAct=no, vsids-s=0.600000 } # reduced faulty configuration  (for simpler debugging)
-{ alluiphack=1, ics=yes, longConflict=yes, lpd=16, minSizeMinimizingClause=286, otfss=yes, remtype=1, rer=yes, rer-e=yes, rfirst=36, rinc=800000.200000, rnd-freq=0.200000, rnd-seed=36659301.200001, rtype=1, sUHLElbd=5, sUHLEsize=16, size-core=16, updLearnAct=no, vsids-s=0.600000 } # reduced excludable faulty configuration 
 # found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1041.cnf within timeout 0.036, (minimized with double)
 # full faulty call: { 3resolve=yes, cp3_res_add_red=yes, cp3_res_ars=yes, cp3_res_percent=1.000000, enabled_cp3=yes } # reduced faulty configuration  (for simpler debugging)
 { 3resolve=yes, cp3_res_add_red=yes, cp3_res_ars=yes, cp3_res_percent=1.000000, enabled_cp3=yes } # reduced excludable faulty configuration 

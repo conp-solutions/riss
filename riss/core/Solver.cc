@@ -4642,7 +4642,7 @@ bool Solver::interleavedClauseStrengthening()
             DOUT(if (config.opt_ics_debug) cerr << "c check lit " << j << "/" << c.size() << ": " << ca[learnts[i]][j] << " with value " << toInt(value(ca[learnts[i]][j])) << endl;);
             if (value(ca[learnts[i]][j]) == l_True) {    // just need to keep all previous and this literal
                 DOUT(if (config.opt_ics_debug) {
-                cerr << "c interrupt because of sat.lit, current trail: " << trail << endl;
+                cerr << "c interrupt because of sat.lit, current trail " << endl;
                 cerr << "c write to " << k << " / " << c.size() << " literal from " << j << " / " << c.size() << endl;
                 });
                 ca[learnts[i]][k++] = ca[learnts[i]][j];
@@ -4756,16 +4756,19 @@ bool Solver::interleavedClauseStrengthening()
 
     for (int i = 0 ; i < trailLimCopy.size(); ++i) {
         newDecisionLevel();
-        // if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
+        DOUT( if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl; );
         if (value(trailCopy[ trailLimCopy[i] ]) == l_False) {
             cancelUntil(decisionLevel() - 1);
+	    assert( decisionLevel() <= i && "the last literal should not be added to the trail" );
             break; // stop here, because the next decision has to be different! (and the search will take care of that!)
         } else if (value(trailCopy[ trailLimCopy[i] ]) == l_Undef) {
-            // cerr << "c enqueue next decision(" << i << ") idx=" << trailLimCopy[i] << " : "  << trailCopy[ trailLimCopy[i] ] << endl;
+            DOUT( if(config.opt_ics_debug) cerr << "c enqueue next decision(" << i << ") idx=" << trailLimCopy[i] << " : "  << trailCopy[ trailLimCopy[i] ] << endl; );
             uncheckedEnqueue(trailCopy[ trailLimCopy[i] ]);
-            cancelUntil(decisionLevel() - 1);      // do not add the same literal multiple times on the decision vector!
-            continue; // no need to propagate here!
-        }
+        } else { // the literal is already true, remove the currently added level, and proceed with the next level
+	    cancelUntil(decisionLevel() - 1);      // do not add the same literal multiple times on the decision vector!
+            continue; // no need to propagate here! 
+	}
+	assert( decisionLevel() > 0 && "a new literal has just been added" );
         CRef confl = propagate();
         if (confl != CRef_Undef) {  // handle conflict. conflict at top-level -> return false!, else backjump, and continue with good state!
             cancelUntil(decisionLevel() - 1);
@@ -4779,7 +4782,7 @@ bool Solver::interleavedClauseStrengthening()
 
     for (int i = 0 ; i < backupSolverState.size(); ++i) { varFlags[i].polarity = backupSolverState[i].polarity; }
     DOUT(if (config.opt_ics_debug) {
-    cerr << "c after ICS decision levels" << endl;
+    cerr << "c after ICS decision levels (" << decisionLevel() << ")" << endl;
     for (int i = 0 ; i < trail_lim.size(); ++i) {
             cerr << "c dec[" << i + 1 << "] : " << trail[ trail_lim[i] ] << endl;
         }

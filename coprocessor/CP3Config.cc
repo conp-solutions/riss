@@ -42,7 +42,7 @@ const char* _cat_hte      = "COPROCESSOR - HTE";
 const char* _cat_pr       = "COPROCESSOR - PROBING";
 const char* _cat_up       = "COPROCESSOR - UP";
 const char* _cat_res      = "COPROCESSOR - RES";
-const char* _cat_rew      = "COPROCESSOR - REWRITE";
+const char* _cat_rew      = "COPROCESSOR - REWRITE #NoAutoT";
 const char* _cat_shuffle  = "COPROCESSOR - SHUFFLE";
 const char* _cat_sls      = "COPROCESSOR - SLS";
 const char* _cat_sub      = "COPROCESSOR - SUBSUMPTION";
@@ -117,11 +117,11 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     // use 2sat and sls only for high versions!
 
     opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing #NoAutoT", 0, IntRange(0, 64), optionListPtr, &opt_enabled),
-    opt_sls         (_cat2,       "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false,       optionListPtr, &opt_enabled),
-    opt_sls_phase   (_cat_sls,    "sls-phase",     "Use current interpretation of SLS as phase", false,                                        optionListPtr, &opt_sls),
-    opt_sls_flips   (_cat_sls,    "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX),                      optionListPtr, &opt_sls),
-    opt_xor         (_cat2,       "xor",           "Reason with XOR constraints", false,                                                       optionListPtr, &opt_enabled),
-    opt_rew         (_cat2,       "rew",           "Rewrite AMO constraints", false,                                                           optionListPtr, &opt_enabled),
+    opt_sls         (_cat2,       "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false,         optionListPtr, &opt_enabled),
+    opt_sls_phase   (_cat_sls,    "sls-phase",     "Use current interpretation of SLS as phase", false,                                          optionListPtr, &opt_sls),
+    opt_sls_flips   (_cat_sls,    "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX),                        optionListPtr, &opt_sls),
+    opt_xor         (_cat2,       "xor",           "Reason with XOR constraints", false,                                                         optionListPtr, &opt_enabled),
+    opt_rew         (_cat_rew,    "rew",           "Rewrite AMO constraints #NoAutoT", false,                                                    optionListPtr, &opt_enabled),
 
     //
     // Var and Cls LIMTS
@@ -184,9 +184,9 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_rew_cls         (_cat, "cp3_rew_cls",     "clause limit to enable REW",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
     opt_rew_lits        (_cat, "cp3_rew_lits",    "total literal limit to enable REW",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
 
-    opt_hbr_vars        (_cat, "cp3_hbr_vars",    "variable limit to enable HBR",                INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
-    opt_hbr_cls         (_cat, "cp3_hbr_cls",     "clause limit to enable HBR",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
-    opt_hbr_lits        (_cat, "cp3_hbr_lits",    "total literal limit to enable HBR",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_rew),
+    opt_hbr_vars        (_cat, "cp3_hbr_vars",    "variable limit to enable HBR",                INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_hbr),
+    opt_hbr_cls         (_cat, "cp3_hbr_cls",     "clause limit to enable HBR",                  INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_hbr),
+    opt_hbr_lits        (_cat, "cp3_hbr_lits",    "total literal limit to enable HBR",           INT32_MAX, IntRange(0, INT32_MAX), optionListPtr, &opt_hbr),
 
 
 

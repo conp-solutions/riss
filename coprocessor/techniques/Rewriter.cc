@@ -19,7 +19,7 @@ void Rewriter::giveMoreSteps()
 }
 
 
-Rewriter::Rewriter(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Subsumption& _subsumption)
+Rewriter::Rewriter(Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
     : Technique(_config, _ca, _controller)
     , data(_data)
     , processTime(0)
@@ -46,6 +46,7 @@ Rewriter::Rewriter(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _
     , maxChain(0)
     , minChain(0)
     , foundChains(0)
+    , propagation(_propagation)
     , subsumption(_subsumption)
     , rewHeap(data)
 {
@@ -199,6 +200,7 @@ bool Rewriter::rewriteImpl()
                     clsLits.push(~newXn);
                     clsLits.push(~data.lits[j]); // FIXME: pick right literal!
                     // add this clause - since this combination was not possible in the "original" formula
+		    assert( clsLits.size() > 1 && "unit clauses should be allocated in another way" );
                     CRef tmpRef = ca.alloc(clsLits, false);  // is not a learned clause!
                     data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
                     createdClauses ++;
@@ -315,6 +317,7 @@ bool Rewriter::rewriteImpl()
                             if (!foundNR2comp && !foundNR2) { clsLits.push(r2); sort(clsLits); sortCalls++;}
                             if (!foundNR2comp && !hasDuplicate(data.list(minL2) , clsLits)) {
                                 // add clause with clsLits
+                                assert( clsLits.size() > 1 && "unit clauses should be allocated in another way" );
                                 CRef tmpRef = ca.alloc(clsLits, c.learnt());  // use learnt flag of other !
                                 data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
                                 DOUT(if (config.rew_debug_out > 1) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
@@ -401,6 +404,7 @@ bool Rewriter::rewriteImpl()
                     if (!hasDuplicate(data.list(minL), clsLits)) {
                         enlargedClauses ++;
                         data.removedClause(nll[k]);
+			assert( clsLits.size() > 1 && "unit clauses should not be allocated" );
                         CRef tmpRef = ca.alloc(clsLits, c.learnt());  // no learnt clause!
                         data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
                         DOUT(if (config.rew_debug_out > 1) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
@@ -425,6 +429,7 @@ bool Rewriter::rewriteImpl()
         for (int j = 0 ; j + 1 < rSize; ++ j) {
             if (data.lits[j] < data.lits[j + 1]) { clsLits[0] =  ~data.lits[j] ; clsLits[1] = data.lits[j + 1] ; }
             else { clsLits[0] =  data.lits[j + 1] ; clsLits[1] = ~data.lits[j] ; }
+            assert( clsLits.size() > 1 && "unit clauses should not be allocated" );
             CRef tmpRef = ca.alloc(clsLits, false);  // no learnt clause!
             data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
             DOUT(if (config.rew_debug_out > 2) cerr << "c add new chain [" << tmpRef << "] : " << ca[tmpRef] << endl;);
@@ -704,7 +709,7 @@ bool Rewriter::rewriteAMO()
                 }
             }
             DOUT(if (config.rew_debug_out > 0)  cerr << "c found " << count << " binary clauses, out of " << (size * (size - 1)) / 2 << endl;);
-            assert(count >= ((size * (size - 1)) / 2) && "not all clauses have been found");
+//             assert(count >= ((size * (size - 1)) / 2) && "not all clauses have been found"); // this assertion might not hold as the BIG might not be up to date wrt the clauses, but all its binary clauses are still entailed by the current formula
 
 
             DOUT(if (config.rew_debug_out > 1) cerr << "c rewrite AMO " << amo << " with size " << size << " halfsize " << size / 2 << " and rSize " << rSize << endl;);
@@ -721,6 +726,7 @@ bool Rewriter::rewriteAMO()
                         clsLits.push(~newXn);
                         clsLits.push(~data.lits[j]); // FIXME: pick right literal!
                         // add this clause - since this combination was not possible in the "original" formula
+			assert( clsLits.size() > 1 && "unit clauses should not be allocated" );
                         CRef tmpRef = ca.alloc(clsLits, false);  // is not a learned clause!
                         data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
                         createdClauses ++;
@@ -837,13 +843,18 @@ bool Rewriter::rewriteAMO()
                                 if (!foundNR2comp && !foundNR2) { clsLits.push(r2); sort(clsLits); sortCalls++;}
                                 if (!foundNR2comp && !hasDuplicate(data.list(minL2) , clsLits)) {
                                     // add clause with clsLits
-                                    CRef tmpRef = ca.alloc(clsLits, c.learnt());  // use learnt flag of other !
-                                    data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
-                                    DOUT(if (config.rew_debug_out > 1) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
-                                    createdClauses ++;
-                                    // clause is sorted already!
-                                    data.addClause(tmpRef);   // add to all literal lists in the clause
-                                    data.getClauses().push(tmpRef);
+				    if( clsLits.size() == 1 ) {
+				      data.enqueue( clsLits[0] );
+				    } else {
+				      assert( clsLits.size() > 1 && "unit clauses should not be allocated" );
+				      CRef tmpRef = ca.alloc(clsLits, c.learnt());  // use learnt flag of other !
+				      data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
+				      DOUT(if (config.rew_debug_out > 1) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
+				      createdClauses ++;
+				      // clause is sorted already!
+				      data.addClause(tmpRef);   // add to all literal lists in the clause
+				      data.getClauses().push(tmpRef);
+				    }
                                 }
                             }
                         } // end positive clauses
@@ -942,6 +953,7 @@ bool Rewriter::rewriteAMO()
                         if (!hasDuplicate(data.list(minL), clsLits)) {
                             enlargedClauses ++;
                             data.removedClause(nll[k]);
+			    assert( clsLits.size() > 1 && "clauses that are added as usual should not be allocated" );
                             CRef tmpRef = ca.alloc(clsLits, c.learnt());  // no learnt clause!
                             data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
                             DOUT(if (config.rew_debug_out > 1) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
@@ -967,6 +979,7 @@ bool Rewriter::rewriteAMO()
                 for (int k = j + 1 ; k < rSize; ++k) {
                     clsLits[0] = data.lits[j] < data.lits[k] ? ~data.lits[j] : ~data.lits[k];
                     clsLits[1] = data.lits[j] < data.lits[k] ? ~data.lits[k] : ~data.lits[j];
+		    assert( clsLits.size() > 1 && "clauses that are added as usual should not be allocated" );
                     CRef tmpRef = ca.alloc(clsLits, false);  // no learnt clause!
                     data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption!
                     DOUT(if (config.rew_debug_out > 2) cerr << "c add new AMO [" << tmpRef << "] : " << ca[tmpRef] << endl;);
@@ -977,6 +990,12 @@ bool Rewriter::rewriteAMO()
             }
 
 
+	    if( data.hasToPropagate() ) {
+	      if (l_False == propagation.process(data, true)) {
+		  return appliedSomething();
+	      }
+	    }
+            
             // do subsumption per iteration!
             subsumption.process();
             modifiedFormula = modifiedFormula || subsumption.appliedSomething();

@@ -49,7 +49,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , probing(config, solver->ca, controller, data, propagation, ee, *solver)
     , rate(config, solver->ca, controller, data, *solver, propagation)
     , resolving(config, solver->ca, controller, data, propagation)
-    , rewriter(config, solver->ca, controller, data, subsumption)
+    , rewriter(config, solver->ca, controller, data, propagation, subsumption)
     , fourierMotzkin(config, solver->ca, controller, data, propagation, *solver)
     , dense(config, solver->ca, controller, data, propagation)
     , symmetry(config, solver->ca, controller, data, *solver)

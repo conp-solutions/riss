@@ -51,13 +51,13 @@ extern void configCall(int argc, char** argv, std::stringstream& s);
 
 // print global options in PCS file format into the given File
 extern void printOptions(FILE* pcsFile, int printLevel = -1, int granularity = 0);
-/// print option dependencies in PCS file format into the given File, add #NoAutoT to the description if an option should be excluded
+/// print option dependencies in PCS file format into the given File, add #NoAutoT to the description or category if an option should be excluded
 extern void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity);
 
 /**
 * Options is an abstract class that gives the interface for all types options:
 *
-* to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description!
+* to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description or category!
 */
 class Option
 {
@@ -128,7 +128,7 @@ class Option
     virtual bool canPrintOppositeOfDefault(int granularity) = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
 
     /// print the option (besides debug, can be overwritten by specific types, useful for strings)
-    virtual bool wouldPrintOption() const { return description != 0 && 0 == strstr(description, "#NoAutoT"); }
+    virtual bool wouldPrintOption() const { return description != 0 && 0 == strstr(description, "#NoAutoT") && 0 == strstr(category, "#NoAutoT"); }
 
     void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity)
     {

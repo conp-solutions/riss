@@ -125,6 +125,7 @@ done
 
 # print number of iterations
 echo "fix iterations: $i ( out of $FIXATTEMPTS )"
+date
 
 # remove intermediate files
 ls $SMACOUTPUT $SMACERROR $REDUCEOUTPUT
