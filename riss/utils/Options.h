@@ -264,8 +264,8 @@ class DoubleOption : public Option
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
         double badd = 0, esub = 0;
-        if (!range.begin_inclusive) { badd = 0.00001; }
-        if (!range.end_inclusive) { esub = 0.00001; }
+        if (!range.begin_inclusive) { badd = 0.0001; }
+        if (!range.end_inclusive) { esub = 0.0001; }
         // always logarithmic
         double endValue = range.end == HUGE_VAL ? (defaultValue > 1000000.0 ? defaultValue : 1000000.0) : range.end - esub;
         if (granularity == 0) {  // use interval
@@ -276,15 +276,20 @@ class DoubleOption : public Option
             }
         } else { // print linear distributed sampling for double option
             fprintf(pcsFile, "%s  {", name); // print name
-            double diff = (endValue - (range.begin + badd)) / (double)granularity;
 	    bool hitDefault = false;
-            for (double v = range.begin + badd; v <= endValue; v += diff) {
-                if (v != range.begin + badd) { fprintf(pcsFile, ","); }   // print comma, if there will be more and we printed one item already
-                fprintf(pcsFile, "%lf", v); // print current value
-		if( round( v * 1000 ) == round( defaultValue*1000 ) ) hitDefault = true; // otherwise we run into precision problems
-            }
-            if( ! hitDefault ) fprintf(pcsFile, ",%lf", defaultValue); // print default value of option as well!
-            fprintf(pcsFile, "} [%lf]    # %s\n", value, description);
+	    bool hitValue = false;
+	    if( granularity > 1 ) {
+	      double diff = (endValue - (range.begin + badd)) / (double)(granularity-1);
+	      for (double v = range.begin + badd; v <= endValue; v += diff) {
+		  if (v != range.begin + badd) { fprintf(pcsFile, ","); }   // print comma, if there will be more and we printed one item already
+		  fprintf(pcsFile, "%.4lf", v); // print current value
+		  if( round( v * 10000 ) == round( defaultValue*10000 ) ) hitDefault = true; // otherwise we run into precision problems
+		  if( round( v * 10000 ) == round( value*10000 ) ) hitValue = true; // otherwise we run into precision problems
+	      }
+	    }
+            if( ! hitValue)    fprintf(pcsFile, ",%.4lf", value);        // print current value of option as well!
+            if( ! hitDefault && round( defaultValue*10000 ) != round( value*10000 )  ) fprintf(pcsFile, ",%.4lf", defaultValue); // print default value of option as well!
+            fprintf(pcsFile, "} [%.4lf]    # %s\n", value, description);
         }
     }
 
