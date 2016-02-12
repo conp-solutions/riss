@@ -143,6 +143,9 @@ void RegionAllocator<T>::capacity(uint32_t min_cap)
 
     assert(cap > 0);
     memory = (T*)::realloc(memory, sizeof(T) * cap);
+    
+    // we want to get an error if the allocation failed
+    if( memory == 0 ) throw OutOfMemoryException();
 }
 
 
