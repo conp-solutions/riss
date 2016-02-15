@@ -248,6 +248,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_use_reverse_minimization(_cm, "revMin",     "minimize learned clause by using reverse vivification", false,                              optionListPtr),
     reverse_minimizing_size     (_cm, "revMinSize", "max clause size for revMin" , 12, IntRange(2, INT32_MAX),                                   optionListPtr, &opt_use_reverse_minimization),
     lbLBDreverseClause          (_cm, "revMinLBD",  "max clause LBD for revMin", 6, IntRange(1, INT32_MAX),                                      optionListPtr, &opt_use_reverse_minimization),
+    opt_minimize_max_size       (_cm, "minmaxsize", "maximal learned clause size to apply minimization", 0, IntRange(0, INT32_MAX),              optionListPtr),
 
     // USING BIG information during search
     opt_uhdProbe                (_cm, "sUhdProbe",  "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0, 3), optionListPtr),

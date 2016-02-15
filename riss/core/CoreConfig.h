@@ -245,6 +245,7 @@ class CoreConfig : public Config
     BoolOption opt_use_reverse_minimization; // indicate that reverse minimization is used
     IntOption reverse_minimizing_size;       // size to perform reverse minimization
     IntOption lbLBDreverseClause;            // lbd to perform reverse minimization
+    IntOption opt_minimize_max_size;         // do not perform minimization if the current learned clause is larger than the given value
 
     IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
     IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off

@@ -1141,7 +1141,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         }
     }
 
-
+    // control minimization based on clause size
+    if( config.opt_minimize_max_size != 0 && out_learnt.size() > config.opt_minimize_max_size ) doMinimizeClause = false;
+    
     if (doMinimizeClause) {
         // Simplify conflict clause:
         //
