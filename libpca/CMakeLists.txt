@@ -13,7 +13,7 @@ include(ExternalProject)
 # to install the header files directly into the source folder
 # (they are ignored by git)
 ExternalProject_Add(armadillo-static
-  URL http://skylink.dl.sourceforge.net/project/arma/armadillo-5.600.2.tar.gz
+  URL http://downloads.sourceforge.net/project/arma/armadillo-6.500.5.tar.gz
   PREFIX "armadillo"
   CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF
              -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
@@ -41,7 +41,7 @@ target_link_libraries(libpca-static armadillo-lib-static)
 # Armadillo (shared)
 # 
 ExternalProject_Add(armadillo-shared
-  URL http://skylink.dl.sourceforge.net/project/arma/armadillo-5.600.2.tar.gz
+  URL http://downloads.sourceforge.net/project/arma/armadillo-6.500.5.tar.gz
   PREFIX "armadillo"
   CMAKE_ARGS -DBUILD_SHARED_LIBS=ON
              -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
