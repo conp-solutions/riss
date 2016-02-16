@@ -1,0 +1,12 @@
+#
+# work on feature file to get similarities between sat competitions (based on year)
+#
+
+
+1) obtain the features file (note: instance will be specified twice in the downloaded file, the head has to respect this)
+  scp -C taurus:/scratch/nmanthey/Features/features.csv .
+2) get features into a usable format, take care of the header as well, drop all features that are based on time, get rid of out cluster specific file names (formluas names should start with "/CNF/year/"
+  ./processFeatures.sh features.csv /projects/p_sat
+3) run the evaluation
+  ./evaluate.sh
+

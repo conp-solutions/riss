@@ -1,0 +1,15 @@
+/CNF/2003/2003-shuffled/handmade
+/CNF/2004/handmade  
+/CNF/2005/crafted  
+/CNF/2007/crafted
+/CNF/2009/crafted
+/CNF/2011/selected/SAT02/handmade
+/CNF/2011/selected/SAT03/handmade
+/CNF/2011/selected/SAT07/crafted
+/CNF/2011/selected/SAT09/CRAFTED
+/CNF/2011/selected/SAT11/crafted
+/CNF/2011/selected/SAT04/handmade
+/CNF/2011/selected/SAT05/crafted
+/CNF/2012/crafted
+/CNF/2013/crafted
+/CNF/2014/sc14-crafted
