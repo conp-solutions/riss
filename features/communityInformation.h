@@ -2,10 +2,18 @@
 #include <fstream>
 #include "riss/core/Dimacs.h"
 #include "CNFClassifier.h"
-
-
+#include "Graph.h"
 using namespace std;
 
+class communityInformation
+{
+private:
+
+Graph* VIG;
+vector<vector<int>> communities;
+vector<int> nodes;
+vector<vector<int>> neighbors;    
+  
 Graph* buildSingleVIG(char** argv, int argc, bool deri){
 
    string line = "";
@@ -99,24 +107,39 @@ Graph* buildSingleVIG(char** argv, int argc, bool deri){
  return vigGraph; 
 }
 
-void detectClauses(int argc, char** argv,  bool deri){
-
-Graph* VIG = buildSingleVIG(argv, argc, deri);
-    
-  VIG->finalizeGraph();
-  VIG->completeSingleVIG();
- 
-vector<vector<int>> communities = VIG->getCommunityForEachNode(0.000001);
-vector<int> nodes(VIG->getSize());
-
-for(int i=0; i<communities.size(); ++i) {
-for(int j=0; j<communities[i].size();j++) nodes[communities[i][j]] = i;
-}
-
-vector<vector<int>> neighbors;
+public:
 
   
+communityInformation(int argc, char** argv, bool derivative){
+   VIG = buildSingleVIG(argv, argc, derivative);
+   VIG->finalizeGraph();
+   VIG->completeSingleVIG(); 
+   
+   communities = VIG->getCommunityForEachNode(0.000001);
+    
+   nodes.resize(VIG->getSize());
+   neighbors.resize(communities.size());
+ 
+  for(int i=0; i<communities.size(); ++i) {
+    for(int j=0; j<communities[i].size();j++) nodes[communities[i][j]-1] = i;
+    }
+
+   vector<int> adj; 
+   for(int i=0; i<communities.size()-1; ++i){
+     for(int j =0; j<communities[i].size(); ++j){
+      adj = VIG->getAdjacency(communities[i][j]-1);
+       for(int k=0; k<adj.size(); ++k){
+       	 if (nodes[adj[k]] > i){
+	   neighbors[i].push_back(nodes[adj[k]]);
+	   neighbors[nodes[adj[k]]].push_back(i);
+	} 
+      }   
+  }
+}
 }
 
+vector<vector<int>> getCommunityNeighbors(){return neighbors;}
+vector<vector<int>> getCommunities(){return communities;}
+vector<int> getNodes(){return nodes;}
 
-
+};

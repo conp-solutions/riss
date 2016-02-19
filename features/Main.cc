@@ -469,7 +469,7 @@ int main(int argc, char** argv)
         
 
 	//computeExtraGraphFeatures (argc, argv);
-	detectClauses(argc, argv, derivative);
+	communityInformation communityInformation(argc, argv, derivative);
 
         return 0;
 
