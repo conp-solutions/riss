@@ -12,7 +12,9 @@ private:
 Graph* VIG;
 vector<vector<int>> communities;
 vector<int> nodes;
-vector<vector<int>> neighbors;    
+vector<vector<int>> neighbors;  
+
+int stepcounter;
   
 Graph* buildSingleVIG(char** argv, int argc, bool deri){
 
@@ -110,20 +112,22 @@ Graph* buildSingleVIG(char** argv, int argc, bool deri){
 public:
 
   
-communityInformation(int argc, char** argv, bool derivative){
+communityInformation(int argc, char** argv, bool derivative, int stepcounter): stepcounter(stepcounter){
    VIG = buildSingleVIG(argv, argc, derivative);
    VIG->finalizeGraph();
-   VIG->completeSingleVIG(); 
-   
-   communities = VIG->getCommunityForEachNode(0.000001);
-    
+   VIG->completeSingleVIG();  
    nodes.resize(VIG->getSize());
-   neighbors.resize(communities.size());
- 
-  for(int i=0; i<communities.size(); ++i) {
-    for(int j=0; j<communities[i].size();j++) nodes[communities[i][j]-1] = i;
-    }
+  
+}
 
+vector<vector<int>> getCommunityNeighbors(){
+int step = 0; 
+  
+  if(communities.size() == 0){
+  
+    getCommunities();
+  }
+  
    vector<int> adj; 
    for(int i=0; i<communities.size()-1; ++i){
      for(int j =0; j<communities[i].size(); ++j){
@@ -132,14 +136,43 @@ communityInformation(int argc, char** argv, bool derivative){
        	 if (nodes[adj[k]] > i){
 	   neighbors[i].push_back(nodes[adj[k]]);
 	   neighbors[nodes[adj[k]]].push_back(i);
-	} 
+	   }
+	   step++;
+	if(step > stepcounter) return neighbors;
       }   
   }
 }
+  
+  return neighbors;
+  
 }
 
-vector<vector<int>> getCommunityNeighbors(){return neighbors;}
-vector<vector<int>> getCommunities(){return communities;}
-vector<int> getNodes(){return nodes;}
+vector<vector<int>> getCommunities(){
+  
+  communities = VIG->getCommunityForEachNode(0.000001);
+  neighbors.resize(communities.size());
+  
+  return communities;
+    
+}
+
+vector<int> getNodes(){
+  int step = 0;
+  
+  if(communities.size() == 0){
+  
+    getCommunities();
+  }
+  
+   for(int i=0; i<communities.size(); ++i) {
+    for(int j=0; j<communities[i].size();j++){ nodes[communities[i][j]-1] = i;
+      step++;
+      if(step > stepcounter) return nodes;
+    }
+    }
+    
+  return nodes;
+  
+}
 
 };
