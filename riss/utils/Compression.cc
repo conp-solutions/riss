@@ -194,8 +194,8 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
 
 	// scan for the highest variable
 	for (Var var = _mapping.size(); var > 0; var--) {
-	  if( mapping[var] != UNIT ) { // we found a variable that is eliminated. as we started from the end, this is the highest variable in the compressed formula
-	    highestVar = mapping[var];
+	  if( mapping[var - 1] != UNIT ) { // we found a variable that is eliminated. as we started from the end, this is the highest variable in the compressed formula
+	    highestVar = mapping[var - 1];
 	    break;
 	  }
 	}
