@@ -150,7 +150,7 @@ vector<vector<int>> getCommunities(){
   
   communities = VIG->getCommunityForEachNode(prec);
   neighbors.resize(communities.size());
-  
+ 
   return communities;
     
 }

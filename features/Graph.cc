@@ -895,13 +895,14 @@ void Graph::getCommunities(double precision){
 
 vector<vector<int>> Graph::getCommunityForEachNode(double prec){
  Community c(this);
-    double modularity;
-    vector<int> comm;
-					
-		modularity = c.compute_modularity_GFA(prec);
+ vector<vector<int>> comm;					
+		c.compute_modularity_GFA(prec);
 		c.compute_communities();
 		
-		return c.Comm;	
+		comm = c.Comm;
+		comm.resize(c.ncomm);
+		
+		return comm;	
   
 }
 
