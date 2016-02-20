@@ -15,8 +15,9 @@ vector<int> nodes;
 vector<vector<int>> neighbors;  
 
 int stepcounter;
+double prec;
   
-Graph* buildSingleVIG(char** argv, int argc, bool deri){
+Graph* buildSingleVIG(char** argv, int argc){
 
    string line = "";
     ofstream* fileout = new ofstream();
@@ -78,7 +79,7 @@ Graph* buildSingleVIG(char** argv, int argc, bool deri){
      vector<int> clsSizes(10, 0);
     
     Graph *vigGraph = nullptr;
-    vigGraph = new Graph(S.nVars(), deri); 
+    vigGraph = new Graph(S.nVars(), true); 
     
      for (int i = 0; i < S.clauses.size(); ++i) {
       
@@ -95,13 +96,11 @@ Graph* buildSingleVIG(char** argv, int argc, bool deri){
             const Var v = var(l); // calculate a variable from the literal
 
             // Adding edges for the variable graph
-            if (deri) {
-                for (int k = j + 1; k < c.size(); ++k) {
+                            for (int k = j + 1; k < c.size(); ++k) {
                     vigGraph->addDirectedEdge(v,   
                                    var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
                 }
-            }
-
+	      
             assert(var(~l) == var(l) && "the two variables have to be the same");
         }
 
@@ -112,15 +111,15 @@ Graph* buildSingleVIG(char** argv, int argc, bool deri){
 public:
 
   
-communityInformation(int argc, char** argv, bool derivative, int stepcounter): stepcounter(stepcounter){
-   VIG = buildSingleVIG(argv, argc, derivative);
+communityInformation(int argc, char** argv, int stepcounter, double prec): stepcounter(stepcounter), prec(prec){
+   VIG = buildSingleVIG(argv, argc);
    VIG->finalizeGraph();
    VIG->completeSingleVIG();  
    nodes.resize(VIG->getSize());
   
 }
 
-vector<vector<int>> getCommunityNeighbors(){
+bool getCommunityNeighbors(){
 int step = 0; 
   
   if(communities.size() == 0){
@@ -138,25 +137,25 @@ int step = 0;
 	   neighbors[nodes[adj[k]]].push_back(i);
 	   }
 	   step++;
-	if(step > stepcounter) return neighbors;
+	if(step > stepcounter) return false;
       }   
   }
 }
   
-  return neighbors;
+  return true;
   
 }
 
 vector<vector<int>> getCommunities(){
   
-  communities = VIG->getCommunityForEachNode(0.000001);
+  communities = VIG->getCommunityForEachNode(prec);
   neighbors.resize(communities.size());
   
   return communities;
     
 }
 
-vector<int> getNodes(){
+bool getNodes(){
   int step = 0;
   
   if(communities.size() == 0){
@@ -167,11 +166,11 @@ vector<int> getNodes(){
    for(int i=0; i<communities.size(); ++i) {
     for(int j=0; j<communities[i].size();j++){ nodes[communities[i][j]-1] = i;
       step++;
-      if(step > stepcounter) return nodes;
+      if(step > stepcounter) return false;
     }
     }
     
-  return nodes;
+  return true;
   
 }
 
