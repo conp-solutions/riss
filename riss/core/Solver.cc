@@ -756,6 +756,7 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
             if ((config.opt_rer_rewriteNew && !config.opt_rer_as_learned)
                     || config.opt_rer_extractGates
                ) {
+    
                 // rewrite the learned clause by replacing a disjunction of two literals with the
                 // corresponding ER-literal (has to be falsified as well)
                 const int cs = learned_clause.size();
@@ -765,6 +766,7 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
                     const Lit& otherLit = erRewriteInfo[ toInt(l1) ].otherMatch;
                     if (otherLit == lit_Undef) { continue; }  // there has been no rewriting with this literal yet
                     if (! varFlags[ var(otherLit) ].seen) { continue; }    // the literal for rewriting is not present in the clause, because the variable is not present
+                    
                     // check whether the other literal is present
                     for (int j = 1; j < learned_clause.size(); ++ j) {
                         if (i == j) { continue; }  // do not check the literal with itself
@@ -779,6 +781,22 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
                     }
                 }
                 if (cs > learned_clause.size()) {
+		  
+		    rerRewriteArray.resize( 2*nVars() );
+		    rerRewriteArray.nextStep();
+		  
+		    int keptLits = 0;
+		    for( int k = 0 ; k < learned_clause.size(); ++ k ) {
+		      if( !rerRewriteArray.isCurrentStep( toInt( learned_clause[k] ) ) ) { // keep each literal once
+			rerRewriteArray.setCurrentStep( toInt( learned_clause[k] ) ); // memorize this literal
+			learned_clause[keptLits++] = learned_clause[k];               // keep literals
+		      } // else drop literal automatically
+		    }
+		    learned_clause.shrink_( learned_clause.size() - keptLits ); // remove duplicate literals
+		    
+		    for( int k = 0 ; k < learned_clause.size(); ++ k ) { // check for duplicates
+		      for( int m = k + 1; m < learned_clause.size(); ++m ) assert( learned_clause[k] != learned_clause[m] && "do not have duplicate literals in the clause" );
+		    }
                     erRewriteClauses ++;
                     return true;
                 } else { return false; }
@@ -833,7 +851,7 @@ Lit Solver::pickBranchLit()
     if (config.opt_litPairDecisions > 0 && decisionLevel() > 0) {
         assert(trail_lim.size() > 0 && "there has to be a decision already");
         int refDecisionLevel = 0;
-        while (refDecisionLevel < decisionLevel()) {    // as long as there are other reference decisions
+        while (refDecisionLevel < decisionLevel() && trail_lim[refDecisionLevel] < trail.size() ) {   // as long as there are other reference decisions, take care of assumptions and "empty assumption decision literals"
             assert(trail_lim[refDecisionLevel] < trail.size() && "decision literals have to be located in the trail");
             Lit decideDecision = trail [ trail_lim[refDecisionLevel] ] ;
             DOUT(if (config.opt_printDecisions > 1) cerr << endl << "c reference decision: " << decideDecision << " @ " << refDecisionLevel << endl ;);
@@ -1040,15 +1058,16 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 
         // OTFSS is possible here
         if (!foundFirstLearnedClause && currentSize + 1 == clauseReductSize) {  // OTFSS, but on the reduct!
-            if (c != 0 && config.opt_otfss && (!c->learnt()  // apply otfss only for clauses that are considered to be interesting!
+            if (c != 0 && p != lit_Undef && config.opt_otfss && (!c->learnt()  // apply otfss only for clauses that are considered to be interesting, and not to the conflict itself! // TODO find another way to not apply to the conflict clause
                                      || (config.opt_otfssL && c->learnt() && c->lbd() <= config.opt_otfssMaxLBD))) {
+		DOUT(if (config.debug_otfss) cerr << "c OTFSS can remove literal " << p << " from " << c << endl;);
                 #ifdef PCASSO
 #warning add dependency to otfss info
                 #else
                 otfss.revealedClause ++;
+		assert( p != lit_Undef && "cannot add OTFSS clause for the conflict!" );
                 otfss.info.push({ currentReason.getReasonC(), p });   // add pair to vector to be processed afterwards
                 #endif
-                DOUT(if (config.debug_otfss) cerr << "c OTFSS can remove literal " << p << " from " << c << endl;);
             }
         }
         if (!isOnlyUnit && units > 0) { break; }   // do not consider the next clause, because we cannot continue with units
@@ -1112,7 +1131,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
     }
 
     currentSize ++; // the literal "~p" has been added additionally
-    if (currentSize != out_learnt.size()) { cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << " and collected vector: " << out_learnt << endl; }
+    DOUT( if (currentSize != out_learnt.size()) { cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << " and collected vector: " << out_learnt << endl; } );
     assert(currentSize == out_learnt.size() && "counted literals has to be equal to actual clause!");
 
     DOUT(if (config.opt_rer_debug) cerr << "c learned clause (before mini): " << out_learnt << endl;);
@@ -1138,11 +1157,15 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             learnedDecisionClauses ++;
             DOUT(if (config.opt_printDecisions > 2 || config.opt_learn_debug  || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;);
             doMinimizeClause = false;
+	    analyze_toclear.clear(); // already cleared everything
         }
     }
 
     // control minimization based on clause size
-    if( config.opt_minimize_max_size != 0 && out_learnt.size() > config.opt_minimize_max_size ) doMinimizeClause = false;
+    if( config.opt_minimize_max_size != 0 && out_learnt.size() > config.opt_minimize_max_size ) { 
+      doMinimizeClause = false;
+      out_learnt.copyTo(analyze_toclear); // take care of the conesquences of not performing minimization
+    }
     
     if (doMinimizeClause) {
         // Simplify conflict clause:
@@ -1220,21 +1243,34 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd, dependencyLevel); // code in this method should execute below code until determining correct backtrack level
         }
 
+        for( int k = 0 ; k < out_learnt.size(); ++ k ) { // check for duplicates
+	  for( int m = k + 1; m < out_learnt.size(); ++m ) assert( out_learnt[k] != out_learnt[m] && "do not have duplicate literals in the clause" ); }
+        
         if (out_learnt.size() <= searchconfiguration.uhle_minimizing_size) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = searchUHLE(out_learnt, lbd, dependencyLevel);
         }
+        
+        for( int k = 0 ; k < out_learnt.size(); ++ k ) { // check for duplicates
+	  for( int m = k + 1; m < out_learnt.size(); ++m ) assert( out_learnt[k] != out_learnt[m] && "do not have duplicate literals in the clause" ); }
 
         if (searchconfiguration.use_reverse_minimization && out_learnt.size() <= searchconfiguration.lbSizeReverseClause) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = reverseLearntClause(out_learnt, lbd, dependencyLevel);
         }
 
+        for( int k = 0 ; k < out_learnt.size(); ++ k ) { // check for duplicates
+	  for( int m = k + 1; m < out_learnt.size(); ++m ) assert( out_learnt[k] != out_learnt[m] && "do not have duplicate literals in the clause" ); }
+        
         // rewrite clause only, if one of the two systems added information
-        if (out_learnt.size() <= 0) {   // FIXME not used yet
+        if (config.opt_rer_as_replaceAll && out_learnt.size() <= config.erRewrite_size) {   // rewrite disjunctions with information taken from RER
             if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = erRewrite(out_learnt, lbd, dependencyLevel);
         }
+        
+        for( int k = 0 ; k < out_learnt.size(); ++ k ) { // check for duplicates
+	  for( int m = k + 1; m < out_learnt.size(); ++m ) assert( out_learnt[k] != out_learnt[m] && "do not have duplicate literals in the clause" ); }
+        
     } // end working on usual learnt clause (minimize etc.)
 
 
@@ -1310,6 +1346,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         varBumpActivity(varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd));
     }
 
+    for( int k = 0 ; k < out_learnt.size(); ++ k ) { // check for duplicates
+	  for( int m = k + 1; m < out_learnt.size(); ++m ) assert( out_learnt[k] != out_learnt[m] && "do not have duplicate literals in the clause" ); }
+    
     return 0;
 
 }
@@ -1405,19 +1444,25 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     for (int i = trail.size() - 1; i >= trail_lim[0]; i--) {
         Var x = var(trail[i]);
         if (varFlags[x].seen) {
-            if (reason(x).getReasonC() == CRef_Undef) {
-                assert(level(x) > 0);
-                out_conflict.push(~trail[i]);
-            } else {
-                Clause& c = ca[ reason(x).getReasonC() ];
-                //                for (int j = 1; j < c.size(); j++) Minisat (glucose 2.0) loop
-                // Bug in case of assumptions due to special data structures for Binary.
-                // Many thanks to Sam Bayless (sbayless@cs.ubc.ca) for discover this bug.
-                for (int j = ((c.size() == 2) ? 0 : 1); j < c.size(); j++)
-                    if (level(var(c[j])) > 0) {
-                        varFlags[var(c[j])].seen = 1;
-                    }
-            }
+	    if (reason(x).isBinaryClause() ) { // handle binary reasons properly
+	      if (level(  var(reason(x).getReasonL()) ) > 0) {
+		varFlags[ var(reason(x).getReasonL()) ].seen = 1;
+	      }
+	    } else {
+	      if (reason(x).getReasonC() == CRef_Undef) {
+		  assert(level(x) > 0);
+		  out_conflict.push(~trail[i]);
+	      } else {
+		  Clause& c = ca[ reason(x).getReasonC() ];
+		  //                for (int j = 1; j < c.size(); j++) Minisat (glucose 2.0) loop
+		  // Bug in case of assumptions due to special data structures for Binary.
+		  // Many thanks to Sam Bayless (sbayless@cs.ubc.ca) for discover this bug.
+		  for (int j = ((c.size() == 2) ? 0 : 1); j < c.size(); j++)
+		      if (level(var(c[j])) > 0) {
+			  varFlags[var(c[j])].seen = 1;
+		      }
+	      }
+	    }
 
             varFlags[x].seen = 0;
         }
@@ -4293,6 +4338,11 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 resetRestrictedExtendedResolution(); // done with the current pattern
                 maxRERclause = maxRERclause >= currentLearnedClause.size() ? maxRERclause : currentLearnedClause.size();
                 totalRERlits += currentLearnedClause.size();
+		
+		for( int k = 0 ; k < currentLearnedClause.size(); ++ k ) { // check for dudplicates
+		  for( int m = k+1 ; m < currentLearnedClause.size(); ++ m ) assert( currentLearnedClause[m] != currentLearnedClause[k] && "no duplicate literals" );
+		}
+		
                 return rerDontAttachAssertingLit;
             } else {
                 DOUT(if (config.opt_rer_debug) cerr << "c add as [ " << rerLits.size() << " ] candidate [" << rerLearnedSizeCandidates << "] : " << currentLearnedClause << endl;);
@@ -5049,6 +5099,8 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
         assert(!isBiAsserting && "does not work if isBiasserting is changing something afterwards!");
         extResTime.start();
         rerClause = restrictedExtendedResolution(learnt_clause, nblevels, dependencyLevel);
+	for( int k = 0 ; k < learnt_clause.size(); ++ k ) { // check for duplicates
+	  for( int m = k + 1; m < learnt_clause.size(); ++m ) assert( learnt_clause[k] != learnt_clause[m] && "do not have duplicate literals in the clause" ); }
         extResTime.stop();
     } else if (isBiAsserting) { resetRestrictedExtendedResolution(); }   // do not have two clauses in a row for rer, if one of them is bi-asserting!
 

@@ -1130,6 +1130,8 @@ class Solver
     vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
     int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause; // stat counters
     double rerOverheadTrailLits, totalRERlits; // stats
+    
+    MarkArray rerRewriteArray;          // markArray to rewrite learned clauses
 
     // interleaved clause strengthening (ics)
     int lastICSconflicts;     // number of conflicts for last ICS

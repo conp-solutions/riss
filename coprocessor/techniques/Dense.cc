@@ -196,14 +196,15 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     // after full compression took place, set known assignments again
     for (int i = 0 ; i < _trail.size(); ++i) {
         // put rewritten literals back on the trail
+	assert( var(_trail[i]) <= data.nVars() && "all variables had to be compressed" );
         data.enqueue(_trail[i]);
     }
 
     // ensure we compressed something
-    if (data.nVars() + diff != compression.nvars()) {
+    DOUT( if (data.nVars() + diff != compression.nvars()) {
         cerr << "c number of variables does not match: " << endl
              << "c diff= " << diff << " old= " << compression.nvars() << " new=" << data.nVars() << endl;
-    }
+    } );
     assert(data.nVars() + diff == compression.nvars() && "number of variables has to be reduced");
 
     // add the clauses to the structures again. as all clauses have been rewritten, we clear all lists and add all clauses again
@@ -213,12 +214,14 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
             const Clause& c = ca[ data.getClauses()[i] ];
             if (! c.can_be_deleted()) {
                 data.addClause(data.getClauses()[i]);
+		for( int j = 0 ; j < c.size() ; ++ j ) assert( var(c[j]) <= data.nVars() && "all variables had to be compressed" );
             }
         }
         for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
             const Clause& c = ca[ data.getLEarnts()[i] ];
             if (! c.can_be_deleted()) {
                 data.addClause(data.getLEarnts()[i]);
+		for( int j = 0 ; j < c.size() ; ++ j ) assert( var(c[j]) <= data.nVars() && "all variables had to be compressed" );
             }
         }
     }

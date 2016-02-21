@@ -322,7 +322,7 @@ CRef Probing::prPropagate(bool doDouble)
                     }
                     // a new clause is required
                     CRef cr2 = ca.alloc(solver.oc, clearnt);  // add the new clause - now all references could be invalid!
-                    cerr << "c add clause [" << cr2 << "] : " << ca[cr2] << endl;
+                    DOUT( if (config.pr_debug_out > 1) cerr << "c add clause [" << cr2 << "] : " << ca[cr2] << endl; );
                     if (clearnt) { ca[cr2].setLBD(1); solver.learnts.push(cr2); ca[cr2].activity() = cactivity; }
                     else { solver.clauses.push(cr2); }
                     solver.clssToBump.push(cr2); // add clause to solver lazily!

@@ -347,7 +347,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #endif
     opt_dense_inprocess    (_cat_dense, "dense_inp",       "use dense during inprocessing", false,                                            optionListPtr, &opt_dense),
     opt_dense_fragmentation(_cat_dense, "cp3_dense_frag",  "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100), optionListPtr, &opt_dense),
-    opt_dense_keep_assigned(_cat_dense, "cp3_keep_set",    "keep already assigned literals", false,                                           optionListPtr, &opt_dense),
+    opt_dense_keep_assigned(_cat_dense, "cp3_keep_set",    "keep already assigned literals #NoAutoT", false,                                  optionListPtr, &opt_dense),
 
     //
     // Entailed
