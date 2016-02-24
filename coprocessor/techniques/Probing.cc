@@ -388,7 +388,22 @@ bool Probing::prAnalyze(CRef confl)
 
         loops ++;
         // take care of level 2 decision!
-        if (reason.getReasonC() != CRef_Undef) {
+	
+	if (reason.isBinaryClause() ) {
+                Lit q = reason.getReasonL(); // use the other literal
+
+                if (!solver.varFlags[var(q)].seen && solver.level(var(q)) > 0) {
+                    solver.varBumpActivity(var(q));
+                    DOUT(if (config.pr_debug_out > 2) cerr << "c set seen INT for " << var(q) + 1 << endl;);
+                    solver.varFlags[var(q)].seen = 1; // for every variable, which is not on level 0, set seen!
+                    if (solver.level(var(q)) >= solver.decisionLevel()) {
+                        pathC++;
+                    } else {
+                        data.lits.push_back(q);
+                    }
+                }
+	} else {
+	  if (reason.getReasonC() != CRef_Undef) {
 
             Clause& c = ca[reason.getReasonC()];
 
@@ -414,7 +429,7 @@ bool Probing::prAnalyze(CRef confl)
                     }
                 }
             }
-
+	  }
         }
 
         assert((loops != 1 || pathC > 1) && "in the first iteration there have to be at least 2 literals of the decision level!");

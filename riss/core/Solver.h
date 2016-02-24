@@ -966,6 +966,9 @@ class Solver
   protected:
     #endif
 
+    /// check whether the given new clause already exists in the set of clauses given before
+    bool clauseAlreadyExists(const vec<CRef>& clauses, vec<Lit>& clause);
+    
     /*
      * restricted extended resolution (Audemard ea 2010)
      */
@@ -2042,6 +2045,32 @@ inline int Solver::computeLBD(const T& lits, const int& litsSize)
     // Ignore all literals on level 0, as they are implied by the formula
     if (config.opt_lbd_ignore_l0 && withLevelZero) { return distance - 1; }
     return distance;
+}
+
+inline bool Solver::clauseAlreadyExists(const vec<CRef>& clauses, vec<Lit>& clause){
+  char hit[ nVars() * 2 ];
+  memset( hit, 0, sizeof( char)  * nVars() * 2 );
+  
+  for( int i = 0 ; i < clause.size(); ++ i ) {
+    hit [ toInt( clause[i] ) ] = 1;
+  }
+  
+  bool found = false;
+  for( int i = 0 ; i < clauses.size(); ++ i ) {
+      const Clause& c = ca[ clauses[i] ];
+      if( clause.size() != c.size() ) continue; // size does not match
+      
+      bool failed = false;
+      for( int j = 0 ; j < c.size(); ++ j ) {
+	if( hit[ toInt(c[j]) ] != 1 ) { failed = true; break; }
+      }
+      if( ! failed ) {
+	std::cerr << "c found clause " << clause << " on position " << i << " as " << c << std::endl;
+	found = true;
+      }
+  }
+  
+  return found;
 }
 
 
