@@ -310,7 +310,7 @@ void compute_communities() {
 
 	Comm.resize(g->getSize());
 	for (int i=0; i<g->getSize(); i++)
-		Comm[n2c[i]].push_back(i+1);
+		Comm[n2c[i]].push_back(i); //original Version push_back(i+1)
 
 	for (int i=0; i< Comm.size(); i++)
 		Comm_order.push_back(make_pair(i,Comm[i].size()));

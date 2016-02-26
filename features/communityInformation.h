@@ -130,7 +130,7 @@ int step = 0;
    vector<int> adj; 
    for(int i=0; i<communities.size()-1; ++i){
      for(int j =0; j<communities[i].size(); ++j){
-      adj = VIG->getAdjacency(communities[i][j]-1);
+      adj = VIG->getAdjacency(communities[i][j]);
        for(int k=0; k<adj.size(); ++k){
        	 if (nodes[adj[k]] > i){
 	   neighbors[i].push_back(nodes[adj[k]]);
@@ -164,7 +164,7 @@ bool getNodes(){
   }
   
    for(int i=0; i<communities.size(); ++i) {
-    for(int j=0; j<communities[i].size();j++){ nodes[communities[i][j]-1] = i;
+    for(int j=0; j<communities[i].size();j++){ nodes[communities[i][j]] = i;
       step++;
       if(step > stepcounter) return false;
     }
