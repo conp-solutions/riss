@@ -90,6 +90,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_hte            (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false,                optionListPtr, &opt_enabled),
 
     opt_bce            (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false,                     optionListPtr, &opt_enabled),
+    opt_modprep        (_cat2, "modprep",       "Use Modularity Based Preprocessing", false,                                      optionListPtr, &opt_enabled),
     opt_ent            (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing #NoAutoT", false,      optionListPtr, &opt_enabled),
     opt_exp            (_cat2, "exp",           "Use experimental simplification techniques #NoAutoT", false,                     optionListPtr, &opt_enabled),
     opt_la             (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing #NoAutoT", false, optionListPtr, &opt_enabled),

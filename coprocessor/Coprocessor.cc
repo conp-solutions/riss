@@ -59,6 +59,8 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , entailedRedundant(config, solver->ca, controller, data)
     , hbr(config, solver->ca, controller, data, propagation)
     , shuffler(config)
+    , experimental(config, solver->ca, controller, data, *solver)
+    , modprep(config, solver->ca, controller, data, *solver)
     , sls(config, data, solver->ca, controller)
     , shuffleVariable(-1)
 {
@@ -399,7 +401,6 @@ lbool Preprocessor::performSimplification()
         }
 
         if (! data.ok()) { break; }  // stop here already
-
         if (config.opt_hbr) {
             if (config.opt_verbose > 0) { cerr << "c hbr ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
@@ -410,6 +411,31 @@ lbool Preprocessor::performSimplification()
 
             DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
         }
+        
+        if (! data.ok()) { break; }  // stop here already
+        if (config.opt_exp) {
+            if (config.opt_verbose > 0) { cerr << "c exp ..." << endl; }
+            if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") experimental techniques" << endl; }
+            if (status == l_Undef) { experimental.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); experimental.printStatistics(cerr); }
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-EXP.cnf").c_str(), 0););
+            data.checkGarbage(); // perform garbage collection
+
+            DOUT(if (config.opt_debug)  { checkLists("after EXP"); scanCheck("after EXP"); });    // perform only if BCE finished the whole formula?!
+        }
+
+        if (! data.ok()) { break; }  // stop here already
+        if (config.opt_modprep) {
+            if (config.opt_verbose > 0) { cerr << "c modprep ..." << endl; }
+            if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") modprep techniques" << endl; }
+            if (status == l_Undef) { modprep.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); modprep.printStatistics(cerr); }
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-MODPREP.cnf").c_str(), 0););
+            data.checkGarbage(); // perform garbage collection
+
+            DOUT(if (config.opt_debug)  { checkLists("after MODPREP"); scanCheck("after MODPREP"); });    // perform only if BCE finished the whole formula?!
+        }
+        
         //
         // end of simplification iteration
         //
@@ -501,6 +527,8 @@ lbool Preprocessor::performSimplification()
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_hbr) { hbr.printStatistics(cerr); }
+        if (config.opt_exp) { experimental.printStatistics(cerr); }
+        if (config.opt_modprep) { modprep.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
         if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
@@ -785,10 +813,26 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         else if (execute == 'H' && config.opt_hbr && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c HBR" << endl; }
             hbr.process();
-            change = rate.appliedSomething() || change;
+            change = hbr.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c HBR changed formula: " << change << endl; }
         }
-
+        
+        // EXP "X"
+        else if (execute == 'X' && config.opt_exp && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c EXP" << endl; }
+            experimental.process();
+            change = experimental.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c EXP changed formula: " << change << endl; }
+        }
+        
+        // MODPREP "m"
+        else if (execute == 'm' && config.opt_modprep && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c MODPREP" << endl; }
+            modprep.process();
+            change = modprep.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c MODPREP changed formula: " << change << endl; }
+        }
+        
         // hte "h"
         else if (execute == 'h' && config.opt_hte && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c hte" << endl; }
@@ -928,6 +972,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_hbr) { hbr.printStatistics(cerr); }
+        if (config.opt_exp) { experimental.printStatistics(cerr); }
+        if (config.opt_modprep) { modprep.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
         if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
@@ -1071,6 +1117,8 @@ void Preprocessor::giveMoreSteps()
     fourierMotzkin.giveMoreSteps();
     rate.giveMoreSteps();
     hbr.giveMoreSteps();
+    experimental.giveMoreSteps();
+    modprep.giveMoreSteps();
 }
 
 lbool Preprocessor::preprocessScheduled()
@@ -1317,6 +1365,8 @@ void Preprocessor::destroyTechniques()
     if (config.opt_rate) { rate.destroy(); }
     if (config.opt_ent) { entailedRedundant.destroy(); }
     if (config.opt_hbr) { hbr.destroy(); }
+    if (config.opt_exp) { experimental.destroy(); }
+    if (config.opt_modprep) { modprep.destroy(); }
     if (config.opt_rew) { rewriter.destroy(); }
 
 }

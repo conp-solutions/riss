@@ -345,7 +345,7 @@ void Graph::completeSingleVIG(){
      for(int k = 0; k < adj.size(); k++) addDirectedEdge(adj[k].first, j, adj[k].second);
      }
      
-     finalizeGraph(); //make sure that the graph is sorted
+     finalizeGraph(); //make sure that the graph is sorted and that there are no duplicates in adjacency lists
     
 }
 

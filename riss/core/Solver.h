@@ -68,6 +68,7 @@ class Symmetry;
 class RATElimination;
 class FourierMotzkin;
 class ExperimentalTechniques;
+class ModPrep;
 class BIG;
 }
 
@@ -107,6 +108,7 @@ class Solver
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
     friend class Coprocessor::ExperimentalTechniques;
+    friend class Coprocessor::ModPrep;
     friend class Riss::IncSolver; // for bmc
 
     #ifdef PCASSO

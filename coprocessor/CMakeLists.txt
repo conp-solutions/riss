@@ -26,6 +26,7 @@ set(LIB_SOURCES
     techniques/FourierMotzkin.cc
     techniques/HiddenTautologyElimination.cc
     techniques/LiteralAddition.cc
+    techniques/ModPrep.cc
     techniques/Probing.cc
     techniques/Propagation.cc
     techniques/Resolving.cc
