@@ -6,12 +6,13 @@
  */
 
 #include "Graph.h"
+
 #include <math.h>
 #include <assert.h>
 #include <sstream>
 #include <iostream>
-#include "community.h"
 #include "dimension.h"
+#include "community.h"
 #include <algorithm>
 #include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
@@ -889,6 +890,19 @@ void Graph::getCommunities(double precision){
 			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/getSize() << endl;
 			cerr << "iterations = " << c.iterations << endl;
 			cerr << "------------" << endl;
+  
+}
+
+vector<vector<int>> Graph::getCommunityForEachNode(double prec){
+ Community c(this);
+ vector<vector<int>> comm;					
+		c.compute_modularity_GFA(prec);
+		c.compute_communities();
+		
+		comm = c.Comm;
+		comm.resize(c.ncomm);
+		
+		return comm;	
   
 }
 

@@ -13,6 +13,8 @@
 #include "riss/core/SolverTypes.h"
 #include <set>
 
+
+
 //using namespace std;
 
 typedef std::pair<int, double> edge;
@@ -57,6 +59,7 @@ class Graph
     int precision;
 
   public:
+    std::vector<std::vector<int>> getCommunityForEachNode(double prec);
     void getCommunities(double precision);
     void getDimension();
     double getWeight(int nodeA, int nodeB);

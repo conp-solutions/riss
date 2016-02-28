@@ -33,6 +33,8 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 
 #include "classifier/CompareSolver.h"
 
+#include "communityInformation.h"
+
 using namespace Riss;
 using namespace Coprocessor;
 using namespace std;
@@ -466,8 +468,9 @@ int main(int argc, char** argv)
 
         
 
-	computeExtraGraphFeatures (argc, argv);
-
+	//computeExtraGraphFeatures (argc, argv);
+	communityInformation communityInformation(argc, argv, 1000, 0.000001);
+        
         return 0;
 
         /**
