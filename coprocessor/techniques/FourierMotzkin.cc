@@ -517,8 +517,12 @@ bool FourierMotzkin::process()
 
     }
 
+    if (data.hasToPropagate())
+      if (propagation.process(data, true) == l_False) {data.setFailed(); return modifiedFormula; }
+    
     // semantic search
     if (config.opt_fm_sem) {
+	assert(solver.trail.size() == solver.qhead && "everything should be propagated at this point");
         findCardsSemantic(cards, leftHands);
 
         DOUT(
@@ -1216,7 +1220,8 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
 {
 
     assert(solver.decisionLevel() == 0 && "will look for card constraints only at level 0!");
-
+    assert(solver.trail.size() == solver.qhead && "everything should be propagated at this point");
+    
     DOUT(if (config.fm_debug_out > 0) cerr << "c find cards semantically with " << cards.size() << " constraints" << endl;);
 
     // merge-sort clauses according to size. smallest first

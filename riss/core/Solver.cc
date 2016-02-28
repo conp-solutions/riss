@@ -756,7 +756,11 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
             if ((config.opt_rer_rewriteNew && !config.opt_rer_as_learned)
                     || config.opt_rer_extractGates
                ) {
-    
+		rerRewriteArray.resize( nVars() * 2 ); // get enough space
+		rerRewriteArray.nextStep();
+		// get all literals marked
+		for (int i = 0; i < learned_clause.size(); ++ i) rerRewriteArray.setCurrentStep( toInt( learned_clause[i] ) );
+		
                 // rewrite the learned clause by replacing a disjunction of two literals with the
                 // corresponding ER-literal (has to be falsified as well)
                 const int cs = learned_clause.size();
@@ -767,6 +771,8 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
                     const Lit& otherLit = erRewriteInfo[ toInt(l1) ].otherMatch;
                     if (otherLit == lit_Undef) { continue; }  // there has been no rewriting with this literal yet
                     if (! varFlags[ var(otherLit) ].seen) { continue; }    // the literal for rewriting is not present in the clause, because the variable is not present
+                    if ( rerRewriteArray.isCurrentStep( toInt( otherLit ) ) ) continue; // check whether the other literal is present
+                    if ( rerRewriteArray.isCurrentStep( toInt( ~erRewriteInfo[ toInt(l1) ].replaceWith ) ) ) continue; // do not add complementary literals
                     
                     // check whether the other literal is present
                     for (int j = 1; j < learned_clause.size(); ++ j) {
@@ -774,6 +780,7 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
                         if (learned_clause[j] == otherLit) {  // found the other match
 			    DOUT( if (config.opt_rer_debug) cerr << "c rewrite " << learned_clause << " pos " << i << " and " << j << " lits: " << learned_clause[i] << " and " << learned_clause[j] << " ADDING LITERAL: " << erRewriteInfo[ toInt(l1) ].replaceWith << endl; );
                             learned_clause[i] = erRewriteInfo[ toInt(l1) ].replaceWith; // replace
+                            rerRewriteArray.setCurrentStep( toInt( erRewriteInfo[ toInt(l1) ].replaceWith ) ); // remebmer that we also added this literal to the clause
                             learned_clause[j] = learned_clause[ learned_clause.size() - 1 ]; // delete the other literal
                             learned_clause.pop(); // by pushing forward, and pop_back
 			    assert( !hasComplementary(learned_clause) && !hasDuplicates(learned_clause) && "there should not be duplicate literals in the learned clause"  );
