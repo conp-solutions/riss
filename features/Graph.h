@@ -23,12 +23,12 @@ typedef std::vector<edge> adjacencyList;
 /**
  * undirected weighted graph.
  */
-class Graph
+class SimpleGraph
 {
   private:
     void doPageRank();
     int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
-    void compute_G_plus(Graph*& Graph_plus, const std::vector<int>& set);
+    void compute_G_plus(SimpleGraph*& Graph_plus, const std::vector<int>& set);
     std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
     void getallcombinations(const std::vector<int>& nodes,std::vector<int> set,std::vector<std::vector<int>>& sets, int k, int position);
     bool improved_recursive_treewidth(int k);
@@ -75,9 +75,9 @@ class Graph
     double getDiameter();
     void completeSingleVIG();
     std::vector<int> getAdjacency(int adjnode); 
-    Graph(int nodes, bool computingDerivative);
-    Graph(int nodes, bool merge, bool computingDerivative);
-    virtual ~Graph();
+    SimpleGraph(int nodes, bool computingDerivative);
+    SimpleGraph(int nodes, bool merge, bool computingDerivative);
+    virtual ~SimpleGraph();
     void addUndirectedEdge(int nodeA, int nodeB);
     void addUndirectedEdge(int nodeA, int nodeB, double weight);
     void addDirectedEdge(int nodeA, int nodeB, double weight);
@@ -156,15 +156,15 @@ class Graph
   friend class EdgeIter;
 	
   class EdgeIter : public std::iterator<std::input_iterator_tag, edgeNewDef> {
-		Graph &g;
+		SimpleGraph &g;
 		std::vector<edge>::iterator it;
 		int node;
-		Graph::edgeNewDef e;
+		SimpleGraph::edgeNewDef e;
 
 	public:
                 
-		EdgeIter(Graph &x) : g(x){}
-		EdgeIter(Graph &x, std::vector<edge>::iterator y, int n): g(x), it(y), node(n){ }
+		EdgeIter(SimpleGraph &x) : g(x){}
+		EdgeIter(SimpleGraph &x, std::vector<edge>::iterator y, int n): g(x), it(y), node(n){ }
 
 		EdgeIter (const EdgeIter &x) : g(x.g), node(x.node), it(x.it) {}
 
@@ -214,7 +214,7 @@ class Graph
 		bool operator==(const EdgeIter &rhs) {return it==rhs.it;}
 		bool operator!=(const EdgeIter &rhs) {return it!=rhs.it;}
 
-		Graph::edgeNewDef& operator*() {
+		SimpleGraph::edgeNewDef& operator*() {
 			std::cerr<<"ENTER *\n";
 			
 			e.orig = node; 
@@ -222,7 +222,7 @@ class Graph
 			e.weight = it->second; 
 			return e;
 		}
-		Graph::edgeNewDef *operator->() {
+		SimpleGraph::edgeNewDef *operator->() {
 		         e.orig = node; 
 			e.dest = it->first; 
 			e.weight = it->second; 
@@ -249,14 +249,14 @@ class Graph
 	class NeighIter : public std::vector<int>::iterator {
 	        
 		std::vector<edge>::iterator it;
-		Graph::edgeNewDef e;
+		SimpleGraph::edgeNewDef e;
 		
 		
 	public:
                
 	    	NeighIter(std::vector<edge>::iterator x) : it(x){}
 		
-		Graph::edgeNewDef *operator->() {
+		SimpleGraph::edgeNewDef *operator->() {
 			e.dest = it->first; 
 			e.weight = it->second; 
 			return &e;
