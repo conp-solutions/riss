@@ -29,14 +29,16 @@ along with GraphFeatSAT. If not, see <http://www.gnu.org/licenses/>.
 
 #include <vector>
 #include <stack>
-#ifndef VECTOR
+
 #include "Graph.h"
-#endif
+
 #include <algorithm>
 #include <stdio.h> 
 
 #ifndef COMMUNITY_H
 #define COMMUNITY_H
+
+extern bool verbose;
 
 using namespace std;
 
@@ -117,22 +119,15 @@ double modularity() {
 
 	
 	for (Graph::EdgeIter it=g->begin(); it != g->end(); it++) {
-	
-	  //assert(it->orig >= 0 && it->orig < n2c.size());
+		//assert(it->orig >= 0 && it->orig < n2c.size());
 		//assert(it->dest >= 0 && it->dest < n2c.size());
-	
-	
-		if (n2c[it->orig] == n2c[it->dest]){ 
-		 	w += it->weight; 
-		}
+		if (n2c[it->orig] == n2c[it->dest]) 
+			w += it->weight; 
 	}
-	
-	
+
 	for (int i=0; i<g->getSize(); i++)
 		aritym[n2c[i]] += g->arity(i);  
 
-	
-	
 	for (int i=0; i<g->getSize(); i++)
 		arity += aritym[i] * aritym[i] / g->arity() / g->arity();
 
@@ -147,8 +142,7 @@ bool one_level() {
 // Given a graf "g" and a partition "n2c", improves the partition by moving nodes from one 
 // partition to another. Modifies "arity" and "n2c". Returns "true" if partition changed.
 //-------------------------------------------------------------------------------------------
-	
-  bool improved = false, changed;
+	bool improved = false, changed;
 	vector<int> random_order(g->getSize());
 
 	for (int i=0 ; i<random_order.size(); i++)
@@ -157,11 +151,10 @@ bool one_level() {
 	vector <double> wc(g->getSize(), -1); // wc[c] = sum_{j\in c} w(n,j) for c not conected wc[c]=-1
 	vector <int> nc;                  // neigh communities
 	do {
-		//if(verbose) cerr << "Q=" << modularity() << endl;
+		cerr << "Q=" << modularity() << "at iteration"<<iterations<<endl;
 		iterations++;
 		shuffle(random_order);
 		changed = false;
-		
 		for (int naux=0; naux<g->getSize(); naux++) {
 			int n = random_order[naux];
 
@@ -203,7 +196,6 @@ bool one_level() {
 		}
 	}
 	while (changed);
-	
 	return (improved);
 }
 
@@ -225,7 +217,10 @@ Graph* community2graph() {
 	Graph* g2 = new Graph(aux,0);
 
 	for (Graph::EdgeIter it=g->begin(); it != g->end(); ++it)
-		g2->addDirectedEdge(n2c[it->orig], n2c[it->dest], (double)it->weight);
+		g2->addDirectedEdge(n2c[it->orig], n2c[it->dest], (double)it->weight);  //TODO: Insertfunction for edges
+	        g2->finalizeGraph();
+	        g2->completeSingleVIG();
+	
 
 	return g2;
 }
@@ -241,10 +236,8 @@ double compute_modularity_GFA(double precision) {
 
 	do {
 		double aux = c->modularity();
-		
 		improved = c->one_level() && abs2(c->modularity()-aux) > precision;
 		//improved = c->one_level();
-		
 		if (improved) {
 			c->g = c->community2graph();
 			improved = (ncomm != c->g->getSize());
@@ -259,8 +252,6 @@ double compute_modularity_GFA(double precision) {
 		//c.g.print();
 	}
 	while (improved);
-	
-	
 	return modularity();
 }
 
@@ -310,7 +301,7 @@ void compute_communities() {
 
 	Comm.resize(g->getSize());
 	for (int i=0; i<g->getSize(); i++)
-		Comm[n2c[i]].push_back(i); //original Version push_back(i+1)
+		Comm[n2c[i]].push_back(i+1);
 
 	for (int i=0; i< Comm.size(); i++)
 		Comm_order.push_back(make_pair(i,Comm[i].size()));

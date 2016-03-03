@@ -31,7 +31,8 @@ Graph::Graph(int size, bool computingDerivative) :
     weightStatistics(computingDerivative, false), 
     exzentricityStatistics(computingDerivative),
     pagerankStatistics(computingDerivative),
-    articulationpointsStatistics(computingDerivative) 
+    articulationpointsStatistics(computingDerivative),
+    narity(0)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -53,7 +54,8 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     weightStatistics(computingDerivative, false), 
     exzentricityStatistics(computingDerivative),
     pagerankStatistics(computingDerivative),
-    articulationpointsStatistics(computingDerivative)
+    articulationpointsStatistics(computingDerivative),
+    narity(0)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -341,12 +343,18 @@ vector<int> Graph::getAdjacency(int adjnode)
 
 void Graph::completeSingleVIG(){
      
-   for(int j = size-2; j >= 0; j--){ //you dont have to check the last node
+   for(int j = size-1; j >= 0; j--){
      adjacencyList& adj = node[j];
-     for(int k = 0; k < adj.size(); k++) addDirectedEdge(adj[k].first, j, adj[k].second);
-     }
+     for(int k = 0; k < adj.size(); k++){
+       addDirectedEdge(adj[k].first, j, adj[k].second);
+       narity[adj[k].first] -= adj[k].second;
+       narity[j] -= adj[k].second;
+       
+    }
+   }
      
      finalizeGraph(); //make sure that the graph is sorted
+
     
 }
 
@@ -882,6 +890,7 @@ void Graph::getCommunities(double precision){
 	
 		
 		modularity = c.compute_modularity_GFA(precision);
+		
 		c.compute_communities();
 
 		
@@ -897,7 +906,7 @@ vector<vector<int>> Graph::getCommunityForEachNode(double prec){
  Community c(this);
  vector<vector<int>> comm;					
 		c.compute_modularity_GFA(prec);
-		c.compute_communities();
+		//c.compute_communities();
 		
 		comm = c.Comm;
 		comm.resize(c.ncomm);

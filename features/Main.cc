@@ -468,9 +468,9 @@ int main(int argc, char** argv)
 
         
 
-	//computeExtraGraphFeatures (argc, argv);
-	communityInformation communityInformation(argc, argv, 1000, 0.000001);
-        
+	computeExtraGraphFeatures (argc, argv);
+	//communityInformation communityInformation(argc, argv, 1000, 0.000001);
+        //communityInformation.getCommunities();
         return 0;
 
         /**

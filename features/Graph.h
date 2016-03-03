@@ -234,19 +234,19 @@ class Graph
 
 	EdgeIter begin() {
 		int nod = 0;
-		while (this->node[nod].size()==0 && nod < size) nod++;
-		return EdgeIter(*this, this->node[nod].begin(), nod);  
+		while (node[nod].size()==0 && nod < size) nod++;
+		return EdgeIter(*this, node[nod].begin(), nod);  
 	// First neight of first node
 	}
 
 	EdgeIter end() {
-		return EdgeIter(*this, this->node[size-1].end(), size);  
+		return EdgeIter(*this, node[size-1].end(), size);  
 	// Last neight of last node
 	}
     
     //--------------- ITERATOR ON NEIGHBORS --------------------------------------------------
 
-	class NeighIter : public std::vector<int>::iterator {
+	class NeighIter : public std::vector<edge>::iterator {
 	        
 		std::vector<edge>::iterator it;
 		Graph::edgeNewDef e;
@@ -276,14 +276,14 @@ class Graph
 	NeighIter begin(int x) { 
 	        
 		assert(x>=0 && x<= size-1); 
-		return NeighIter(node[x].begin()); 
+		return (NeighIter)node[x].begin(); 
 	}
 
 	NeighIter end(int x) {
 	  
 		assert(x>=0 && x<= size-1); 
 		  
-		return NeighIter(node[x].end()); 
+		return (NeighIter)node[x].end(); 
 	}
 	
 	
