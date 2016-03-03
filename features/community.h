@@ -151,7 +151,7 @@ bool one_level() {
 	vector <double> wc(g->getSize(), -1); // wc[c] = sum_{j\in c} w(n,j) for c not conected wc[c]=-1
 	vector <int> nc;                  // neigh communities
 	do {
-		cerr << "Q=" << modularity() << "at iteration"<<iterations<<endl;
+		//cerr << "Q=" << modularity() << "at iteration"<<iterations<<endl;
 		iterations++;
 		shuffle(random_order);
 		changed = false;
@@ -216,12 +216,15 @@ Graph* community2graph() {
 
 	Graph* g2 = new Graph(aux,0);
 
-	for (Graph::EdgeIter it=g->begin(); it != g->end(); ++it)
-		g2->addDirectedEdge(n2c[it->orig], n2c[it->dest], (double)it->weight);  //TODO: Insertfunction for edges
-	        g2->finalizeGraph();
-	        g2->completeSingleVIG();
-	
-
+	for (Graph::EdgeIter it=g->begin(); it != g->end(); ++it){
+	  
+		g2->addDirectedEdge(n2c[it->orig], n2c[it->dest], (double)it->weight); 
+	        g2->addDirectedEdgeWithoutArity(n2c[it->dest], n2c[it->orig], (double)it->weight);
+		//cerr<<"hello"<<endl;
+		//g2->finalizeGraph();
+	       // g2->completeSingleVIG();
+	}
+       
 	return g2;
 }
 
@@ -248,7 +251,7 @@ double compute_modularity_GFA(double precision) {
 			c = new Community(c->g);
 		}
 		
-			cerr <<"\tQ = "<<modularity()<<" #comm = "<<ncomm<<endl;
+			//cerr <<"\tQ = "<<modularity()<<" #comm = "<<ncomm<<endl;
 		//c.g.print();
 	}
 	while (improved);
@@ -301,7 +304,7 @@ void compute_communities() {
 
 	Comm.resize(g->getSize());
 	for (int i=0; i<g->getSize(); i++)
-		Comm[n2c[i]].push_back(i+1);
+		Comm[n2c[i]].push_back(i);
 
 	for (int i=0; i< Comm.size(); i++)
 		Comm_order.push_back(make_pair(i,Comm[i].size()));

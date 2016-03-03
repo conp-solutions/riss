@@ -172,6 +172,27 @@ void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     }
 }
 
+void Graph::addDirectedEdgeWithoutArity(int nodeA, int nodeB, double aweight) //needed for communitystructure
+{
+    assert( !addedUndirectedEdge && "cannot mix edge types in implementation" );
+    addedDirectedEdge = true;
+    if (nodeA >= node.size()) {
+        stringstream sstm;
+        sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
+        string s = sstm.str();
+        cerr << s;
+        assert(false);
+    }
+    edge p(nodeB, aweight);
+    node[nodeA].push_back(p);
+    nodeDeg[nodeA]++;                      //TODO nodeDeg inverted Edges ?
+    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+        sortAdjacencyList(node[nodeA]);
+        sortSize[ nodeA ] *= 2;
+	nodeDeg[nodeA] = node[nodeA].size();
+    }
+}
+
 uint64_t Graph::addAndCountUndirectedEdge(int nodeA, int nodeB, double weight)
 {
     assert( !addedDirectedEdge && "cannot mix edge types in implementation" );
@@ -346,10 +367,7 @@ void Graph::completeSingleVIG(){
    for(int j = size-1; j >= 0; j--){
      adjacencyList& adj = node[j];
      for(int k = 0; k < adj.size(); k++){
-       addDirectedEdge(adj[k].first, j, adj[k].second);
-       narity[adj[k].first] -= adj[k].second;
-       narity[j] -= adj[k].second;
-       
+       addDirectedEdgeWithoutArity(adj[k].first, j, adj[k].second);
     }
    }
      
@@ -906,7 +924,7 @@ vector<vector<int>> Graph::getCommunityForEachNode(double prec){
  Community c(this);
  vector<vector<int>> comm;					
 		c.compute_modularity_GFA(prec);
-		//c.compute_communities();
+		c.compute_communities();
 		
 		comm = c.Comm;
 		comm.resize(c.ncomm);

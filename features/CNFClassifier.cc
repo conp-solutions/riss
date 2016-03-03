@@ -1225,7 +1225,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
   //cerr<<vigGraph->getPageRank(0)<<endl;
     
     
-  vigGraph->getCommunities(0.000001); //TODO: take a look at the precision
+  //vigGraph->getCommunities(0.000001); //TODO: take a look at the precision
   //  vigGraph->getDimension();	
     /*
    
