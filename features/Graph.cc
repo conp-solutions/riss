@@ -172,6 +172,36 @@ void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     }
 }
 
+
+void Graph::addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double aweight)
+{
+    assert( !addedUndirectedEdge && "cannot mix edge types in implementation" );
+    addedDirectedEdge = true;
+    if (nodeA >= node.size()) {
+        stringstream sstm;
+        sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
+        string s = sstm.str();
+        cerr << s;
+        assert(false);
+    }
+    edge p(nodeB, aweight);
+    node[nodeA].push_back(p);
+    nodeDeg[nodeA]++;
+    edge pb(nodeA, aweight);
+    node[nodeB].push_back(pb);
+    nodeDeg[nodeB]++;
+    narity[nodeA] += aweight;
+    narity[nodeB] += aweight;
+    
+        sortAdjacencyList(node[nodeA]);
+	sortAdjacencyList(node[nodeB]);
+        sortSize[ nodeA ] *= 2;
+	sortSize[ nodeB ] *= 2;
+	nodeDeg[nodeA] = node[nodeA].size();
+	nodeDeg[nodeB] = node[nodeB].size();
+    
+}
+
 void Graph::addDirectedEdgeWithoutArity(int nodeA, int nodeB, double aweight) //needed for communitystructure
 {
     assert( !addedUndirectedEdge && "cannot mix edge types in implementation" );

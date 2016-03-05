@@ -3,16 +3,20 @@
 #include "riss/core/Dimacs.h"
 #include "CNFClassifier.h"
 #include "Graph.h"
+#include <set>
 using namespace std;
 
 class communityInformation
 {
+public:
+vector<int> nodes;
+vector<set<int>> neighbors;   
+  
 private:
-
+bool computednodes;
 Graph* VIG;
 vector<vector<int>> communities;
-vector<int> nodes;
-vector<vector<int>> neighbors;  
+ 
 
 int stepcounter;
 double prec;
@@ -97,7 +101,7 @@ Graph* buildSingleVIG(char** argv, int argc){
 
             // Adding edges for the variable graph
                             for (int k = j + 1; k < c.size(); ++k) {
-                    vigGraph->addDirectedEdge(v,   
+                    vigGraph->addDirectedEdgeAndInvertedEdge(v,   
                                    var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
                 }
 	      
@@ -113,9 +117,10 @@ public:
   
 communityInformation(int argc, char** argv, int stepcounter, double prec): stepcounter(stepcounter), prec(prec){
    VIG = buildSingleVIG(argv, argc);
-   VIG->finalizeGraph();
-   VIG->completeSingleVIG();  
+   //VIG->finalizeGraph();
+   //VIG->completeSingleVIG();  
    nodes.resize(VIG->getSize());
+   computednodes =false;
   
 }
 
@@ -127,14 +132,16 @@ int step = 0;
     getCommunities();
   }
   
+  if(!computednodes) getNodes();
+  
    vector<int> adj; 
    for(int i=0; i<communities.size()-1; ++i){
      for(int j =0; j<communities[i].size(); ++j){
       adj = VIG->getAdjacency(communities[i][j]);
        for(int k=0; k<adj.size(); ++k){
        	 if (nodes[adj[k]] > i){
-	   neighbors[i].push_back(nodes[adj[k]]);
-	   neighbors[nodes[adj[k]]].push_back(i);
+	   neighbors[i].insert(nodes[adj[k]]);
+	   neighbors[nodes[adj[k]]].insert(i);
 	   }
 	   step++;
 	if(step > stepcounter) return false;
@@ -169,7 +176,7 @@ bool getNodes(){
       if(step > stepcounter) return false;
     }
     }
-    
+  computednodes = true;  
   return true;
   
 }

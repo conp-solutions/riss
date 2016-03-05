@@ -16,7 +16,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include <sys/resource.h>
 #include <fstream>
 #include <algorithm>
-
+#include <set>
 #include "CNFClassifier.h"
 #include "classifier/WekaDataset.h"
 #include "classifier/Configurations.h"
@@ -469,8 +469,19 @@ int main(int argc, char** argv)
         
 
 	//computeExtraGraphFeatures (argc, argv);
-	//communityInformation communityInformation(argc, argv, 1000, 0.000001);
-        //vector<vector<int>> com = communityInformation.getCommunities();
+	/*communityInformation communityInformation(argc, argv, 100000, 0.000001);
+       communityInformation.getNodes();
+       bool ok = communityInformation.getCommunityNeighbors();
+       if(ok){
+	for(int i=0; i<communityInformation.neighbors.size();++i){
+	cerr<<"community "<<i<<endl;
+	for(set<int>::iterator it=communityInformation.neighbors[i].begin(); it != communityInformation.neighbors[i].end(); it++){
+	cerr<<*it<<endl;
+	  
+	}
+	
+       }
+       }*/
         return 0;
 
         /**
