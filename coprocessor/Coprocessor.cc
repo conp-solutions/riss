@@ -1368,6 +1368,11 @@ void Preprocessor::destroyTechniques()
     if (config.opt_exp) { experimental.destroy(); }
     if (config.opt_modprep) { modprep.destroy(); }
     if (config.opt_rew) { rewriter.destroy(); }
+    
+    // re-init replacedBy information during next round
+    data.replacedBy().clear();
+    assert ( data.getEquivalences().size() == 0 && "all equivalences should have been processed!" );
+    
 
 }
 

@@ -94,6 +94,9 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     compressClauses(data.getClauses());
     compressClauses(data.getLEarnts());
 
+    compressLiterals( data.replacedBy() );
+    compressLiterals( data.getEquivalences() );
+    
     // write white file
     if (newWhiteFile != nullptr) {
         cerr << "c work with newWhiteFile " << newWhiteFile << endl;
@@ -372,6 +375,23 @@ void Dense::printStatistics(ostream& stream)
 {
     cerr << "c [STAT] DENSE " << compression.diff() << " gaps" << endl;
 }
+
+void Dense::compressLiterals(vec< Riss::Lit >& literals)
+{
+  int j = 0;
+  for (uint32_t i = 0 ; i < literals.size(); ++i) {
+    if( literals[i] == lit_Undef ) { 
+      literals[j++] = lit_Undef;
+      continue;
+    }
+    
+    const Lit compressed = compression.importLit( literals[i] );
+    
+    if( compressed == lit_Undef ) continue; // drop literals without copression
+    literals[ j ++ ] = compressed;          // store compressed literal
+  }
+}
+
 
 void Dense::compressClauses(vec<CRef>& clauses)
 {

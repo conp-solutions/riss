@@ -961,7 +961,7 @@ void Solver::updateMetricsDuringAnalyze(const Lit p, const CRef cr, Clause& c, b
                         // they are marked as protected
                         c.setCoreClause(true);
                     }
-                }
+                } else if ( config.opt_rem_inc_lbd && nblevels > c.lbd() ) c.setCanBeDel(true);
             }
         }
     }
@@ -1672,7 +1672,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                             c.setCanBeDel(false);   // LBD of clause improved, so that its not considered for deletion
                         }
                         c.setLBD(newLbd);
-                    }
+                    } else if ( config.opt_rem_inc_lbd && newLbd > c.lbd() ) c.setCanBeDel(true);
                 }
             }
         NextClause:;
@@ -5015,6 +5015,7 @@ lbool Solver::inprocess(lbool status)
         // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
         if (coprocessor != 0 && useCoprocessorIP) {
             if (coprocessor->wantsToInprocess()) {
+	        if( decisionLevel() > 0 ) cancelUntil(0); // make sure we operate on level 0!
                 if (processOtfss(otfss)) { return l_False ; }    // make sure we work on the correct clauses still (collected before)
                 communicationClient.receiveEE = true; // enable receive EE after first inprocessing (as there will be another one)
                 inprocessCalls ++;

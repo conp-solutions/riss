@@ -63,6 +63,7 @@ class CoreConfig : public Config
     BoolOption opt_lbd_ignore_assumptions; // do not consider assumption levels for LBD
     IntOption opt_update_lbd; // update LBD during 0=propagation,1=learning,2=never (if during propagation, then during learning is not necessary!)
     BoolOption opt_lbd_inc;    // allow to increase LBD of clauses dynamically?
+    BoolOption opt_rem_inc_lbd;  // reset delete flag if LBD of a learned clause increases
     BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
     DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 

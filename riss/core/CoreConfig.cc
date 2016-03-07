@@ -64,6 +64,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lbd_ignore_assumptions  (_cred, "lbdIgnLA",              "ignore top level literals for LBD calculation", false,                                                                  optionListPtr),
     opt_update_lbd              (_cred, "lbdupd",                "update LBD during (0=propagation,1=learning,2=never),", 1, IntRange(0, 2),                                              optionListPtr),
     opt_lbd_inc                 (_cred, "incLBD",                "allow to increment lbd of clauses dynamically", false,                                                                  optionListPtr),
+    opt_rem_inc_lbd             (_cred, "remIncLBD",             "reset delete flag if LBD of a learned clause increases", false,                                                         optionListPtr),
     opt_quick_reduce            (_cred, "quickRed",              "check only first two literals for being satisfied", false,                                                              optionListPtr),
     opt_keep_worst_ratio        (_cred, "keepWorst",             "keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true),  optionListPtr),
 
