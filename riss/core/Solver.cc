@@ -783,7 +783,7 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
                             rerRewriteArray.setCurrentStep( toInt( erRewriteInfo[ toInt(l1) ].replaceWith ) ); // remebmer that we also added this literal to the clause
                             learned_clause[j] = learned_clause[ learned_clause.size() - 1 ]; // delete the other literal
                             learned_clause.pop(); // by pushing forward, and pop_back
-			    assert( !hasComplementary(learned_clause) && !hasDuplicates(learned_clause) && "there should not be duplicate literals in the learned clause"  );
+			    // assert( !hasComplementary(learned_clause) && !hasDuplicates(learned_clause) && "there should not be duplicate literals in the learned clause"  );
                             erRewriteRemovedLits ++;
                             --i; // repeat current literal, moved in literal might be a replacable literal as well!
                             break; // done with the current literal!
@@ -804,7 +804,7 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd, unsigned& de
 		    }
 		    learned_clause.shrink_( learned_clause.size() - keptLits ); // remove duplicate literals
 		    
-		    assert( !hasComplementary(learned_clause) && !hasDuplicates(learned_clause) && "there should not be duplicate literals in the learned clause"  );
+		    // assert( !hasComplementary(learned_clause) && !hasDuplicates(learned_clause) && "there should not be duplicate literals in the learned clause"  );
 		    
                     erRewriteClauses ++;
                     return true;
@@ -1273,7 +1273,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 	    DOUT(if (config.opt_learn_debug) cerr << endl << "c found learned clause after GLUCOSE minimization: " << out_learnt << endl;);
         }
 
-        assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
+        // assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
 	
         if (out_learnt.size() <= searchconfiguration.uhle_minimizing_size) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
@@ -1281,7 +1281,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 	    DOUT(if (config.opt_learn_debug) cerr << endl << "c found learned clause after UNHIDE minimization: " << out_learnt << endl;);
         }
         
-        assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
+        // assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
 
         if (searchconfiguration.use_reverse_minimization && out_learnt.size() <= searchconfiguration.lbSizeReverseClause) {
             if (recomputeLBD) { lbd = computeLBD(out_learnt, out_learnt.size()); }  // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
@@ -1289,7 +1289,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
 	    DOUT(if (config.opt_learn_debug) cerr << endl << "c found learned clause after REVERSE minimization: " << out_learnt << endl;);
         }
 
-        assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
+        // assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
         
         // rewrite clause only, if one of the two systems added information
         if (config.opt_rer_as_replaceAll && out_learnt.size() <= config.erRewrite_size) {   // rewrite disjunctions with information taken from RER
@@ -1297,7 +1297,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
             recomputeLBD = erRewrite(out_learnt, lbd, dependencyLevel);
         }
         
-        assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
+        // assert( !hasComplementary(out_learnt) && !hasDuplicates(out_learnt) && "there should not be duplicate literals in the learned clause"  );
         
     } // end working on usual learnt clause (minimize etc.)
 
@@ -2166,7 +2166,7 @@ lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause)
         if (l_False == handleMultipleUnits(learnt_clause)) { return l_False; }
         updateSleep(&learnt_clause, learnt_clause.size(), true);   // share multiple unit clauses!
     } else { // treat usual learned clause!
-	assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "there should not be duplicate literals in the learned clause"  );
+	// assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "there should not be duplicate literals in the learned clause"  );
         if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, dependencyLevel)) { return l_False; }
     }
     return l_Undef;
@@ -4285,7 +4285,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution(vec< Lit >& currentLe
                 if (config.opt_rer_full) {  // also add the other clause?
                     oc.clear(); oc.push(mkLit(x, false));
                     for (int i = 0; i < rerLits.size(); ++i) { oc.push(~rerLits[i]); }
-                    assert( !hasComplementary(rerLits) && !hasDuplicates(rerLits) && "no duplicate literals!" );
+                    // assert( !hasComplementary(rerLits) && !hasDuplicates(rerLits) && "no duplicate literals!" );
                     int pos = 1;
                     for (int i = 2; i < oc.size(); ++ i) if (level(var(oc[i])) > level(var(oc[pos]))) { pos = i; }    // get second highest level!
                     { const Lit tmp = oc[pos]; oc[pos] = oc[1]; oc[1] = tmp; } // swap highest level literal to second position
@@ -5126,12 +5126,12 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 {
     // when this method is called, backjumping has been done already!
     rerReturnType rerClause = rerUsualProcedure;
-    assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
+    // assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
     if (doAddVariablesViaER && !isBiAsserting) {  // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
         assert(!isBiAsserting && "does not work if isBiasserting is changing something afterwards!");
         extResTime.start();
         rerClause = restrictedExtendedResolution(learnt_clause, nblevels, dependencyLevel);
-	assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
+	// assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
         extResTime.stop();
     } else if (isBiAsserting) { resetRestrictedExtendedResolution(); }   // do not have two clauses in a row for rer, if one of them is bi-asserting!
 
@@ -5144,9 +5144,9 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     sumLBD += nblevels;
     // write learned clause to DRUP!
     addCommentToProof("learnt clause");
-    assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
+    // assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
     addToProof(learnt_clause);
-    assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
+    // assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
     // store learning stats!
     totalLearnedClauses ++ ; sumLearnedClauseSize += learnt_clause.size(); sumLearnedClauseLBD += nblevels;
     maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
@@ -5168,7 +5168,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     } else {
         CRef cr = CRef_Undef;
 
-	assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
+	// assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "do not have duplicate literals in the learned clause" );
 	
         // is a core learnt clause, so we do not create a learned, but a "usual" clause
 //  if (!activityBasedRemoval && nblevels < lbd_core_threshold + 1) {
