@@ -611,7 +611,7 @@ class Solver
 
         inline vec<Riss::Lit>& getEquivalenceStack() { return equivalencesStack; }
 
-        inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
+//         inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
         inline bool hasEquivalencesToProcess() const { return equivalencesStack.size() > 0; }
 
         inline void addEquivalenceClass(const Lit& a, const Lit& b, bool doShare = true
@@ -627,7 +627,7 @@ class Solver
                 #ifdef PCASSO
                 dependencyStack.push(dependencyLevel);
                 #endif
-                if (doShare) {
+                if (doShare && solver->isCommunicating()) {
                     temporary.clear();
                     temporary.push(a);
                     temporary.push(b);
@@ -652,7 +652,7 @@ class Solver
             dependencyStack.push(dependencyLevel);
             #endif
 
-            if (doShare) {  // tell priss about shared equivalences
+            if (doShare && solver->isCommunicating() ) {  // tell priss about shared equivalences
                 temporary.clear();
                 for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }
                 #ifdef PCASSO
@@ -1430,6 +1430,8 @@ class Solver
     int sharingTimePoint; // when to share a learned clause (0=when learned, 1=when first used for propagation, 2=when first used during conflict analysis)
 
     Communicator* communication; /// communication with the outside, and control of this solver
+    
+    const bool isCommunicating() { return communication != nullptr; }
 
     /** return dependency level we are currently working on */
     unsigned currentDependencyLevel() const ;
