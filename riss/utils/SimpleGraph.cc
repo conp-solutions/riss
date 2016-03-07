@@ -159,6 +159,38 @@ void SimpleGraph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     }
 }
 
+void SimpleGraph::addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double aweight)
+{
+    assert( !addedUndirectedEdge && "cannot mix edge types in implementation" );
+    addedDirectedEdge = true;
+    if (nodeA >= node.size()) {
+        stringstream sstm;
+        sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
+        string s = sstm.str();
+        cerr << s;
+        assert(false);
+    }
+    edge p(nodeB, aweight);
+    node[nodeA].push_back(p);
+    nodeDeg[nodeA]++;
+    edge pb(nodeA, aweight);
+    node[nodeB].push_back(pb);
+    nodeDeg[nodeB]++;
+    narity[nodeA] += aweight;
+    narity[nodeB] += aweight;
+    
+    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+        sortAdjacencyList(node[nodeA]);
+	sortSize[ nodeA ] *= 2;
+	nodeDeg[nodeA] = node[nodeA].size();
+    }
+    if (intermediateSort && node[nodeB].size() > sortSize[ nodeB ]) {
+    	sortAdjacencyList(node[nodeB]);
+	sortSize[ nodeB ] *= 2;
+	nodeDeg[nodeB] = node[nodeB].size();
+    }
+}
+
 uint64_t SimpleGraph::addAndCountUndirectedEdge(int nodeA, int nodeB, double weight)
 {
     assert( !addedDirectedEdge && "cannot mix edge types in implementation" );

@@ -77,6 +77,7 @@ class SimpleGraph
     void addUndirectedEdge(int nodeA, int nodeB);
     void addUndirectedEdge(int nodeA, int nodeB, double weight);
     void addDirectedEdge(int nodeA, int nodeB, double weight);
+    void addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double weight);
     uint64_t addAndCountUndirectedEdge(int nodeA, int nodeB, double weight);
     int getDegree(int node);
     

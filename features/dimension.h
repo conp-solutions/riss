@@ -30,9 +30,7 @@ along with GraphFeatSAT. If not, see <http://www.gnu.org/licenses/>.
 
 #include <vector>
 #include <stack>
-#ifndef VECTOR
 #include "Graph.h"
-#endif
 #include <algorithm>
 
 #ifndef DIMENSION_H

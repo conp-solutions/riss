@@ -30,7 +30,7 @@ bool ModPrep::process()
 {
     // parameters
     double precision = 0.000001;
-    int randomCommunities = 20;
+    int randomCommunities =0; // 20;
     int stepLimit = 1000000;  // TODO: make it a parameter
     int singleConflicts = 1000; // conflict per community pair
     int totalConflictLimit = 1000000; // number of conflicts that can be performed in total
@@ -210,7 +210,7 @@ bool ModPrep::getRandomCommunities(int randomCommunities, vector< int >& communi
   // build adjacency lists for communities
   communities = new SimpleGraph ( randomCommunities, false );
   for( int i = 0; i < communityPerVariable.size(); ++ i ) {
-    DOUT( cerr << "c add edge: " << communityPerVariable[i] << " - " << i << endl; );
+    //DOUT( cerr << "c add edge: " << communityPerVariable[i] << " - " << i << endl; );
     communities->addDirectedEdge( communityPerVariable[i], i , 1); // add variable to its community
   }
   communities->finalizeGraph();
@@ -264,7 +264,7 @@ SimpleGraph* ModPrep::getVIG(int& step, int steplimit)
             const Lit cpl = ~l;  // build the complement of the literal
             const Var v = var(l); // calculate a variable from the literal
                 for (int k = j + 1; k < c.size(); ++k) {
-                    vigGraph->addDirectedEdge(v, var(c[k]), 1); //with undirected edges there would be problems finding features(e.g. diameter)
+                    vigGraph->addDirectedEdgeAndInvertedEdge(v, var(c[k]), 1); //with undirected edges there would be problems finding features(e.g. diameter)
                 }
             step ++;
 	    if( step > steplimit ) { // when reaching the limit, we do not return a graph at all!

@@ -118,14 +118,10 @@ double modularity() {
 
 	
 	for (SimpleGraph::EdgeIter it=g->begin(); it != g->end(); it++) {
-	
-	  //assert(it->orig >= 0 && it->orig < n2c.size());
+		//assert(it->orig >= 0 && it->orig < n2c.size());
 		//assert(it->dest >= 0 && it->dest < n2c.size());
-	
-	
-		if (n2c[it->orig] == n2c[it->dest]){ 
-		 	w += it->weight; 
-		}
+		if (n2c[it->orig] == n2c[it->dest]) 
+			w += it->weight;
 	}
 	
 	
@@ -194,7 +190,7 @@ bool one_level() {
 				}
 			}
 			if (best_c != n2c[n]) { 
-	cerr << "Node " << n << " goes " << n2c[n] << " -> " <<best_c << " inc="<<2*best_inc/g->arity()<<endl;
+	//cerr << "Node " << n << " goes " << n2c[n] << " -> " <<best_c << " inc="<<2*best_inc/g->arity()<<endl;
 				changed = true;
 				improved = true;
 				n2c[n] = best_c;
@@ -238,17 +234,17 @@ double compute_modularity_GFA(double precision) {
 // Given a graph "g", computes a partition "n2c" by the GFA method, applying "one-level" while it is possible, 
 // and collapsing communities into nodes applying "community2graph".
 //-------------------------------------------------------------------------------------------
-	bool improved ;
+	bool improved;
 	Community* c = new Community(g);
 
 	do {
 		double aux = c->modularity();
 		
-		cerr <<"c\tpre improved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux <<endl;
+		DOUT( cerr <<"c\tpre improved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux <<endl; );
 		
 		improved = c->one_level() && abs2(c->modularity()-aux) > precision;
 		//improved = c->one_level();
-		cerr <<"c\tipos mproved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux <<endl;
+		DOUT( cerr <<"c\tipos mproved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux <<endl; );
 		
 		if (improved) {
 			c->g = c->community2graph();
@@ -260,7 +256,7 @@ double compute_modularity_GFA(double precision) {
 			c = new Community(c->g);
 		}
 		
-		cerr <<"c\tQ = "<<modularity()<<" #comm = "<<ncomm<<endl;
+		DOUT( cerr <<"c\tQ = "<<modularity()<<" #comm = "<<ncomm<<endl; );
 		//c.g.print();
 	}
 	while (improved);
