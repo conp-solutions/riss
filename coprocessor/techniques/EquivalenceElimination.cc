@@ -187,9 +187,9 @@ bool EquivalenceElimination::process(CoprocessorData& data)
         do {
             findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
             eeIter ++;
+	    if( !applyEquivalencesToFormula(data) ) break;   // definitely apply all found eq's
             if (eeIter >= config.opt_ee_bigIters) { break; }
-        } while (applyEquivalencesToFormula(data)
-                 && data.ok()
+        } while (   data.ok()
                  && !data.isInterupted()
                  && (data.unlimited() || steps < config.opt_ee_limit)
                 ); // will set literals that have to be analyzed again!
@@ -2282,12 +2282,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 // TODO necessary here?
                 // take care of unit propagation and subsumption / strengthening
                 if (data.hasToPropagate()) {   // after each application of equivalent literals perform unit propagation!
-                    if (propagation.process(data, true) == l_False) { return newBinary; }
+                    if (propagation.process(data, true) == l_False) { assert( !data.ok() && "had to fail already"  ); return newBinary; }
                 }
                 if (config.opt_eeSub) {
                     subsumption.process();
                     if (data.hasToPropagate()) {   // after each application of equivalent literals perform unit propagation!
-                        if (propagation.process(data, true) == l_False) { return newBinary; }
+                        if (propagation.process(data, true) == l_False) { assert( !data.ok() && "had to fail already"  ); return newBinary; }
                     }
                 }
 
@@ -2318,6 +2318,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 
     }
 
+    assert( data.getEquivalences().size() == 0 && "was empty or processed all elements and cleared the structure" );
     modifiedFormula = modifiedFormula || propagation.appliedSomething() || subsumption.appliedSomething();
 
     // the formula will change, thus, enqueue everything

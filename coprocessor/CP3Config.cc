@@ -368,7 +368,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_eeGateBigFirst     (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates [should not be disabled!]", true, optionListPtr, &opt_ee),
     opt_ee_aagFile         (_cat_ee, "ee_aag", "write final circuit to this file", 0,                                                        optionListPtr, &opt_ee),
     #ifndef NDEBUG
-    ee_debug_out           (_cat_ee, "ee_debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
+    ee_debug_out           (_cat_ee, "ee-debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
     #endif
     opt_eeSub              (_cat_ee, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false,          optionListPtr, &opt_ee),
     opt_eeFullReset        (_cat_ee, "ee_reset",        "after Subs or Up, do full reset?", false,                                           optionListPtr, &opt_ee),

@@ -1370,7 +1370,7 @@ void Preprocessor::destroyTechniques()
     if (config.opt_rew) { rewriter.destroy(); }
     
     // re-init replacedBy information during next round
-    assert ( data.getEquivalences().size() == 0 && "all equivalences should have been processed!" );
+    assert ( (!data.ok() || data.getEquivalences().size() == 0) && "all equivalences should have been processed if the formula is not known to be unsatisfiable!" );
     
 
 }

@@ -620,6 +620,7 @@ class Solver
                                         #endif
                                        )
         {
+	    assert( var(a) < solver->nVars() && var(b) < solver->nVars() && "do not add variables that are larger than stack size" );
             if (a != b) {
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
@@ -646,7 +647,10 @@ class Solver
                                         #endif
                                        )
         {
-            for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
+            for (int i = 0 ; i < lits.size(); ++ i) { 
+	      assert( var(lits[i]) < solver->nVars() && "eq variables have to be in current formula" );
+	      equivalencesStack.push(lits[i]);
+	    }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
             #ifdef PCASSO
             dependencyStack.push(dependencyLevel);
