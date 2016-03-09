@@ -351,6 +351,9 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     // space for replacement info
     assert(v == eqInfo.replacedBy.size() && "new variables have to match the size");
     eqInfo.replacedBy.push(mkLit(v, false));
+    
+    Var compressionVar = compression.newVar();
+    assert( (compressionVar == 0 || compressionVar == v) && "variable that has been added to compression should match the currently added variable" );
 
     if (config.opt_litPairDecisions > 0) {
         decisionLiteralPairs.push(LitPairPair());    // add another pair per literal

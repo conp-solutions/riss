@@ -16,7 +16,8 @@
 #param="-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -no-cp3_uhdTrans   -no-bce -bce-cle -no-bce-bce -config=  -no-cp3_fm_amt -cp3_fm_newAmo=2"
 #param="-config= -cp3_rew_imp -no-cp3_rew_amo -rew -enabled_cp3"
 #param="-config= -biAsserting -enabled_cp3 -up -dense"
-param="-enabled_cp3 -cp3_inp_cons=2 -inprocess -lbd-core-th=4 -phase-bit=1 -rer-g -rer-ga=666666.6667 -config="
+#param="-enabled_cp3 -cp3_inp_cons=2 -inprocess -lbd-core-th=4 -phase-bit=1 -rer-g -rer-ga=666666.6667 -config="
+param="-lpd=4 -var-decay-b=0.9999 -rnd-freq=0.3333 -rnd-seed=6.10988e+07 -init-act=4 -rsw-int=4 -enabled_cp3 -inprocess -cp3_inp_cons=100 -cp3_iters=0 -bce -bva -dense -cp3_Abva -bce-bin -config= -checkModel -quiet "
 
 #
 # select between printing a proof and not printing a proof

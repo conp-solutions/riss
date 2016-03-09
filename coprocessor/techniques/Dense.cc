@@ -260,6 +260,9 @@ void Dense::decompress(vec<lbool>& model)
         }
     });
 
+    assert( ! compression.isDecompressing() && "compression should be decompressing only in this method" );
+    compression.setDecompressing( true );
+    
     // extend the assignment, so that it is large enough
     if (model.size() < compression.nvars()) {
         model.growTo(compression.nvars(), l_False);
@@ -303,6 +306,9 @@ void Dense::decompress(vec<lbool>& model)
         }
     }
 
+    compression.setDecompressing( false );
+    assert( ! compression.isDecompressing() && "compression should be decompressing only in this method" );
+    
     DOUT(if (config.dense_debug_out) {
     cerr << "c decompressed model: ";
     printModel(model);

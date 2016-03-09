@@ -660,6 +660,7 @@ inline void CoprocessorData::resetPPhead()
 
 inline Riss::Var CoprocessorData::nextFreshVariable(char type)
 {
+    assert( solver->eqInfo.replacedBy.size() == solver->nVars() && "information for all variables has to be available" );
     // be careful here
     Riss::Var nextVar = solver->newVar(true, true, type);
     numberOfVars = solver->nVars();
@@ -670,7 +671,7 @@ inline Riss::Var CoprocessorData::nextFreshVariable(char type)
     occs.resize(2 * nVars());
     // std::cerr << "c resize occs to " << occs.size() << std::endl;
     lit_occurrence_count.resize(2 * nVars());
-
+    
     // std::cerr << "c new fresh variable: " << nextVar+1 << std::endl;
     return nextVar;
 }
