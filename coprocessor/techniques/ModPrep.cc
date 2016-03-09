@@ -46,6 +46,8 @@ bool ModPrep::process()
     data.lits.clear();
     data.clss.clear();
     
+    if( data.nVars() == 0 || data.getClauses().size() == 0 || data.getLEarnts().size() == 0 ) return false;
+    
     // get communities here!
     
     vector< int > communityPerVariable ( data.nVars(), -1 );
