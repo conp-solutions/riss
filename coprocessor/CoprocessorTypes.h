@@ -1919,6 +1919,7 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
             sizes[ Riss::toInt(~c[0])  ] ++;
             sizes[ Riss::toInt(~c[1])  ] ++;
+	    assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             sum += 2;
         }
     }
@@ -1940,6 +1941,7 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
+	    assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
             (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;
             sizes[Riss::toInt(~l0)] ++;
@@ -1960,6 +1962,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
     for (int i = 0 ; i < list.size(); ++i) {
         const Riss::Clause& c = ca[list[i]];
         if (c.size() != 2 || c.can_be_deleted()) { continue; }
+        assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
         sizes[ Riss::toInt(~c[0])  ] ++;
         sizes[ Riss::toInt(~c[1])  ] ++;
         sum += 2;
@@ -1982,6 +1985,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
     for (int i = 0 ; i < list.size(); ++i) {
         const Riss::Clause& c = ca[list[i]];
         if (c.size() != 2 || c.can_be_deleted()) { continue; }
+        assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
         const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
         (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
         (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;
@@ -2003,6 +2007,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
         for (int i = 0 ; i < list.size(); ++i) {
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
+            assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             sizes[ Riss::toInt(~c[0])  ] ++;
             sizes[ Riss::toInt(~c[1])  ] ++;
             sum += 2;
@@ -2028,6 +2033,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
         for (int i = 0 ; i < list.size(); ++i) {
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
+            assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
             (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
             (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;

@@ -1787,8 +1787,8 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
     else  { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
     if (eqInSCC == 0) { eqInSCC = (char*) malloc(sizeof(char) * data.nVars()); }
     else  { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
-    eqNodeIndex.resize(data.nVars() * 2, -1);
-    eqNodeLowLinks.resize(data.nVars() * 2, -1);
+    eqNodeIndex.assign(data.nVars() * 2, -1);
+    eqNodeLowLinks.assign(data.nVars() * 2, -1);
 
     // reset all data structures
     eqIndex = 0;
@@ -1854,6 +1854,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
     eqNodeIndex[toInt(l)] = eqIndex;
     eqNodeLowLinks[toInt(l)] = eqIndex;
     eqIndex++;
+    assert( var(l) < data.nVars() && "variables have to stay in range" );
     eqStack.push_back(l);
     eqLitInStack[ toInt(l) ] = 1;
 
@@ -1920,7 +1921,11 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 
 Lit EquivalenceElimination::getReplacement(Lit l)
 {
-    while (var(data.replacedBy() [var(l)]) != var(l)) { l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; }    // go down through the whole hierarchy!
+    assert( var(l) < data.nVars() && "use only existing variables" );
+    while (var(data.replacedBy() [var(l)]) != var(l)) { // go down through the whole hierarchy!
+      assert( var(data.replacedBy() [var(l)]) < data.nVars() && "use only existing variables" );
+      l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; 
+    }    
     //  data.replacedBy() [var(startLit)] = l; // speed up future calculations!
     return l;
 }

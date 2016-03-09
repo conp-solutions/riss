@@ -1235,7 +1235,7 @@ void Preprocessor::initializePreprocessor()
     for (int p = 0; p < 2; ++ p) {
         vec<CRef>& clss = (p == 0) ? data.getClauses() : data.getLEarnts();
         int& thisClss = (p == 0) ? thisClauses : thisLearnts;
-
+	
         for (int i = 0; i < clss.size(); ++i) {
             const CRef cr = clss[i];
             Clause& c = ca[cr];
@@ -1251,6 +1251,8 @@ void Preprocessor::initializePreprocessor()
                 c.set_delete(true);
                 thisClss ++;
             } else {
+		if( p == 1 && c.isCoreClause() ) continue; // do not add core clauses twice (only for clauses)
+	        assert( ( p == 1 || c.isCoreClause() || !c.learnt() ) && "core learnts should be in the clauses vector, usual learnts should be in the learnts vector" );
                 #ifndef NDEBUG
                 data.addClause(cr, config.opt_check);
                 #else
@@ -1261,9 +1263,10 @@ void Preprocessor::initializePreprocessor()
                 propagation.initClause(cr);
                 hte.initClause(cr);
                 cce.initClause(cr);
-                thisClss ++;
+                clss[ thisClss ++ ] = cr; // keep this clause!
             }
         }
+        clss.shrink_( clss.size() - thisClss ); // remove redundant clauses from vector!
     }
 
     if (config.opt_whiteList != 0 && string(config.opt_whiteList).size() != 0) {
@@ -1649,6 +1652,7 @@ void Preprocessor::fullCheck(const string& headline)
                         if (wcr  == cr) { didFind = true; break; }
                     }
                     if (! didFind) { cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl; }
+//                     assert( didFind && "clause should be in watch list of its two first literals" );
                 }
 
             }
