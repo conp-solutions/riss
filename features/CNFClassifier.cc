@@ -1219,7 +1219,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     vigGraph->finalizeGraph(); //finalize
   //  for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
     
-  cerr << vigGraph->getRadius()<<endl;
+  //cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
   //cerr<<vigGraph->getArticulationPoints()<<endl;
   //cerr<<vigGraph->gettreewidth()<<endl;

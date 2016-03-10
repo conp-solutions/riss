@@ -469,7 +469,7 @@ int main(int argc, char** argv)
         
 
 	//computeExtraGraphFeatures (argc, argv);
-	
+	/*
 	communityInformation communityInformation(argc, argv, 1000000, 0.000001);
 
       
@@ -480,7 +480,7 @@ int main(int argc, char** argv)
 	for(int j=0; j<vec[i].size();++j)cerr<<vec[i][j]<<endl;
        }
        
-     
+     */
         return 0;
 
         /**
