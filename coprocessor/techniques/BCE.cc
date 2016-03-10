@@ -139,7 +139,8 @@ void BlockedClauseElimination::coverdLiteralAddition()
                 possibleClaExtensions += data.lits.size();
 
                 // have a filter here that removes some of the literals, if data.lits is too large!
-                if (data.lits.size() > config.claStepSize) { // reduce number of literals somehow
+		// removing arbitrary literals might be unsound, as the order matters?
+                if (false && data.lits.size() > config.claStepSize) { // reduce number of literals somehow
                     int keptLiterals = 0;
                     for (int k = 0; k < data.lits.size(); k++) {
                         if (rand() % 1000 < 600) { // keep some 60 %
@@ -165,6 +166,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
                     if (data.ma.isCurrentStep(toInt(~c[k]))) {
                         isTaut = true;
                         data.lits.push_back(c[k]);
+			break;
                     } else if (!data.ma.isCurrentStep(toInt(c[k]))) {
                         data.lits.push_back(c[k]);
                     }
@@ -172,11 +174,15 @@ void BlockedClauseElimination::coverdLiteralAddition()
 
                 if (!isTaut) { // do not want to perform CCE here!
                     claExtendedClauses++;
+		    assert( data.lits.size() >= c.size() && "we should have added literals!" );
                     CRef newClause = ca.alloc(data.lits, false); // destroys reference for clause c!
                     ca[newClause].sort();
                     //claStorage.push_back( ClaStore(data.list(right)[i], newClause, right ) );
 
+		    DOUT( if( config.opt_bce_debug ) cerr << "c add clause " << data.lits << " for clause " << ca[data.list(right)[i]] << endl; );
                     // add new clause to proof (subsumed by the other, so should be fine!)
+		    assert( !ca[data.list(right)[i]].can_be_deleted() && "clause should still be active!" );
+		    
                     ca[data.list(right)[i]].set_delete(true);
                     data.addCommentToProof("extended by applying CLA");
                     data.addToProof(ca[newClause]); // add the new longer clause!

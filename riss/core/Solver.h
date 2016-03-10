@@ -958,6 +958,8 @@ class Solver
     void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
     void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
+    template <class T>
+    bool checkClauseDRAT(const T& clause );
   public:
     lbool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
@@ -967,6 +969,8 @@ class Solver
     void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
     void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
+    template <class T>
+    bool checkClauseDRAT(const T& clause ) { return true; }
   public:
     lbool checkProof() const { return l_Undef; } // if online checker is used, return whether the current proof is valid
   protected:
@@ -2134,6 +2138,15 @@ inline bool Solver::outputsProof() const
 }
 
 template <class T>
+inline bool Solver::checkClauseDRAT(const T& clause)
+{
+    // if we use the online checker, check the clauses!
+    if (onlineDratChecker != 0) {
+       return onlineDratChecker->addClause(clause, lit_Undef, true);
+    } else return true;
+}
+
+template <class T>
 inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
@@ -2150,7 +2163,10 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, cons
     if (onlineDratChecker != 0) {
         if (deleteFromProof) { onlineDratChecker->removeClause(clause, remLit); }
         else {
-            onlineDratChecker->addClause(clause, remLit);
+            if( !onlineDratChecker->addClause(clause, remLit) ) {
+	      cerr << "c WARNING: detected non DRAT clause, abort!" << endl;
+	      exit( 134 );
+	    }
         }
     }
     // actually print the clause into the file

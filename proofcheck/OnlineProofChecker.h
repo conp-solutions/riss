@@ -76,7 +76,7 @@ public:
    */
   bool addClause(const std::vector<int>& clause );
   template <class T>
-  bool addClause(const  T& clause, const Lit& remLit);
+  bool addClause(const  T& clause, const Lit& remLit, bool checkOnly = false);
   bool addClause(const  vec<Lit>& cls, bool checkOnly = false ) ;
   bool addClause(const  Lit& l ) ;
   
@@ -325,11 +325,15 @@ bool OnlineProofChecker::removeClause(const T& cls)
       if( unitClauses[i] == l ) {
 	unitClauses[i] = unitClauses[ unitClauses.size() - 1 ];
 	unitClauses.pop();
+	break; // remove only once!
       }
     }
-    if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the vector of units" );
+    if( i == unitClauses.size() ) { 
+      assert( false && "the unit clause should be inside the vector of units" );
+      return false;
+    }
     if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] removed clause " << cls <<  std::endl;
-    return false;
+    return true;
   } 
   // find correct CRef ...
   ma.nextStep();
@@ -444,7 +448,7 @@ bool OnlineProofChecker::addClause(const std::vector<int>& clause )
 
 template <class T>
 inline
-bool OnlineProofChecker::addClause(const T& clause, const Lit& remLit)
+bool OnlineProofChecker::addClause(const T& clause, const Lit& remLit, bool checkOnly)
 {
   // create a clause where remLit is the first literal
   tmpLits.clear();
@@ -453,7 +457,7 @@ bool OnlineProofChecker::addClause(const T& clause, const Lit& remLit)
     if( clause[i] != remLit ) tmpLits.push( clause[i] );
   }
   // add this clause in the usual way
-  return addClause( tmpLits );
+  return addClause( tmpLits, checkOnly );
 }
 
 inline 

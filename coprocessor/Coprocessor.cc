@@ -1529,12 +1529,21 @@ bool Preprocessor::checkLists(const string& headline)
     }
     cerr << "c found " << foundEmpty << " empty lists, out of " << data.nVars() * 2 << endl;
 
-    if (false) {
+    DOUT( if ( config.opt_check > 1) {
+      for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
+            const Clause& c = ca[data.getLEarnts()[i]];
+            if (c.can_be_deleted()) { continue; }
+            assert( data.checkClauseDRAT( c ) && "clauses of the current formula should be DRAT wrt the current proof!" );
+        }
+    } );
+    
+    DOUT( if ( config.opt_check > 2) {
+
         for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
             const Clause& c = ca[data.getLEarnts()[i]];
             if (c.can_be_deleted()) { continue; }
             for (int j = 0 ; j < data.getClauses().size(); ++ j) {
-                if (data.getLEarnts()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl; }
+                if (data.getLEarnts()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl; assert(false && "clause index duplicate in lists" );}
             }
         }
 
@@ -1542,7 +1551,7 @@ bool Preprocessor::checkLists(const string& headline)
             const Clause& c = ca[data.getClauses()[i]];
             if (c.can_be_deleted()) { continue; }
             for (int j = i + 1 ; j < data.getClauses().size(); ++ j) {
-                if (data.getClauses()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getClauses()[i] << " in clause vector twice" << endl; }
+                if (data.getClauses()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getClauses()[i] << " in clause vector twice" << endl; assert(false && "clause index duplicate in lists" );}
             }
         }
 
@@ -1550,10 +1559,10 @@ bool Preprocessor::checkLists(const string& headline)
             const Clause& c = ca[data.getLEarnts()[i]];
             if (c.can_be_deleted()) { continue; }
             for (int j = i + 1 ; j < data.getLEarnts().size(); ++ j) {
-                if (data.getLEarnts()[i] == data.getLEarnts()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl; }
+                if (data.getLEarnts()[i] == data.getLEarnts()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl; assert(false && "clause index duplicate in lists" );}
             }
         }
-    }
+    } );
 
     return ret;
 }

@@ -310,6 +310,10 @@ class CoprocessorData
 
     /** return whether the solver outputs the drup proof! */
     bool outputsProof() const { return solver->outputsProof(); }
+    
+    template <class T>
+    /** check whether a clause would be addable to the proof */
+    bool checkClauseDRAT( const T& clause );
 
     #else // no DRAT proofs
     template <class T>
@@ -317,6 +321,8 @@ class CoprocessorData
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     bool outputsProof() const { return false; }
+    template <class T>
+    bool checkClauseDRAT( const T& clause ) { return true; }
     #endif
 
     /// handling equivalent literals, not a constant list to be able to share it in priss (will not alter the list)
@@ -1755,6 +1761,13 @@ inline void CoprocessorData::addToProof(const T& clause, bool deleteFromProof, c
 {
     solver->addToProof(clause, deleteFromProof, remLit);
 }
+
+template <class T>
+inline bool CoprocessorData::checkClauseDRAT(const T& clause)
+{
+  solver->checkClauseDRAT(clause);
+}
+
 
 inline void CoprocessorData::addUnitToProof(const Riss::Lit& l, bool deleteFromProof)
 {
