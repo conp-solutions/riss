@@ -12,6 +12,7 @@ Copyright (c) 2014, Norbert Manthey, All rights reserved.
 #include "riss/utils/System.h"
 #include "riss/core/SolverTypes.h"
 #include "riss/core/Constants.h"
+#include "riss/utils/Debug.h"
 
 // for generic interface
 #include <vector>
@@ -158,7 +159,7 @@ Var OnlineProofChecker::newVar()
 inline
 void OnlineProofChecker::uncheckedEnqueue(Lit p)
 {
-  if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] enqueue literal " << p << std::endl;
+  DOUT( if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] enqueue literal " << p << std::endl; );
   assigns[var(p)] = lbool(!sign(p));
   // prefetch watch lists
   __builtin_prefetch( & watches[p] );
@@ -185,9 +186,10 @@ bool OnlineProofChecker::propagate()
     int     num_props = 0;
     watches.cleanAll(); 
     
-    if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] propagate ... " << std::endl;
+    DOUT( if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] propagate ... " << std::endl; );
     
     // propagate units first!
+    DOUT( if( verbose > 4 ) std::cerr << "c [DRAT-OTFC] propagate " << unitClauses.size() << " units" << std::endl; );
     for( int i = 0 ; i < unitClauses.size() ; ++ i ) { // propagate all known units
       const Lit l = unitClauses[i];
       if( value(l) == l_True ) continue;
@@ -198,14 +200,15 @@ bool OnlineProofChecker::propagate()
     
     while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        vec<Watcher>&  ws  = watches[p];
-        Watcher        *i, *j, *end;
         num_props++;
 	    // First, Propagate binary clauses 
+	DOUT( if( verbose > 5 ) std::cerr << "c [DRAT-OTFC] propagate lit " << p << std::endl; );
 	const vec<Watcher>&  wbin  = watches[p];
+	DOUT( if( verbose > 6 ) std::cerr << "c [DRAT-OTFC] propagate with " << wbin.size() << " binary clauses" << std::endl; );
 	for(int k = 0;k<wbin.size();k++) {
 	  if( !wbin[k].isBinary() ) continue;
 	  const Lit& imp = wbin[k].blocker();
+	  DOUT( if( verbose > 7 ) std::cerr << "c [DRAT-OTFC] propagate bin clause with other literal " << imp << std::endl; );
 	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
 	  if(value(imp) == l_False) {
 	    return true;
@@ -217,15 +220,20 @@ bool OnlineProofChecker::propagate()
 	  } 
 	}
 
+	vec<Watcher>&  ws  = watches[p];
+	DOUT( if( verbose > 6 ) std::cerr << "c [DRAT-OTFC] propagate with " << ws.size() << " longer clauses" << std::endl; );
+        Watcher        *i, *j, *end;
         // propagate longer clauses here!
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
 	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
+	    DOUT( if( verbose > 7 ) std::cerr << "c [DRAT-OTFC] propagate with clause " << ca[ i->cref() ] << std::endl; );
 	    
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
             if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
+	      DOUT( if( verbose > 8 ) std::cerr << "c [DRAT-OTFC] clause is true by blocker " << blocker << " in " << ca[ i->cref() ] << std::endl; );
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
@@ -243,12 +251,14 @@ bool OnlineProofChecker::propagate()
             const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
             if (first != blocker && value(first) == l_True) // satisfied clause
 	    {
+	      DOUT( if( verbose > 8 ) std::cerr << "c [DRAT-OTFC] clause is true by other watch " << first << " in " << c << std::endl; );
 	      *j++ = w; continue; } // same as goto NextClause;
 
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False)
 		{
+		    DOUT( if( verbose > 8 ) std::cerr << "c [DRAT-OTFC] found new watch for the clause: " << c[k] << " in " << c << std::endl; );
                     c[1] = c[k]; c[k] = false_lit;
                     watches[~c[1]].push(w);
                     goto NextClause; 
@@ -263,14 +273,16 @@ bool OnlineProofChecker::propagate()
                 // Copy the remaining watches:
                 while (i < end)
                     *j++ = *i++;
+		break;
             } else {
+		DOUT( if( verbose > 8 ) std::cerr << "c [DRAT-OTFC] enqueue " << first << " with reason " << ca[ i->cref() ] << std::endl; );
                 uncheckedEnqueue(first);
 	    }
         NextClause:;
         }
         ws.shrink_(i - j); // remove all duplciate clauses!
     }
-    
+    DOUT( if( verbose > 5 ) std::cerr << "c [DRAT-OTFC] propagate returns " << (confl != CRef_Undef) << std::endl; );
     return (confl != CRef_Undef); // return true, if something was found!
 }
 
@@ -497,75 +509,86 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
   }
   
   if( ! conflict ) {
-    if( propagate() ) conflict = true; // DRUP!
-    else if(  proof == dratProof ) { // are we checking DRAT?
-      if( cls.size() == 0 && checkOnly ) return false; 
-      assert( cls.size() > 0 && "checking the empty clause cannot reach here (it can only be a RUP clause, not a RAT clause -- empty clause is not entailed" );
-      if( initialVars >= var(cls[0]) ) { // DRAT on the first variable, because this variable is not present before!
-	// build all resolents on the first literal!
-	ma.nextStep();
-	lits.clear();
-	for( int i = 1 ; i < cls.size() ; ++ i ) { 
-	  if( ma.isCurrentStep( toInt( ~cls[i] ) ) ) { conflict = true; break; } // clause has complementary literals, accept it!
-	  ma.setCurrentStep( toInt( cls[i] )); // mark all except the first literal!
-	  lits.push( cls[i] );
-	}
-	if( ! conflict ) {
-	  const int initialSize = lits.size(); // these literals are added by resolving with  the current clause on its first literal
-	  assert( initialSize + 1 == cls.size() && "initial resolvent size has all literals except the literal to resolve on" );
-	  const Lit resolveLit = cls[0];
-	  if( verbose > 3 )  std::cerr << "c [DRAT-OTFC] use literal " << resolveLit << " for DRAT check" <<  std::endl;
-	  conflict = true;
-	  const  std::vector<CRef>& list = occ[ toInt(~resolveLit) ];
-	  bool resovleConflict = false;
-	  if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] resolve against " << list.size() << " clauses" <<  std::endl;
-	  for( int i = 0 ; i < list.size(); ++ i ) {
-	    // build resolvent
-	    lits.shrink_( lits.size() - initialSize ); // remove literals from previous addClause call
-	    const Clause& d = ca[ list[i] ];
-	    if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] resolve with clause " << d <<  std::endl;
-	    int j = 0;
-	    for(  ; j < d.size(); ++ j ) {
-	      if( d[j] == ~resolveLit ) continue; // this literal is used for resolution
-	      if( ma.isCurrentStep( toInt( ~d[j] ) ) ) break; // resolvent is a tautology
-	      if( !ma.isCurrentStep( toInt(d[j]) ) ) {
-		// ma.setCurrentStep( toInt(d[j]) );	// do not do this, because there are multiple resolvents! // this step might be redundant -- however, here we can ensure that also clauses with duplicate literals can be handled, as well as tautologic clauses!
-		lits.push(d[j]);
+    DOUT( if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] clause does not conflict by pure enquing " <<  std::endl; );
+    if( propagate() ) {
+      conflict = true; // DRUP!
+      DOUT( if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] clause is DRUP " <<  std::endl; );
+    } else {
+      DOUT( if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] clause is not DRUP " <<  std::endl; );
+      if(  proof == dratProof ) { // are we checking DRAT?
+	if( cls.size() == 0 && checkOnly ) return false; 
+	assert( cls.size() > 0 && "checking the empty clause cannot reach here (it can only be a RUP clause, not a RAT clause -- empty clause is not entailed" );
+	if( initialVars >= var(cls[0]) ) { // DRAT on the first variable, because this variable is not present before!
+	  // build all resolents on the first literal!
+	  ma.nextStep();
+	  lits.clear();
+	  for( int i = 1 ; i < cls.size() ; ++ i ) { 
+	    if( ma.isCurrentStep( toInt( ~cls[i] ) ) ) { conflict = true; break; } // clause has complementary literals, accept it!
+	    ma.setCurrentStep( toInt( cls[i] )); // mark all except the first literal!
+	    lits.push( cls[i] );
+	  }
+	  if( ! conflict ) {
+	    const int initialSize = lits.size(); // these literals are added by resolving with  the current clause on its first literal
+	    assert( initialSize + 1 == cls.size() && "initial resolvent size has all literals except the literal to resolve on" );
+	    const Lit resolveLit = cls[0];
+	    if( verbose > 3 )  std::cerr << "c [DRAT-OTFC] use literal " << resolveLit << " for DRAT check" <<  std::endl;
+	    conflict = true;
+	    const  std::vector<CRef>& list = occ[ toInt(~resolveLit) ];
+	    bool resovleConflict = false;
+	    if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] resolve against " << list.size() << " clauses" <<  std::endl;
+	    for( int i = 0 ; i < list.size(); ++ i ) {
+	      // build resolvent
+	      lits.shrink_( lits.size() - initialSize ); // remove literals from previous addClause call
+	      const Clause& d = ca[ list[i] ];
+	      if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] resolve with clause " << d <<  std::endl;
+	      int j = 0;
+	      for(  ; j < d.size(); ++ j ) {
+		if( d[j] == ~resolveLit ) continue; // this literal is used for resolution
+		if( ma.isCurrentStep( toInt( ~d[j] ) ) ) break; // resolvent is a tautology
+		if( !ma.isCurrentStep( toInt(d[j]) ) ) {
+		  // ma.setCurrentStep( toInt(d[j]) );	// do not do this, because there are multiple resolvents! // this step might be redundant -- however, here we can ensure that also clauses with duplicate literals can be handled, as well as tautologic clauses!
+		  lits.push(d[j]);
+		}
+	      }
+	      if( j != d.size() ) { 
+		if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] resolvent is tautology" <<  std::endl;
+		continue; // this resolvent would be tautological!
+	      }
+	      // lits contains all literals of the resolvent, propagate and check for the conflict!
+	      
+	      if( verbose > 3 )  std::cerr << "c [DRAT-OTFC] test resolvent " << lits <<  std::endl;
+	      // enqueue all complementary literals!
+	      resovleConflict = false;
+	      cancelUntil();
+	      for( int k = 0 ; k < lits.size() ; ++ k ) {
+		if( value( lits[k] ) == l_Undef ) { 
+		  uncheckedEnqueue( ~lits[k] );
+		} else if( value(~lits[k]) == l_False ) { 
+		  resovleConflict = true; 
+		  DOUT( if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] the clause " << cls << " conflicts during enqueing its literals" <<  std::endl; );
+		  break;
+		} // the clause itself is tautological ...
+	      }
+	      if(!resovleConflict && !propagate() ) { 
+		conflict = false; // not DRAT, the current resolvent does not lead to a conflict!
+		if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRAT clause -- resolution on " << resolveLit << " with " << d << " failed! (does not result in a conflict with UP)" <<  std::endl;
+		printState();
+		assert( false && "added clause has to be a DRAT clause" );
+		return false;
+	      } else {
+		DOUT( if( verbose > 6 )  std::cerr << "c [DRAT-OTFC] the clause " << cls << " conflicts during enqueing/propagating" <<  std::endl; );
 	      }
 	    }
-	    if( j != d.size() ) { 
-	      if( verbose > 4 )  std::cerr << "c [DRAT-OTFC] resolvent is tautology" <<  std::endl;
-	      continue; // this resolvent would be tautological!
-	    }
-	    // lits contains all literals of the resolvent, propagate and check for the conflict!
-	    
-	    if( verbose > 3 )  std::cerr << "c [DRAT-OTFC] test resolvent " << lits <<  std::endl;
-	    // enqueue all complementary literals!
-	    resovleConflict = false;
-	    cancelUntil();
-	    for( int k = 0 ; k < lits.size() ; ++ k ) {
-	      if( value( lits[k] ) == l_Undef ) { 
-		uncheckedEnqueue( ~lits[k] );
-	      } else if( value(~lits[k]) == l_False ) { resovleConflict = true; break; } // the clause itself is tautological ...
-	    }
-	    if( !propagate() ) {
-	      conflict = false; // not DRAT, the current resolvent does not lead to a conflict!
-	      if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRAT clause -- resolution on " << resolveLit << " with " << d << " failed! (does not result in a conflict with UP)" <<  std::endl;
-	      printState();
-	      assert( false && "added clause has to be a DRAT clause" );
-	      break;
-	      return false;
-	    }
-	  }
-	  assert( conflict && "added clause has to be a DRAT clause" );
-	  return false;
-	}
-      } else conflict = true; // DRAT, because we have a fresh variable!
-    } else {
-      if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause" <<  std::endl;
-      printState();
-      assert( false && "added clause has to be a DRUP clause" );
-      return false;
+	    assert( conflict && "added clause has to be a DRAT clause" );
+	    if( !conflict ) return false;
+	  } // else conflict == true
+	} else conflict = true; // DRAT, because we have a fresh variable!
+      } else {
+	if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause, and we do not check DRAT" <<  std::endl;
+	printState();
+	assert( false && "added clause has to be a DRUP clause" );
+	return false;
+      }
     }
   }
   

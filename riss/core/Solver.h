@@ -2165,6 +2165,7 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, cons
         else {
             if( !onlineDratChecker->addClause(clause, remLit) ) {
 	      cerr << "c WARNING: detected non DRAT clause, abort!" << endl;
+	      assert( false && "added clauses should be DRAT" );
 	      exit( 134 );
 	    }
         }

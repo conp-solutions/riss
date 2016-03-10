@@ -32,7 +32,7 @@ def main( intervalfile, callparams ):
 	keepParams = list([])
 	
 	# remove parameters pair wise, keep parameters, if we do not find "Result for ParamILS: CRASHED" any more
-	for n in range(end , 9, -2):
+	for n in range(end , 7, -2):
 		print str(n) + " vs end: " + str(end);
 
 		print "run   " + str(callparams[1:n] + list(keepParams))
