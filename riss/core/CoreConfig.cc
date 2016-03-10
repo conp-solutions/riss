@@ -180,7 +180,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     sscheduleGrowFactor     ("SCHEDULE", "sscheInc",        "increment for conflicts per schedule round", 1.3, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &search_schedule),
 
     #ifndef NDEBUG
-    localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA", false,                                                    optionListPtr),
+    localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA #NoAutoT", false,                                                    optionListPtr),
     #endif
     localLookAhead     ("CORE -- LOCAL LOOK AHEAD", "laHack",       "enable lookahead on level 0", false,                                             optionListPtr),
     tb                 ("CORE -- LOCAL LOOK AHEAD", "tabu",         "do not perform LA, if all considered LA variables are as before", true,          optionListPtr, &localLookAhead),

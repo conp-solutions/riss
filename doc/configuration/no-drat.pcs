@@ -1,0 +1,23 @@
+#
+#
+# the forbidden clauses given in this file disable techniques that are not able to print DRAT proof during the execution of the solver
+# some further values might be excluded due to the actual domain of the parameters. CHECK ALL NON-BOOLEAN PARAMETERS!
+#
+#
+
+# preprocessing options
+{ fm=yes }  # does not work with drat proofs
+{ xor=yes } # does not work with drat proofs
+{ dense=yes } # reduced excludable faulty configuration
+{ enabled_cp3=yes, pr-probe=yes, probe=yes } # necessary assignments and equivalences are not handled (yet)
+{ rate-ratm=yes } # rate-ratm has not to be used, implementation is buggy! example call: solvers/riss5drat/riss -config= -proof=/dev/null -proof-oft-check=1 /home/nmanthey/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1012.cnf  -enabled_cp3 -rate -rate-ratm
+{ cp3_Xbva=1 } # has to be 0! would have to add intermediate clauses as well!
+{ cp3_Ibva=1 } # has to be 0! would have to add intermediate clauses as well!
+
+# search options
+{ hlaLevel=1 } # hlaLevel=5 for DRAT proofs!
+{ hlaLevel=4 } # hlaLevel=5 for DRAT proofs!
+{ laEEp=1 } # has to be 0! ee cannot be handled well for DRAT proofs
+{ laEEp=4 } # has to be 0! ee cannot be handled well for DRAT proofs
+{ prob-step-width=1 } # has to be 0! probing might lead to equivalences
+{ prob-step-width=4 } # has to be 0! probing might lead to equivalences

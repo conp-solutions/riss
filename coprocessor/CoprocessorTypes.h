@@ -310,6 +310,10 @@ class CoprocessorData
 
     /** return whether the solver outputs the drup proof! */
     bool outputsProof() const { return solver->outputsProof(); }
+    
+    template <class T>
+    /** check whether a clause would be addable to the proof */
+    bool checkClauseDRAT( const T& clause );
 
     #else // no DRAT proofs
     template <class T>
@@ -317,6 +321,8 @@ class CoprocessorData
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     bool outputsProof() const { return false; }
+    template <class T>
+    bool checkClauseDRAT( const T& clause ) { return true; }
     #endif
 
     /// handling equivalent literals, not a constant list to be able to share it in priss (will not alter the list)
@@ -660,6 +666,7 @@ inline void CoprocessorData::resetPPhead()
 
 inline Riss::Var CoprocessorData::nextFreshVariable(char type)
 {
+    assert( solver->eqInfo.replacedBy.size() == solver->nVars() && "information for all variables has to be available" );
     // be careful here
     Riss::Var nextVar = solver->newVar(true, true, type);
     numberOfVars = solver->nVars();
@@ -670,7 +677,7 @@ inline Riss::Var CoprocessorData::nextFreshVariable(char type)
     occs.resize(2 * nVars());
     // std::cerr << "c resize occs to " << occs.size() << std::endl;
     lit_occurrence_count.resize(2 * nVars());
-
+    
     // std::cerr << "c new fresh variable: " << nextVar+1 << std::endl;
     return nextVar;
 }
@@ -705,7 +712,7 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
 
         // resize the renaming vector
         solver->eqInfo.replacedBy.shrink_(solver->eqInfo.replacedBy.size() - solver->nVars());
-
+	
         // set cp3 variable representation!
         numberOfVars = solver->nVars();
         lit_occurrence_count.resize(nVars() * 2);
@@ -1755,6 +1762,13 @@ inline void CoprocessorData::addToProof(const T& clause, bool deleteFromProof, c
     solver->addToProof(clause, deleteFromProof, remLit);
 }
 
+template <class T>
+inline bool CoprocessorData::checkClauseDRAT(const T& clause)
+{
+  solver->checkClauseDRAT(clause);
+}
+
+
 inline void CoprocessorData::addUnitToProof(const Riss::Lit& l, bool deleteFromProof)
 {
     solver->addUnitToProof(l, deleteFromProof);
@@ -1919,6 +1933,7 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
             sizes[ Riss::toInt(~c[0])  ] ++;
             sizes[ Riss::toInt(~c[1])  ] ++;
+	    assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             sum += 2;
         }
     }
@@ -1940,6 +1955,7 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
+	    assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
             (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;
             sizes[Riss::toInt(~l0)] ++;
@@ -1960,6 +1976,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
     for (int i = 0 ; i < list.size(); ++i) {
         const Riss::Clause& c = ca[list[i]];
         if (c.size() != 2 || c.can_be_deleted()) { continue; }
+        assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
         sizes[ Riss::toInt(~c[0])  ] ++;
         sizes[ Riss::toInt(~c[1])  ] ++;
         sum += 2;
@@ -1982,6 +1999,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
     for (int i = 0 ; i < list.size(); ++i) {
         const Riss::Clause& c = ca[list[i]];
         if (c.size() != 2 || c.can_be_deleted()) { continue; }
+        assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
         const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
         (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
         (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;
@@ -2003,6 +2021,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
         for (int i = 0 ; i < list.size(); ++i) {
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
+            assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             sizes[ Riss::toInt(~c[0])  ] ++;
             sizes[ Riss::toInt(~c[1])  ] ++;
             sum += 2;
@@ -2028,6 +2047,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
         for (int i = 0 ; i < list.size(); ++i) {
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
+            assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
             (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
             (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;

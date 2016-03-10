@@ -611,7 +611,7 @@ class Solver
 
         inline vec<Riss::Lit>& getEquivalenceStack() { return equivalencesStack; }
 
-        inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
+//         inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
         inline bool hasEquivalencesToProcess() const { return equivalencesStack.size() > 0; }
 
         inline void addEquivalenceClass(const Lit& a, const Lit& b, bool doShare = true
@@ -620,6 +620,7 @@ class Solver
                                         #endif
                                        )
         {
+	    assert( var(a) < solver->nVars() && var(b) < solver->nVars() && "do not add variables that are larger than stack size" );
             if (a != b) {
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
@@ -627,7 +628,7 @@ class Solver
                 #ifdef PCASSO
                 dependencyStack.push(dependencyLevel);
                 #endif
-                if (doShare) {
+                if (doShare && solver->isCommunicating()) {
                     temporary.clear();
                     temporary.push(a);
                     temporary.push(b);
@@ -646,13 +647,16 @@ class Solver
                                         #endif
                                        )
         {
-            for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
+            for (int i = 0 ; i < lits.size(); ++ i) { 
+	      assert( var(lits[i]) < solver->nVars() && "eq variables have to be in current formula" );
+	      equivalencesStack.push(lits[i]);
+	    }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
             #ifdef PCASSO
             dependencyStack.push(dependencyLevel);
             #endif
 
-            if (doShare) {  // tell priss about shared equivalences
+            if (doShare && solver->isCommunicating() ) {  // tell priss about shared equivalences
                 temporary.clear();
                 for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }
                 #ifdef PCASSO
@@ -954,6 +958,8 @@ class Solver
     void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
     void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
+    template <class T>
+    bool checkClauseDRAT(const T& clause );
   public:
     lbool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
@@ -963,6 +969,8 @@ class Solver
     void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
     void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
+    template <class T>
+    bool checkClauseDRAT(const T& clause ) { return true; }
   public:
     lbool checkProof() const { return l_Undef; } // if online checker is used, return whether the current proof is valid
   protected:
@@ -1430,6 +1438,8 @@ class Solver
     int sharingTimePoint; // when to share a learned clause (0=when learned, 1=when first used for propagation, 2=when first used during conflict analysis)
 
     Communicator* communication; /// communication with the outside, and control of this solver
+    
+    const bool isCommunicating() { return communication != nullptr; }
 
     /** return dependency level we are currently working on */
     unsigned currentDependencyLevel() const ;
@@ -2128,6 +2138,15 @@ inline bool Solver::outputsProof() const
 }
 
 template <class T>
+inline bool Solver::checkClauseDRAT(const T& clause)
+{
+    // if we use the online checker, check the clauses!
+    if (onlineDratChecker != 0) {
+       return onlineDratChecker->addClause(clause, lit_Undef, true);
+    } else return true;
+}
+
+template <class T>
 inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
@@ -2144,7 +2163,11 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, cons
     if (onlineDratChecker != 0) {
         if (deleteFromProof) { onlineDratChecker->removeClause(clause, remLit); }
         else {
-            onlineDratChecker->addClause(clause, remLit);
+            if( !onlineDratChecker->addClause(clause, remLit) ) {
+	      cerr << "c WARNING: detected non DRAT clause, abort!" << endl;
+	      assert( false && "added clauses should be DRAT" );
+	      exit( 134 );
+	    }
         }
     }
     // actually print the clause into the file

@@ -346,7 +346,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #ifndef NDEBUG
     dense_debug_out        (_cat_dense, "cp3_dense_debug", "print debug output to screen", 0, IntRange(0, 2) ,                                optionListPtr, &opt_dense),
     #endif
-    opt_dense_inprocess    (_cat_dense, "dense_inp",       "use dense during inprocessing", false,                                            optionListPtr, &opt_dense),
+    opt_dense_inprocess    (_cat_dense, "dense_inp",       "use dense during inprocessing #NoAutoT", false,                                   optionListPtr, &opt_dense),
     opt_dense_fragmentation(_cat_dense, "cp3_dense_frag",  "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100), optionListPtr, &opt_dense),
     opt_dense_keep_assigned(_cat_dense, "cp3_keep_set",    "keep already assigned literals #NoAutoT", false,                                  optionListPtr, &opt_dense),
 
@@ -368,7 +368,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_eeGateBigFirst     (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates [should not be disabled!]", true, optionListPtr, &opt_ee),
     opt_ee_aagFile         (_cat_ee, "ee_aag", "write final circuit to this file", 0,                                                        optionListPtr, &opt_ee),
     #ifndef NDEBUG
-    ee_debug_out           (_cat_ee, "ee_debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
+    ee_debug_out           (_cat_ee, "ee-debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
     #endif
     opt_eeSub              (_cat_ee, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false,          optionListPtr, &opt_ee),
     opt_eeFullReset        (_cat_ee, "ee_reset",        "after Subs or Up, do full reset?", false,                                           optionListPtr, &opt_ee),
@@ -597,9 +597,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     sym_opt_total_conflicts(_cat_sym, "sym-consT",   "number of total conflicts for looking for being implied", 10000, IntRange(0, INT32_MAX) ,                                        optionListPtr, &opt_symm),
     #ifndef NDEBUG
     sym_debug_out          (_cat_sym, "sym-debug",   "debug output for probing", 0, IntRange(0, 4) ,                                                                                   optionListPtr, &opt_symm),
-    #endif
-
-    //
+    #endif   //
     // Unhide
     //
     opt_uhd_Iters     (_cat_uhd, "cp3_uhdIters",     "Number of iterations for unhiding", 3, IntRange(0, INT32_MAX),                                                 optionListPtr, &opt_unhide),
@@ -633,7 +631,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_xor_checkNewSubsume(_cat_xor, "xorEncSubs",   "perform subsumption checks with newly added XOR clauses", false,                                 optionListPtr, &opt_xor),
     opt_xor_addAsLearnt    (_cat_xor, "xorEncL",      "add clause to encode XOR as learnt clause", false,                                               optionListPtr, &opt_xor),
     opt_xor_setPolarity    (_cat_xor, "xorSetPol",    "set default polarities based on XOR elimination order and UP(-1=neg,1=pos)", 0, IntRange(-1, 1), optionListPtr, &opt_xor),
-    opt_xor_addOnNewlyAdded(_cat_xor, "xorAddNew",    "add simplified XORs to list of variables that have been added during add", false,                optionListPtr, &opt_xor),
+    opt_xor_addOnNewlyAdded(_cat_xor, "xorAddNew",    "add simplified XORs to list of variables that have been added during add #NoAutoT", false,       optionListPtr, &opt_xor),
 
     #ifndef NDEBUG
     opt_xor_debug          (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5),                                            optionListPtr, &opt_xor),

@@ -31,8 +31,7 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     DOUT(if (config.dense_debug_out) {cerr << "c dense compress" << endl;});
 
     // reset literal counter
-    count.resize(data.nVars());
-    fill(count.begin(), count.end(), 0);
+    count.assign(data.nVars(), 0);
 
     // count literals occuring in clauses
     countLiterals(count, data.getClauses());
@@ -94,7 +93,6 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     compressClauses(data.getClauses());
     compressClauses(data.getLEarnts());
 
-    compressLiterals( data.replacedBy() );
     compressLiterals( data.getEquivalences() );
     
     // write white file
@@ -126,6 +124,8 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     for (int i = 0; i < _trail.size(); ++i) {
         const Lit lit = _trail[i];
 
+	assert( count[var(lit)] == 0 && "all units should be handled here" );
+	
         // keep the assigned literal
         if (count[var(lit)] != 0
                 || data.doNotTouch(var(lit))
@@ -228,6 +228,10 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
             }
         }
     }
+    
+    // get replaced by structure right
+    data.replacedBy().clear();
+    for( Var v = 0 ; v < data.nVars(); ++ v ) data.replacedBy().push( mkLit(v,false) );
 
     // notify data about compression
     data.didCompress();
@@ -256,6 +260,9 @@ void Dense::decompress(vec<lbool>& model)
         }
     });
 
+    assert( ! compression.isDecompressing() && "compression should be decompressing only in this method" );
+    compression.setDecompressing( true );
+    
     // extend the assignment, so that it is large enough
     if (model.size() < compression.nvars()) {
         model.growTo(compression.nvars(), l_False);
@@ -299,6 +306,9 @@ void Dense::decompress(vec<lbool>& model)
         }
     }
 
+    compression.setDecompressing( false );
+    assert( ! compression.isDecompressing() && "compression should be decompressing only in this method" );
+    
     DOUT(if (config.dense_debug_out) {
     cerr << "c decompressed model: ";
     printModel(model);
