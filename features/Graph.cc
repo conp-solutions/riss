@@ -12,7 +12,7 @@
 #include <sstream>
 #include <iostream>
 #include "dimension.h"
-#include "community.h"
+#include "riss/utils/community.h"
 #include <algorithm>
 #include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
@@ -24,16 +24,18 @@
 using namespace std;
 
 Graph::Graph(int size, bool computingDerivative) :
-    pagerank(size),
-    node(size),
-    nodeDeg(size, 0),
+    SimpleGraph(size, computingDerivative),
+
     degreeStatistics(computingDerivative),
     weightStatistics(computingDerivative, false), 
     exzentricityStatistics(computingDerivative),
     pagerankStatistics(computingDerivative),
     articulationpointsStatistics(computingDerivative),
-    narity(0)
+    communitySizeStatistics(computingDerivative),
+    communityNeighborStatistics(computingDerivative)
+   
 {
+  
     // TODO Auto-generated constructor stub
     this->size = size;
     this->mergeAtTheEnd = true;
@@ -41,21 +43,21 @@ Graph::Graph(int size, bool computingDerivative) :
     addedUndirectedEdge = false;
     intermediateSort = true;
     intermediateSorts = 0;
-    for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
-    sortSize.resize(size, 4);      // re-sort after 16 elements
-    narity.resize(size, 0); 
+   // for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
+   sortSize.resize(size, 4);      // re-sort after 16 elements
+    narity.resize(size, 0);
+    
 }
 
 Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
-    pagerank(size),
-    node(size),
-    nodeDeg(size, 0),
+    SimpleGraph(size, computingDerivative),
     degreeStatistics(computingDerivative),
     weightStatistics(computingDerivative, false), 
     exzentricityStatistics(computingDerivative),
     pagerankStatistics(computingDerivative),
     articulationpointsStatistics(computingDerivative),
-    narity(0)
+    communitySizeStatistics(computingDerivative),
+    communityNeighborStatistics(computingDerivative)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -66,7 +68,7 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     intermediateSorts = 0;
     sortSize.resize(size, 4);      // re-sort after 16 elements
     narity.resize(size, 0); 
-    for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
+  //  for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
 }
 
 Graph::~Graph()
@@ -205,6 +207,7 @@ void Graph::addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double aweight)
     }
 }
 
+
 void Graph::addDirectedEdgeWithoutArity(int nodeA, int nodeB, double aweight) //needed for communitystructure
 {
     assert( !addedUndirectedEdge && "cannot mix edge types in implementation" );
@@ -301,6 +304,12 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
    }
      operations += articulationpointsStatistics.compute(quantilesCount);
      operations += articulationpoints.size();
+   
+   if(comm.size() == 0) SimpleGraph::getCommunities(precision); 
+   
+   for(int i=0; i<comm.size();++i) communitySizeStatistics.addValue(comm[i].size()); 
+   operations += communitySizeStatistics.compute(quantilesCount);
+     
     // Statistics for the weights
     int j;
     for (i = 0; i < size; ++i) {
@@ -313,10 +322,6 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
     return operations;
 }
 
-bool nodesComparator(edge e1, edge e2)
-{
-    return (e1.first < e2.first);
-}
 
 uint64_t Graph::computeNmergeStatistics(int quantilesCount)
 {
@@ -394,7 +399,7 @@ vector<int> Graph::getAdjacency(int adjnode)
   
   return nodes;
 }
-
+/*
 void Graph::completeSingleVIG(){
      
    for(int j = size-1; j >= 0; j--){
@@ -408,7 +413,7 @@ void Graph::completeSingleVIG(){
 
     
 }
-
+*/
 vector<double> Graph::getDistances(int nod){
 
   Riss::MarkArray visited;
@@ -932,40 +937,6 @@ void Graph::doPageRank(){
   }
   
 }
-
-void Graph::getCommunities(double precision){
-
-  Community c(this);
-    double modularity;
-			cerr << "Computing COMMUNITY Structure (VIG)" << endl;
-	
-		
-		modularity = c.compute_modularity_GFA(precision);
-		
-		c.compute_communities();
-
-		
-			cerr << "modularity = " << modularity << endl;
-			cerr << "communities = " << (int)c.ncomm << endl;
-			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/getSize() << endl;
-			cerr << "iterations = " << c.iterations << endl;
-			cerr << "------------" << endl;
-  
-}
-
-vector<vector<int>> Graph::getCommunityForEachNode(double prec){
- Community c(this);
- vector<vector<int>> comm;					
-		c.compute_modularity_GFA(prec);
-		c.compute_communities();
-		
-		comm = c.Comm;
-		comm.resize(c.ncomm);
-		
-		return comm;	
-  
-}
-
 void Graph::getDimension(){
 
    int minx = 0;
@@ -996,3 +967,4 @@ void Graph::getDimension(){
 			cerr << "------------" << endl;
   
 }
+
