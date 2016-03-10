@@ -152,8 +152,8 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         vector<double>& ret)
 {
 
-    SimpleGraph *variablesGraph = nullptr;
-    if (computingVarGraph) { variablesGraph = new SimpleGraph(nVars, computingDerivative); }
+    Graph *variablesGraph = nullptr;
+    if (computingVarGraph) { variablesGraph = new Graph(nVars, computingDerivative); }
     uint64_t operations = 0, operationsV = 0;
     double time1 = cpuTime();
     vector<int> clsSizes(10, 0);   // stores number of clauses of a given size (here, store for 1 to 8)
@@ -186,10 +186,10 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
                 clausesVariablesP.addEdge(v, i);
             }
 
-
             // Adding edges for the variable graph
             if (computingVarGraph) {
                 for (int k = j + 1; k < c.size(); ++k) {
+		  
                     operationsV += variablesGraph->addAndCountUndirectedEdge(v,
                                    var(c[k]), wvariable);
                 }
@@ -220,6 +220,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
             horn++;
         }
     }
+    
     operations += clauses.size();
     operations += cdeg.compute(quantilesCount);
     maxClauseSize = cdeg.getMax();
@@ -324,8 +325,8 @@ uint64_t CNFClassifier::buildResolutionAndClausesGrapths(const BipartiteGraph& c
     if (computingClausesGraph || computingResolutionGraph) {
         double time1 = cpuTime();
 
-        SimpleGraph clausesGraph(clauses.size(), computingDerivative);
-        SimpleGraph resolutionGraph(clauses.size(), computingDerivative);
+        Graph clausesGraph(clauses.size(), computingDerivative);
+        Graph resolutionGraph(clauses.size(), computingDerivative);
         for (int i = 0; i < nVars; ++i) {
             const vector<int> al = clausesVariablesP.getAjacencyW(i);
             for (int k = 0; k < al.size(); ++k) {
@@ -441,9 +442,9 @@ void CNFClassifier::fband(vector<double>& ret)
         // Enrique, graphs declaration:
         int nLiterals = nVars * 2;
         uint64_t bigSteps = 0;
-        SimpleGraph exactlyOneLiterals(nLiterals, computingDerivative);
-        SimpleGraph fullAndGraph(nLiterals, computingDerivative);
-        SimpleGraph blockedAndGraph(nLiterals, computingDerivative);
+        Graph exactlyOneLiterals(nLiterals, computingDerivative);
+        Graph fullAndGraph(nLiterals, computingDerivative);
+        Graph blockedAndGraph(nLiterals, computingDerivative);
         litToClsMap.resize(2 * nVars); // setup enough vectors
         for (int i = 0; i < clauses.size(); ++i) {
             for (int j = 0; j < ca[clauses[i]].size(); ++j)
@@ -932,7 +933,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 
     // here I add cliques between the literals of the clauses in the xorList
     int nLiterals = nVars * 2;
-    SimpleGraph xorGraph(nLiterals, computingDerivative);
+    Graph xorGraph(nLiterals, computingDerivative);
     for (int i = 0; i < xorList.size(); ++i) {
         Clause& clause = ca[xorList[i]];
         int k = clause.size();
@@ -1182,12 +1183,12 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     BipartiteGraph clausesVariablesN(clauses.size(), nVars, computingDerivative); // FIXME: norbert: you might not need all graphs at the same time. Since they consume memory, it might be good to destroy them, as soon as you do not need them any more, and to set them up as late as possible!
 
     buildClausesAndVariablesGrapths(clausesVariablesP, clausesVariablesN, ret);
-    
+   
      vector<int> clsSizes(10, 0);
     
-    SimpleGraph *vigGraph = nullptr;
-    if (computingVarGraph) { vigGraph = new SimpleGraph(nVars, computingDerivative); }
-    
+    Graph *vigGraph = nullptr;
+    if (computingVarGraph) { vigGraph = new Graph(nVars, computingDerivative); }
+
      for (int i = 0; i < clauses.size(); ++i) {
       
         //You should know the difference between Java References, C++ Pointers, C++ References and C++ copies.
@@ -1205,7 +1206,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
             // Adding edges for the variable graph
             if (computingVarGraph) {
                 for (int k = j + 1; k < c.size(); ++k) {
-                    vigGraph->addDirectedEdge(v,   
+		                      vigGraph->addDirectedEdgeAndInvertedEdge(v,   
                                    var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
                 }
             }
@@ -1214,11 +1215,11 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
         }
 
     }
+    
     vigGraph->finalizeGraph(); //finalize
-    vigGraph->completeSingleVIG();//adding inverted edges
   //  for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
     
-  //cerr << vigGraph->getRadius()<<endl;
+  cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
   //cerr<<vigGraph->getArticulationPoints()<<endl;
   //cerr<<vigGraph->gettreewidth()<<endl;

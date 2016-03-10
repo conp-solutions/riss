@@ -469,19 +469,18 @@ int main(int argc, char** argv)
         
 
 	//computeExtraGraphFeatures (argc, argv);
-	/*communityInformation communityInformation(argc, argv, 100000, 0.000001);
-       communityInformation.getNodes();
-       bool ok = communityInformation.getCommunityNeighbors();
-       if(ok){
-	for(int i=0; i<communityInformation.neighbors.size();++i){
-	cerr<<"community "<<i<<endl;
-	for(set<int>::iterator it=communityInformation.neighbors[i].begin(); it != communityInformation.neighbors[i].end(); it++){
-	cerr<<*it<<endl;
-	  
-	}
 	
+	communityInformation communityInformation(argc, argv, 1000000, 0.000001);
+
+      
+       vector<vector<int>> vec =  communityInformation.getCommunities();
+       
+	for(int i=0; i<vec.size();++i){
+	cerr<<"community "<<i<<endl;
+	for(int j=0; j<vec[i].size();++j)cerr<<vec[i][j]<<endl;
        }
-       }*/
+       
+     
         return 0;
 
         /**

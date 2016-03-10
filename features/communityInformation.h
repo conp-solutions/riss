@@ -2,26 +2,25 @@
 #include <fstream>
 #include "riss/core/Dimacs.h"
 #include "CNFClassifier.h"
-#include "Graph.h"
-#include <set>
+#include "riss/utils/SimpleGraph.h"
+#include "riss/utils/community.h"
+
 using namespace std;
 
 class communityInformation
 {
 public:
-vector<int> nodes;
 vector<set<int>> neighbors;   
   
 private:
-bool computednodes;
-Graph* VIG;
-vector<vector<int>> communities;
+Community* community;
+SimpleGraph* VIG;
  
 
 int stepcounter;
 double prec;
   
-Graph* buildSingleVIG(char** argv, int argc){
+SimpleGraph* buildSingleVIG(char** argv, int argc){
 
    string line = "";
     ofstream* fileout = new ofstream();
@@ -82,8 +81,8 @@ Graph* buildSingleVIG(char** argv, int argc){
       
      vector<int> clsSizes(10, 0);
     
-    Graph *vigGraph = nullptr;
-    vigGraph = new Graph(S.nVars(), true); 
+    SimpleGraph *vigGraph = nullptr;
+    vigGraph = new SimpleGraph(S.nVars(), true); 
     
      for (int i = 0; i < S.clauses.size(); ++i) {
       
@@ -116,32 +115,30 @@ public:
 
   
 communityInformation(int argc, char** argv, int stepcounter, double prec): stepcounter(stepcounter), prec(prec){
-   VIG = buildSingleVIG(argv, argc);
-   //VIG->finalizeGraph();
+
+  VIG = buildSingleVIG(argv, argc);
+  VIG->finalizeGraph();
+  community = nullptr;
    //VIG->completeSingleVIG();  
-   nodes.resize(VIG->getSize());
-   computednodes =false;
-  
+    
 }
 
 bool getCommunityNeighbors(){
 int step = 0; 
+vector<int> adj; 
   
-  if(communities.size() == 0){
-  
+  if(community == nullptr){
     getCommunities();
   }
   
-  if(!computednodes) getNodes();
-  
-   vector<int> adj; 
-   for(int i=0; i<communities.size()-1; ++i){
-     for(int j =0; j<communities[i].size(); ++j){
-      adj = VIG->getAdjacency(communities[i][j]);
+    for(int i=0; i<community->Comm.size()-1; ++i){
+     for(int j =0; j<community->Comm[i].size(); ++j){
+      adj = VIG->getAdjacency(community->Comm[i][j]);
        for(int k=0; k<adj.size(); ++k){
-       	 if (nodes[adj[k]] > i){
-	   neighbors[i].insert(nodes[adj[k]]);
-	   neighbors[nodes[adj[k]]].insert(i);
+       	 if (community->n2c[adj[k]] > i){
+	   neighbors[i].insert(community->n2c[adj[k]]);
+	   neighbors[community->n2c[adj[k]]].insert(i);
+	   if(neighbors[i].size() > (community->Comm.size()-1)) break;
 	   }
 	   step++;
 	if(step > stepcounter) return false;
@@ -154,30 +151,25 @@ int step = 0;
 }
 
 vector<vector<int>> getCommunities(){
-  
-  communities = VIG->getCommunityForEachNode(prec);
-  neighbors.resize(communities.size());
- 
-  return communities;
+ community = new Community(VIG);
+ community->compute_modularity_GFA(prec);
+ community->compute_communities();
+ neighbors.resize(community->ncomm);
+ vector<vector<int>> comm = community->Comm;
+ comm.resize(community->ncomm);
+  return comm;
     
 }
 
-bool getNodes(){
+vector<int> getNodes(){
   int step = 0;
   
-  if(communities.size() == 0){
+  if(community->Comm.size() == 0){
   
     getCommunities();
   }
   
-   for(int i=0; i<communities.size(); ++i) {
-    for(int j=0; j<communities[i].size();j++){ nodes[communities[i][j]] = i;
-      step++;
-      if(step > stepcounter) return false;
-    }
-    }
-  computednodes = true;  
-  return true;
+ return community->n2c;
   
 }
 

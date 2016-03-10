@@ -44,7 +44,7 @@ extern bool verbose;
 extern int maxx;
 
 //-------------------------------------------------------------------------------------------
-int components(SimpleGraph *g) {
+int components(Graph *g) {
 //-------------------------------------------------------------------------------------------
 // Computes the number of disconected components of a graph
 //-------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ int components(SimpleGraph *g) {
 			while(!s.empty()) {
 				int v = s.top();
 				s.pop();
-				for (SimpleGraph::NeighIter it=g->begin(v); it != g->end(v); it++)
+				for (Graph::NeighIter it=g->begin(v); it != g->end(v); it++)
 				if (!covered[it->dest]) {
 					covered[it->dest] = true;
 					s.push(it->dest);
@@ -72,7 +72,7 @@ int components(SimpleGraph *g) {
 }
 
 //-----------------------------------------------------------------------------
-int tile(int c, diameter d, vector <diameter> &cover, SimpleGraph *g)
+int tile(int c, diameter d, vector <diameter> &cover, Graph *g)
 //-----------------------------------------------------------------------------
 //Given a node c and a distance d, returns the number of nodes c2 reachable from c
 //at distance d and not marked as cover[c2]==-1
@@ -98,7 +98,7 @@ int tile(int c, diameter d, vector <diameter> &cover, SimpleGraph *g)
 		cover[c] = d;
 
 	//push neighs of c to the stack with d-1
-		for (SimpleGraph::NeighIter it=g->begin(c); it != g->end(c); it++)
+		for (Graph::NeighIter it=g->begin(c); it != g->end(c); it++)
 			if (d > 1) 
 			s.push(make_pair(it->dest, d-1));
 	}
@@ -107,7 +107,7 @@ return ncover;
 }
 
 //-----------------------------------------------------------------------------
-int needed(SimpleGraph *g, diameter d, vector <int> &centers) {  
+int needed(Graph *g, diameter d, vector <int> &centers) {  
 //-----------------------------------------------------------------------------
 // Given a graph g, and a diameter d, computes how many tiles of diameter d are
 // needed for covering the graph, trying tile centers as centers
@@ -143,7 +143,7 @@ bool comparesecond(pair <int,int> a, pair <int,int> b) {
 }
 
 //-----------------------------------------------------------------------------
-vector <int> computeNeeded(SimpleGraph *g) {  
+vector <int> computeNeeded(Graph *g) {  
 //-----------------------------------------------------------------------------
 // Given a (weighted) graph g, computes needed[i] as the number of tiles of diameter i
 // needed for covering the graph
