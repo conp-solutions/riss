@@ -111,7 +111,6 @@ void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB)
 
 void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
 {
-  cerr<<size<<" "<<node.size()<<endl;
     assert( !addedDirectedEdge && "cannot mix edge types in implementation" );
     addedUndirectedEdge = true;
     if (nodeA >= node.size()) {

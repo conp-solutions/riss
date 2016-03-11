@@ -47,6 +47,7 @@ class Graph : public SimpleGraph
     SequenceStatistics weightStatistics;
     SequenceStatistics communitySizeStatistics;
     SequenceStatistics communityNeighborStatistics;
+    SequenceStatistics communityBridgeStatistics;
     bool mergeAtTheEnd; // do not detect duplicate entries during the creation of the graph
     bool intermediateSort;  // remove duplicates in adjacency lists already during the algorithm execution
     int intermediateSorts; // statistics
