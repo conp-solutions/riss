@@ -32,7 +32,8 @@ Graph::Graph(int size, bool computingDerivative) :
     pagerankStatistics(computingDerivative),
     articulationpointsStatistics(computingDerivative),
     communitySizeStatistics(computingDerivative),
-    communityNeighborStatistics(computingDerivative)
+    communityNeighborStatistics(computingDerivative),
+    communityBridgeStatistics(computingDerivative)
    
 {
   
@@ -57,7 +58,8 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     pagerankStatistics(computingDerivative),
     articulationpointsStatistics(computingDerivative),
     communitySizeStatistics(computingDerivative),
-    communityNeighborStatistics(computingDerivative)
+    communityNeighborStatistics(computingDerivative),
+    communityBridgeStatistics(computingDerivative)
 {
     // TODO Auto-generated constructor stub
     this->size = size;
