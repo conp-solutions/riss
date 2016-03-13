@@ -1184,13 +1184,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
         }
     }
 
-    DOUT( 
-    if( pathLimit != 0 ) {
-      if( clauseAlreadyExists( clauses, out_learnt ) ) { cerr << "c found current learned clause already in Formula!" << endl; assert( false && "learnt clause is duplicate" ); }
-      if( clauseAlreadyExists( learnts, out_learnt ) ) { cerr << "c found current learned clause already in Formula!" << endl; assert( false && "learnt clause is duplicate" ); }
-    }
-    );
-    
     // control minimization based on clause size
     if( config.opt_minimize_max_size != 0 && out_learnt.size() > config.opt_minimize_max_size ) { 
       doMinimizeClause = false;

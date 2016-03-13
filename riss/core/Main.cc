@@ -428,6 +428,7 @@ int main(int argc, char** argv)
                 printf("c verified model\n");
             } else {
                 printf("c model invalid -- turn answer into UNKNOWN\n");
+		assert( false && "model should be correct" );
                 ret = l_Undef; // turn result into unknown, because the model is not correct
             }
             gzclose(in);
