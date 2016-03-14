@@ -89,6 +89,10 @@ public:
   template <class T>
   bool removeClause( const T& cls, const Lit& rmLit ) ;
   
+  /** check whether the given clause exists in the current proof (useful for debugging) */
+  template <class T>
+  bool hasClause( const T& cls ) ;
+  
   /// plot the current unit clauses and the current formula
   void printState();
   
@@ -317,6 +321,64 @@ bool OnlineProofChecker::removeClause(const T& cls, const Lit& remLit)
   }
   // remove this clause in the usual way
   return removeClause( tmpLits );
+}
+
+template <class T>
+inline 
+bool OnlineProofChecker::hasClause(const T& cls)
+{
+  if( verbose > 3 ) {
+     std::cerr << "c [DRAT-OTFC] check for clause " << cls <<  std::endl;
+  }
+  
+  if( cls.size() == 0 ) {
+    if(!ok ) return true;
+    else return false;
+  }
+  
+  if( cls.size() == 1 ) {
+    const Lit& l = cls[0];
+    int i = 0;
+    for(  ; i < unitClauses.size(); ++ i ) {
+      if( unitClauses[i] == l ) { return true; }
+    }
+    if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] could not find clause " << cls <<  std::endl;
+    return false;
+  } 
+  // find correct CRef ...
+  ma.nextStep();
+  int smallestIndex = 0;
+  ma.setCurrentStep( toInt( cls[0] ) );
+  for( int i = 1; i < cls.size(); ++ i ) {
+    ma.setCurrentStep( toInt( cls[i] ) );
+    if( occ[ toInt( cls[i] ) ].size() < occ[smallestIndex].size() ) smallestIndex = i;
+  }
+  
+  const Lit smallest = cls[smallestIndex];
+  
+  CRef ref = CRef_Undef;
+  int i = 0 ; 
+  for( ; i < occ[ toInt(smallest) ].size(); ++ i ) {
+    const Clause& c = ca[ occ[toInt(smallest)][i] ];
+    if( c.size() != cls.size() ) continue; // do not check this clause!
+    
+    int hit = 0;
+    for( ; hit < c.size(); ++ hit ) {
+      if( ! ma.isCurrentStep( toInt(c[hit]) ) ) break; // a literal is not in both clauses, not the correct clause
+    }
+    if( hit < c.size() ) continue; // not the right clause -> check next!
+
+    ref = occ[toInt(smallest)][i];
+    i = -1; // set to indicate that we found the clause
+    break;
+  }
+  if( i == occ[ toInt(smallest) ].size() || ref == CRef_Undef ) {
+    if( verbose > 1 )  std::cerr << "c [DRAT-OTFC] could not find clause " << cls << " from list of literal " << smallest <<  std::endl;
+    printState();
+    return false;
+  }
+  assert( i == -1 && "found the clause" );
+  return true; // found clause
 }
 
 

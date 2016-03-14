@@ -314,6 +314,10 @@ class CoprocessorData
     template <class T>
     /** check whether a clause would be addable to the proof */
     bool checkClauseDRAT( const T& clause );
+    
+    template <class T>
+    /** check whether a clause is in the current proof */
+    bool proofHasClause( const T& clause );
 
     #else // no DRAT proofs
     template <class T>
@@ -1765,7 +1769,13 @@ inline void CoprocessorData::addToProof(const T& clause, bool deleteFromProof, c
 template <class T>
 inline bool CoprocessorData::checkClauseDRAT(const T& clause)
 {
-  solver->checkClauseDRAT(clause);
+  return solver->checkClauseDRAT(clause);
+}
+
+template <class T>
+inline bool CoprocessorData::proofHasClause(const T& clause)
+{
+  return solver->proofHasClause(clause);
 }
 
 

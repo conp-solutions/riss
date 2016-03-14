@@ -36,7 +36,7 @@ bool ModPrep::process()
     int totalConflictLimit = 1000000; // number of conflicts that can be performed in total
 
     // usual code
-    DOUT(if (config.entailed_debug > 0) cerr << "c run ENT process" << endl;);
+    DOUT(if (config.entailed_debug > 0) cerr << "c run MODPREP process" << endl;);
     MethodTimer mt(&processTime);
 
     if (! performSimplification()) { return false; }   // do not do anything?!

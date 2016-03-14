@@ -191,7 +191,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 
     #ifndef NDEBUG
     opt_debug (_cat, "cp3-debug", "do more debugging #NoAutoT", false,                                                                            optionListPtr, &opt_enabled),
-    opt_check (_cat, "cp3-check", "check solver state during simplification and before returning control to solver #NoAutoT",  0, IntRange(0, 3), optionListPtr, &opt_enabled),
+    opt_check (_cat, "cp3-check", "check solver state during simplification and before returning control to solver #NoAutoT",  0, IntRange(0, 4), optionListPtr, &opt_enabled),
     opt_log   (_cat, "cp3-log",   "Output log messages until given level #NoAutoT", 0, IntRange(0, 3),                                   optionListPtr, &opt_enabled),
     printAfter(_cat, "cp3-print", "print intermediate formula after given technique #NoAutoT", 0,                                        optionListPtr, &opt_debug),
     #endif

@@ -2165,6 +2165,7 @@ lbool Solver::conflictAnalysis(const CRef confl, vec<Lit>& learnt_clause)
 	// assert( !hasComplementary(learnt_clause) && !hasDuplicates(learnt_clause) && "there should not be duplicate literals in the learned clause"  );
         if (l_False == handleLearntClause(learnt_clause, backTrackedBeyondAsserting, nblevels, dependencyLevel)) { return l_False; }
     }
+    
     return l_Undef;
 }
 
@@ -2342,8 +2343,7 @@ lbool Solver::search(int nof_conflicts)
             varDecayActivity();
             claDecayActivity();
 
-
-        } else { // there has not been a conflict
+	} else { // there has not been a conflict
             if (handleRestarts(nof_conflicts, conflictC)) { return l_Undef; }    // perform a restart
 
             // check for new models, continue with propagation if new clauses have been added
@@ -4675,8 +4675,7 @@ bool Solver::interleavedClauseStrengthening()
     // backtrack to level 0
     DOUT(if (config.opt_ics_debug) for (int i = 0 ; i < trailLimCopy.size(); ++i) cerr << "c decision " << trailCopy[ trailLimCopy[i] ]  << "@" << i + 1 << endl;);
     cancelUntil(0);
-
-
+    
     // perform reducer algorithm for some of the last good learned clauses - also adding the newly learnt clauses
     int backtrack_level; unsigned int nblevels;   // helper variable (more or less borrowed from search method
     unsigned dependencyLevel;           // helper variable (more or less borrowed from search method
@@ -4715,7 +4714,12 @@ bool Solver::interleavedClauseStrengthening()
         int j = 0;
         bool droppedLit = false;
         int dropPosition = -1;
-        if (outputsProof()) { oc.clear(); for (int j = 0 ; j < c.size(); ++ j) { oc.push(c[j]); } }      // copy original clause
+        if (outputsProof()) {        // copy original clause
+	  oc.clear();
+	  for (int j = 0 ; j < c.size(); ++ j) { 
+	    oc.push(c[j]);
+	  } 
+	}
         for (; j < ca[learnts[i]].size(); ++ j) {    // check each literal and enqueue it negated -- do not use the reference, because lhbr in propagate can make it invalid
             DOUT(if (config.opt_ics_debug) cerr << "c check lit " << j << "/" << c.size() << ": " << ca[learnts[i]][j] << " with value " << toInt(value(ca[learnts[i]][j])) << endl;);
             if (value(ca[learnts[i]][j]) == l_True) {    // just need to keep all previous and this literal
@@ -4732,7 +4736,7 @@ bool Solver::interleavedClauseStrengthening()
                 continue; // can drop this literal
             }
             ca[learnts[i]][k++] = ca[learnts[i]][j]; // keep the current literal!
-            newDecisionLevel(); // we are working on decision level 1, so nothing breaks
+            newDecisionLevel(); // we are not working on decision level 0, so nothing breaks
             uncheckedEnqueue(~ca[learnts[i]][j]);
             CRef confl = propagate();
             if (confl != CRef_Undef) {  // found a conflict, handle it (via usual, simple, conflict analysis)
@@ -4742,7 +4746,7 @@ bool Solver::interleavedClauseStrengthening()
                 int ret = analyze(confl, learnt_clause, backtrack_level, nblevels, dependencyLevel);
                 cancelUntil(0);
                 if (ret == 0) {
-                    addCommentToProof("learnt clause");
+                    addCommentToProof("learnt clause during ICS");
                     addToProof(learnt_clause);
                     if (learnt_clause.size() == 1) {
                         assert(decisionLevel() == 0 && "enequeue unit clause on decision level 0!");
@@ -4805,10 +4809,14 @@ bool Solver::interleavedClauseStrengthening()
         } else if (d.size() == 1) {   // if not already done, propagate this new clause!
             if (value(d[0]) == l_Undef) {
                 uncheckedEnqueue(d[0]);
+		int proofTopLevels = trail.size();
                 if (propagate() != CRef_Undef) {
                     DOUT(if (config.opt_ics_debug) cerr << "c ICS return false, because unit " << d[0] << " cannot be propagated" << endl;);
                     return false;
                 }
+                if( outputsProof() ) {
+		  for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }		  
+		}
             } else if (value(d[0]) == l_False) {
                 DOUT(if (config.opt_ics_debug) cerr << "c ICS learned falsified unit " << d[0] << endl;);
                 return false; // should not happen!
@@ -4858,6 +4866,12 @@ bool Solver::interleavedClauseStrengthening()
         }
     }
 
+		      cerr << endl << endl << "c post ICS formula" << endl;
+		      for( int z1 = 0 ; z1 < clauses.size(); ++ z1 ) if( ca[ clauses[z1 ] ].mark() == 0 ) cerr << ca[ clauses[z1 ] ] << " 0" << endl;
+		      for( int z1 = 0 ; z1 < learnts.size(); ++ z1 ) if( ca[ learnts[z1 ] ].mark() == 0 ) cerr << ca[ learnts[z1 ] ] << " 0" << endl;
+		      for( int z1 = 0 ; z1 < trail.size(); ++ z1 ) cerr << trail[z1] << " 0" << endl;
+		      cerr << endl << endl;
+    
     for (int i = 0 ; i < backupSolverState.size(); ++i) { varFlags[i].polarity = backupSolverState[i].polarity; }
     DOUT(if (config.opt_ics_debug) {
     cerr << "c after ICS decision levels (" << decisionLevel() << ")" << endl;

@@ -1546,21 +1546,29 @@ bool Preprocessor::checkLists(const string& headline)
                 if (data.getLEarnts()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl; assert(false && "clause index duplicate in lists" );}
             }
         }
-
+	int totalClauses = 0;
         for (int i = 0 ; i < data.getClauses().size(); ++ i) {
             const Clause& c = ca[data.getClauses()[i]];
             if (c.can_be_deleted()) { continue; }
+            totalClauses ++;
             for (int j = i + 1 ; j < data.getClauses().size(); ++ j) {
                 if (data.getClauses()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getClauses()[i] << " in clause vector twice" << endl; assert(false && "clause index duplicate in lists" );}
             }
+            if( config.opt_check > 3 ) {
+	      if( ! data.proofHasClause( ca[data.getClauses()[i]] ) ) { cerr << "c could not find clause " << ca[data.getClauses()[i]] << " in proof" << endl;}
+	    }
         }
 
         for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
             const Clause& c = ca[data.getLEarnts()[i]];
             if (c.can_be_deleted()) { continue; }
+            totalClauses ++;
             for (int j = i + 1 ; j < data.getLEarnts().size(); ++ j) {
                 if (data.getLEarnts()[i] == data.getLEarnts()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl; assert(false && "clause index duplicate in lists" );}
             }
+            if( config.opt_check > 3 ) {
+	      if( ! data.proofHasClause( ca[data.getLEarnts()[i]] ) ) { cerr << "c could not find clause " << ca[data.getLEarnts()[i]] << " in proof" << endl;}
+	    }
         }
     } );
 

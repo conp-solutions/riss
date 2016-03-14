@@ -960,6 +960,8 @@ class Solver
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
     template <class T>
     bool checkClauseDRAT(const T& clause );
+    template <class T>
+    bool proofHasClause(const T& clause);
   public:
     lbool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
@@ -971,6 +973,8 @@ class Solver
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     template <class T>
     bool checkClauseDRAT(const T& clause ) { return true; }
+    template <class T>
+    void proofHasClause(const T& clause){ return true; }
   public:
     lbool checkProof() const { return l_Undef; } // if online checker is used, return whether the current proof is valid
   protected:
@@ -2145,6 +2149,15 @@ inline bool Solver::checkClauseDRAT(const T& clause)
        return onlineDratChecker->addClause(clause, lit_Undef, true);
     } else return true;
 }
+
+template <class T>
+inline bool Solver::proofHasClause(const T& clause)
+{
+  if( onlineDratChecker != 0 ) {
+    return onlineDratChecker->hasClause(clause);
+  } else return true;
+}
+
 
 template <class T>
 inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
