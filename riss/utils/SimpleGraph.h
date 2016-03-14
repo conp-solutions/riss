@@ -21,6 +21,8 @@ typedef std::vector<edge> adjacencyList;
 /**
  * undirected weighted graph.
  */
+
+
 class SimpleGraph
 {
   private:
@@ -33,9 +35,7 @@ class SimpleGraph
     void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
     std::vector<std::vector<int>> getSets(const std::vector<int>& nodes, int k);
     void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
-    int size;
-    std::vector<adjacencyList> node;
-    std::vector<int> nodeDeg;
+    
 
     bool mergeAtTheEnd; // do not detect duplicate entries during the creation of the graph
     bool intermediateSort;  // remove duplicates in adjacency lists already during the algorithm execution
@@ -49,9 +49,23 @@ class SimpleGraph
     std::vector<int> articulationpoints;
     std::vector <double> narity;  
     
-    int precision;
+    
+    
+protected:
+    int size;
+    std::vector<adjacencyList> node;
+    std::vector<int> nodeDeg;
+    std::vector<std::set<int>> communityneighbors;
+    std::vector<std::vector<int>> bridgenodes;
+    double precision = 0.000001;
+    //vectors for communityclassifying
+    std::vector<std::vector<int>> comm;
+    std::vector<int> n2c;
+    
 
   public:
+    void computeCommunityNeighbors();
+    void computeCommunityBridgeNodes();
     std::vector<std::vector<int>> getCommunityForEachNode(double prec);
     void getCommunities(double precision);
     void getDimension();
@@ -92,7 +106,10 @@ class SimpleGraph
     void finalizeGraph();
 
     int getSize(){return size;}
-    
+    static bool nodesComparator(edge e1, edge e2)
+     {
+    return (e1.first < e2.first);
+     } 
    
      //--------------- TOOL FOR COMPUTING DIMENSIONS --------------------------------------------------
      

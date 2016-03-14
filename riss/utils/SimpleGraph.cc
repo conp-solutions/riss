@@ -11,10 +11,10 @@
 #include <assert.h>
 #include <sstream>
 #include <iostream>
-#include "riss/utils/community.h"
 #include <algorithm>
 #include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
+#include "riss/utils/community.h"
 
 #include <iterator>
 
@@ -27,6 +27,7 @@ SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
     node(size),
     nodeDeg(size, 0)
 {
+  
     // TODO Auto-generated constructor stub
     this->size = size;
     this->mergeAtTheEnd = true;
@@ -37,6 +38,7 @@ SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
     for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
     sortSize.resize(size, 4);      // re-sort after 16 elements
     narity.resize(size, 0); 
+    
 }
 
 SimpleGraph::SimpleGraph(int size, bool mergeAtTheEnd, bool computingDerivative) :
@@ -254,11 +256,6 @@ uint64_t SimpleGraph::computeOnlyStatistics(int quantilesCount)
         operations += node[i].size();
     }
     return operations;
-}
-
-bool nodesComparator(edge e1, edge e2)
-{
-    return (e1.first < e2.first);
 }
 
 uint64_t SimpleGraph::computeNmergeStatistics(int quantilesCount)
@@ -882,25 +879,55 @@ void SimpleGraph::getCommunities(double precision){
 		
 		modularity = c.compute_modularity_GFA(precision);
 		c.compute_communities();
-
+                n2c = c.n2c;
+		comm = c.Comm;
 		
 			cerr << "modularity = " << modularity << endl;
 			cerr << "communities = " << (int)c.ncomm << endl;
 			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/getSize() << endl;
 			cerr << "iterations = " << c.iterations << endl;
 			cerr << "------------" << endl;
+			
+			
   
 }
 
-vector<vector<int>> SimpleGraph::getCommunityForEachNode(double prec){
- Community c(this);
- vector<vector<int>> comm;					
-		c.compute_modularity_GFA(prec);
-		c.compute_communities();
-		
-		comm = c.Comm;
-		comm.resize(c.ncomm);
-		
-		return comm;	
+void SimpleGraph::computeCommunityNeighbors(){
   
+if(comm.size() == 0) getCommunities(precision);
+
+ vector<int> adj; 
+   for(int i=0; i<comm.size()-1; ++i){
+     for(int j =0; j<comm[i].size(); ++j){
+      adj = this->getAdjacency(comm[i][j]);
+       for(int k=0; k<adj.size(); ++k){
+       	 if (n2c[adj[k]] > i){
+	   communityneighbors[i].insert(n2c[adj[k]]);
+	   communityneighbors[n2c[adj[k]]].insert(i);
+	   if(communityneighbors[i].size() > (comm.size()-1)) break;
+	   }
+       }   
+  }
+}
+
+}
+
+void SimpleGraph::computeCommunityBridgeNodes(){
+  
+if(comm.size() == 0) getCommunities(precision);
+
+ vector<int> adj; 
+   for(int i=0; i<comm.size(); ++i){
+     for(int j =0; j<comm[i].size(); ++j){
+      adj = this->getAdjacency(comm[i][j]);
+       for(int k=0; k<adj.size(); ++k){
+       	 if (n2c[adj[k]] > i){
+	   bridgenodes[i].push_back(comm[i][j]);
+	   bridgenodes[n2c[adj[k]]].push_back(adj[k]);
+	   break;
+       }   
+   }
+  }
+
+ }
 }
