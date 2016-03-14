@@ -4865,12 +4865,6 @@ bool Solver::interleavedClauseStrengthening()
             break; // interrupt re-building the trail
         }
     }
-
-		      cerr << endl << endl << "c post ICS formula" << endl;
-		      for( int z1 = 0 ; z1 < clauses.size(); ++ z1 ) if( ca[ clauses[z1 ] ].mark() == 0 ) cerr << ca[ clauses[z1 ] ] << " 0" << endl;
-		      for( int z1 = 0 ; z1 < learnts.size(); ++ z1 ) if( ca[ learnts[z1 ] ].mark() == 0 ) cerr << ca[ learnts[z1 ] ] << " 0" << endl;
-		      for( int z1 = 0 ; z1 < trail.size(); ++ z1 ) cerr << trail[z1] << " 0" << endl;
-		      cerr << endl << endl;
     
     for (int i = 0 ; i < backupSolverState.size(); ++i) { varFlags[i].polarity = backupSolverState[i].polarity; }
     DOUT(if (config.opt_ics_debug) {
