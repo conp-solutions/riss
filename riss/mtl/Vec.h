@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <assert.h>
 #include <new>
+#include <string.h>
 
 #include "riss/mtl/IntTypes.h"
 #include "riss/mtl/XAlloc.h"
@@ -95,9 +96,10 @@ class vec
     void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = nullptr; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */
-    void fitSize() {
-      cap = sz;
-      data = (T*)::realloc(data, (cap) * sizeof(T));
+    void fitSize()
+    {
+        cap = sz;
+        data = (T*)::realloc(data, (cap) * sizeof(T));
     }
 
     /** swap content of two vectors */
@@ -112,6 +114,14 @@ class vec
         data = tmpdata;
         sz   = tmpsz;
         cap  = tmpcap;
+    }
+
+    /** assign the given element to all items of the vector
+     * Note: uses memset
+     */
+    void assign(const T& ele)
+    {
+        memset(data, ele, sizeof(ele) * sz);
     }
 };
 

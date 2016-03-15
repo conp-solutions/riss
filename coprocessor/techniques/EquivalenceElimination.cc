@@ -187,9 +187,9 @@ bool EquivalenceElimination::process(CoprocessorData& data)
         do {
             findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
             eeIter ++;
+	    if( !applyEquivalencesToFormula(data) ) break;   // definitely apply all found eq's
             if (eeIter >= config.opt_ee_bigIters) { break; }
-        } while (applyEquivalencesToFormula(data)
-                 && data.ok()
+        } while (   data.ok()
                  && !data.isInterupted()
                  && (data.unlimited() || steps < config.opt_ee_limit)
                 ); // will set literals that have to be analyzed again!
@@ -1787,8 +1787,8 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
     else  { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
     if (eqInSCC == 0) { eqInSCC = (char*) malloc(sizeof(char) * data.nVars()); }
     else  { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
-    eqNodeIndex.resize(data.nVars() * 2, -1);
-    eqNodeLowLinks.resize(data.nVars() * 2, -1);
+    eqNodeIndex.assign(data.nVars() * 2, -1);
+    eqNodeLowLinks.assign(data.nVars() * 2, -1);
 
     // reset all data structures
     eqIndex = 0;
@@ -1854,6 +1854,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
     eqNodeIndex[toInt(l)] = eqIndex;
     eqNodeLowLinks[toInt(l)] = eqIndex;
     eqIndex++;
+    assert( var(l) < data.nVars() && "variables have to stay in range" );
     eqStack.push_back(l);
     eqLitInStack[ toInt(l) ] = 1;
 
@@ -1920,7 +1921,11 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 
 Lit EquivalenceElimination::getReplacement(Lit l)
 {
-    while (var(data.replacedBy() [var(l)]) != var(l)) { l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; }    // go down through the whole hierarchy!
+    assert( var(l) < data.nVars() && "use only existing variables" );
+    while (var(data.replacedBy() [var(l)]) != var(l)) { // go down through the whole hierarchy!
+      assert( var(data.replacedBy() [var(l)]) < data.nVars() && "use only existing variables" );
+      l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; 
+    }    
     //  data.replacedBy() [var(startLit)] = l; // speed up future calculations!
     return l;
 }
@@ -2159,16 +2164,16 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                                 }
 
                                 Lit removedFrom[ c.size() ];
-				int removedFromSize = 0;
-                                
+                                int removedFromSize = 0;
+
                                 // TODO: update counter statistics for all literals of the clause!
                                 for (int m = 0 ; m < c.size(); ++ m) {
                                     if (c[m] == repr || c[m] == ~repr) { duplicate = true; continue; }  // manage that this clause is not pushed into the list of clauses again!
                                     const Lit tr = getReplacement(c[m]);
-                                    if (tr != c[m]) { 
-				      if( var (tr) != var( repr ) ) { removedFrom[ removedFromSize ++ ] = c[m]; } // memorize literal that has been removed from the clause (not repr)
-				      getsNewLiterals = true; 
-				    }
+                                    if (tr != c[m]) {
+                                        if (var(tr) != var(repr)) { removedFrom[ removedFromSize ++ ] = c[m]; }     // memorize literal that has been removed from the clause (not repr)
+                                        getsNewLiterals = true;
+                                    }
                                     c[m] = tr;
                                 }
 
@@ -2282,12 +2287,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 // TODO necessary here?
                 // take care of unit propagation and subsumption / strengthening
                 if (data.hasToPropagate()) {   // after each application of equivalent literals perform unit propagation!
-                    if (propagation.process(data, true) == l_False) { return newBinary; }
+                    if (propagation.process(data, true) == l_False) { assert( !data.ok() && "had to fail already"  ); return newBinary; }
                 }
                 if (config.opt_eeSub) {
                     subsumption.process();
                     if (data.hasToPropagate()) {   // after each application of equivalent literals perform unit propagation!
-                        if (propagation.process(data, true) == l_False) { return newBinary; }
+                        if (propagation.process(data, true) == l_False) { assert( !data.ok() && "had to fail already"  ); return newBinary; }
                     }
                 }
 
@@ -2318,6 +2323,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 
     }
 
+    assert( data.getEquivalences().size() == 0 && "was empty or processed all elements and cleared the structure" );
     modifiedFormula = modifiedFormula || propagation.appliedSomething() || subsumption.appliedSomething();
 
     // the formula will change, thus, enqueue everything

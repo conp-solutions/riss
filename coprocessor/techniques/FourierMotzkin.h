@@ -78,13 +78,29 @@ class FourierMotzkin : public Technique<FourierMotzkin>
   public:
     class CardC
     {
+      private:
+
+        // implement ID system for FM proofs
+        int getNextID()
+        {
+            static int currentID = 0;
+            return currentID ++;
+        }
+
       public:
         std::vector<Riss::Lit> ll;
         std::vector<Riss::Lit> lr;
         int k;
-        CardC(std::vector<Riss::Lit>& amo) : ll(amo), k(1) {};   // constructor to add amo constraint
-        CardC(std::vector<Riss::Lit>& amk, int _k) : ll(amk), k(_k) {};   // constructor to add amk constraint
-        CardC(const Riss::Clause& c) : k(-1) { lr.resize(c.size(), Riss::lit_Undef); for (int i = 0 ; i < c.size(); ++i) { lr[i] = c[i]; }  }   // constructor for usual clauses
+      private:
+        int id;
+        int parentL, parentR; // ID of parent constraints
+      public:
+
+        CardC() : k(0), id(getNextID()), parentL(-1), parentR(-1) {}   // default constructor
+        CardC(std::vector<Riss::Lit>& amo) : ll(amo), k(1), id(getNextID()), parentL(-1), parentR(-1) {};     // constructor to add amo constraint
+        CardC(std::vector<Riss::Lit>& amk, int _k) : ll(amk), k(_k), id(getNextID()), parentL(-1), parentR(-1) {};     // constructor to add amk constraint
+        CardC(const Riss::Clause& c) : k(-1), id(getNextID()), parentL(-1), parentR(-1) { lr.resize(c.size(), Riss::lit_Undef); for (int i = 0 ; i < c.size(); ++i) { lr[i] = c[i]; }  }     // constructor for usual clauses
+
         bool amo() const { return k == 1 && lr.size() == 0 ; }
         bool amt() const { return k == 2 && lr.size() == 0 ; }
         bool amk() const { return k >= 0 && lr.size() == 0 ; }
@@ -94,14 +110,23 @@ class FourierMotzkin : public Technique<FourierMotzkin>
         bool failed() const { return (((int)lr.size() + k) < 0) ; }
         bool taut() const { return k >= (int)ll.size(); } // assume no literal appears both in ll and lr
         bool invalid() const { return k == 0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
-        void invalidate() { k = 0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);}
-        CardC() : k(0) {} // default constructor
+        void invalidate() { if (!invalid()) { k = 0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);} }
+
         void swap(CardC& other)     /** swap with other constraint */
         {
             const int t = other.k; other.k = k; k = t;
+            int p = parentL; parentL = other.parentL; other.parentL = p;
+            p = parentR; parentR = other.parentR; other.parentR = p;
+            p = id; id = other.id; other.id = p;
             ll.swap(other.ll);
             lr.swap(other.lr);
         }
+
+        void setParents(int idL, int idR) { assert(idL != idR && "cannot have the same parent twice"); assert(parentL == -1 && parentR == -1); parentL = idL; parentR = idR; }
+        int getID() const { return id; }
+        int getParentR() const { return parentR; }
+        int getParentL() const { return parentL; }
+
     };
 
   public:

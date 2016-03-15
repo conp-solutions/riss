@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/XAlloc.h"
 #include "riss/mtl/Vec.h"
+#include "riss/mtl/HPVec.h"
 
 #include <iostream>
 namespace Riss
@@ -44,8 +45,8 @@ class RegionAllocator
   public:
     // TODO: make this a class for better type-checking?
     typedef uint32_t Ref;
-    enum { Ref_Undef = UINT32_MAX };
-    enum { Ref_Error = UINT32_MAX - 1};
+    enum { Ref_Undef = (UINT32_MAX >> 1)    };   // divide by 2, as we sometimes cut off the highest bit
+    enum { Ref_Error = (UINT32_MAX >> 1) - 1};   // divide by 2, as we sometimes cut off the highest bit
     enum { Unit_Size = sizeof(uint32_t) };
 
     explicit RegionAllocator(uint32_t start_cap = 1024 * 1024) : memory(nullptr), sz(0), cap(0), wasted_(0) { capacity(start_cap); }
@@ -85,7 +86,7 @@ class RegionAllocator
     void fitSize()
     {
         cap = sz;                                      // reduce capacity to the number of currently used elements
-        memory = (T*)xrealloc(memory, sizeof(T) * cap); // free resources
+        memory = (T*)::realloc(memory, sizeof(T) * cap); // free resources
     }
 
     void     moveTo(RegionAllocator& to)
@@ -141,7 +142,10 @@ void RegionAllocator<T>::capacity(uint32_t min_cap)
     // printf(" .. (%p) cap = %u\n", this, cap);
 
     assert(cap > 0);
-    memory = (T*)xrealloc(memory, sizeof(T) * cap);
+    memory = (T*)::realloc(memory, sizeof(T) * cap);
+    
+    // we want to get an error if the allocation failed
+    if( memory == 0 ) throw OutOfMemoryException();
 }
 
 

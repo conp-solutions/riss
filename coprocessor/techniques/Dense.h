@@ -62,6 +62,12 @@ class Dense : public Technique<Dense>
     std::vector<Riss::lbool> trail;   // temporary mapping of assigned literals (units)
 
     void compressClauses(Riss::vec<Riss::CRef>& clauses);
+    
+    /** apply compression to literals
+     *  drop literals without copression
+     *  keeps lit_Undef 
+     */
+    void compressLiterals(vec< Lit >& literals);
 
     inline void printTrail() const
     {

@@ -68,6 +68,7 @@ class Symmetry;
 class RATElimination;
 class FourierMotzkin;
 class ExperimentalTechniques;
+class ModPrep;
 class BIG;
 }
 
@@ -107,6 +108,7 @@ class Solver
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
     friend class Coprocessor::ExperimentalTechniques;
+    friend class Coprocessor::ModPrep;
     friend class Riss::IncSolver; // for bmc
 
     #ifdef PCASSO
@@ -458,8 +460,29 @@ class Solver
     // Helper structures:
     //
   public:
+
+    /** structure that allows to store the binary reason for a variable assignment implicitely*/
+    struct ReasonStruct {
+
+        unsigned data : 31;
+        unsigned isBinary : 1;
+        ReasonStruct() : data(0), isBinary(0) {}
+
+        ReasonStruct(const CRef& cr) : data(cr), isBinary(0) {}
+        ReasonStruct(const Lit& l) : data(toInt(l)), isBinary(1) {}
+
+        void setReason(const CRef cr) { data = cr; isBinary = 0; }
+        void setReason(const Lit l) { data = toInt(l); isBinary = 1; }
+
+        CRef getReasonC() const { return data; }
+        Lit getReasonL() const { return toLit(data); }
+
+        bool isBinaryClause() const { return isBinary; }
+    };
+
     struct VarData {
-        CRef reason; int level;
+        ReasonStruct reason; // new reason struct
+        int level;
         Lit dom;
         int32_t position; /// for hack
         #ifdef PCASSO
@@ -475,12 +498,23 @@ class Solver
             , dependencyLevel(0)
             #endif
         {}
+        VarData(Lit r, int l, Lit li, int32_t p) : reason(r), level(l), dom(li), position(p)
+            #ifdef PCASSO
+            , dependencyLevel(0)
+            #endif
+        {}
     };
 
   protected:
     static inline VarData mkVarData(CRef cr, int l)
     {
         VarData d(cr, l, lit_Undef, -1);
+        return d;
+    }
+
+    static inline VarData mkVarData(Lit reasonLiteral, int l)
+    {
+        VarData d(reasonLiteral, l, lit_Undef, -1);
         return d;
     }
 
@@ -577,7 +611,7 @@ class Solver
 
         inline vec<Riss::Lit>& getEquivalenceStack() { return equivalencesStack; }
 
-        inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
+//         inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
         inline bool hasEquivalencesToProcess() const { return equivalencesStack.size() > 0; }
 
         inline void addEquivalenceClass(const Lit& a, const Lit& b, bool doShare = true
@@ -586,6 +620,7 @@ class Solver
                                         #endif
                                        )
         {
+	    assert( var(a) < solver->nVars() && var(b) < solver->nVars() && "do not add variables that are larger than stack size" );
             if (a != b) {
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
@@ -593,7 +628,7 @@ class Solver
                 #ifdef PCASSO
                 dependencyStack.push(dependencyLevel);
                 #endif
-                if (doShare) {
+                if (doShare && solver->isCommunicating()) {
                     temporary.clear();
                     temporary.push(a);
                     temporary.push(b);
@@ -612,13 +647,16 @@ class Solver
                                         #endif
                                        )
         {
-            for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
+            for (int i = 0 ; i < lits.size(); ++ i) { 
+	      assert( var(lits[i]) < solver->nVars() && "eq variables have to be in current formula" );
+	      equivalencesStack.push(lits[i]);
+	    }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
             #ifdef PCASSO
             dependencyStack.push(dependencyLevel);
             #endif
 
-            if (doShare) {  // tell priss about shared equivalences
+            if (doShare && solver->isCommunicating() ) {  // tell priss about shared equivalences
                 temporary.clear();
                 for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }
                 #ifdef PCASSO
@@ -760,8 +798,11 @@ class Solver
     Lit      pickBranchLit();                                                          // Return the next decision variable.
     void     newDecisionLevel();                                                       // Begins a new decision level.
 
+
     void     uncheckedEnqueue(Lit p, CRef from = CRef_Undef,                           // Enqueue a literal. Assumes value of literal is undefined.
                               bool addToProof = false, const unsigned dependencyLevel = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
+    void     uncheckedEnqueue(Lit p, Lit fromLit, bool addToProof = true, const unsigned dependencyLevel = 0); // same as the above method, but uses literal as the reason
+
     bool     enqueue(Lit p, CRef from = CRef_Undef);                                   // Test if fact 'p' contradicts current state, enqueue otherwise.
 
     CRef     propagate(bool duringAddingClauses = false);                              // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
@@ -772,6 +813,8 @@ class Solver
     bool     litRedundant(Lit p, uint32_t abstract_levels, unsigned& dependencyLevel);                           // (helper method for 'analyze()')
 
     lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
+
+    void updateMetricsDuringAnalyze(const Lit p, const CRef cr, Clause& c, bool& foundFirstLearnedClause, unsigned int& dependencyLevel);   /// update metrics based on the current clause we are using
 
   public:
     /** Main solve method (assumptions given in 'assumptions')
@@ -832,7 +875,8 @@ class Solver
     //
     int      decisionLevel()      const;     // Gives the current decisionlevel.
     uint32_t abstractLevel(Var x) const;     // Used to represent an abstraction of sets of decision levels.
-    CRef     reason(Var x) const;
+    ReasonStruct& reason(Var x);
+    const ReasonStruct& reason(Var x) const ;
     int      level(Var x) const;
     double   progressEstimate()      const;  // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget()      const;
@@ -910,24 +954,36 @@ class Solver
     #ifdef DRATPROOF
     // DRUP proof
     bool outputsProof() const ;
+    vec<Lit> exportedClause; // temporary storage to write literals to proof
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
-    void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
+    void addToProof(const T& clause, bool deleteFromProof = false, Lit remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
+    void addUnitToProof(Lit l, bool deleteFromProof = false);   // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
+    template <class T>
+    bool checkClauseDRAT(const T& clause );
+    template <class T>
+    bool proofHasClause(const T& clause);
   public:
     lbool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
     #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
-    void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
+    void addToProof(const T& clause, bool deleteFromProof = false, Lit remLit = lit_Undef) const {};
+    void addUnitToProof(Lit l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
+    template <class T>
+    bool checkClauseDRAT(const T& clause ) { return true; }
+    template <class T>
+    void proofHasClause(const T& clause){ return true; }
   public:
     lbool checkProof() const { return l_Undef; } // if online checker is used, return whether the current proof is valid
   protected:
     #endif
 
+    /// check whether the given new clause already exists in the set of clauses given before
+    bool clauseAlreadyExists(const vec<CRef>& clauses, vec<Lit>& clause);
+    
     /*
      * restricted extended resolution (Audemard ea 2010)
      */
@@ -1092,6 +1148,8 @@ class Solver
     vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
     int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause; // stat counters
     double rerOverheadTrailLits, totalRERlits; // stats
+    
+    MarkArray rerRewriteArray;          // markArray to rewrite learned clauses
 
     // interleaved clause strengthening (ics)
     int lastICSconflicts;     // number of conflicts for last ICS
@@ -1385,6 +1443,8 @@ class Solver
     int sharingTimePoint; // when to share a learned clause (0=when learned, 1=when first used for propagation, 2=when first used during conflict analysis)
 
     Communicator* communication; /// communication with the outside, and control of this solver
+    
+    const bool isCommunicating() { return communication != nullptr; }
 
     /** return dependency level we are currently working on */
     unsigned currentDependencyLevel() const ;
@@ -1511,17 +1571,17 @@ class Solver
 
     void recomputeLPDdata();   /// clears current info, and recomputes the info again based on the current clauses
 
-    
+
     bool useNaiveBacktracking; /// use DPLL instead of CDCL for conflict analysis. breaks invariants of the CDCL implementation
-    
+
     /** turn of clause learning and restarts*/
     void enableDPLL();
-    
-    /** perform naive backtracking (dpll like) 
+
+    /** perform naive backtracking (dpll like)
      @return l_Undef, if everything worked out nicely, l_False, if backtracking is not possible because the search space is exhaused
      */
     lbool dpllBacktracking();
-    
+
 // [BEGIN] modifications for model enumerating solver
     class EnumerationClient
     {
@@ -1641,7 +1701,9 @@ class Solver
 //=================================================================================================
 // Implementation of inline methods:
 
-inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
+inline Solver::ReasonStruct& Solver::reason(Var x)       { return vardata[x].reason; }
+inline const Solver::ReasonStruct& Solver::reason(Var x) const { return vardata[x].reason; }
+
 inline int  Solver::level(Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x)
@@ -1705,12 +1767,21 @@ inline bool     Solver::addClause(Lit p, Lit q, Lit r)   { add_tmp.clear(); add_
 inline bool     Solver::locked(const Clause& c) const
 {
     if (c.size() > 2) {
-        return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
+        return value(c[0]) == l_True
+               && ! reason(var(c[0])).isBinaryClause()
+               && reason(var(c[0])).getReasonC() != CRef_Undef
+               && ca.lea(reason(var(c[0])).getReasonC()) == &c;
     }
     return
-        (value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c)
+        (value(c[0]) == l_True
+         && ! reason(var(c[0])).isBinaryClause()
+         && reason(var(c[0])).getReasonC() != CRef_Undef
+         && ca.lea(reason(var(c[0])).getReasonC()) == &c)
         ||
-        (value(c[1]) == l_True && reason(var(c[1])) != CRef_Undef && ca.lea(reason(var(c[1]))) == &c);
+        (value(c[1]) == l_True
+         && ! reason(var(c[1])).isBinaryClause()
+         && reason(var(c[1])).getReasonC() != CRef_Undef
+         && ca.lea(reason(var(c[1])).getReasonC()) == &c);
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size());}
 
@@ -1996,6 +2067,32 @@ inline int Solver::computeLBD(const T& lits, const int& litsSize)
     return distance;
 }
 
+inline bool Solver::clauseAlreadyExists(const vec<CRef>& clauses, vec<Lit>& clause){
+  char hit[ nVars() * 2 ];
+  memset( hit, 0, sizeof( char)  * nVars() * 2 );
+  
+  for( int i = 0 ; i < clause.size(); ++ i ) {
+    hit [ toInt( clause[i] ) ] = 1;
+  }
+  
+  bool found = false;
+  for( int i = 0 ; i < clauses.size(); ++ i ) {
+      const Clause& c = ca[ clauses[i] ];
+      if( clause.size() != c.size() ) continue; // size does not match
+      
+      bool failed = false;
+      for( int j = 0 ; j < c.size(); ++ j ) {
+	if( hit[ toInt(c[j]) ] != 1 ) { failed = true; break; }
+      }
+      if( ! failed ) {
+	std::cerr << "c found clause " << clause << " on position " << i << " as " << c << std::endl;
+	found = true;
+      }
+  }
+  
+  return found;
+}
+
 
 //
 // SECTION FOR DRAT PROOFS
@@ -2049,50 +2146,123 @@ inline bool Solver::outputsProof() const
 }
 
 template <class T>
-inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
+inline bool Solver::checkClauseDRAT(const T& clause)
+{
+    // if we use the online checker, check the clauses!
+    if (onlineDratChecker != 0) {
+      
+      const bool useExport = compression.isAvailable(); // indicate which data to be used
+      if( useExport ) {
+	exportedClause.growTo( clause.size() );
+	exportedClause.clear();
+	for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+      }
+      
+      return useExport ? onlineDratChecker->addClause(exportedClause, lit_Undef, true) : onlineDratChecker->addClause(clause, lit_Undef, true);
+    } else return true;
+}
+
+template <class T>
+inline bool Solver::proofHasClause(const T& clause)
+{
+  if( onlineDratChecker != 0 ) {
+    
+    const bool useExport = compression.isAvailable(); // indicate which data to be used
+    if( useExport ) {
+      exportedClause.growTo( clause.size() );
+      exportedClause.clear();
+      for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+    }
+    
+    return useExport ? onlineDratChecker->hasClause(exportedClause) : onlineDratChecker->hasClause(clause);
+  } else return true;
+}
+
+
+template <class T>
+inline void Solver::addToProof(const T& clause, const bool deleteFromProof, Lit remLit)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
+    const bool useExport = compression.isAvailable(); // indicate which data to be used
+    if( useExport ) {
+      exportedClause.growTo( clause.size() );
+      exportedClause.clear();
+      for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+      remLit = compression.exportLit( remLit );
+    }
+    
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
-        if (deleteFromProof) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
-        else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false); }  // first version: work on global proof only!
+        if (deleteFromProof) { 
+	  if( useExport ) communication->getPM()->delFromProof( exportedClause, remLit, communication->getID(), false);  // first version: work on global proof only! TODO: change to local!
+	  else communication->getPM()->delFromProof(clause, remLit, communication->getID(), false);   // first version: work on global proof only! TODO: change to local!
+	}
+        else {
+	  if( useExport ) communication->getPM()->addToProof(exportedClause, remLit, communication->getID(), false);  // first version: work on global proof only!
+	  else communication->getPM()->addToProof(clause, remLit, communication->getID(), false);  // first version: work on global proof only!
+	}
         return;
     }
 
     // check before actually using the clause
     if (onlineDratChecker != 0) {
-        if (deleteFromProof) { onlineDratChecker->removeClause(clause, remLit); }
+        if (deleteFromProof) {
+	  if( useExport ) onlineDratChecker->removeClause(exportedClause , remLit);
+	  else onlineDratChecker->removeClause(clause, remLit); 
+	}
         else {
-            onlineDratChecker->addClause(clause, remLit);
+	    bool addedClause = (useExport ? onlineDratChecker->addClause( exportedClause, remLit) : onlineDratChecker->addClause( clause, remLit) );
+            if( ! addedClause  ) {
+	      cerr << "c WARNING: detected non DRAT clause, abort!" << endl;
+	      assert( false && "added clauses should be DRAT" );
+	      exit( 134 );
+	    }
         }
     }
     // actually print the clause into the file
     if (deleteFromProof) { fprintf(proofFile, "d "); }
     if (remLit != lit_Undef) { fprintf(proofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }  // print this literal first (e.g. for DRAT clauses)
-    for (int i = 0; i < clause.size(); i++) {
-        if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
-        fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+    const int csize = useExport ? exportedClause.size() : clause.size();
+    if (useExport ) {
+      for (int i = 0; i < csize; i++) {
+	  if (exportedClause[i] == lit_Undef || exportedClause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
+	  fprintf(proofFile, "%i ", (var(exportedClause[i]) + 1) * (-2 * sign(exportedClause[i]) + 1));
+      }
+    } else {
+      for (int i = 0; i < csize; i++) {
+	  if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
+	  fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+      }
     }
     fprintf(proofFile, "0\n");
 
     if (config.opt_verboseProof == 2) {
         std::cerr << "c [PROOF] ";
         if (deleteFromProof) { std::cerr << " d "; }
-        for (int i = 0; i < clause.size(); i++) {
-            if (clause[i] == lit_Undef) { continue; }
-            std::cerr << clause[i] << " ";
-        }
+        if (useExport) {
+	  for (int i = 0; i < csize; i++) {
+	      if (exportedClause[i] == lit_Undef) { continue; }
+	      std::cerr << exportedClause[i] << " ";
+	  }
+	} else {
+	  for (int i = 0; i < csize; i++) {
+	      if (clause[i] == lit_Undef) { continue; }
+	      std::cerr << clause[i] << " ";
+	  }
+	}
         if (deleteFromProof && remLit != lit_Undef) { std::cerr << remLit; }
         std::cerr << " 0" << std::endl;
     }
 }
 
-inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
+inline void Solver::addUnitToProof(Lit l, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
+    if( compression.isAvailable() ) l = compression.exportLit(l);
+    
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
         if (deleteFromProof) { communication->getPM()->delFromProof(l, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addUnitToProof(l, communication->getID(), false); }  // first version: work on global proof only!

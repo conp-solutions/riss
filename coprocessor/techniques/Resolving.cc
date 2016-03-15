@@ -395,8 +395,8 @@ void Resolving::addRedundantBinaries()
             int use = config.opt_add2_red_level ? (level * config.opt_add2_percent) : (config.opt_add2_percent * (data.lits.size() - directLits));
 
             // cerr << "c use new literals: " << use << endl;
-
-            assert(use <= data.lits.size() && "used literals have to be less than the ones in the found list");
+	    if( use + directLits > data.lits.size() ) use = data.lits.size() - directLits; // limit literals that can be used to the number of present literals
+            assert(directLits + use <= data.lits.size() && "used literals have to be less than the ones in the found list");
 
             // shuffle some literals to the front!
             for (int i = directLits; i < use + directLits; ++ i) {

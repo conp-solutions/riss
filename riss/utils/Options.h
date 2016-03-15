@@ -51,13 +51,13 @@ extern void configCall(int argc, char** argv, std::stringstream& s);
 
 // print global options in PCS file format into the given File
 extern void printOptions(FILE* pcsFile, int printLevel = -1, int granularity = 0);
-/// print option dependencies in PCS file format into the given File, add #NoAutoT to the description if an option should be excluded
-extern void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
+/// print option dependencies in PCS file format into the given File, add #NoAutoT to the description or category if an option should be excluded
+extern void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity);
 
 /**
 * Options is an abstract class that gives the interface for all types options:
 *
-* to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description!
+* to exclude options from being printed in the automatically generated parameter file, add #NoAutoT in the description or category!
 */
 class Option
 {
@@ -125,28 +125,28 @@ class Option
         else { return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled(); }
     }
 
-    virtual bool canPrintOppositeOfDefault() = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
+    virtual bool canPrintOppositeOfDefault(int granularity) = 0;  // represent whether printing the opposite value of the default value is feasible (only for bool and int with small domains)
 
     /// print the option (besides debug, can be overwritten by specific types, useful for strings)
-    virtual bool wouldPrintOption() const { return description != 0 && 0 == strstr(description, "#NoAutoT"); }
+    virtual bool wouldPrintOption() const { return description != 0 && 0 == strstr(description, "#NoAutoT") && 0 == strstr(category, "#NoAutoT"); }
 
-    void printOptionsDependencies(FILE* pcsFile, int printLevel)
+    void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }  // do not print this option, as its dependency is too deep
         if (dependOnNonDefaultOf == 0) { return; } // no dependency
-        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault()) { return; }     // cannot express opposite value of dependency-parent
+        if (!dependOnNonDefaultOf->canPrintOppositeOfDefault(granularity)) { return; }     // cannot express opposite value of dependency-parent
         if (strstr(name, "debug") != 0 || strstr(description, "debug") != 0) { return; }                                             // do not print the parameter, if its is related to debug output
         if (strstr(dependOnNonDefaultOf->name, "debug") != 0 || strstr(dependOnNonDefaultOf->description, "debug") != 0) { return; } // do not print the parameter, if its parent is related to debug output
         if (!wouldPrintOption()) { return; }  // do not print this option
         if (!dependOnNonDefaultOf->wouldPrintOption()) { return; }  // do not print parent option
 
         char defaultAsString[ 2048 ]; // take care of HUGEVAL in double, or string values
-        dependOnNonDefaultOf->getNonDefaultString(defaultAsString, 2047);
+        dependOnNonDefaultOf->getNonDefaultString(granularity,defaultAsString, 2047);
         assert(strlen(defaultAsString) < 2047 && "memory overflow");
         fprintf(pcsFile, "%s   | %s in {%s} #  only active, if %s has not its default value \n", name, dependOnNonDefaultOf->name, defaultAsString, dependOnNonDefaultOf->name);
     }
 
-    virtual void getNonDefaultString(char* buffer, int size) = 0;   // convert the default value into a string
+    virtual void getNonDefaultString(int granularity, char* buffer, int size) = 0;   // convert the default value into a string
 
     friend  bool parseOptions(int& argc, char** argv, bool strict);
     friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
@@ -264,30 +264,38 @@ class DoubleOption : public Option
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
         double badd = 0, esub = 0;
-        if (!range.begin_inclusive) { badd = 0.000001; }
-        if (!range.end_inclusive) { esub = 0.000001; }
+        if (!range.begin_inclusive) { badd = 0.0001; }
+        if (!range.end_inclusive) { esub = 0.0001; }
         // always logarithmic
-        double endValue = range.end == HUGE_VAL ? (defaultValue > 1000000.0 ? defaultValue : 1000000.0) : range.end;
-	if( granularity == 0 ) { // use interval
-	  if (range.begin + badd > 0 || range.end - esub < 0) {
-	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, value, description);
-	  } else {
-	      fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, value, description);
-	  }
-	} else { // print linear distributed sampling for double option
-	  fprintf(pcsFile, "%s  {", name); // print name
-	  double diff = (endValue - (range.begin + badd)) / (double)granularity;
-	  for( double v = range.begin + badd; v <= endValue; v += diff) {
-	    if( v != range.begin + badd ) fprintf(pcsFile, "," ); // print comma, if there will be more and we printed one item already
-	    fprintf(pcsFile, "%lf", v); // print current value
-	  }
-	  fprintf(pcsFile, "} [%lf]    # %s\n", defaultValue, description);
-	}
+        double endValue = range.end == HUGE_VAL ? (defaultValue > 1000000.0 ? defaultValue : 1000000.0) : range.end - esub;
+        if (granularity == 0) {  // use interval
+            if (range.begin + badd > 0 || range.end - esub < 0) {
+                fprintf(pcsFile, "%s  [%lf,%lf] [%lf]l   # %s\n", name, range.begin + badd, endValue, value, description);
+            } else {
+                fprintf(pcsFile, "%s  [%lf,%lf] [%lf]    # %s\n", name, range.begin + badd, endValue, value, description);
+            }
+        } else { // print linear distributed sampling for double option
+            fprintf(pcsFile, "%s  {", name); // print name
+	    bool hitDefault = false;
+	    bool hitValue = false;
+	    if( granularity > 1 ) {
+	      double diff = (endValue - (range.begin + badd)) / (double)(granularity-1);
+	      for (double v = range.begin + badd; v <= endValue; v += diff) {
+		  if (v != range.begin + badd) { fprintf(pcsFile, ","); }   // print comma, if there will be more and we printed one item already
+		  fprintf(pcsFile, "%.4lf", v); // print current value
+		  if( round( v * 10000 ) == round( defaultValue*10000 ) ) hitDefault = true; // otherwise we run into precision problems
+		  if( round( v * 10000 ) == round( value*10000 ) ) hitValue = true; // otherwise we run into precision problems
+	      }
+	    }
+            if( ! hitValue)    fprintf(pcsFile, ",%.4lf", value);        // print current value of option as well!
+            if( ! hitDefault && round( defaultValue*10000 ) != round( value*10000 )  ) fprintf(pcsFile, ",%.4lf", defaultValue); // print default value of option as well!
+            fprintf(pcsFile, "} [%.4lf]    # %s\n", value, description);
+        }
     }
 
-    virtual bool canPrintOppositeOfDefault() { return false; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return false; }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
         // snprintf(buffer, size, "%lf", defaultValue); // could only print the default value
         return;
@@ -383,6 +391,34 @@ class IntOption : public Option
         #endif
     }
 
+    void fillGranularityDomain(int granularity, std::vector<int>& values) {
+	    values.resize( granularity );
+            int addedValues = 0;
+            values[ addedValues++ ] = value;
+            int dist = value < 16 ? 1 : (value < 16000 ? 64 : 512);   // smarter way to initialize the initial diff value
+            if (addedValues < granularity) { values[ addedValues++ ] = defaultValue; }
+            while (addedValues < granularity) {
+                if (value + dist > value && value + dist <= range.end) { values[ addedValues++ ] = value + dist; }
+                if (addedValues < granularity && value - dist >= range.begin) { values[ addedValues++ ] = value - dist; }
+                dist = dist * 4;
+                if (value - dist < value && value + dist > range.end && value - dist < range.begin) { break; }  // stop if there cannot be more values!
+            }
+            values.resize( addedValues );
+            sort(values);
+            int j = 0;
+            assert(values[0] >= range.begin && values[0] <= range.end && "stay in bound");
+            for (int i = 1 ; i < addedValues; ++ i) {
+                if (values[i] != values[j]) {
+                    assert(values[i] >= range.begin && values[i] <= range.end && "stay in bound");
+                    values[++j] = values[i];
+                }
+            }
+            j++;
+            assert(addedValues > 0 && "there has to be at least one option");
+            assert(j <= addedValues && j <= granularity && "collected values hae to stay in bounds");
+	    values.resize( j );
+    }
+    
     void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
@@ -391,50 +427,49 @@ class IntOption : public Option
 
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
-        if( granularity != 0 ) {
-	  fprintf(pcsFile, "%s  {", name);
-	  int values[granularity];
-	  int addedValues = 0;
-	  values[ addedValues++ ] = value;
-	  int dist = value < 16 ? 1 : ( value < 16000 ? 64 : 512 ); // smarter way to initialize the initial diff value
-	  if( addedValues < granularity) values[ addedValues++ ] = defaultValue;
-	  while( addedValues < granularity ) {
-	    if( value + dist <= range.end ) values[ addedValues++ ] = value + dist;
-	    if( addedValues < granularity && value - dist >= range.end ) values[ addedValues++ ] = value - dist;
-	    dist = dist * 4;
-	  }
-	  sort( values, addedValues );
-	  int j = 0;
-	  for( int i = 1 ; i < addedValues; ++ i ) {
-	    if( values[i] != values[j] ) values[++j] = values[i];
-	  }
-	  assert( j > 0 && "there has to be at least one option" );
-	  for( int i = 0 ; i < j; ++ i ) {
-	    if ( i != 0 )  fprintf(pcsFile, ",");
-	    fprintf(pcsFile, "%d", values[i] );
-	  }
-	  fprintf(pcsFile, "} [%d]    # %s\n", value, description);
-	} else {
-	  if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
-	      if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
-		  fprintf(pcsFile, "%s  {%d", name, range.begin);
-		  for (int i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%d", i); }
-		  fprintf(pcsFile, "} [%d]    # %s\n", value, description);
-	      } else {
-		  fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, value, description);
-	      }
-	  } else {
-	      fprintf(pcsFile, "%s  [%d,%d] [%d]il   # %s\n", name, range.begin, range.end, value, description);
-	  }
-	}
+        if (granularity != 0) {
+            fprintf(pcsFile, "%s  {", name);
+            std::vector<int> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
+                if (i != 0) { fprintf(pcsFile, ","); }
+                fprintf(pcsFile, "%d", values[i]);
+            }
+            fprintf(pcsFile, "} [%d]    # %s\n", value, description);
+        } else {
+            if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
+                if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
+                    fprintf(pcsFile, "%s  {%d", name, range.begin);
+                    for (int i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%d", i); }
+                    fprintf(pcsFile, "} [%d]    # %s\n", value, description);
+                } else {
+                    fprintf(pcsFile, "%s  [%d,%d] [%d]i    # %s\n", name, range.begin, range.end, value, description);
+                }
+            } else {
+                fprintf(pcsFile, "%s  [%d,%d] [%d]il   # %s\n", name, range.begin, range.end, value, description);
+            }
+        }
     }
 
-    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return granularity != 0 || ((range.end - range.begin <= 16) && range.end - range.begin > 1); }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
-
-        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+	if (granularity != 0) {
+            std::vector<int> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
+		if (values[i] == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%d", values[i]);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i + 1 < values.size() && values[i+1] != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        } else if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
             for (int i = range.begin ; i <= range.end; ++ i) {
                 if (i == defaultValue) { continue; } // do not print default value
                 snprintf(buffer, size, "%d", i);  // convert value
@@ -538,6 +573,34 @@ class Int64Option : public Option
         #endif
     }
 
+    void fillGranularityDomain(int granularity, std::vector<int64_t>& values) {
+	    values.resize( granularity );
+            int addedValues = 0;
+            values[ addedValues++ ] = value;
+            int64_t dist = value < 16 ? 1 : (value < 16000 ? 64 : 512);   // smarter way to initialize the initial diff value
+            if (addedValues < granularity) { values[ addedValues++ ] = defaultValue; }
+            while (addedValues < granularity) {
+                if (value + dist > value && value + dist <= range.end) { values[ addedValues++ ] = value + dist; }
+                if (addedValues < granularity && value - dist >= range.begin) { values[ addedValues++ ] = value - dist; }
+                dist = dist * 4;
+                if (value - dist < value && value + dist > range.end && value - dist < range.begin) { break; }  // stop if there cannot be more values!
+            }
+            values.resize( addedValues );
+            sort(values);
+            int j = 0;
+            assert(values[0] >= range.begin && values[0] <= range.end && "stay in bound");
+            for (int i = 1 ; i < addedValues; ++ i) {
+                if (values[i] != values[j]) {
+                    assert(values[i] >= range.begin && values[i] <= range.end && "stay in bound");
+                    values[++j] = values[i];
+                }
+            }
+            j++;
+            assert(addedValues > 0 && "there has to be at least one option");
+            assert(j <= addedValues && j <= granularity && "collected values hae to stay in bounds");
+	    values.resize( j );
+    }
+    
     void printOptions(FILE* pcsFile, int printLevel, int granularity)
     {
         if (printLevel != -1 && getDependencyLevel() > printLevel) { return; }   // do not print this option, as its dependency is too deep
@@ -547,50 +610,49 @@ class Int64Option : public Option
         // print only, if there is a default
         // choose between logarithmic scale and linear scale based on the number of elements in the list - more than 16 elements means it should be log (simple heuristic)
 
-	if( granularity != 0 ) {
-	  fprintf(pcsFile, "%s  {", name);
-	  int64_t values[granularity];
-	  int addedValues = 0;
-	  values[ addedValues++ ] = value;
-	  int64_t dist = value < 16 ? 1 : ( value < 16000 ? 64 : 512 ); // smarter way to initialize the initial diff value
-	  if( addedValues < granularity) values[ addedValues++ ] = defaultValue;
-	  while( addedValues < granularity ) {
-	    if( value + dist <= range.end ) values[ addedValues++ ] = value + dist;
-	    if( addedValues < granularity && value - dist >= range.end ) values[ addedValues++ ] = value - dist;
-	    dist = dist * 4;
-	  }
-	  sort( values, addedValues );
-	  int j = 0;
-	  for( int i = 1 ; i < addedValues; ++ i ) {
-	    if( values[i] != values[j] ) values[++j] = values[i];
-	  }
-	  assert( j > 0 && "there has to be at least one option" );
-	  for( int i = 0 ; i < j; ++ i ) {
-	    if ( i != 0 )  fprintf(pcsFile, ",");
-	    fprintf(pcsFile, "%ld", values[i] );
-	  }
-	  fprintf(pcsFile, "} [%ld]    # %s\n", value, description);
-	} else {
-	  if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
-	      if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
-		  fprintf(pcsFile, "%s  {%ld", name, range.begin);
-		  for (int64_t i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%ld", i); }
-		  fprintf(pcsFile, "} [%ld]    # %s\n", value, description);
-	      } else {
-		  fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, value, description);
-	      }
-	  } else {
-	      fprintf(pcsFile, "%s  [%ld,%ld] [%ld]il   # %s\n", name, range.begin, range.end, value, description);
-	  }
-	}
+        if (granularity != 0) {
+            fprintf(pcsFile, "%s  {", name);
+            std::vector<int64_t> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
+                if (i != 0) { fprintf(pcsFile, ","); }
+                fprintf(pcsFile, "%ld", values[i]);
+            }
+            fprintf(pcsFile, "} [%ld]    # %s\n", value, description);
+        } else {
+            if ((range.end - range.begin <= 16 && range.end - range.begin > 0 && range.end != INT32_MAX) || (range.begin <= 0 && range.end >= 0)) {
+                if (range.end - range.begin <= 16 && range.end - range.begin > 0) {  // print all values if the difference is really small
+                    fprintf(pcsFile, "%s  {%ld", name, range.begin);
+                    for (int64_t i = range.begin + 1; i <= range.end; ++ i) { fprintf(pcsFile, ",%ld", i); }
+                    fprintf(pcsFile, "} [%ld]    # %s\n", value, description);
+                } else {
+                    fprintf(pcsFile, "%s  [%ld,%ld] [%ld]i    # %s\n", name, range.begin, range.end, value, description);
+                }
+            } else {
+                fprintf(pcsFile, "%s  [%ld,%ld] [%ld]il   # %s\n", name, range.begin, range.end, value, description);
+            }
+        }
     }
 
-    virtual bool canPrintOppositeOfDefault() { return (range.end - range.begin <= 16) && range.end - range.begin > 1; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return granularity != 0 || ((range.end - range.begin <= 16) && range.end - range.begin > 1); }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
-
-        if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
+      if (granularity != 0) {
+            std::vector<int64_t> values;
+	    fillGranularityDomain( granularity, values );
+            for (int i = 0 ; i < values.size(); ++ i) {
+		if (values[i] == defaultValue) { continue; } // do not print default value
+                snprintf(buffer, size, "%ld", values[i]);  // convert value
+                const int sl = strlen(buffer);
+                size = size - strlen(buffer) - 1;  // store new size
+                if (i + 1 < values.size() && values[i+1] != defaultValue) {
+                    buffer[sl] = ',';      // set separator
+                    buffer[sl + 1] = 0;    // indicate end of buffer
+                    buffer = &(buffer[sl + 1]); // move start pointer accordingly (len is one more now)
+                }
+            }
+        } else if (range.end - range.begin <= 16 && range.end - range.begin > 1) {
             for (int64_t  i = range.begin ; i <= range.end; ++ i) {
                 if (i == defaultValue) { continue; } // do not print default value
                 snprintf(buffer, size, "%ld", i);  // convert value
@@ -702,9 +764,9 @@ class StringOption : public Option
         return Option::wouldPrintOption();    // if the string has an default value, still check the global criterion
     }
 
-    virtual bool canPrintOppositeOfDefault() { return false; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return false; }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
         if (defaultValue == 0) { buffer[0] = 0; }
         else {
@@ -790,9 +852,9 @@ class BoolOption : public Option
         fprintf(pcsFile, "%s  {yes,no} [%s]     # %s\n", name, value ? "yes" : "no", description);
     }
 
-    virtual bool canPrintOppositeOfDefault() { return true; }
+    virtual bool canPrintOppositeOfDefault(int granularity) { return true; }
 
-    virtual void getNonDefaultString(char* buffer, int size)
+    virtual void getNonDefaultString(int granularity, char* buffer, int size)
     {
         assert(size > 3 && "cannot print values otherwise");
         strncpy(buffer, !defaultValue ? "yes" : "no", size);

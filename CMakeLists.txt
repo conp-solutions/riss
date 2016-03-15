@@ -34,7 +34,7 @@ endfunction()
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.1.0")
+version("5.2.1")
 
 option(DRATPROOF       "Produce DRAFT-proofs (disabled by default)" OFF)
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
@@ -122,6 +122,7 @@ endif()
 add_component(riss/)
 add_component(risslibcheck/)
 add_component(classifier/)
+add_component(features/)
 add_component(libpca/)
 add_component(coprocessor/)
 add_component(externalTools/)
@@ -133,7 +134,6 @@ add_component(qprocessor/)
 add_component(test/)
 add_component(doc/)
 add_component(scripts/)
-add_component(features/)
 
 if(SHIFTBMC)
   add_component(shiftbmc/)

@@ -1,0 +1,1388 @@
+#
+#
+# modified for finding bugs:
+#  1) inprocess is always enabled
+#  2) enabled_cp3 is always enabled
+#
+
+
+# PCS Information for riss (core) 5.2.1  v5.2.0-3-gf479b22 
+#
+#
+# Global Parameters
+#
+#
+
+
+#
+#
+# Search Parameters
+#
+#
+
+#
+#999HACK OPTIONS:
+#
+act-based  {yes,no} [no]     # use activity for learned clauses
+
+reduce-frac  {0.000001,0.200001,0.400001,0.600000,0.800000,0.500000} [0.500000]    # Remove this quota of learnt clauses when database is reduced
+act-lbd-size-ratio  {-10.000000,-6.000000,-2.000000,2.000000,6.000000,10.000000,0.000000} [0.000000]    # still use LBD for removal, if stddevLBD * X < stddevSize (if X is negative, invert comparison)
+
+size-core  {0,1,4,16} [0]    # Saving learnt clause forever if size deceeds this threshold
+lbd-core-th  {0,1,4,16} [0]    # Saving learnt clause forever if LBD deceeds this threshold
+
+#
+#CLAUSE SHARING OPTIONS:
+#
+
+
+
+#
+#CORE OPTIONS:
+#
+rmf  {yes,no} [no]     # use fast remove
+
+gc-frac  {0.000001,0.200001,0.400001,0.600000,0.800000,0.200000} [0.200000]    # The fraction of wasted memory allowed before a garbage collection is triggered
+
+#
+#CORE -- CONFLICT ANALYSIS OPTIONS:
+#
+learnDecRER  {yes,no} [no]     # consider decision clauses for RER?
+
+learnDecMS  {2,3,6,18} [2]    # min size so that decision clauses are learned, -1 = off
+learnDecP  {-1,0,3,15} [-1]    # if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off
+
+#
+#CORE -- EXTENDED RESOLUTION RER OPTIONS:
+#
+rer-g  {yes,no} [no]     # extract binary and gates from the formula for RER rewriting
+rer-e  {yes,no} [no]     # when a pair is rejected, initialize with the new clause
+rer-ite  {yes,no} [no]     # check for ITE pattern, if AND is not found?
+rer-f  {yes,no} [yes]     # add full rer extension?
+rer-rn  {yes,no} [no]     # rewrite new learned clauses, only if full and not added as learned
+rer-l  {yes,no} [yes]     # store extensions as learned clauses
+rer  {yes,no} [no]     # perform restricted extended resolution (along Audemard ea 2010)
+
+rer-ga  {0.000000,200000.000000,400000.000000,600000.000000,800000.000000,1000000.000000} [0.000000]    # increase activity for input variables
+rer-freq  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000} [1.000000]    # how often rer compared to usual learning
+
+er-lbd  {5,6,7,10} [6]    # rewrite new learned clauses with ER, if lbd is small enough
+er-size  {30,94,286,1054} [30]    # rewrite new learned clauses with ER, if size is small enough
+rer-new-act  {0,1,4} [0]    # how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+rer-window  {2,3,6,18} [2]    # number of clauses to collect before fuse
+rer-maxLBD  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # maximum LBD to perform rer
+rer-minLBD  {1,2,5,17} [1]    # minimum LBD to perform rer
+rer-max-size  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # maximum size of learned clause to perform rer
+rer-min-size  {2,3,6,18} [2]    # minimum size of learned clause to perform rer
+rer-r  {0,1} [0]    # replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned
+
+#
+#CORE -- INCREMENTAL OPTIONS:
+#
+
+#
+#CORE -- INTERLEAVED CLAUSE STRENGTHENING OPTIONS:
+#
+ics_shrinkNew  {yes,no} [no]     # shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+ics_dyn  {yes,no} [no]     # update variable/clause activities during ICS
+ics_keepNew  {yes,no} [no]     # keep the learned clauses that have been produced during the ICS
+ics  {yes,no} [no]     # perform interleaved clause strengthening (along Wieringa ea 2013)
+
+ics_relSIZE  {0.000000,200000.000000,400000.000000,600000.000000,800000.000000,1000000.000000,1.000000} [1.000000]    # only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%
+ics_relLBD  {0.000000,200000.000000,400000.000000,600000.000000,800000.000000,1000000.000000,1.000000} [1.000000]    # only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%
+
+ics_processLast  {4986,5050,5114,5306} [5050]    # process this number of learned clauses (analyse, reject if quality too bad!)
+ics_window  {4936,5000,5064,5256} [5000]    # run ICS after another N conflicts
+
+#
+#CORE -- LOCAL LOOK AHEAD OPTIONS:
+#
+laEEl  {yes,no} [no]     # add EE clauses as learnt clauses
+dyn  {yes,no} [no]     # dynamically set the frequency based on success
+tabu  {yes,no} [yes]     # do not perform LA, if all considered LA variables are as before
+laHack  {yes,no} [no]     # enable lookahead on level 0
+
+hlaTop  {-1,0,3,15} [-1]    # allow another LA after learning another nr of top level units (-1 = never)
+hlabound  {4032,4096,4160,4352} [4096]    # max. nr of LAs (-1 == inf)
+hlaevery  {0,1,2,5} [1]    # initial frequency of LA
+hlaLevel  {1,4,5} [5]    # level of look ahead
+hlaMax  {50,114,306,1074} [50]    # maximum bound for frequency
+laEEp  {0,1,4,16} [0]    # add EE clauses, if less than p percent tests failed
+
+#
+#CORE -- MINIMIZE OPTIONS:
+#
+revMin  {yes,no} [no]     # minimize learned clause by using reverse vivification
+updLearnAct  {yes,no} [yes]     # UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)
+biAsserting  {yes,no} [no]     # Learn bi-asserting clauses, if possible (do not learn asserting clause!)
+revRevC  {yes,no} [no]     # reverse new conflict clause after reverse minimization
+refConflict  {yes,no} [yes]     # refine conflict clause after solving with assumptions
+
+sUHLElbd  {5,6,7,10} [6]    # maximal LBD for UHLE for learnt clauses (0=off)
+sUHLEsize  {0,1,4,16} [0]    # maximal clause size for UHLE for learnt clauses (0=off)
+sUhdPrSh  {0,1,4,16} [0]    # travers the BIG again during every i-th restart 0=off
+sUhdProbe  {0,1} [0]    # perform probing based on learned clauses (off,linear,quadratic,larger)
+revMinLBD  {5,6,7,10} [6]    # max clause LBD for revMin
+revMinSize  {11,12,13,16} [12]    # max clause size for revMin
+ccmin-mode  {1,2} [2]    # Controls conflict clause minimization (0=none, 1=basic, 2=deep)
+minLBDMinimizingClause  {5,6,7,10} [6]    # The min LBD required to minimize clause
+minSizeMinimizingClause  {30,94,286,1054} [30]    # The min size required to minimize clause
+biAsFreq  {3,4,5,8} [4]    # The min nr. of clauses between two learned bi-asserting clauses
+
+#
+#CORE -- PROOF OPTIONS:
+#
+
+
+#
+#CORE -- REDUCE OPTIONS:
+#
+quickRed  {yes,no} [no]     # check only first two literals for being satisfied
+incLBD  {yes,no} [no]     # allow to increment lbd of clauses dynamically
+lbdIgnLA  {yes,no} [no]     # ignore top level literals for LBD calculation
+lbdIgnL0  {yes,no} [no]     # ignore top level literals for LBD calculation
+
+cla-decay  {0.000001,0.200001,0.400001,0.600000,0.800000,0.999000} [0.999000]    # The clause activity decay factor
+rem-asi  {0.000001,200000.000001,400000.000001,600000.000000,800000.000000,1000000.000000,1.100000} [1.100000]    # learnt size increase
+rem-lsi  {0.000001,200000.000001,400000.000001,600000.000000,800000.000000,1000000.000000,1.100000} [1.100000]    # learnt size increase
+rem-lsf  {0.000001,200000.000001,400000.000001,600000.000000,800000.000000,1000000.000000,0.333333} [0.333333]    # factor of learnts compared to original formula
+keepWorst  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000} [0.000000]    # keep this (relative to all learned) number of worst learned clauses during removal
+
+maxlearnts  {0,1,4,16} [0]    # number of learnt clauses to initialize geometric/static removal
+rem-asc  {36,100,164,356} [100]    # first number of conflicts to adjust learnt factors
+remtype  {0,1} [0]    # remove clauses (0=glucose/dynamic,1=minisat/geometric,2=fixed limit)
+lbdupd  {0,1,2} [1]    # update LBD during (0=propagation,1=learning,2=never),
+minLBDFrozenClause  {30,94,286,1054} [30]    # Protect clauses if their LBD decrease and is lower than (for one turn)
+specialIncReduceDB  {936,1000,1064,1256} [1000]    # Special increment for reduce DB
+incReduceDB  {236,300,364,556} [300]    # Increment for reduce DB
+firstReduceDB  {3936,4000,4064,4256} [4000]    # The number of conflicts before the first reduce DB
+
+#
+#CORE -- RESTART OPTIONS:
+#
+r-dyn-ema  {yes,no} [no]     # Perform dynamic restarts based on EMA
+r-dyn-bl  {yes,no} [yes]     # Perform dynamic restarts blocking
+
+rMaxInc  {1.000000,200000.800000,400000.600000,600000.400000,800000.200000,1000000.000000,1.100000} [1.100000]    # increase of the max. restart interval per restart
+rinc  {1.000001,200000.800001,400000.600001,600000.400000,800000.200000,1000000.000000,2.000000} [2.000000]    # Restart interval increase factor
+r-ema-tslow  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000,0.000244} [0.000244]    # Alpha for slow evolving EMA for clause LBDs
+r-ema-lslow  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000,0.000061} [0.000061]    # Alpha for slow evolving EMA for interpretation size
+r-ema-lfast  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000,0.031250} [0.031250]    # Alpha for fast evolving EMA for interpretation size
+R  {1.000001,1.800001,2.600001,3.400000,4.200000,5.000000,1.400000} [1.400000]    # The constant used to block restart
+K  {0.000001,0.200001,0.400001,0.600000,0.800000} [0.800000]    # The constant used to force restart
+
+rMax  {-1,0,3,15} [-1]    # initial max. interval between two restarts (-1 = off)
+irlevel  {1,2,5,17} [1]    # Choose how often restarts beyond assumptions shoud be performed (every X)
+r-min-noBlock  {9936,10000,10064,10256} [10000]    # Do not allow restart blocking before this number of conflicts
+rfirst  {36,100,164,356} [100]    # The base restart interval
+rtype  {0,1,4} [0]    # Choose type of restart (0=dynamic,1=luby,2=geometric,3=static,4=none)
+rlevel  {0,1} [0]    # Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail
+lpd  {0,1,4,16} [0]    # decisions to be performed based on previous decisions (0=off)
+sbr  {11,12,13,16} [12]    # use removal with clause activity based on sbr (randomized)
+szTrailQueue  {4936,5000,5064,5256} [5000]    # The size of moving average for trail (block restarts)
+szLBDQueue  {50,114,306,1074} [50]    # The size of moving average for LBD (restarts)
+
+#
+#CORE -- RESTART SWITCHING OPTIONS:
+#
+rsw-iratio  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000,0.666600} [0.666600]    # Percentage of dynamic restarts in switch intervals
+rsw-iinc  {1.000000,2.800000,4.600000,6.400000,8.200000,10.000000,1.100000} [1.100000]    # Increase of the interval after finishing an interval
+
+rsw-type  {3,4} [4]    # Type of restart for switching(1=luby,2=geometric,3=static,4=none)
+rsw-int  {0,1,4,16} [0]    # First interval for restart heuristic switching (>0 to activate)
+
+#
+#CORE -- SEARCH OPTIONS:
+#
+phase-bitinv  {yes,no} [no]     # invert value of polarity assigned by bit-strategy
+
+vsids-i  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000} [1.000000]    # interpolate between VSIDS and VMTF, inc during update
+vsids-e  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000} [1.000000]    # interpolate between VSIDS and VMTF, end value
+vsids-s  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000} [1.000000]    # interpolate between VSIDS and VMTF,start value
+rnd-seed  {0.000001,18329650.600001,36659301.200001,54988951.800000,73318602.400000,91648253.000000} [91648253.000000]    # Used by the random variable selection
+rnd-freq  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000} [0.000000]    # The frequency with which the decision heuristic tries to choose a random variable
+var-decay-i  {0.000001,0.200001,0.400001,0.600000,0.800000,0.010000} [0.010000]    # The variable activity decay factor increase 
+var-decay-e  {0.000001,0.200001,0.400001,0.600000,0.800000,0.950000} [0.950000]    # The variable activity decay factor stop value
+var-decay-b  {0.000001,0.200001,0.400001,0.600000,0.800000,0.950000} [0.950000]    # The variable activity decay factor start value
+
+clsActB  {0,1} [0]    # bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)
+varActB  {0,1} [0]    # bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)
+vsids-d  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # interpolate between VSIDS and VMTF, numer of conflits until next update
+alluiphack  {0,1} [0]    # learn all unit UIPs at any level
+phase-bitmod  {3,4,5,8} [4]    # mod of bits of the counter to be used to select bits for bit phase
+phase-bit  {0,1,4,16} [0]    # decision level until which the bit phase is used
+phase-saving  {1,2} [2]    # Controls the level of phase saving (0=none, 1=limited, 2=full)
+var-decay-d  {4936,5000,5064,5256} [5000]    # Nr. of conflicts for activity decay increase
+
+#
+#Contrasat OPTIONS:
+#
+
+#
+#DEBUG OPTIONS:
+#
+
+#
+#INIT OPTIONS:
+#
+rnd-init  {yes,no} [no]     # Randomize the initial activity
+
+actDec  {0.000001,2.000001,4.000001,6.000000,8.000000,10.000000,1.052632} [1.052632]    # decrease per element (sub, or divide)
+actStart  {0.000001,200000.000001,400000.000001,600000.000000,800000.000000,1000000.000000,1024.000000} [1024.000000]    # highest value for first variable
+
+actIncMode  {0,1} [0]    # how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo
+init-pol  {0,1,4} [0]    # initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)
+init-act  {0,1,4} [0]    # initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))
+
+
+#
+#MISC OPTIONS:
+#
+
+sInterval  {0,1,4,16} [0]    # how often to perform simplifications on level 0
+
+#
+#MiPiSAT OPTIONS:
+#
+prob-limit  {32,96,288,1056} [32]    # Limit how many variables with highest activity should be probed
+prob-step-width  {0,1,4,16} [0]    # Perform failed literals and detection of necessary assignments each n times
+
+#
+#REASON OPTIONS:
+#
+longConflict  {yes,no} [no]     # if a binary conflict is found, check for a longer one!
+
+#
+#SCHEDULE OPTIONS:
+#
+sscheInc  {1.000000,200000.800000,400000.600000,600000.400000,800000.200000,1000000.000000,1.300000} [1.300000]    # increment for conflicts per schedule round
+
+sscheDConflicts  {2999488,3000000,3000512,3002048} [3000000]    # initial conflicts for default
+sscheConflicts  {9999488,10000000,10000512,10002048} [10000000]    # initial conflicts for schedule
+
+
+#
+#SEARCH -- OTFSS OPTIONS:
+#
+otfssL  {yes,no} [no]     # otfss for learnt clauses
+otfss  {yes,no} [no]     # perform otfss during conflict analysis
+
+otfssMLDB  {30,94,286,1054} [30]    # max. LBD of learnt clauses that are candidates for otfss
+
+#
+#cir-minisat OPTIONS:
+#
+cir-bump  {0,1,4,16} [0]    # Activates CIR with bump ratio for VSIDS score (choose large: 9973)
+
+
+#
+#
+# Simplification Parameters
+#
+#
+
+#
+#COPROCESSOR OPTIONS:
+#
+inc-inp  {yes,no} [no]     # increase technique limits per inprocess step
+randInp  {yes,no} [yes]     # Randomize Inprocessing
+cp3_randomized  {yes,no} [no]     # Steps withing preprocessing techniques are executed in random order
+cp3_limited  {yes,no} [yes]     # Limits for preprocessing techniques
+inprocess  {yes} [yes]     # Use CP3 for inprocessing
+enabled_cp3  {yes} [yes]     # Use CP3
+
+cp3_viv_lits  {14999488,15000000,15000512,15002048} [15000000]    # total literal limit to enable VIVIFICATION
+cp3_viv_cls  {9999488,10000000,10000512,10002048} [10000000]    # clause limit to enable VIVIFICATION
+cp3_viv_vars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable VIVIFICATION
+cp3_probe_lits  {29999488,30000000,30000512,30002048} [30000000]    # total literal limit to enable PROBING
+cp3_probe_cls  {2999488,3000000,3000512,3002048} [3000000]    # clause limit to enable PROBING
+cp3_probe_vars  {2999488,3000000,3000512,3002048} [3000000]    # variable limit to enable PROBING
+cp3_Xbva_lits  {9999488,10000000,10000512,10002048} [10000000]    # total literal limit to enable XBVA
+cp3_Xbva_cls  {4999488,5000000,5000512,5002048} [5000000]    # clause limit to enable XBVA
+cp3_Xbva_vars  {999488,1000000,1000512,1002048} [1000000]    # variable limit to enable XBVA
+cp3_Ibva_lits  {39999488,40000000,40000512,40002048} [40000000]    # total literal limit to enable IBVA
+cp3_Ibva_cls  {9999488,10000000,10000512,10002048} [10000000]    # clause limit to enable IBVA
+cp3_Ibva_vars  {999488,1000000,1000512,1002048} [1000000]    # variable limit to enable IBVA
+cp3_hbr_lits  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # total literal limit to enable HBR
+cp3_hbr_cls  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable HBR
+cp3_hbr_vars  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # variable limit to enable HBR
+cp3_rew_lits  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # total literal limit to enable REW
+cp3_rew_cls  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable REW
+cp3_rew_vars  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # variable limit to enable REW
+cp3_sls_lits  {3999488,4000000,4000512,4002048} [4000000]    # total literal limit to enable SLS
+cp3_sls_cls  {499488,500000,500512,502048} [500000]    # clause limit to enable SLS
+cp3_sls_vars  {499488,500000,500512,502048} [500000]    # variable limit to enable SLS
+cp3_xor_lits  {4999488,5000000,5000512,5002048} [5000000]    # total literal limit to enable XOR
+cp3_xor_cls  {2999488,3000000,3000512,3002048} [3000000]    # clause limit to enable XOR
+cp3_xor_vars  {699488,700000,700512,702048} [700000]    # variable limit to enable XOR
+cp3_fm_lits  {19999488,20000000,20000512,20002048} [20000000]    # total literal limit to enable FM
+cp3_fm_cls  {9999488,10000000,10000512,10002048} [10000000]    # clause limit to enable FM
+cp3_fm_vars  {1999488,2000000,2000512,2002048} [2000000]    # variable limit to enable FM
+cp3_symm_lits  {14999488,15000000,15000512,15002048} [15000000]    # total literal limit to enable SYMM
+cp3_symm_cls  {19999488,20000000,20000512,20002048} [20000000]    # clause limit to enable SYMM
+cp3_symm_vars  {2999488,3000000,3000512,3002048} [3000000]    # variable limit to enable SYMM
+cp3_aBin_lits  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # total literal limit to enable ADD2
+cp3_aBin_cls  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable ADD2
+cp3_aBin_vars  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # variable limit to enable ADD2
+cp3_tRes_lits  {49999488,50000000,50000512,50002048} [50000000]    # total literal limit to enable 3RES
+cp3_tRes_cls  {19999488,20000000,20000512,20002048} [20000000]    # clause limit to enable 3RES
+cp3_tRes_vars  {999488,1000000,1000512,1002048} [1000000]    # variable limit to enable 3RES
+cp3_unhide_lits  {6999488,7000000,7000512,7002048} [7000000]    # total literal limit to enable UNHIDE
+cp3_unhide_cls  {9999488,10000000,10000512,10002048} [10000000]    # clause limit to enable UNHIDE
+cp3_unhide_vars  {2999488,3000000,3000512,3002048} [3000000]    # variable limit to enable UNHIDE
+cp3_bva_lits  {39999488,40000000,40000512,40002048} [40000000]    # total literal limit to enable BVA
+cp3_bva_cls  {19999488,20000000,20000512,20002048} [20000000]    # clause limit to enable BVA
+cp3_bva_vars  {2999488,3000000,3000512,3002048} [3000000]    # variable limit to enable BVA
+cp3_bve_lits  {49999488,50000000,50000512,50002048} [50000000]    # total literal limit to enable BVE
+cp3_bve_cls  {19999488,20000000,20000512,20002048} [20000000]    # clause limit to enable BVE
+cp3_bve_vars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable BVE
+cp3_ee_lits  {39999488,40000000,40000512,40002048} [40000000]    # total literal limit to enable EE
+cp3_ee_cls  {19999488,20000000,20000512,20002048} [20000000]    # clause limit to enable EE
+cp3_ee_vars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable EE
+cp3_rate_lits  {9999488,10000000,10000512,10002048} [10000000]    # total literal limit to enable RATE
+cp3_rate_cls  {1999488,2000000,2000512,2002048} [2000000]    # clause limit to enable RATE
+cp3_rate_vars  {999488,1000000,1000512,1002048} [1000000]    # variable limit to enable RATE
+cp3_cce_lits  {49999488,50000000,50000512,50002048} [50000000]    # total literal limit to enable CCE
+cp3_cce_cls  {29999488,30000000,30000512,30002048} [30000000]    # clause limit to enable CCE
+cp3_cce_vars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable CCE
+cp3_la_lits  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # total literal limit to enable CLA
+cp3_la_cls  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable CLA
+cp3_la_vars  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable CLA
+cp3_ent_lits  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # total literal limit to enable ENT
+cp3_ent_cls  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable ENT
+cp3_ent_vars  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # variable limit to enable ENT
+cp3_bce_lits  {29999488,30000000,30000512,30002048} [30000000]    # total literal limit to enable BCE,CLE,CLA
+cp3_bce_cls  {9999488,10000000,10000512,10002048} [10000000]    # clause limit to enable BCE,CLE,CLA
+cp3_bce_vars  {2999488,3000000,3000512,3002048} [3000000]    # variable limit to enable BCE,CLE,CLA
+cp3_hte_lits  {19999488,20000000,20000512,20002048} [20000000]    # total literal limit to enable HTE
+cp3_hte_cls  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # clause limit to enable HTE
+cp3_hte_vars  {999488,1000000,1000512,1002048} [1000000]    # variable limit to enable HTE
+cp3_susi_lits  {9999488,10000000,10000512,10002048} [10000000]    # total literal limit to enable subsimp
+cp3_susi_cls  {4999488,5000000,5000512,5002048} [5000000]    # clause limit to enable subsimp
+cp3_susi_vars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable subsimp
+cp3_iters  {0,1,2,5} [1]    # simplification rounds in preprocessing
+cp3_iinp_cons  {0,1,4,16} [0]    # Increase inprocessing interval in each iteration
+cp3_inp_cons  {19488,20000,20512,22048} [20000]    # Perform Inprocessing after at least X conflicts
+cp3_iplits  {49999488,50000000,50000512,50002048} [50000000]    # total literal limit to enable CP3 inprocessing
+cp3_ipcls  {29999488,30000000,30000512,30002048} [30000000]    # clause limit to enable CP3 inprocessing
+cp3_ipvars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable CP3 inprocessing
+cp3_lits  {49999488,50000000,50000512,50002048} [50000000]    # total literal limit to enable CP3
+cp3_cls  {29999488,30000000,30000512,30002048} [30000000]    # clause limit to enable CP3
+cp3_vars  {4999488,5000000,5000512,5002048} [5000000]    # variable limit to enable CP3
+
+#
+#COPROCESSOR  TECHNIQUES OPTIONS:
+#
+rew  {yes,no} [no]     # Rewrite AMO constraints
+xor  {yes,no} [no]     # Reason with XOR constraints
+sls  {yes,no} [no]     # Use Simple Walksat algorithm to test whether formula is satisfiable quickly
+hbr  {yes,no} [no]     # Use hyper binary resolution
+fm  {yes,no} [no]     # Use the Fourier Motzkin transformation
+symm  {yes,no} [no]     # Do local symmetry breaking
+simplify  {yes,no} [yes]     # Apply easy simplifications to the formula
+shuffle  {yes,no} [no]     # Shuffle the formula, before the preprocessor is initialized
+dense  {yes,no} [no]     # Remove gaps in variables of the formula
+addRed2  {yes,no} [no]     # Use Adding Redundant Binary Clauses
+3resolve  {yes,no} [no]     # Use Ternary Clause Resolution
+probe  {yes,no} [no]     # Use Probing/Clause Vivification
+unhide  {yes,no} [no]     # Use Unhiding (UHTE, UHLE based on BIG sampling)
+bva  {yes,no} [no]     # Use Bounded Variable Addition during preprocessing
+bve  {yes,no} [no]     # Use Bounded Variable Elimination during preprocessing
+ee  {yes,no} [no]     # Use Equivalence Elimination during preprocessing
+rate  {yes,no} [no]     # Use resolution asymmetric tautologye limination during preprocessing
+cce  {yes,no} [no]     # Use (covered) Clause Elimination during preprocessing
+la  {yes,no} [no]     # Use (covered/asymmetric) Literal Addition during preprocessing
+exp  {yes,no} [no]     # Use experimental simplification techniques
+ent  {yes,no} [no]     # Use checking for entailed redundancy during preprocessing
+bce  {yes,no} [no]     # Use Blocked Clause Elimination during preprocessing
+hte  {yes,no} [no]     # Use Hidden Tautology Elimination during preprocessing
+subsimp  {yes,no} [no]     # Use Subsumption during preprocessing
+up  {yes,no} [no]     # Use Unit Propagation during preprocessing
+
+
+#
+#COPROCESSOR - BCE OPTIONS:
+#
+bce-cle-cons  {yes,no} [no]     # conservative cle if taut. resolvents are present
+bce-cla  {yes,no} [no]     # perform covered literal addition (CLA)
+bce-cle  {yes,no} [no]     # perform covered literal elimination (CLE)
+bce-bcm  {yes,no} [no]     # actually perform BCM (instead of BCE)
+bce-bce  {yes,no} [yes]     # actually perform BCE
+bce-bin  {yes,no} [no]     # allow to remove binary clauses during BCE
+bce-compl  {yes,no} [yes]     # test literals for BCE based on the number of occurrences of the complementary literal
+
+bce-incInp  {9936,10000,10064,10256} [10000]    # number of steps given to BCE for another inprocessign round
+bce-limit  {99999488,100000000,100000512,100002048} [100000000]    # number of pairwise clause comparisons before interrupting BCE
+
+#
+#COPROCESSOR - BVA OPTIONS:
+#
+cp3_bva_subOr  {yes,no} [no]     # try to also substitus disjunctions
+cp3_bva_dupli  {yes,no} [yes]     # remove duplicate clauses
+cp3_bva_compl  {yes,no} [yes]     # treat complementary literals special
+cp3_Abva  {yes,no} [no]     # perform AND-bva
+
+cp3_Ibva_heap  {0,1,2,5} [1]    # 0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order
+cp3_Xbva_heap  {0,1,2,5} [1]    # 0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order
+cp3_bva_Imax  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # maximum reduction for one additional variable
+cp3_bva_Xmax  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # maximum reduction for one additional variable
+cp3_bva_Ilimit  {99999488,100000000,100000512,100002048} [100000000]    # number of steps allowed for ITE-BVA
+cp3_bva_Xlimit  {99999488,100000000,100000512,100002048} [100000000]    # number of steps allowed for XOR-BVA
+cp3_Ibva  {0,1} [0]    # perform ITE-bva (1=half gates,2=full gates)
+cp3_Xbva  {0,1} [0]    # perform XOR-bva (1=half gates,2=full gates)
+cp3_Abva_heap  {0,1,2,5} [1]    # 0: minimum heap, 1: maximum heap, 2: ratio pos/neg smaller+less, 3: ratio pos/neg smaller+greater, 4: ratio pos/neg greater+less, 5: ratio pos/neg greater + greater, 6-9: same as 3-6, but inverse measure order
+cp3_bva_incInp  {79488,80000,80512,82048} [80000]    # increases of number of steps per inprocessing
+cp3_bva_Amax  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # maximum reduction for one additional variable
+cp3_bva_limit  {1199488,1200000,1200512,1202048} [1200000]    # number of steps allowed for AND-BVA
+cp3_bva_Vlimit  {2999488,3000000,3000512,3002048} [3000000]    # use BVA only, if number of variables is below threshold
+cp3_bva_push  {1,2} [2]    # push variables back to queue (0=none,1=original,2=all)
+
+#
+#COPROCESSOR - BVE OPTIONS:
+#
+par_bve_min_upd  {yes,no} [no]     # Omit LitOcc and Heap updates to reduce locking
+bce_only  {yes,no} [no]     # Only remove blocked clauses but do not resolve variables.
+bve_early  {yes,no} [no]     # Interupt anticipate eagerly
+bve_BCElim  {yes,no} [no]     # Eliminate Blocked Clauses
+bve_totalG  {yes,no} [no]     # Keep track of total size of formula when allowing increasing eliminations
+bve_fdepOnly  {yes,no} [no]     # eliminate only variables that are func.dep (based on gates)
+bve_force_gates  {yes,no} [no]     # Force gate search (slower, but probably more eliminations and blockeds are found)
+bve_gates  {yes,no} [yes]     # try to find variable AND gate definition before elimination
+bve_strength  {yes,no} [yes]     # do strengthening during bve
+bve_unlimited  {yes,no} [no]     # perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v
+
+postp_lockd_neighb  {2,3,4,7} [3]    # Postpone Elimination-Check if more neighbors are locked
+par_bve_th  {9936,10000,10064,10256} [10000]    # Threshold for use of BVE-Worker
+cp3_bve_inpInc  {4999488,5000000,5000512,5002048} [5000000]    # increase for steps per inprocess call
+bve_heap_updates  {0,1,2} [1]    # Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap
+bve_cgrow_t  {936,1000,1064,1256} [1000]    # total number of additional clauses
+bve_cgrow  {-1,0,1,4} [0]    # number of additional clauses per elimination
+cp3_bve_heap  {0,1,4} [0]    # 0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order
+cp3_bve_resolve_learnts  {0,1} [0]    # Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts
+cp3_bve_learnt_growth  {-1,0,1,4} [0]    # Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N
+cp3_bve_limit  {24999488,25000000,25000512,25002048} [25000000]    # perform at most this many clause derefferences
+cp3_par_bve  {0,1,2} [1]    # Parallel BVE: 0 never, 1 heur., 2 always
+
+#
+#COPROCESSOR - CCE OPTIONS:
+#
+cp3_cce_inpInc  {59488,60000,60512,62048} [60000]    # increase for steps per inprocess call
+cp3_cce_sizeP  {40} [40]    # percent of max. clause size for clause elimination (excluding)
+cp3_cce_level  {2,3} [3]    # none, ALA+ATE, CLA+ATE, ALA+CLA+BCE
+cp3_cce_steps  {1999488,2000000,2000512,2002048} [2000000]    # Number of steps that are allowed per iteration
+
+#
+#COPROCESSOR - DENSE OPTIONS:
+#
+cp3_keep_set  {yes,no} [no]     # keep already assigned literals
+dense_inp  {yes,no} [no]     # use dense during inprocessing
+
+cp3_dense_frag  {0,1,4,16} [0]    # Perform densing, if fragmentation is higher than (percent)
+
+#
+#COPROCESSOR - ENTAILED OPTIONS:
+#
+ent-min  {2,3,6,18} [2]    # minimum clause size that is tested
+
+#
+#COPROCESSOR - EQUIVALENCE ELIMINATION OPTIONS:
+#
+ee_freeze_eager  {yes,no} [yes]     # exclude frozen variables eagerly from found equivalences
+cp3_ee_subNew  {yes,no} [no]     # check for new subsumptions immediately when adding new clauses
+cp3_ee_it  {yes,no} [no]     # use the iterative BIG-EE algorithm
+ee_reset  {yes,no} [no]     # after Subs or Up, do full reset?
+ee_sub  {yes,no} [no]     # do subsumption/strengthening during applying equivalent literals?
+cp3_BigThenGate  {yes,no} [yes]     # detect binary equivalences before going for gates [should not be disabled!]
+cp3_eagerGates  {yes,no} [yes]     # do handle gates eagerly
+
+cp3_ee_bIter  {2,3,4,7} [3]    # max. iteration to perform EE search on BIG
+cp3_ee_inpInc  {199488,200000,200512,202048} [200000]    # increase for steps per inprocess call
+cp3_ee_limit  {999488,1000000,1000512,1002048} [1000000]    # step limit for detecting equivalent literals
+cp3_ee_cIter  {1,2,3,6} [2]    # max. EE iterations for circuit (-1 == inf)
+cp3_ee_glimit  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # step limit for structural hashing
+cp3_ee_level  {0,1} [0]    # EE on BIG, gate probing, structural hashing
+
+
+#
+#COPROCESSOR - EQUIVALENCE ELIMINATION - HASHING OPTIONS:
+#
+cp3_extImplied  {yes,no} [yes]     # do search binary clause also in BIG with dfs
+cp3_extNgtInput  {yes,no} [yes]     # extract gates, where inputs come from the same variable
+cp3_addBlocked  {yes,no} [no]     # clauses that are used to extract blocked gates will be added eagerly (soundness)
+cp3_extBlocked  {yes,no} [no]     # extract gates, that can be found by blocked clause addition
+cp3_extHASUM  {yes,no} [no]     # extract full adder sum bit gates
+cp3_genAND  {yes,no} [no]     # extract generic AND gates
+cp3_extExO  {yes,no} [no]     # extract ExO gates
+cp3_extXOR  {yes,no} [no]     # extract XOR gates
+cp3_extITE  {yes,no} [no]     # extract ITE gates
+cp3_extAND  {yes,no} [yes]     # extract AND gates
+
+#
+#COPROCESSOR - FOURIERMOTZKIN OPTIONS:
+#
+card_noUnits  {yes,no} [no]     # assume there are no unit clauses inside the formula (otherwise, more expensive)
+cp3_fm_proof  {yes,no} [no]     # prints FM proof steps
+cp3_fm_gc  {yes,no} [yes]     # perform garbage collection during FM
+cp3_fm_1st  {yes,no} [no]     # extract first AMO candidate, or last AMO candidate
+cp3_fm_newSub  {yes,no} [yes]     # check whether new ALO and ALK subsume other clauses (only if newALO or newALK)
+cp3_fm_keepM  {yes,no} [yes]     # keep all new AMOs (also rejected ones)
+cp3_fm_cut  {yes,no} [yes]     # avoid eliminating too expensive variables (>10,10 or >5,15)
+cp3_fm_vMulAMT  {yes,no} [no]     # try to find multiple AMTs per variable
+cp3_fm_vMulAMO  {yes,no} [yes]     # try to find multiple AMOs per variable
+cp3_fm_dups  {yes,no} [yes]     # avoid finding the same AMO multiple times
+cp3_fm_merge  {yes,no} [yes]     # perform AMO merge
+cp3_fm_unit  {yes,no} [yes]     # check for units first
+cp3_fm_sem  {yes,no} [yes]     # extract Card constraints using UP
+cp3_fm_twoPr  {yes,no} [yes]     # extract AMO using two product structures
+cp3_fm_amt  {yes,no} [yes]     # extract at-most-two
+
+card_max  {11,12,13,16} [12]    # max card size that will be looked for
+card_maxC  {5,6,7,10} [6]    # max clause size to find cards
+card_minC  {2,3,4,7} [3]    # min clause size to find cards
+cp3_fm_printproof  {0,1} [0]    # print FM proof steps (0=off,1=ids,2=formula constraints,3=all constraints) use -no-cp3_fm_gc
+cp3_fm_newAlk  {1,2} [2]    # create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)
+cp3_fm_newAlo  {1,2} [2]    # create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all 
+cp3_fm_newAmo  {1,2} [2]    # encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses
+cp3_fm_growT  {99488,100000,100512,102048} [100000]    # total grow of number of constraints
+cp3_fm_grow  {40,104,296,1064} [40]    # max. grow of number of constraints per step
+cp3_fm_maxA  {136,200,264,456} [200]    # largest AMO that will be found during search
+cp3_fm_maxConstraints  {199488,200000,200512,202048} [200000]    # number of constraints that are allows
+
+card_Elimit  {1199488,1200000,1200512,1202048} [1200000]    # number of steps allowed for searching AMOs semantically
+cp3_fm_Slimit  {11999488,12000000,12000512,12002048} [12000000]    # number of steps allowed for searching AMOs for FM
+cp3_fm_limit  {5999488,6000000,6000512,6002048} [6000000]    # number of steps allowed for FM
+
+#
+#COPROCESSOR - HTE OPTIONS:
+#
+cp3_hteTalk  {yes,no} [no]     # talk about algorithm execution
+cp3_par_hte  {yes,no} [no]     # Forcing Parallel HTE
+
+cp3_hte_inpInc  {59488,60000,60512,62048} [60000]    # increase for steps per inprocess call
+cp3_hte_steps  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # Number of steps that are allowed per iteration
+
+#
+#COPROCESSOR - Hyper Binary Resolution OPTIONS:
+#
+hbr-incInp  {9936,10000,10064,10256} [10000]    # number of steps given to HBR for another inprocessign round
+hbr-addBin  {0,1} [0]    # when add binary clauses (0=always,1=1st iteration,2=never
+hbr-csize  {3,4,7,19} [3]    # max. clause size to be considered for HBR
+hbr-limit  {99999488,100000000,100000512,100002048} [100000000]    # number of pairwise clause comparisons before interrupting HBR
+
+#
+#COPROCESSOR - LA OPTIONS:
+#
+la-alaBin  {yes,no} [no]     # use binary clauses for ALA
+la-ala  {yes,no} [no]     # perform asymmetric literal addition (ALA)
+la-cla  {yes,no} [yes]     # perform covered literal addition (CLA)
+
+la-alaIter  {1,2,5,17} [1]    # number of extension literals per step so that literals are removed randomly
+ala-limit  {99999488,100000000,100000512,100002048} [100000000]    # number of pairwise clause comparisons before interrupting LA
+la-claIter  {1,2,5,17} [1]    # number of extension literals per step so that literals are removed randomly
+la-claMax  {1,2,3,6} [2]    # number of extension literals per step so that literals are removed randomly
+la-claStep  {3,4,5,8} [4]    # number of extension literals per step so that literals are removed randomly
+cla-limit  {99999488,100000000,100000512,100002048} [100000000]    # number of pairwise clause comparisons before interrupting LA
+
+#
+#COPROCESSOR - PROBING OPTIONS:
+#
+pr-nce  {yes,no} [yes]     # generate L2 necessary assignments as binary clauses
+pr-vivi  {yes,no} [no]     # perform clause vivification
+pr-EE  {yes,no} [yes]     # run equivalent literal detection
+pr-lhbr  {yes,no} [yes]     # perform lhbr during probing
+pr-repeat  {yes,no} [no]     # repeat probing if changes have been applied
+pr-roots  {yes,no} [yes]     # probe only on root literals
+pr-double  {yes,no} [yes]     # perform double look-ahead
+pr-bins  {yes,no} [yes]     # use binary clauses for probing
+pr-probe  {yes,no} [no]     # perform probing
+
+pr-keepLHBR  {0,1} [0]    # keep clauses that have been created during LHBR during probing/vivification (0=no,1=learnt)
+cp3_viv_inpInc  {999488,1000000,1000512,1002048} [1000000]    # increase for steps per inprocess call
+cp3_pr_inpInc  {999488,1000000,1000512,1002048} [1000000]    # increase for steps per inprocess call
+pr-viviL  {4999488,5000000,5000512,5002048} [5000000]    # step limit for clause vivification
+pr-viviP  {16,80} [80]    # percent of max. clause size for clause vivification
+pr-keepI  {1,2} [2]    # keep clauses that imply on level 1 (0=no,1=learnt,2=original)
+pr-keepL  {1,2} [2]    # keep conflict clauses in solver (0=no,1=learnt,2=original)
+pr-probeL  {199488,200000,200512,202048} [200000]    # step limit for probing
+pr-csize  {2147475455,2147481599,2147483135,2147483647} [2147483647]    # size of clauses that are considered for probing/vivification (propagation)
+pr-uips  {-1,0,3,15} [-1]    # perform learning if a conflict occurs up to x-th UIP (-1 = all )
+
+#
+#COPROCESSOR - RAT Elimination OPTIONS:
+#
+rate-ratm_rounds  {yes,no} [no]     # perform more than one RATM iteration
+rate-ratm_ext  {yes,no} [no]     # perform extended RAT minimization (ratm)
+rate-ratm  {yes,no} [no]     # perform RAT minimization (ratm)
+rate-bcs  {yes,no} [no]     # perform blocked substitution (bcs)
+rate-rate  {yes,no} [no]     # perform RAT elimination (rate)
+rate-brat  {yes,no} [no]     # test resolvents for being blocked if not AT
+rat-compl  {yes,no} [yes]     # sort according to nr. of complements
+
+rate-min  {2,3,4,7} [3]    # minimal clause size for RAT elimination
+
+ratm-limit  {8999999488,9000000000,9000000512,9000002048} [9000000000]    # number of pairwise clause comparisons before interrupting RATM and up
+rate-limit  {8999999488,9000000000,9000000512,9000002048} [9000000000]    # number of pairwise clause comparisons before interrupting RATE and up
+
+#
+#COPROCESSOR - RES OPTIONS:
+#
+cp3_res_ars  {yes,no} [no]     # also before preprocessing?
+cp3_res_add_lea  {yes,no} [no]     # add redundants based on learneds as well?
+cp3_res_add_lev  {yes,no} [yes]     # calculate added percent based on level
+cp3_res_add_red  {yes,no} [no]     # add redundant binary clauses
+cp3_res_eagerSub  {yes,no} [yes]     # perform eager subsumption
+cp3_res3_reAdd  {yes,no} [no]     # Add variables of newly created resolvents back to working queues
+cp3_res_bin  {yes,no} [no]     # resolve with binary clauses
+
+cp3_res_percent  {0.000000,0.200000,0.400000,0.600000,0.800000,1.000000,0.010000} [0.010000]    # produce this percent many new clauses out of the total
+
+cp3_add_inpInc  {59488,60000,60512,62048} [60000]    # increase for steps per inprocess call
+cp3_res_inpInc  {199488,200000,200512,202048} [200000]    # increase for steps per inprocess call
+cp3_res3_ncls  {99488,100000,100512,102048} [100000]    # Max. Number of newly created clauses
+cp3_res3_steps  {999488,1000000,1000512,1002048} [1000000]    # Number of resolution-attempts that are allowed per iteration
+
+#
+#COPROCESSOR - REWRITE OPTIONS:
+#
+cp3_rewI_small  {yes,no} [yes]     # prefer little imply variables
+cp3_rew_stats  {yes,no} [no]     # analyze formula, but do not apply rewriting
+cp3_rew_ratio  {yes,no} [yes]     # allow literals in AMO only, if their complement is not more frequent
+cp3_rew_avg  {yes,no} [yes]     # use AMOs above equal average only?
+cp3_rew_1st  {yes,no} [no]     # how to find AMOs
+cp3_rew_merge  {yes,no} [no]     # merge AMO constraints to create larger AMOs (fourier motzkin)
+cp3_rew_exo  {yes,no} [yes]     # scan for encoded exactly once constraints first
+cp3_rew_imp  {yes,no} [no]     # rewrite implication chains
+cp3_rew_amo  {yes,no} [yes]     # rewrite amos
+
+cp3_rew_inpInc  {59488,60000,60512,62048} [60000]    # increase for steps per inprocess call
+cp3_rewI_min  {3,4,5,8} [4]    # min size of an inplication chain to be rewritten
+cp3_rew_Addlimit  {99488,100000,100512,102048} [100000]    # number of new variables being allowed
+cp3_rew_Vlimit  {999488,1000000,1000512,1002048} [1000000]    # max number of variables to still perform REW
+cp3_rew_limit  {1199488,1200000,1200512,1202048} [1200000]    # number of steps allowed for REW
+cp3_rew_minA  {2,3,4,7} [3]    # min size of altered AMOs
+cp3_rew_iter  {0,1,2,5} [1]    # number of iterations
+cp3_rew_min  {2,3,4,7} [3]    # min occurrence to be considered
+
+#
+#COPROCESSOR - SHUFFLE OPTIONS:
+#
+shuffle-order  {yes,no} [yes]     # shuffle the order of the clauses
+
+shuffle-seed  {0,1,4,16} [0]    # seed for shuffling
+
+#
+#COPROCESSOR - SLS OPTIONS:
+#
+sls-adopt-cls  {yes,no} [no]     # reduce nr of flips for large instances
+sls-phase  {yes,no} [no]     # Use current interpretation of SLS as phase
+
+sls-rnd-walk  {1936,2000,2064,2256} [2000]    # probability of random walk (0-10000)
+sls-ksat-flips  {19999488,20000000,20000512,20002048} [20000000]    # how many flips should be performed, if k-sat is detected (-1 = infinite)
+sls-flips  {7999488,8000000,8000512,8002048} [8000000]    # Perform given number of SLS flips
+
+#
+#COPROCESSOR - SUBSUMPTION OPTIONS:
+#
+cp3_inpPrefL  {yes,no} [yes]     # During inprocessing, check learned clauses first!
+cp3_strength  {yes,no} [yes]     # Perform clause strengthening
+naive_strength  {yes,no} [no]     # use naive strengthening
+
+par_str_minCls  {249488,250000,250512,252048} [250000]    # number of clauses to start parallel strengthening
+susi_chunk_size  {99488,100000,100512,102048} [100000]    # Size of Par SuSi Chunks
+par_subs_counts  {0,1} [1]    # Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector
+cp3_par_subs  {0,1,2} [1]    # par subsumption: 0 never, 1 heuristic, 2 always
+cp3_par_strength  {0,1,2} [1]    # par strengthening: 0 never, 1 heuristic, 2 always
+cp3_sub_inpInc  {39999488,40000000,40000512,40002048} [40000000]    # increase for steps per inprocess call
+cp3_call_inc  {136,200,264,456} [200]    # max. limit increase per process call (subsimp is frequently called from other techniques)
+cp3_str_limit  {299999488,300000000,300000512,300002048} [300000000]    # limit of strengthening steps
+cp3_sub_limit  {299999488,300000000,300000512,300002048} [300000000]    # limit of subsumption steps
+all_strength_res  {0,1,4,16} [0]    # Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)
+
+#
+#COPROCESSOR - SYMMETRY OPTIONS:
+#
+sym-clLearn  {yes,no} [no]     # clean the learned clauses that have been created during symmetry search
+sym-propA  {yes,no} [no]     # test all four casese instead of two
+sym-propF  {yes,no} [no]     # generate full clauses
+sym-prop  {yes,no} [no]     # try to generate symmetry breaking clauses with propagation
+sym-print  {yes,no} [no]     # show the data for each variable
+sym-show  {yes,no} [no]     # show symmetry pairs
+sym-unit  {yes,no} [no]     # ignore unit clauses
+sym-pol  {yes,no} [no]     # consider the polarity of the occurrences
+sym-size  {yes,no} [no]     # scale with the size of the clause
+
+sym-ratio  {0.000000,200000.000000,400000.000000,600000.000000,800000.000000,1000000.000000,0.400000} [0.400000]    # only consider a variable if it appears close to the average of variable occurrences
+
+sym-consT  {9936,10000,10064,10256} [10000]    # number of total conflicts for looking for being implied
+sym-cons  {0,1,4,16} [0]    # number of conflicts for looking for being implied
+sym-iter  {2,3,4,7} [3]    # number of symmetry approximation iterations
+sym-min  {1,2,3,6} [2]    # minimum symmtry to be exploited
+
+#
+#COPROCESSOR - UNHIDE OPTIONS:
+#
+cp3_uhdPrSiBo  {yes,no} [yes]     # Check larger clauses only in first and last iteration
+cp3_uhdPrEE  {yes,no} [no]     # Find Equivalences during uhd probing (requ. uhdProbe > 1)
+cp3_uhdTstDbl  {yes,no} [no]     # Test for duplicate binary clauses
+cp3_uhdEE  {yes,no} [no]     # Use equivalent literal elimination
+cp3_uhdNoShuffle  {yes,no} [no]     # Do not perform randomized graph traversation
+cp3_uhdUHTE  {yes,no} [yes]     # Use Unhiding+Hidden Tautology Elimination
+cp3_uhdTrans  {yes,no} [no]     # Use Transitive Graph Reduction (buggy)
+
+cp3_uhdPrSize  {2,3,6,18} [2]    # Enable unhide probing for larger clauses, size <= given parameter
+cp3_uhdProbe  {0,1,4} [0]    # Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)
+cp3_uhdUHLE  {2,3} [3]    # Use Unhiding+Hidden Literal Elimination
+cp3_uhdIters  {2,3,4,7} [3]    # Number of iterations for unhiding
+
+#
+#COPROCESSOR - XOR OPTIONS:
+#
+xorAddNew  {yes,no} [no]     # add simplified XORs to list of variables that have been added during add
+xorEncL  {yes,no} [no]     # add clause to encode XOR as learnt clause
+xorEncSubs  {yes,no} [no]     # perform subsumption checks with newly added XOR clauses
+xorDropPure  {yes,no} [no]     # drop XORs with a literal that occurs only once
+xorFindRes  {yes,no} [no]     # try to recover XORs including resolution steps
+xorFindSubs  {yes,no} [yes]     # try to recover XORs that are partially subsumed
+xorKeepUsed  {yes,no} [yes]     # continue to simplify kept xors
+
+xorSetPol  {-1,0,1} [0]    # set default polarities based on XOR elimination order and UP(-1=neg,1=pos)
+xorEncSize  {1,2,3} [2]    # size of xors that are encoded back (<=2 ^= none)
+xorBackdoor  {0,1,4,16} [0]    # work on XOR backdoor, is size is smaller equal
+xorSelect  {0,1} [0]    # how to select next xor 0=first,1=smallest
+xorLimit  {1199488,1200000,1200512,1202048} [1200000]    # number of checks for finding xors
+xorMaxSize  {11,12,13,16} [12]    # Maximum Clause Size for detecting XOrs (high number consume much memory!)
+
+
+#
+#
+# Dependencies 
+#
+#
+
+
+#
+#
+# Search Dependencies 
+#
+#
+
+#
+#999HACK OPTIONS:
+#
+act-lbd-size-ratio   | act-based in {yes} #  only active, if act-based has not its default value 
+
+#
+#CORE -- EXTENDED RESOLUTION RER OPTIONS:
+#
+rer-l   | rer in {yes} #  only active, if rer has not its default value 
+rer-rn   | rer in {yes} #  only active, if rer has not its default value 
+rer-f   | rer in {yes} #  only active, if rer has not its default value 
+rer-ite   | rer in {yes} #  only active, if rer has not its default value 
+rer-e   | rer in {yes} #  only active, if rer has not its default value 
+rer-g   | rer in {yes} #  only active, if rer has not its default value 
+
+rer-freq   | rer in {yes} #  only active, if rer has not its default value 
+rer-ga   | rer-g in {yes} #  only active, if rer-g has not its default value 
+
+rer-r   | rer in {yes} #  only active, if rer has not its default value 
+rer-min-size   | rer in {yes} #  only active, if rer has not its default value 
+rer-max-size   | rer in {yes} #  only active, if rer has not its default value 
+rer-minLBD   | rer in {yes} #  only active, if rer has not its default value 
+rer-maxLBD   | rer in {yes} #  only active, if rer has not its default value 
+rer-window   | rer in {yes} #  only active, if rer has not its default value 
+rer-new-act   | rer in {yes} #  only active, if rer has not its default value 
+er-size   | rer-rn in {yes} #  only active, if rer-rn has not its default value 
+er-lbd   | rer-rn in {yes} #  only active, if rer-rn has not its default value 
+
+#
+#CORE -- INTERLEAVED CLAUSE STRENGTHENING OPTIONS:
+#
+ics_keepNew   | ics in {yes} #  only active, if ics has not its default value 
+ics_dyn   | ics in {yes} #  only active, if ics has not its default value 
+ics_shrinkNew   | ics in {yes} #  only active, if ics has not its default value 
+
+ics_relLBD   | ics in {yes} #  only active, if ics has not its default value 
+ics_relSIZE   | ics in {yes} #  only active, if ics has not its default value 
+
+ics_window   | ics in {yes} #  only active, if ics has not its default value 
+ics_processLast   | ics in {yes} #  only active, if ics has not its default value 
+
+#
+#CORE -- LOCAL LOOK AHEAD OPTIONS:
+#
+tabu   | laHack in {yes} #  only active, if laHack has not its default value 
+dyn   | laHack in {yes} #  only active, if laHack has not its default value 
+laEEl   | laHack in {yes} #  only active, if laHack has not its default value 
+
+laEEp   | laHack in {yes} #  only active, if laHack has not its default value 
+hlaMax   | laHack in {yes} #  only active, if laHack has not its default value 
+hlaLevel   | laHack in {yes} #  only active, if laHack has not its default value 
+hlaevery   | laHack in {yes} #  only active, if laHack has not its default value 
+hlabound   | laHack in {yes} #  only active, if laHack has not its default value 
+hlaTop   | laHack in {yes} #  only active, if laHack has not its default value 
+
+#
+#CORE -- MINIMIZE OPTIONS:
+#
+biAsFreq   | biAsserting in {yes} #  only active, if biAsserting has not its default value 
+revMinSize   | revMin in {yes} #  only active, if revMin has not its default value 
+revMinLBD   | revMin in {yes} #  only active, if revMin has not its default value 
+sUhdPrSh   | sUhdProbe in {1} #  only active, if sUhdProbe has not its default value 
+sUHLEsize   | sUhdProbe in {1} #  only active, if sUhdProbe has not its default value 
+sUHLElbd   | sUhdProbe in {1} #  only active, if sUhdProbe has not its default value 
+
+#
+#CORE -- RESTART OPTIONS:
+#
+r-ema-lfast   | r-dyn-ema in {yes} #  only active, if r-dyn-ema has not its default value 
+r-ema-lslow   | r-dyn-ema in {yes} #  only active, if r-dyn-ema has not its default value 
+r-ema-tslow   | r-dyn-ema in {yes} #  only active, if r-dyn-ema has not its default value 
+rinc   | rtype in {1,4} #  only active, if rtype has not its default value 
+rMaxInc   | rMax in {0,3,15} #  only active, if rMax has not its default value 
+
+rfirst   | rtype in {1,4} #  only active, if rtype has not its default value 
+irlevel   | rtype in {1,4} #  only active, if rtype has not its default value 
+
+#
+#CORE -- RESTART SWITCHING OPTIONS:
+#
+rsw-iinc   | rsw-int in {1,4,16} #  only active, if rsw-int has not its default value 
+rsw-iratio   | rsw-int in {1,4,16} #  only active, if rsw-int has not its default value 
+
+rsw-type   | rsw-int in {1,4,16} #  only active, if rsw-int has not its default value 
+
+#
+#CORE -- SEARCH OPTIONS:
+#
+phase-bitinv   | phase-bit in {1,4,16} #  only active, if phase-bit has not its default value 
+
+phase-bitmod   | phase-bit in {1,4,16} #  only active, if phase-bit has not its default value 
+
+#
+#SCHEDULE OPTIONS:
+#
+
+
+
+#
+#
+# Simplification Dependencies 
+#
+#
+
+#
+#COPROCESSOR OPTIONS:
+#
+inprocess   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cp3_limited   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cp3_randomized   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+randInp   | inprocess in {yes} #  only active, if inprocess has not its default value 
+inc-inp   | inprocess in {yes} #  only active, if inprocess has not its default value 
+
+cp3_vars   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cp3_cls   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cp3_lits   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cp3_ipvars   | inprocess in {yes} #  only active, if inprocess has not its default value 
+cp3_ipcls   | inprocess in {yes} #  only active, if inprocess has not its default value 
+cp3_iplits   | inprocess in {yes} #  only active, if inprocess has not its default value 
+cp3_inp_cons   | inprocess in {yes} #  only active, if inprocess has not its default value 
+cp3_iinp_cons   | inprocess in {yes} #  only active, if inprocess has not its default value 
+cp3_iters   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cp3_susi_vars   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_susi_cls   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_susi_lits   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_hte_vars   | hte in {yes} #  only active, if hte has not its default value 
+cp3_hte_cls   | hte in {yes} #  only active, if hte has not its default value 
+cp3_hte_lits   | hte in {yes} #  only active, if hte has not its default value 
+cp3_bce_vars   | bce in {yes} #  only active, if bce has not its default value 
+cp3_bce_cls   | bce in {yes} #  only active, if bce has not its default value 
+cp3_bce_lits   | bce in {yes} #  only active, if bce has not its default value 
+cp3_ent_vars   | ent in {yes} #  only active, if ent has not its default value 
+cp3_ent_cls   | ent in {yes} #  only active, if ent has not its default value 
+cp3_ent_lits   | ent in {yes} #  only active, if ent has not its default value 
+cp3_la_vars   | la in {yes} #  only active, if la has not its default value 
+cp3_la_cls   | la in {yes} #  only active, if la has not its default value 
+cp3_la_lits   | la in {yes} #  only active, if la has not its default value 
+cp3_cce_vars   | cce in {yes} #  only active, if cce has not its default value 
+cp3_cce_cls   | cce in {yes} #  only active, if cce has not its default value 
+cp3_cce_lits   | cce in {yes} #  only active, if cce has not its default value 
+cp3_rate_vars   | rate in {yes} #  only active, if rate has not its default value 
+cp3_rate_cls   | rate in {yes} #  only active, if rate has not its default value 
+cp3_rate_lits   | rate in {yes} #  only active, if rate has not its default value 
+cp3_ee_vars   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_cls   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_lits   | ee in {yes} #  only active, if ee has not its default value 
+cp3_bve_vars   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_cls   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_lits   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bva_vars   | bva in {yes} #  only active, if bva has not its default value 
+cp3_bva_cls   | bva in {yes} #  only active, if bva has not its default value 
+cp3_bva_lits   | bva in {yes} #  only active, if bva has not its default value 
+cp3_unhide_vars   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_unhide_cls   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_unhide_lits   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_tRes_vars   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_tRes_cls   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_tRes_lits   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_aBin_vars   | cp3_res_add_red in {yes} #  only active, if cp3_res_add_red has not its default value 
+cp3_aBin_cls   | cp3_res_add_red in {yes} #  only active, if cp3_res_add_red has not its default value 
+cp3_aBin_lits   | cp3_res_add_red in {yes} #  only active, if cp3_res_add_red has not its default value 
+cp3_symm_vars   | symm in {yes} #  only active, if symm has not its default value 
+cp3_symm_cls   | symm in {yes} #  only active, if symm has not its default value 
+cp3_symm_lits   | symm in {yes} #  only active, if symm has not its default value 
+cp3_fm_vars   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_cls   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_lits   | fm in {yes} #  only active, if fm has not its default value 
+cp3_xor_vars   | xor in {yes} #  only active, if xor has not its default value 
+cp3_xor_cls   | xor in {yes} #  only active, if xor has not its default value 
+cp3_xor_lits   | xor in {yes} #  only active, if xor has not its default value 
+cp3_sls_vars   | sls in {yes} #  only active, if sls has not its default value 
+cp3_sls_cls   | sls in {yes} #  only active, if sls has not its default value 
+cp3_sls_lits   | sls in {yes} #  only active, if sls has not its default value 
+cp3_rew_vars   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_cls   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_lits   | rew in {yes} #  only active, if rew has not its default value 
+cp3_hbr_vars   | rew in {yes} #  only active, if rew has not its default value 
+cp3_hbr_cls   | rew in {yes} #  only active, if rew has not its default value 
+cp3_hbr_lits   | rew in {yes} #  only active, if rew has not its default value 
+cp3_Ibva_vars   | cp3_Ibva in {1} #  only active, if cp3_Ibva has not its default value 
+cp3_Ibva_cls   | cp3_Ibva in {1} #  only active, if cp3_Ibva has not its default value 
+cp3_Ibva_lits   | cp3_Ibva in {1} #  only active, if cp3_Ibva has not its default value 
+cp3_Xbva_vars   | cp3_Xbva in {1} #  only active, if cp3_Xbva has not its default value 
+cp3_Xbva_cls   | cp3_Xbva in {1} #  only active, if cp3_Xbva has not its default value 
+cp3_Xbva_lits   | cp3_Xbva in {1} #  only active, if cp3_Xbva has not its default value 
+cp3_probe_vars   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+cp3_probe_cls   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+cp3_probe_lits   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+cp3_viv_vars   | pr-vivi in {yes} #  only active, if pr-vivi has not its default value 
+cp3_viv_cls   | pr-vivi in {yes} #  only active, if pr-vivi has not its default value 
+cp3_viv_lits   | pr-vivi in {yes} #  only active, if pr-vivi has not its default value 
+
+#
+#COPROCESSOR  TECHNIQUES OPTIONS:
+#
+up   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+subsimp   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+hte   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+bce   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+ent   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+exp   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+la   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+cce   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+rate   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+ee   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+bve   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+bva   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+unhide   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+probe   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+3resolve   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+addRed2   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+dense   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+shuffle   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+simplify   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+symm   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+fm   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+hbr   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+sls   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+xor   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+rew   | enabled_cp3 in {yes} #  only active, if enabled_cp3 has not its default value 
+
+
+#
+#COPROCESSOR - BCE OPTIONS:
+#
+bce-compl   | bce in {yes} #  only active, if bce has not its default value 
+bce-bin   | bce in {yes} #  only active, if bce has not its default value 
+bce-bce   | bce in {yes} #  only active, if bce has not its default value 
+bce-bcm   | bce in {yes} #  only active, if bce has not its default value 
+bce-cle   | bce in {yes} #  only active, if bce has not its default value 
+bce-cla   | bce in {yes} #  only active, if bce has not its default value 
+bce-cle-cons   | bce-cle in {yes} #  only active, if bce-cle has not its default value 
+
+bce-limit   | bce in {yes} #  only active, if bce has not its default value 
+bce-incInp   | bce in {yes} #  only active, if bce has not its default value 
+
+#
+#COPROCESSOR - BVA OPTIONS:
+#
+cp3_Abva   | bva in {yes} #  only active, if bva has not its default value 
+cp3_bva_compl   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+cp3_bva_dupli   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+cp3_bva_subOr   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+
+cp3_bva_push   | bva in {yes} #  only active, if bva has not its default value 
+cp3_bva_Vlimit   | bva in {yes} #  only active, if bva has not its default value 
+cp3_bva_limit   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+cp3_bva_Amax   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+cp3_bva_incInp   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+cp3_Abva_heap   | cp3_Abva in {yes} #  only active, if cp3_Abva has not its default value 
+cp3_Xbva   | bva in {yes} #  only active, if bva has not its default value 
+cp3_Ibva   | bva in {yes} #  only active, if bva has not its default value 
+cp3_bva_Xlimit   | cp3_Xbva in {1} #  only active, if cp3_Xbva has not its default value 
+cp3_bva_Ilimit   | cp3_Ibva in {1} #  only active, if cp3_Ibva has not its default value 
+cp3_bva_Xmax   | cp3_Xbva in {1} #  only active, if cp3_Xbva has not its default value 
+cp3_bva_Imax   | cp3_Ibva in {1} #  only active, if cp3_Ibva has not its default value 
+cp3_Xbva_heap   | cp3_Xbva in {1} #  only active, if cp3_Xbva has not its default value 
+cp3_Ibva_heap   | cp3_Ibva in {1} #  only active, if cp3_Ibva has not its default value 
+
+#
+#COPROCESSOR - BVE OPTIONS:
+#
+bve_unlimited   | bve in {yes} #  only active, if bve has not its default value 
+bve_strength   | bve in {yes} #  only active, if bve has not its default value 
+bve_gates   | bve in {yes} #  only active, if bve has not its default value 
+bve_force_gates   | bve in {yes} #  only active, if bve has not its default value 
+bve_fdepOnly   | bve in {yes} #  only active, if bve has not its default value 
+bve_totalG   | bve in {yes} #  only active, if bve has not its default value 
+bve_BCElim   | bve in {yes} #  only active, if bve has not its default value 
+bve_early   | bve in {yes} #  only active, if bve has not its default value 
+bce_only   | bve in {yes} #  only active, if bve has not its default value 
+par_bve_min_upd   | cp3_par_bve in {2} #  only active, if cp3_par_bve has not its default value 
+
+cp3_par_bve   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_limit   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_learnt_growth   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_resolve_learnts   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_heap   | bve in {yes} #  only active, if bve has not its default value 
+bve_cgrow   | bve in {yes} #  only active, if bve has not its default value 
+bve_cgrow_t   | bve in {yes} #  only active, if bve has not its default value 
+bve_heap_updates   | bve in {yes} #  only active, if bve has not its default value 
+cp3_bve_inpInc   | bve in {yes} #  only active, if bve has not its default value 
+par_bve_th   | cp3_par_bve in {2} #  only active, if cp3_par_bve has not its default value 
+postp_lockd_neighb   | cp3_par_bve in {2} #  only active, if cp3_par_bve has not its default value 
+
+#
+#COPROCESSOR - CCE OPTIONS:
+#
+cp3_cce_steps   | cce in {yes} #  only active, if cce has not its default value 
+cp3_cce_level   | cce in {yes} #  only active, if cce has not its default value 
+cp3_cce_sizeP   | cce in {yes} #  only active, if cce has not its default value 
+cp3_cce_inpInc   | cce in {yes} #  only active, if cce has not its default value 
+
+#
+#COPROCESSOR - DENSE OPTIONS:
+#
+dense_inp   | dense in {yes} #  only active, if dense has not its default value 
+cp3_keep_set   | dense in {yes} #  only active, if dense has not its default value 
+
+cp3_dense_frag   | dense in {yes} #  only active, if dense has not its default value 
+
+#
+#COPROCESSOR - ENTAILED OPTIONS:
+#
+ent-min   | ent in {yes} #  only active, if ent has not its default value 
+
+#
+#COPROCESSOR - EQUIVALENCE ELIMINATION OPTIONS:
+#
+cp3_eagerGates   | ee in {yes} #  only active, if ee has not its default value 
+cp3_BigThenGate   | ee in {yes} #  only active, if ee has not its default value 
+ee_sub   | ee in {yes} #  only active, if ee has not its default value 
+ee_reset   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_it   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_subNew   | ee in {yes} #  only active, if ee has not its default value 
+ee_freeze_eager   | ee in {yes} #  only active, if ee has not its default value 
+
+cp3_ee_level   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_glimit   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_ee_cIter   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_ee_limit   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_inpInc   | ee in {yes} #  only active, if ee has not its default value 
+cp3_ee_bIter   | ee in {yes} #  only active, if ee has not its default value 
+
+
+#
+#COPROCESSOR - EQUIVALENCE ELIMINATION - HASHING OPTIONS:
+#
+cp3_extAND   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extITE   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extXOR   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extExO   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_genAND   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extHASUM   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extBlocked   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_addBlocked   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extNgtInput   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+cp3_extImplied   | cp3_ee_level in {1} #  only active, if cp3_ee_level has not its default value 
+
+#
+#COPROCESSOR - FOURIERMOTZKIN OPTIONS:
+#
+cp3_fm_amt   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_twoPr   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_sem   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_unit   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_merge   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_dups   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_vMulAMO   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_vMulAMT   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_cut   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_keepM   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_newSub   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_1st   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_gc   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_proof   | fm in {yes} #  only active, if fm has not its default value 
+card_noUnits   | fm in {yes} #  only active, if fm has not its default value 
+
+cp3_fm_maxConstraints   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_maxA   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_grow   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_growT   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_newAmo   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_newAlo   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_newAlk   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_printproof   | fm in {yes} #  only active, if fm has not its default value 
+card_minC   | fm in {yes} #  only active, if fm has not its default value 
+card_maxC   | fm in {yes} #  only active, if fm has not its default value 
+card_max   | fm in {yes} #  only active, if fm has not its default value 
+
+cp3_fm_limit   | fm in {yes} #  only active, if fm has not its default value 
+cp3_fm_Slimit   | fm in {yes} #  only active, if fm has not its default value 
+card_Elimit   | fm in {yes} #  only active, if fm has not its default value 
+
+#
+#COPROCESSOR - HTE OPTIONS:
+#
+cp3_par_hte   | hte in {yes} #  only active, if hte has not its default value 
+cp3_hteTalk   | hte in {yes} #  only active, if hte has not its default value 
+
+cp3_hte_steps   | hte in {yes} #  only active, if hte has not its default value 
+cp3_hte_inpInc   | hte in {yes} #  only active, if hte has not its default value 
+
+#
+#COPROCESSOR - Hyper Binary Resolution OPTIONS:
+#
+hbr-limit   | hbr in {yes} #  only active, if hbr has not its default value 
+hbr-csize   | hbr in {yes} #  only active, if hbr has not its default value 
+hbr-addBin   | hbr in {yes} #  only active, if hbr has not its default value 
+hbr-incInp   | hbr in {yes} #  only active, if hbr has not its default value 
+
+#
+#COPROCESSOR - LA OPTIONS:
+#
+la-cla   | la in {yes} #  only active, if la has not its default value 
+la-ala   | la in {yes} #  only active, if la has not its default value 
+la-alaBin   | la-ala in {yes} #  only active, if la-ala has not its default value 
+
+cla-limit   | la in {yes} #  only active, if la has not its default value 
+la-claStep   | la in {yes} #  only active, if la has not its default value 
+la-claMax   | la in {yes} #  only active, if la has not its default value 
+la-claIter   | la in {yes} #  only active, if la has not its default value 
+ala-limit   | la-ala in {yes} #  only active, if la-ala has not its default value 
+la-alaIter   | la-ala in {yes} #  only active, if la-ala has not its default value 
+
+#
+#COPROCESSOR - PROBING OPTIONS:
+#
+pr-probe   | probe in {yes} #  only active, if probe has not its default value 
+pr-bins   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-double   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-roots   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-repeat   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-lhbr   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-EE   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-vivi   | probe in {yes} #  only active, if probe has not its default value 
+pr-nce   | probe in {yes} #  only active, if probe has not its default value 
+
+pr-uips   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-csize   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-probeL   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+pr-keepL   | probe in {yes} #  only active, if probe has not its default value 
+pr-keepI   | probe in {yes} #  only active, if probe has not its default value 
+pr-viviP   | pr-vivi in {yes} #  only active, if pr-vivi has not its default value 
+pr-viviL   | pr-vivi in {yes} #  only active, if pr-vivi has not its default value 
+cp3_pr_inpInc   | pr-probe in {yes} #  only active, if pr-probe has not its default value 
+cp3_viv_inpInc   | pr-vivi in {yes} #  only active, if pr-vivi has not its default value 
+pr-keepLHBR   | probe in {yes} #  only active, if probe has not its default value 
+
+#
+#COPROCESSOR - RAT Elimination OPTIONS:
+#
+rat-compl   | rate in {yes} #  only active, if rate has not its default value 
+rate-brat   | rate in {yes} #  only active, if rate has not its default value 
+rate-rate   | rate in {yes} #  only active, if rate has not its default value 
+rate-bcs   | rate in {yes} #  only active, if rate has not its default value 
+rate-ratm   | rate in {yes} #  only active, if rate has not its default value 
+rate-ratm_ext   | rate-ratm in {yes} #  only active, if rate-ratm has not its default value 
+rate-ratm_rounds   | rate-ratm in {yes} #  only active, if rate-ratm has not its default value 
+
+rate-min   | rate in {yes} #  only active, if rate has not its default value 
+
+rate-limit   | rate in {yes} #  only active, if rate has not its default value 
+ratm-limit   | rate in {yes} #  only active, if rate has not its default value 
+
+#
+#COPROCESSOR - RES OPTIONS:
+#
+cp3_res_bin   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res3_reAdd   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res_eagerSub   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res_add_red   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res_add_lev   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res_add_lea   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res_ars   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+
+cp3_res_percent   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+
+cp3_res3_steps   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res3_ncls   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_res_inpInc   | 3resolve in {yes} #  only active, if 3resolve has not its default value 
+cp3_add_inpInc   | cp3_res_add_red in {yes} #  only active, if cp3_res_add_red has not its default value 
+
+#
+#COPROCESSOR - REWRITE OPTIONS:
+#
+cp3_rew_amo   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_imp   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_exo   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_merge   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_1st   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_avg   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_ratio   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_stats   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rewI_small   | rew in {yes} #  only active, if rew has not its default value 
+
+cp3_rew_min   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_iter   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_minA   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_limit   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_Vlimit   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_Addlimit   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rewI_min   | rew in {yes} #  only active, if rew has not its default value 
+cp3_rew_inpInc   | rew in {yes} #  only active, if rew has not its default value 
+
+#
+#COPROCESSOR - SHUFFLE OPTIONS:
+#
+shuffle-order   | shuffle in {yes} #  only active, if shuffle has not its default value 
+
+shuffle-seed   | shuffle in {yes} #  only active, if shuffle has not its default value 
+
+#
+#COPROCESSOR - SLS OPTIONS:
+#
+sls-phase   | sls in {yes} #  only active, if sls has not its default value 
+sls-adopt-cls   | sls in {yes} #  only active, if sls has not its default value 
+
+sls-flips   | sls in {yes} #  only active, if sls has not its default value 
+sls-ksat-flips   | sls in {yes} #  only active, if sls has not its default value 
+sls-rnd-walk   | sls in {yes} #  only active, if sls has not its default value 
+
+#
+#COPROCESSOR - SUBSUMPTION OPTIONS:
+#
+naive_strength   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_strength   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_inpPrefL   | subsimp in {yes} #  only active, if subsimp has not its default value 
+
+all_strength_res   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_sub_limit   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_str_limit   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_call_inc   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_sub_inpInc   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_par_strength   | subsimp in {yes} #  only active, if subsimp has not its default value 
+cp3_par_subs   | subsimp in {yes} #  only active, if subsimp has not its default value 
+par_subs_counts   | subsimp in {yes} #  only active, if subsimp has not its default value 
+susi_chunk_size   | subsimp in {yes} #  only active, if subsimp has not its default value 
+par_str_minCls   | subsimp in {yes} #  only active, if subsimp has not its default value 
+
+#
+#COPROCESSOR - SYMMETRY OPTIONS:
+#
+sym-size   | symm in {yes} #  only active, if symm has not its default value 
+sym-pol   | symm in {yes} #  only active, if symm has not its default value 
+sym-unit   | symm in {yes} #  only active, if symm has not its default value 
+sym-show   | symm in {yes} #  only active, if symm has not its default value 
+sym-print   | symm in {yes} #  only active, if symm has not its default value 
+sym-prop   | symm in {yes} #  only active, if symm has not its default value 
+sym-propF   | symm in {yes} #  only active, if symm has not its default value 
+sym-propA   | symm in {yes} #  only active, if symm has not its default value 
+sym-clLearn   | symm in {yes} #  only active, if symm has not its default value 
+
+sym-ratio   | symm in {yes} #  only active, if symm has not its default value 
+
+sym-min   | symm in {yes} #  only active, if symm has not its default value 
+sym-iter   | symm in {yes} #  only active, if symm has not its default value 
+sym-cons   | symm in {yes} #  only active, if symm has not its default value 
+sym-consT   | symm in {yes} #  only active, if symm has not its default value 
+
+#
+#COPROCESSOR - UNHIDE OPTIONS:
+#
+cp3_uhdTrans   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdUHTE   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdNoShuffle   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdEE   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdTstDbl   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdPrEE   | cp3_uhdProbe in {1,4} #  only active, if cp3_uhdProbe has not its default value 
+cp3_uhdPrSiBo   | cp3_uhdProbe in {1,4} #  only active, if cp3_uhdProbe has not its default value 
+
+cp3_uhdIters   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdUHLE   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdProbe   | unhide in {yes} #  only active, if unhide has not its default value 
+cp3_uhdPrSize   | cp3_uhdProbe in {1,4} #  only active, if cp3_uhdProbe has not its default value 
+
+#
+#COPROCESSOR - XOR OPTIONS:
+#
+xorKeepUsed   | xor in {yes} #  only active, if xor has not its default value 
+xorFindSubs   | xor in {yes} #  only active, if xor has not its default value 
+xorFindRes   | xor in {yes} #  only active, if xor has not its default value 
+xorDropPure   | xor in {yes} #  only active, if xor has not its default value 
+xorEncSubs   | xor in {yes} #  only active, if xor has not its default value 
+xorEncL   | xor in {yes} #  only active, if xor has not its default value 
+xorAddNew   | xor in {yes} #  only active, if xor has not its default value 
+
+xorMaxSize   | xor in {yes} #  only active, if xor has not its default value 
+xorLimit   | xor in {yes} #  only active, if xor has not its default value 
+xorSelect   | xor in {yes} #  only active, if xor has not its default value 
+xorBackdoor   | xor in {yes} #  only active, if xor has not its default value 
+xorEncSize   | xor in {yes} #  only active, if xor has not its default value 
+xorSetPol   | xor in {yes} #  only active, if xor has not its default value 
+
+
+
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1070.cnf within timeout 0.216, (minimized with double)
+# full faulty call: { enabled_cp3=yes, la=yes, la-cla=no } # reduced faulty configuration  (for simpler debugging)
+{ enabled_cp3=yes, la=yes, la-cla=no } # reduced excludable faulty configuration 
+
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc886.cnf within timeout 0.0, (minimized with double)
+# full faulty call: { R=5.000000 } # reduced faulty configuration  (for simpler debugging)
+{ R=5.000000 } # reduced excludable faulty configuration 
+
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1084.cnf within timeout 0.024, (minimized with double)
+# full faulty call: { cp3_rew_imp=yes, enabled_cp3=yes, rew=yes } # reduced faulty configuration  (for simpler debugging)
+{ cp3_rew_imp=yes, enabled_cp3=yes, rew=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1041.cnf within timeout 0.036, (minimized with double)
+# full faulty call: { 3resolve=yes, cp3_res_add_red=yes, cp3_res_ars=yes, cp3_res_percent=1.000000, enabled_cp3=yes } # reduced faulty configuration  (for simpler debugging)
+{ 3resolve=yes, cp3_res_add_red=yes, cp3_res_ars=yes, cp3_res_percent=1.000000, enabled_cp3=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1084.cnf within timeout 0.352, (minimized with double)
+# full faulty call: { cir-bump=16, cp3_keep_set=yes, dense=yes, enabled_cp3=yes, rMax=0 } # reduced faulty configuration  (for simpler debugging)
+{ cir-bump=16, cp3_keep_set=yes, dense=yes, enabled_cp3=yes, rMax=0 } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1048.cnf within timeout 0.548, (minimized with double)
+# full faulty call: { enabled_cp3=yes, lpd=4, sym-cons=16, sym-prop=yes, symm=yes } # reduced faulty configuration  (for simpler debugging)
+{ enabled_cp3=yes, lpd=4, sym-cons=16, sym-prop=yes, symm=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1120.cnf within timeout 0.12, (minimized with double)
+# full faulty call: { enabled_cp3=yes, lpd=1, sym-cons=16, sym-pol=yes, sym-prop=yes, symm=yes } # reduced faulty configuration  (for simpler debugging)
+{ enabled_cp3=yes, lpd=1, sym-cons=16, sym-pol=yes, sym-prop=yes, symm=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1078.cnf within timeout 7.056, (minimized with double)
+# full faulty call: { enabled_cp3=yes, learnDecP=3, longConflict=yes, lpd=16, rMax=15, rnd-freq=0.800000, sym-cons=4, sym-pol=yes, sym-prop=yes, sym-propA=yes, sym-propF=yes, sym-size=yes, symm=yes, var-decay-b=0.400001 } # reduced faulty configuration  (for simpler debugging)
+{ enabled_cp3=yes, learnDecP=3, longConflict=yes, lpd=16, rMax=15, rnd-freq=0.800000, sym-cons=4, sym-pol=yes, sym-prop=yes, sym-propA=yes, sym-propF=yes, sym-size=yes, symm=yes, var-decay-b=0.400001 } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc886.cnf within timeout 0.012, (minimized with double)
+# full faulty call: { enabled_cp3=yes, lpd=16, sym-cons=16, sym-pol=yes, sym-prop=yes, symm=yes } # reduced faulty configuration  (for simpler debugging)
+{ enabled_cp3=yes, lpd=16, sym-cons=16, sym-pol=yes, sym-prop=yes, symm=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1055.cnf within timeout 0.14, (minimized with double)
+# full faulty call: { cp3_rew_minA=2, enabled_cp3=yes, rew=yes } # reduced faulty configuration  (for simpler debugging)
+{ cp3_rew_minA=2, enabled_cp3=yes, rew=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1055.cnf within timeout 0.284, (minimized with double)
+# full faulty call: { cir-bump=4, cp3_keep_set=yes, cp3_uhdEE=yes, dense=yes, enabled_cp3=yes, rMax=3, unhide=yes } # reduced faulty configuration  (for simpler debugging)
+{ cir-bump=4, cp3_keep_set=yes, cp3_uhdEE=yes, dense=yes, enabled_cp3=yes, rMax=3, unhide=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1044.cnf within timeout 0.516, (minimized with double)
+# full faulty call: { cir-bump=16, cp3_keep_set=yes, cp3_uhdPrEE=yes, cp3_uhdProbe=4, dense=yes, enabled_cp3=yes, rMax=3, unhide=yes } # reduced faulty configuration  (for simpler debugging)
+{ cir-bump=16, cp3_keep_set=yes, cp3_uhdPrEE=yes, cp3_uhdProbe=4, dense=yes, enabled_cp3=yes, rMax=3, unhide=yes } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1018.cnf within timeout 0.452, (minimized with double)
+# full faulty call: { cir-bump=4, cp3_keep_set=yes, dense=yes, ee=yes, enabled_cp3=yes, la=yes, lpd=1, rsw-int=16 } # reduced faulty configuration  (for simpler debugging)
+{ cir-bump=4, cp3_keep_set=yes, dense=yes, ee=yes, enabled_cp3=yes, la=yes, lpd=1, rsw-int=16 } # reduced excludable faulty configuration 
+# found faulty configuration on file /home/nmanthey/Arbeit/TUD/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1021.cnf within timeout 0.768, (minimized with double)
+# full faulty call: { addRed2=yes, cp3_res_add_red=yes, cp3_res_percent=1.000000, enabled_cp3=yes } # reduced faulty configuration  (for simpler debugging)
+{ addRed2=yes, cp3_res_add_red=yes, cp3_res_percent=1.000000, enabled_cp3=yes } # reduced excludable faulty configuration 

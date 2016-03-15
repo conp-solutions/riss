@@ -38,6 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/mtl/IntTypes.h"
 #include "riss/mtl/Alg.h"
 #include "riss/mtl/Vec.h"
+#include "riss/mtl/HPVec.h"
 #include "riss/mtl/Map.h"
 #include "riss/mtl/Sort.h"
 #include "riss/mtl/Alloc.h"
@@ -715,10 +716,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::free(diff);
     }
 
-    void reloc(CRef& cr, ClauseAllocator& to)
+    /** reloc clause without modifying the reference directly */
+    CRef relocC(CRef cr, ClauseAllocator& to)
     {
         Clause& c = operator[](cr);
-        if (c.reloced()) { cr = c.relocation(); return; }
+        if (c.reloced()) { cr = c.relocation(); return cr; }
 
         cr = to.alloc(c, c.learnt());
 
@@ -736,6 +738,13 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].setLBD(c.lbd());
             to[cr].setCanBeDel(c.canBeDel());
         } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
+
+        return cr;
+    }
+
+    void reloc(CRef& cr, ClauseAllocator& to)
+    {
+        cr = relocC(cr, to);
     }
 
     // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3
@@ -834,7 +843,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 template<class Idx, class Vec, class Deleted>
 class OccLists
 {
-    vec<Vec>  occs;
+    vec<Vec>  occs; // use huge pages to store the list of watch lists
     vec<char> dirty;
     vec<Idx>  dirties;
     Deleted   deleted;
@@ -1069,22 +1078,28 @@ inline void Clause::strengthen(const Lit& p)
 struct Watcher {
     // payload
     CRef clauseReference;
-    unsigned blockingLit: 30;
-    unsigned watchType: 2; // 0 = binary, 1 = long clause, 2= 3=
+
+//     unsigned blockingLit: 30;
+//     unsigned watchType: 2; // 0 = binary, 1 = long clause, 2= 3=
+    uint32_t blockingLitData;
+
     // wrapper
     const CRef& cref() const { return clauseReference; };
     CRef& cref() { return clauseReference; };
-    Lit  blocker() const { return toLit(blockingLit); };
+    Lit  blocker() const { return toLit(blockingLitData & 0x3fffffff); };
     void cref(const CRef& newRef) { clauseReference = newRef; }
-    void blocker(const Lit& newBlocker) { assert(toInt(newBlocker) < (1 << 30) && "can only handle 30 bits here"); blockingLit = toInt(newBlocker); }
+    void blocker(const Lit& newBlocker) { assert(toInt(newBlocker) < (1 << 30) && "can only handle 30 bits here"); blockingLitData = ((uint32_t)toInt(newBlocker) & 0x3fffffff); }
 
-    bool isBinary() const { return watchType == 0; }
-    bool isLong()   const { return watchType == 1; }
-    bool matchWatchType(const int type) const { return watchType == type; }
+    bool isBinary() const { return (blockingLitData & 0xc0000000) == 0; }          // non of the type bits is set
+    bool isLong()   const { return (blockingLitData & 0xc0000000) == 0x40000000; } // only the lower of the type bits is set
+    bool matchWatchType(const int type) const { return (blockingLitData & 0xc0000000) == ((type & 3) << 30); }
 
     // constructor and comparators
     /** by default, the watch holds a long clause */
-    Watcher(CRef cr, Lit p, int type) : clauseReference(cr), blockingLit(toInt(p)), watchType(type) {}
+    Watcher(CRef cr, Lit p, int type) : clauseReference(cr), blockingLitData((uint32_t)toInt(p) & 0x3fffffff)
+    {
+        blockingLitData += ((type & 3) << 30);   // assign the correct type by shifting the lower 2 bits to the upper 2 bits
+    }
     bool operator==(const Watcher& w) const { return clauseReference == w.clauseReference; }
     bool operator!=(const Watcher& w) const { return clauseReference != w.clauseReference; }
 };
@@ -1170,7 +1185,7 @@ class MarkArray
      */
     bool isCurrentStep(const uint32_t index) const
     {
-	assert( index < array.size() && "write access should only be done to elements in the array" );
+        assert(index < array.size() && "write access should only be done to elements in the array");
         return array[index] == step;
     }
 
@@ -1178,7 +1193,7 @@ class MarkArray
      */
     void setCurrentStep(const uint32_t index)
     {
-	assert( index < array.size() && "write access should only be done to elements in the array" );
+        assert(index < array.size() && "write access should only be done to elements in the array");
         array[index] = step;
     }
 

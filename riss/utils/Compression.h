@@ -38,12 +38,22 @@ class Compression
     std::vector<Var> forward;   // store to which new variable an old variable has been mapped
     std::vector<lbool> trail;   // already assigned literals (units) - this variables are removed from the formula
 
+    bool isDecompressingModel;  // indicate that we are currently decompressing for the model, so that newVar calls will not result in increasing the mappings
+    
   public:
 
     enum {
         UNIT = -1, // variable is unit and therefore removed in the compressed formula
     };
 
+    Compression() 
+     : isDecompressingModel( false )
+     {}
+     
+     void setDecompressing(bool isDecompressing ) { isDecompressingModel = isDecompressing; }
+     
+     bool isDecompressing () const { return isDecompressingModel; }
+    
     /**
      * Returns value of an assigned variable (aka. unit) that was removed from the formula
      * and is therefore in the trail of the compression.
@@ -76,6 +86,19 @@ class Compression
      * @return true, if compression is active and variable renaming was performed
      */
     inline bool isAvailable() const { return mapping.size() > 0; }
+    
+    /** handle the case when a new variable is introduced
+     *  @return the number of the variable that has been added (or 0, if no compression has been done so far)
+     */
+    inline Var newVar() {
+      if( ! isAvailable() || isDecompressing () ) return 0;
+      const int reducedVars = postvars();
+      const int originalVars = nvars();
+      // the new variable is "new" in the reduced formula
+      mapping.push_back( reducedVars ); // the new variable maps to the first free variable behind the compressed highest variable
+      forward.push_back( originalVars );  // the variable behind the (former) highest variable is the actual representative
+      return reducedVars;
+    }
 
     /**
      * use the passed mapping as the new mapping. the current trail and forward mapping will be adjusted
@@ -122,6 +145,7 @@ class Compression
      */
     inline Lit importLit(const Lit& lit) const
     {
+	if( toInt(lit) < 0 ) return lit; // take care of lit_Undef and lit_Error!
         if (isAvailable()) {
             assert(var(lit) < mapping.size() && "Variable must not be larger than current mapping");
 
@@ -147,7 +171,7 @@ class Compression
 
     /**
      * The same import method as above but for variables. var_Undef is returned, if the variable
-     * is a unit in the compressed formula, or has not been present in the compressed formula. 
+     * is a unit in the compressed formula, or has not been present in the compressed formula.
      * If the variable was removed from the formula, var_Undef will be returned.
      */
     inline Var importVar(const Var& var) const
@@ -155,11 +179,11 @@ class Compression
         // @see import for literals above for comments
 
         if (isAvailable()) {
-            assert(var < mapping.size() && "Variable must not be larger than current mapping");
+            assert( (var < mapping.size() || isDecompressing() )&& "Variable must not be larger than current mapping");
 
             const Var compressed = mapping[var];
 
-	    // if for the given variable there is no mapping
+            // if for the given variable there is no mapping
             if (compressed == UNIT) {
                 return var_Undef;
             } else {
@@ -181,9 +205,10 @@ class Compression
      */
     inline Lit exportLit(const Lit& lit) const
     {
+	if( toInt(lit) < 0 ) return lit; // take care of lit_Undef and lit_Error!
         if (isAvailable()) {
             assert(var(lit) < forward.size() && "Variable must not be larger than current mapping. "
-                                                "Did you forget to update the compression?");
+                   "Did you forget to update the compression?");
             return mkLit(forward[var(lit)], sign(lit));
         }
         // no compression available, nothing to do! :)
@@ -201,7 +226,7 @@ class Compression
 
         if (isAvailable()) {
             assert(var < forward.size() && "Variable must not be larger than current mapping. "
-                                           "Did you forget to update the compression?");
+                   "Did you forget to update the compression?");
 
             return forward[var];
         } else {

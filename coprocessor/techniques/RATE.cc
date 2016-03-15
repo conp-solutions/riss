@@ -145,14 +145,14 @@ bool RATElimination::eliminateRAT()
             for (int i = 0 ; i < data.list(right).size(); ++ i) {
 
                 Clause& c = ca[ data.list(right)[i] ];
-                if (c.can_be_deleted() || c.learnt()) { 
-		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to learnt or deletion flag: " << c << endl;);
-		  continue; 
-		}   // TODO: yet we do not work with learned clauses, because its expensive
-                if (c.size() < config.rate_minSize) { 
-		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to size: " << c << " (vs. " << config.rate_minSize << ")" << endl;);
-		  continue;
-		}   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
+                if (c.can_be_deleted() || c.learnt()) {
+                    DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to learnt or deletion flag: " << c << endl;);
+                    continue;
+                }   // TODO: yet we do not work with learned clauses, because its expensive
+                if (c.size() < config.rate_minSize) {
+                    DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to size: " << c << " (vs. " << config.rate_minSize << ")" << endl;);
+                    continue;
+                }   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
 
                 rateCandidates ++;
                 DOUT(if (config.opt_rate_debug > 0) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;);
@@ -272,56 +272,57 @@ bool RATElimination::eliminateRAT()
                     }
 
                     CRef ppConfl = CRef_Undef;
-                    if (confl == false) { 
-		      ppConfl = solver.propagate();  // check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
-		      confl = CRef_Undef != ppConfl; 
-		    }  
+                    if (confl == false) {
+                        ppConfl = solver.propagate();  // check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
+                        confl = CRef_Undef != ppConfl;
+                    }
                     solver.cancelUntil(1);    // backtrack just to level 1 to keep first part of the resolvent propagated
                     rateSteps += solver.trail.size() - defaultLits; // approximate effort for propagation with respect to the level!
 
-                    DOUT( if (config.opt_rate_debug > 2) { cerr << "c propagate with conflict " << (ppConfl != CRef_Undef ? "yes" : " no") << endl;
-			  if( ppConfl != CRef_Undef ) cerr << "c conflict: " << ca[ppConfl] << endl;
-		      }
-		    );
+                    DOUT(if (config.opt_rate_debug > 2) {
+                    cerr << "c propagate with conflict " << (ppConfl != CRef_Undef ? "yes" : " no") << endl;
+                        if (ppConfl != CRef_Undef) { cerr << "c conflict: " << ca[ppConfl] << endl; }
+                    }
+                        );
 
                     if (confl == false) {
                         // the resolvent is not AT, hence, check whether the resolvent is blocked
                         if (config.opt_rate_brat) {
                             MethodClock bratMC(bratTime);   // measure time
-			    
-			    DOUT( if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, check resolvents for " << data.lits << endl; );
-			    
+
+                            DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, check resolvents for " << data.lits << endl;);
+
                             // check whether resolvent is blocked on one of its literals
                             bool isblocked = false;
 //        bratResolve.nextStep(); //TODO these two lines are not used
 //        for( int k = 0 ; k < data.lits.size(); ++k ) bratResolve.setCurrentStep( toInt(data.lits[k] ) ); // create markArray for redundant clause
                             // for (int k = 0 ; k < data.lits.size(); ++k) {
-                                const Lit resL = right; // currently not sure how to restore resolvents, that are not blocked on the literal we currently process ... data.lits[k]
-                                if (data.doNotTouch(var(resL))) { isblocked = true; break; }     // do not perform blocked clause addition on doNotTouch variables
-                                isblocked = true;
+                            const Lit resL = right; // currently not sure how to restore resolvents, that are not blocked on the literal we currently process ... data.lits[k]
+                            if (data.doNotTouch(var(resL))) { isblocked = true; break; }     // do not perform blocked clause addition on doNotTouch variables
+                            isblocked = true;
 
-                                for (int m = 0 ; m < data.list(~resL).size(); ++ m) {   // resolve with all candidates
-                                    const Clause& e = ca[ data.list(~resL)[m] ];
-				    if (e.can_be_deleted()) { continue; }
-				    DOUT( if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, resolve with " << e << " on " << resL << endl; );
-                                    if (data.list(right)[i] == data.list(~resL)[m]) { blockCheckOnSameClause ++; }
+                            for (int m = 0 ; m < data.list(~resL).size(); ++ m) {   // resolve with all candidates
+                                const Clause& e = ca[ data.list(~resL)[m] ];
+                                if (e.can_be_deleted()) { continue; }
+                                DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, resolve with " << e << " on " << resL << endl;);
+                                if (data.list(right)[i] == data.list(~resL)[m]) { blockCheckOnSameClause ++; }
 
-                                    bool hasComplement = false; // check resolvent for being tautologic
-                                    for (int n = 0 ; n < e.size(); ++ n) {
-                                        if (e[n] == ~resL) { continue; }
-                                        if (data.ma.isCurrentStep(toInt(~e[n]))) { hasComplement = true; break; }
-                                    }
-
-                                    if (!hasComplement) { isblocked = false; break; }
-                                    else {
-				      DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, resolvent is blocked on " << resL << endl; );
-				    }
+                                bool hasComplement = false; // check resolvent for being tautologic
+                                for (int n = 0 ; n < e.size(); ++ n) {
+                                    if (e[n] == ~resL) { continue; }
+                                    if (data.ma.isCurrentStep(toInt(~e[n]))) { hasComplement = true; break; }
                                 }
 
-                                if (isblocked == true) {
-                                    usedBratClause = true;
-                                    break; // found a blocking literal
+                                if (!hasComplement) { isblocked = false; break; }
+                                else {
+                                    DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE BRAT, resolvent is blocked on " << resL << endl;);
                                 }
+                            }
+
+                            if (isblocked == true) {
+                                usedBratClause = true;
+                                break; // found a blocking literal
+                            }
                             // }
                             allResolventsRedundant = isblocked; // overloading ... not really AT, but the resolvent is redundant
 
@@ -423,29 +424,29 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
                 }
             }
             data.list(solver.trail[g]).clear();
-	    
-	    const Lit& negLit = ~ solver.trail[g];
+
+            const Lit& negLit = ~ solver.trail[g];
             for (int p = 0; p < data.list(negLit).size(); ++p) {
 
                 Clause& gpclause = ca[data.list(negLit)[p]];
                 if (! gpclause.can_be_deleted()) {
-		    
-		    if( gpclause.size() > 2 ) {
-// hard to be checked as we do not know the blocking literal...		      assert( ( (gpclause[0] != negLit && gpclause[1] != negLit) || data.value( gpclause[0] ) == l_True || data.value( gpclause[1] ) == l_True ) && "the literal can be in the first two places only if the clause is satisfied (or if the blocking literal is satisfied)" );
-		      gpclause.remove_lit_unsorted( negLit );
-		      data.addCommentToProof("remove literal due to unit propagation");
-		      data.addToProof(gpclause);
-		      data.addToProof(gpclause,true,negLit);
-		    } else {
-		      assert( (data.value(gpclause[0]) == l_True || data.value(gpclause[1]) == l_True) && "in larger clauses, the clause is satisfied, or the literal is not on the first two positions" );
-		      gpclause.set_delete(true);
-		      data.addToProof(gpclause, true);    // remove the clause from the proof (its subsumed by a unit clause)
-		      data.removedClause( data.list(negLit)[p] );
-		    }
+
+                    if (gpclause.size() > 2) {
+// hard to be checked as we do not know the blocking literal...           assert( ( (gpclause[0] != negLit && gpclause[1] != negLit) || data.value( gpclause[0] ) == l_True || data.value( gpclause[1] ) == l_True ) && "the literal can be in the first two places only if the clause is satisfied (or if the blocking literal is satisfied)" );
+                        gpclause.remove_lit_unsorted(negLit);
+                        data.addCommentToProof("remove literal due to unit propagation");
+                        data.addToProof(gpclause);
+                        data.addToProof(gpclause, true, negLit);
+                    } else {
+                        assert((data.value(gpclause[0]) == l_True || data.value(gpclause[1]) == l_True) && "in larger clauses, the clause is satisfied, or the literal is not on the first two positions");
+                        gpclause.set_delete(true);
+                        data.addToProof(gpclause, true);    // remove the clause from the proof (its subsumed by a unit clause)
+                        data.removedClause(data.list(negLit)[p]);
+                    }
                 }
             }
             data.list(solver.trail[g]).clear();
-	    
+
         }
         trailPosition = solver.trail.size();
         return true;
@@ -748,17 +749,17 @@ bool RATElimination::minimizeRAT()
                 Clause& c = ca[ cr ];
                 data.lits.clear();
 
-                if (c.can_be_deleted() || c.learnt()) { 
-		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to learnt or deletion flag: " << c << endl;);
-		  continue; 
-		}   // TODO: yet we do not work with learned clauses, because its expensive
-                if (c.size() < config.rate_minSize) { 
-		  DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to size: " << c << " (vs. " << config.rate_minSize << ")" << endl;);
-		  continue;
-		}   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
+                if (c.can_be_deleted() || c.learnt()) {
+                    DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to learnt or deletion flag: " << c << endl;);
+                    continue;
+                }   // TODO: yet we do not work with learned clauses, because its expensive
+                if (c.size() < config.rate_minSize) {
+                    DOUT(if (config.opt_rate_debug > 3) cerr << "c RATE reject clause due to size: " << c << " (vs. " << config.rate_minSize << ")" << endl;);
+                    continue;
+                }   // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
 
                 DOUT(if (config.opt_rate_debug > 0) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;);
-		
+
                 for (int k = 0; k < c.size(); ++k) if (c[k] != right) { data.lits.push_back(c[k]); }
 
                 reduct.nextStep();
@@ -772,7 +773,7 @@ bool RATElimination::minimizeRAT()
                     int detachTrailSize = 0;
                     const CRef clause = data.list(left)[j];
                     if (ca[ clause ].can_be_deleted()) { continue; }
-                    
+
                     DOUT(if (config.opt_rate_debug > 1) cerr << "c consider for resolution with " << left << " : " << ca[clause] << endl;);
 
                     if (shortATM(clause, left, trailPosition, atlits)) {    // calls the ATM routine, returns true, if clause has AT
@@ -1326,7 +1327,7 @@ bool RATElimination::blockedSubstitution()
                         didSomething = true;
                         bcaSubstitue ++; bcaSubstitueLits += c.size() - 1;
 
-                        cerr << "c substitute " << d << " with " << data.lits << " via " << c << endl;
+                        DOUT(if (config.opt_rate_debug > 2) cerr << "c substitute " << d << " with " << data.lits << " via " << c << endl; );
 
                         // write according proof
                         data.addCommentToProof("add a blocked clause for blocked substitution");
@@ -1440,55 +1441,7 @@ void RATElimination::cleanSolver()
 
 void RATElimination::reSetupSolver()
 {
-    assert(solver.decisionLevel() == 0 && "solver can be re-setup only at level 0!");
-    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
-    if (solver.trail_lim.size() > 0)
-        for (int i = 0 ; i < solver.trail_lim[0]; ++ i)
-            if (solver.reason(var(solver.trail[i])) != CRef_Undef)
-                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted()) {
-                    solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
-                }
-
-    // give back into solver
-    for (int p = 0 ; p < 1; ++ p) {   // do not use learned clauses, because they might be dropped without any notice later again
-        vec<CRef>& clauses = (p == 0 ? solver.clauses : solver.learnts);
-        for (int i = 0; i < clauses.size(); ++i) {
-            const CRef cr = clauses[i];
-            Clause& c = ca[cr];
-            assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
-            if (!c.can_be_deleted()) {   // all clauses are neccesary for re-setup!
-                assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
-                if (c.size() > 1) {
-                    // do not watch literals that are false!
-                    int j = 1;
-                    for (int k = 0 ; k < 2; ++ k) {   // ensure that the first two literals are undefined!
-                        if (solver.value(c[k]) == l_False) {
-                            for (; j < c.size() ; ++j)
-                                if (solver.value(c[j]) != l_False)
-                                { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
-                        }
-                    }
-                    // assert( (solver.value( c[0] ) != l_False || solver.value( c[1] ) != l_False) && "Cannot watch falsified literals" );
-
-                    // reduct of clause is empty, or unit
-                    if (solver.value(c[0]) == l_False) { data.setFailed(); return; }
-                    else if (solver.value(c[1]) == l_False) {
-                        if (data.enqueue(c[0]) == l_False) { return; }
-                        else {
-                            c.set_delete(true);
-                        }
-                        if (solver.propagate() != CRef_Undef) { data.setFailed(); return; }
-                        c.set_delete(true);
-                    } else { solver.attachClause(cr); }
-                } else if (solver.value(c[0]) == l_Undef)
-                    if (data.enqueue(c[0]) == l_False) { return; }
-                    else if (solver.value(c[0]) == l_False) {
-                        // assert( false && "This UNSAT case should be recognized before re-setup" );
-                        data.setFailed();
-                    }
-            }
-        }
-    }
+    data.reSetupSolver();
 }
 
 } // namespace Coprocessor

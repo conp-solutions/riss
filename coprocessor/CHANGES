@@ -1,7 +1,9 @@
 # ChangeLog for Coprocessor
 
 
+## v5.2.0
 
+ * fix bug in FM semantic extraction (related to step limit)
  * add hyper binary resolution
 
 ## v5.0.3

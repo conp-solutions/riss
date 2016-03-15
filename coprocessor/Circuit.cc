@@ -115,11 +115,11 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 data.enqueue(~pos);
                 data.lits.clear(); break;
             }
-            if ( !data.ma.isCurrentStep(toInt(list[i]))) { // do not add the same literal twice!
-	      data.ma.setCurrentStep(toInt(list[i]));
-	      data.lits.push_back(list[i]);
-	      DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
-	    }
+            if (!data.ma.isCurrentStep(toInt(list[i]))) {  // do not add the same literal twice!
+                data.ma.setCurrentStep(toInt(list[i]));
+                data.lits.push_back(list[i]);
+                DOUT(if (config.circ_debug_out) cerr << "c mark literal " << list[i] << endl;);
+            }
         }
         if (data.lits.size() > 1) {   // work on found binary clauses!
 
@@ -214,8 +214,8 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                             cerr << "] leads to gate: ";
                             gates[ gates.size() - 1 ].print(cerr);
                         });
-			
-			sort( learnt_clause );                    // added clauses have to be sorted!
+
+                        sort(learnt_clause);                      // added clauses have to be sorted!
                         CRef cr = ca.alloc(learnt_clause, false); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
                         data.addClause(cr);
                         data.getClauses().push(cr);
@@ -350,7 +350,7 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
             for (int k = 0 ; k < lList.size(); ++ k) {
                 const Clause& ck = ca[lList[k]];
                 if (ck.can_be_deleted()) { continue; }
-                if( ck.size() != 2) { found = false; break; }   // not the current clause, or more than one clause
+                if (ck.size() != 2) { found = false; break; }   // not the current clause, or more than one clause
                 // all literals of the clause have to appear in the list of excluded literals
                 if (!data.ma.isCurrentStep(toInt(ck[0])) ||
                         !data.ma.isCurrentStep(toInt(ck[1]))) {

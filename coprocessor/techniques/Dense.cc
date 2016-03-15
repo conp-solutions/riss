@@ -31,8 +31,7 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     DOUT(if (config.dense_debug_out) {cerr << "c dense compress" << endl;});
 
     // reset literal counter
-    count.resize(data.nVars());
-    fill(count.begin(), count.end(), 0);
+    count.assign(data.nVars(), 0);
 
     // count literals occuring in clauses
     countLiterals(count, data.getClauses());
@@ -62,22 +61,22 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
         // compress (remove) variable
         else {
             diff++;
-	    if( data.value( var ) != l_Undef ) {
-	      trail[var] = data.value(var);
-	      assert( mapping[var] == Compression::UNIT && "this variable has an assignment" );
+            if (data.value(var) != l_Undef) {
+                trail[var] = data.value(var);
+                assert(mapping[var] == Compression::UNIT && "this variable has an assignment");
 
-	      DOUT(if (config.dense_debug_out) {
-	      if (data.doNotTouch(var)) {
-		      cerr << "c do not touch variable will be dropped: "
-			  << var + 1 << " mapping: " << mapping[var] + 1 << endl;
-		  } else {
-		      cerr << "c variable " << var + 1 << " occurrs " << count[var] << " times, and is undefined: "
-			  << (data.value(mkLit(var, false)) == l_Undef) << endl;
-		  }
-	      });
-	    } else {
-	      assert( mapping[var] == Compression::UNIT && "variables that are not present in the formula, and that do not have a truth value, are treated as gap" );
-	    }
+                DOUT(if (config.dense_debug_out) {
+                if (data.doNotTouch(var)) {
+                        cerr << "c do not touch variable will be dropped: "
+                             << var + 1 << " mapping: " << mapping[var] + 1 << endl;
+                    } else {
+                        cerr << "c variable " << var + 1 << " occurrs " << count[var] << " times, and is undefined: "
+                             << (data.value(mkLit(var, false)) == l_Undef) << endl;
+                    }
+                });
+            } else {
+                assert(mapping[var] == Compression::UNIT && "variables that are not present in the formula, and that do not have a truth value, are treated as gap");
+            }
         }
     }
 
@@ -94,6 +93,8 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     compressClauses(data.getClauses());
     compressClauses(data.getLEarnts());
 
+    compressLiterals( data.getEquivalences() );
+    
     // write white file
     if (newWhiteFile != nullptr) {
         cerr << "c work with newWhiteFile " << newWhiteFile << endl;
@@ -123,6 +124,8 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     for (int i = 0; i < _trail.size(); ++i) {
         const Lit lit = _trail[i];
 
+	assert( count[var(lit)] == 0 && "all units should be handled here" );
+	
         // keep the assigned literal
         if (count[var(lit)] != 0
                 || data.doNotTouch(var(lit))
@@ -196,33 +199,40 @@ void Dense::compress(bool addClausesToLists, const char* newWhiteFile)
     // after full compression took place, set known assignments again
     for (int i = 0 ; i < _trail.size(); ++i) {
         // put rewritten literals back on the trail
+	assert( var(_trail[i]) <= data.nVars() && "all variables had to be compressed" );
         data.enqueue(_trail[i]);
     }
 
     // ensure we compressed something
-    if (data.nVars() + diff != compression.nvars()) {
+    DOUT( if (data.nVars() + diff != compression.nvars()) {
         cerr << "c number of variables does not match: " << endl
              << "c diff= " << diff << " old= " << compression.nvars() << " new=" << data.nVars() << endl;
-    }
+    } );
     assert(data.nVars() + diff == compression.nvars() && "number of variables has to be reduced");
 
     // add the clauses to the structures again. as all clauses have been rewritten, we clear all lists and add all clauses again
-    if( addClausesToLists ) {
-	data.cleanOccurrences(); // clear all occurrences
-	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
-	  const Clause& c = ca[ data.getClauses()[i] ];
-	  if( ! c.can_be_deleted() ) {
-	    data.addClause( data.getClauses()[i] );
-	  }
-	}
-	for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
-	  const Clause& c = ca[ data.getLEarnts()[i] ];
-	  if( ! c.can_be_deleted() ) {
-	    data.addClause( data.getLEarnts()[i] );
-	  }
-	}
+    if (addClausesToLists) {
+        data.cleanOccurrences(); // clear all occurrences
+        for (int i = 0 ; i < data.getClauses().size(); ++ i) {
+            const Clause& c = ca[ data.getClauses()[i] ];
+            if (! c.can_be_deleted()) {
+                data.addClause(data.getClauses()[i]);
+		for( int j = 0 ; j < c.size() ; ++ j ) assert( var(c[j]) <= data.nVars() && "all variables had to be compressed" );
+            }
+        }
+        for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
+            const Clause& c = ca[ data.getLEarnts()[i] ];
+            if (! c.can_be_deleted()) {
+                data.addClause(data.getLEarnts()[i]);
+		for( int j = 0 ; j < c.size() ; ++ j ) assert( var(c[j]) <= data.nVars() && "all variables had to be compressed" );
+            }
+        }
     }
     
+    // get replaced by structure right
+    data.replacedBy().clear();
+    for( Var v = 0 ; v < data.nVars(); ++ v ) data.replacedBy().push( mkLit(v,false) );
+
     // notify data about compression
     data.didCompress();
 }
@@ -233,23 +243,26 @@ void Dense::decompress(vec<lbool>& model)
     // to itself (identity map), but this would be a waste of resources
     if (!compression.isAvailable()) {
         DOUT(if (config.dense_debug_out) {
-            cerr << "c no decompression needed" << endl;
-        });
+        cerr << "c no decompression needed" << endl;
+    });
         return;
     }
 
     DOUT(if (config.dense_debug_out) {
-        cerr << "c dense decompress, model to work on: ";
-        printModel(model);
+    cerr << "c dense decompress, model to work on: ";
+    printModel(model);
 
-            if (!compression.isAvailable()) {
-                cerr << "c no decompression" << endl;
-            } else {
-                cerr << "c [DENSE] change number of variables from "
-                     << model.size() << " to " << compression.nvars() << endl;
-            }
+        if (!compression.isAvailable()) {
+            cerr << "c no decompression" << endl;
+        } else {
+            cerr << "c [DENSE] change number of variables from "
+                 << model.size() << " to " << compression.nvars() << endl;
+        }
     });
 
+    assert( ! compression.isDecompressing() && "compression should be decompressing only in this method" );
+    compression.setDecompressing( true );
+    
     // extend the assignment, so that it is large enough
     if (model.size() < compression.nvars()) {
         model.growTo(compression.nvars(), l_False);
@@ -265,18 +278,18 @@ void Dense::decompress(vec<lbool>& model)
         // units - simply copy, because they do not occure in the compressed formula
         if (compressed == Compression::UNIT) {
             lbool unit = compression.value(var);
-	    if( unit != l_Undef ) model[var] = unit; // only use, if a value has been set
+            if (unit != l_Undef) { model[var] = unit; }  // only use, if a value has been set
 
             DOUT(if (config.dense_debug_out) {
-                cerr << "c satisfy " << var + 1 << "="
-                     << ((unit == l_True) ? "true" : "false") << endl;
+            cerr << "c satisfy " << var + 1 << "="
+                 << ((unit == l_True) ? "true" : "false") << endl;
             });
         }
         // renamed variable
         else if (compressed != var) {
             DOUT(if (config.dense_debug_out) {
-                cerr << "c move variable " << compressed + 1 << " to " << var + 1 << endl;
-            });
+            cerr << "c move variable " << compressed + 1 << " to " << var + 1 << endl;
+        });
 
             // Copy assignment from the compressed variable name to the variable
             // name in the original formula.
@@ -288,11 +301,14 @@ void Dense::decompress(vec<lbool>& model)
         // unchanged variable
         else {
             DOUT(if (config.dense_debug_out) {
-                cerr << "c variable " << var + 1 << " unchanged" << endl;
-            });
+            cerr << "c variable " << var + 1 << " unchanged" << endl;
+        });
         }
     }
 
+    compression.setDecompressing( false );
+    assert( ! compression.isDecompressing() && "compression should be decompressing only in this method" );
+    
     DOUT(if (config.dense_debug_out) {
     cerr << "c decompressed model: ";
     printModel(model);
@@ -303,27 +319,27 @@ void Dense::decompress(vec<lbool>& model)
 bool Dense::writeCompressionMap(const string& filename)
 {
     DOUT(if (config.dense_debug_out) {
-        cerr << "c write compression map" << endl;
-    });
+    cerr << "c write compression map" << endl;
+});
 
-#ifdef NDEBUG
+    #ifdef NDEBUG
     return compression.serialize(filename, false);
-#else
+    #else
     return compression.serialize(filename, config.dense_debug_out);
-#endif
+    #endif
 }
 
 bool Dense::readCompressionMap(const string& filename)
 {
     DOUT(if (config.dense_debug_out) {
-        cerr << "c read compression map" << endl;
-    });
+    cerr << "c read compression map" << endl;
+});
 
-#ifdef NDEBUG
+    #ifdef NDEBUG
     return compression.deserialize(filename, false);
-#else
+    #else
     return compression.deserialize(filename, config.dense_debug_out);
-#endif
+    #endif
 }
 
 /** parse a clause from string and store it in the literals vector
@@ -369,6 +385,23 @@ void Dense::printStatistics(ostream& stream)
 {
     cerr << "c [STAT] DENSE " << compression.diff() << " gaps" << endl;
 }
+
+void Dense::compressLiterals(vec< Riss::Lit >& literals)
+{
+  int j = 0;
+  for (uint32_t i = 0 ; i < literals.size(); ++i) {
+    if( literals[i] == lit_Undef ) { 
+      literals[j++] = lit_Undef;
+      continue;
+    }
+    
+    const Lit compressed = compression.importLit( literals[i] );
+    
+    if( compressed == lit_Undef ) continue; // drop literals without copression
+    literals[ j ++ ] = compressed;          // store compressed literal
+  }
+}
+
 
 void Dense::compressClauses(vec<CRef>& clauses)
 {

@@ -71,16 +71,9 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_up          ;
     Riss::BoolOption opt_subsimp     ;
     Riss::BoolOption opt_hte         ;
-    #if defined TOOLVERSION && TOOLVERSION < 355
-    const bool opt_bce;
-    #else
     Riss::BoolOption opt_bce         ;
-    #endif
-    #if defined TOOLVERSION && TOOLVERSION < 360
-    const bool opt_ent;
-    #else
-    Riss::BoolOption opt_ent        ;
-    #endif
+    Riss::BoolOption opt_modprep     ;
+    Riss::BoolOption opt_ent         ;
     Riss::BoolOption opt_exp         ;
     Riss::BoolOption opt_la          ;
     Riss::BoolOption opt_cce         ;
@@ -99,6 +92,8 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_FM          ;
     Riss::BoolOption opt_hbr         ;
 
+
+    Riss::StringOption stepbystepoutput; // prefix of CNF filename to be printed after executing a given technique (adds technique to name, but not iteration)
 
     Riss::StringOption opt_ptechs ;
     Riss::StringOption opt_itechs ;
@@ -435,6 +430,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_newAlk      ;
     Riss::BoolOption opt_checkSub   ;
     Riss::BoolOption opt_rem_first  ;
+    Riss::BoolOption opt_fm_garbageColelct ;
+    Riss::BoolOption opt_fm_prooftrace ;
+    Riss::IntOption opt_fm_printtrace ;
     Riss::IntOption opt_minCardClauseSize;
     Riss::IntOption opt_maxCardClauseSize;
     Riss::IntOption opt_maxCardSize      ;

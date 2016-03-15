@@ -245,7 +245,7 @@ int main(int argc, char** argv)
                 if (ret == l_True) {
                     if (S.proofFile != 0) { fclose(S.proofFile); }  // close proof file!
                     preprocessor.extendModel(S.model);
-		    const int printVariables = (preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables() );
+                    const int printVariables = (preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables());
                     if (res != nullptr) {
                         cerr << "s SATISFIABLE" << endl;
                         fprintf(res, "s SATISFIABLE\nv ");

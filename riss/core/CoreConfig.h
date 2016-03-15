@@ -63,6 +63,7 @@ class CoreConfig : public Config
     BoolOption opt_lbd_ignore_assumptions; // do not consider assumption levels for LBD
     IntOption opt_update_lbd; // update LBD during 0=propagation,1=learning,2=never (if during propagation, then during learning is not necessary!)
     BoolOption opt_lbd_inc;    // allow to increase LBD of clauses dynamically?
+    BoolOption opt_rem_inc_lbd;  // reset delete flag if LBD of a learned clause increases
     BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
     DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
@@ -74,7 +75,7 @@ class CoreConfig : public Config
     IntOption     opt_max_learnts;
 
     BoolOption opt_dpll;  // perform DPLL instead of CDCL (no restarts, no learning)
-    
+
     BoolOption opt_biAsserting; // learn bi-asserting clauses instead of UIP clauses
     IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;
@@ -144,6 +145,7 @@ class CoreConfig : public Config
     IntOption     opt_cir_bump;
 
     BoolOption   opt_act_based;
+    DoubleOption opt_avg_size_lbd_ratio;
     IntOption    opt_lbd_core_thresh;
     DoubleOption opt_l_red_frac;
     IntOption    opt_keep_permanent_size;
@@ -244,6 +246,7 @@ class CoreConfig : public Config
     BoolOption opt_use_reverse_minimization; // indicate that reverse minimization is used
     IntOption reverse_minimizing_size;       // size to perform reverse minimization
     IntOption lbLBDreverseClause;            // lbd to perform reverse minimization
+    IntOption opt_minimize_max_size;         // do not perform minimization if the current learned clause is larger than the given value
 
     IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
     IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off

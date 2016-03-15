@@ -139,7 +139,8 @@ void BlockedClauseElimination::coverdLiteralAddition()
                 possibleClaExtensions += data.lits.size();
 
                 // have a filter here that removes some of the literals, if data.lits is too large!
-                if (data.lits.size() > config.claStepSize) { // reduce number of literals somehow
+		// removing arbitrary literals might be unsound, as the order matters?
+                if (false && data.lits.size() > config.claStepSize) { // reduce number of literals somehow
                     int keptLiterals = 0;
                     for (int k = 0; k < data.lits.size(); k++) {
                         if (rand() % 1000 < 600) { // keep some 60 %
@@ -165,6 +166,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
                     if (data.ma.isCurrentStep(toInt(~c[k]))) {
                         isTaut = true;
                         data.lits.push_back(c[k]);
+			break;
                     } else if (!data.ma.isCurrentStep(toInt(c[k]))) {
                         data.lits.push_back(c[k]);
                     }
@@ -172,11 +174,15 @@ void BlockedClauseElimination::coverdLiteralAddition()
 
                 if (!isTaut) { // do not want to perform CCE here!
                     claExtendedClauses++;
+		    assert( data.lits.size() >= c.size() && "we should have added literals!" );
                     CRef newClause = ca.alloc(data.lits, false); // destroys reference for clause c!
                     ca[newClause].sort();
                     //claStorage.push_back( ClaStore(data.list(right)[i], newClause, right ) );
 
+		    DOUT( if( config.opt_bce_debug ) cerr << "c add clause " << data.lits << " for clause " << ca[data.list(right)[i]] << endl; );
                     // add new clause to proof (subsumed by the other, so should be fine!)
+		    assert( !ca[data.list(right)[i]].can_be_deleted() && "clause should still be active!" );
+		    
                     ca[data.list(right)[i]].set_delete(true);
                     data.addCommentToProof("extended by applying CLA");
                     data.addToProof(ca[newClause]); // add the new longer clause!
@@ -271,7 +277,7 @@ void BlockedClauseElimination::blockedClauseElimination()
             assert(bceHeap.inHeap(toInt(right)) && "item from the heap has to be on the heap");
             bceHeap.removeMin();
 
-            if (data.doNotTouch(var(right))) {
+            if (data.doNotTouch(var(right)) || data.value( right ) != l_Undef ) {
                 continue;    // do not consider variables that have to stay fixed! // TODO: might be put into re-init loop for heap
             }
 
@@ -283,7 +289,8 @@ void BlockedClauseElimination::blockedClauseElimination()
                  " clauses " << endl;);
             data.lits.clear(); // used for covered literal elimination
             for (int i = 0; i < data.list(right).size(); ++i) {
-                Clause& c = ca[data.list(right)[i]];
+		if( data.hasToPropagate() ) break; // we found a unit, stop working on BCE for now
+		  Clause& c = ca[data.list(right)[i]];
                 if (c.can_be_deleted() || (!config.bceBinary && c.size() == 2 && !config.opt_bce_cle)) {
                     continue;    // do not work on uninteresting clauses!
                 }
@@ -302,18 +309,26 @@ void BlockedClauseElimination::blockedClauseElimination()
                 // its a new clause, hence the array has to be renewed
                 if (config.opt_bce_bcm) { tautologyReasonLiterals.nextStep(); }
 
-                DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE analyze clause " << c << endl;);
+                DOUT(if (config.opt_bce_debug) cerr << "c" << endl << "c BCE/CLE analyze clause " << c << endl;);
 
                 for (int j = 0; j < data.list(left).size(); ++j) {
+		    if( data.hasToPropagate() ) break; // we found a unit, stop working on BCE for now
+		  
                     Clause& d = ca[data.list(left)[j]];
-                    if (d.can_be_deleted()) { continue; } // do not work on uninteresting clauses!
+                    if (d.can_be_deleted()) { 
+		      DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE do not compare with clause " << d << " as it is already deleted" << endl;);
+		      continue;
+		    } // do not work on uninteresting clauses!
                     bceSteps++;
-                    DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE compare with clause " << d << endl;);
+                    DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE compare with clause " << d << " (" << j << "/" << data.list(left).size() << ")" << endl;);
                     const Lit tautLit = tautologicResolvent(c, d,
                                                             right);        // check whether there is a literal that produces a tautologic resolvent
+		    DOUT(if (config.opt_bce_debug) cerr << "c              returned with tautlit = " << tautLit << endl;);
                     if (tautLit == lit_Undef) {                                 // the resolvent is not a tautology
                         isBlocked = false;                                         // from here on, the given clause is not a blocked clause since a non-tautologic resolvent has been produced
+                        DOUT(if (config.opt_bce_debug) cerr << "c    clause is not BCE, CLE lits: " << data.lits.size() << " , canCLE: " << canCle << endl;);
                         if (!config.opt_bce_cle || data.lits.size() == 0) {
+			    DOUT(if (config.opt_bce_debug) cerr << "c    stop as we are not BCE, and there are no CLE literals left" << endl;);
                             break;    // however, for cle further checks have to be/can be done!
                         }
 
@@ -333,17 +348,18 @@ void BlockedClauseElimination::blockedClauseElimination()
                             }
                             data.lits.resize(keptCle); // remove all the other literals
                             DOUT(if (config.opt_bce_debug)
-                                 cerr << "c resolving " << c << " with " << d << " keeps the literals " <<
+                                 cerr << "c resolving " << c << " with " << d << " keeps the CLE literals " <<
                                  data.lits << endl;);
                             if (keptCle == 0) { break; } // can stop here, because no CLE, and not blocked!
                         }
                     } else {
                         // compute cle?
                         if (config.opt_bce_cle) {
-                            if (data.lits.size() >
-                                    0) { // we have found a tautologic resolvent, take care of the set of literals for CLE!
+			    DOUT(if (config.opt_bce_debug) cerr << "c      handle tautologic resolvent during CLE with " << data.lits << " CLE lits left " << endl;);
+                            if (data.lits.size() > 0) { // we have found a tautologic resolvent, take care of the set of literals for CLE!
                                 // very conservative, but cheap:
                                 if (config.opt_bce_cle_conservative) {
+				    DOUT(if (config.opt_bce_debug) cerr << "c      conservative, abort CLE" << endl;);
                                     data.lits.clear(); // ensure that no CLE is performed!
                                 } else {
                                     // less conservative, but more expensive data.lits = data.lits \ \ngt{D}
@@ -367,16 +383,18 @@ void BlockedClauseElimination::blockedClauseElimination()
                                         data.lits[keptLiterals++] = data.lits[k++];    // increase pointer, keep literal!
                                     }
                                     data.lits.resize(keptLiterals); // remove the other literals
+				    DOUT(if (config.opt_bce_debug) cerr << "c      non-conservative, keep literals " << data.lits << endl;);
                                 }
                             }
                         }
 
                         // compute blocked clause minimization
-                        if (config.opt_bce_bcm) {
+                        if (config.opt_bce_bcm && ! d.learnt() ) {
                             tautologyReasonLiterals.setCurrentStep(toInt(
                                     tautLit)); // store that this literal is necessary for the clause to be blocked
                         }
                     }
+                    DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE finished iteration with clause " << d << " (" << j << "/" << data.list(left).size() << ")" << endl;);
                 }
                 DOUT(if (config.opt_bce_debug)
                      cerr << "c resolved " << c << " with about " << data.list(left).size() <<
@@ -402,9 +420,7 @@ void BlockedClauseElimination::blockedClauseElimination()
                         }
                         successfulSimplification();
                         if (!c.learnt()) {
-                            if (config.opt_bce_verbose > 2)
-                                cerr << "c remove with blocking literal " << right << " blocked clause " <<
-                                     ca[data.list(right)[i]] << endl;
+                            DOUT( if (config.opt_bce_verbose > 2) cerr << "c remove with blocking literal " << right << " blocked clause " << ca[data.list(right)[i]] << endl; );
                             data.addToExtension(data.list(right)[i],
                                                 right); // to reconstruct the actual model of the formula, add the clause and literal to the repair stack
                         }
@@ -417,16 +433,17 @@ void BlockedClauseElimination::blockedClauseElimination()
                         // check the clause whether it contains literals that could be eliminated
                         int keptLiterals = 0;
                         for (int k = 0; k < c.size(); ++k) {
-                            if (c[k] == right) {
+                            if (c[k] == right || (deletedSomeLiteral && data.outputsProof() )) { // make sure we only remove one literal in a step ... TODO teach proof printing how to handle multi-BCM clauses
                                 c[keptLiterals++] = c[k];  // keep the literal
                                 continue;                  // the blocking literal needs to remain in the clause
                             }
-                            if (!tautologyReasonLiterals.isCurrentStep(
-                                        toInt(c[k]))) {  // found a literal that can be removed
+                            if (!tautologyReasonLiterals.isCurrentStep( toInt(c[k]))) {  // found a literal that can be removed
                                 if (!deletedSomeLiteral) { // tell proof about removed blocked clause (the other clause will be added below, after minimization)
                                     data.addCommentToProof("blocked clause during BCM");
-                                    data.addToProof(c,
-                                                    true);  // delete the original clause - the minimized clause can still be added by blocked clause addition
+                                    data.addToProof(c, true);  // delete the original clause - the minimized clause can still be added by blocked clause addition
+				    // collect literals to delete clause from proof afterwards
+				    data.lits.clear(); // collect the literals that could be removed by CLE
+				    for (int k = 0; k < c.size(); ++k) if (right != c[k]) { data.lits.push_back(c[k]); }
                                 }
                                 deletedSomeLiteral = true;                          // indicate that the clause has been modified
                                 data.removeClauseFrom(data.list(right)[i],
@@ -456,12 +473,11 @@ void BlockedClauseElimination::blockedClauseElimination()
                             bcm_lits += (c.size() - keptLiterals);             // counters
                             assert(keptLiterals < c.size() &&
                                    "some literal was removed"); // something has to be removed
+			    const int oldSize = c.size();
                             c.shrink(c.size() - keptLiterals);                             // remove the literals
-                            DOUT(if (config.opt_bce_debug) cerr << "c create clause " << c << " during BCM" << endl;);
-                            data.addCommentToProof(
-                                "found a blocked clause during BCM");     // tell the proof about the clause
-                            data.addToProof(c, false,
-                                            right);                                // add the clause to the proof (its a RAT clause)
+                            DOUT(if (config.opt_bce_debug) cerr << "c create clause " << c << " during BCM with old size: " << oldSize << endl;);
+                            data.addCommentToProof( "found a blocked clause during BCM");     // tell the proof about the clause
+                            data.addToProof(c, false, right);                                // add the clause to the proof (its a RAT clause)
 
                             if (c.size() == 1) {
                                 if (l_False == data.enqueue(c[0])) {
@@ -477,14 +493,16 @@ void BlockedClauseElimination::blockedClauseElimination()
                     if (config.opt_bce_cle && canCle && data.lits.size() > 0) {
                         // cle can actually be performed:
                         successfulSimplification();
-                        remCLE += data.lits.size();
                         int k = 0, l = 0; // data.lits is a sub set of c, both c and data.lits are ordered!
                         int keptLiterals = 0;
                         DOUT(if (config.opt_bce_debug) cerr << "c cle turns clause " << c << endl;);
                         if (data.outputsProof()) { // store the original clause for deleting it from the proof
                             data.getSolver()->oc.clear();
                             for (int m = 0; m < c.size(); ++m) { data.getSolver()->oc.push(c[m]); }
+                            // only remove a single literal, as DRAT does not support multiple literals ... // TODO do a step by step procedure in future for DRAT!
+                            data.lits.resize( 1 );
                         }
+                        remCLE += data.lits.size();
                         while (k < c.size() && l < data.lits.size()) {
                             if (c[k] == data.lits[l]) {
                                 // remove the literal from the clause and remove the clause from that literals structures, as well as decrease the occurrence counter
@@ -544,6 +562,13 @@ void BlockedClauseElimination::blockedClauseElimination()
             } // end iterating over all clauses that contain (right)
 
 
+            // in case we aborted due to a unit clause, take care of that before processing more clauses!
+            if( data.hasToPropagate() ) {
+	      propagation.process(data, true); // propagate, if there's something to be propagated
+	      modifiedFormula = modifiedFormula || propagation.appliedSomething();
+	      if (!data.ok()) { return ; }
+	    }
+            
         } // end iterating over all literals of the heap
 
         // perform garbage collection

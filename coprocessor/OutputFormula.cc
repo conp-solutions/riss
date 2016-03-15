@@ -16,6 +16,11 @@ namespace Coprocessor
 
 void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
+    data.outputFormula(file, varMap);
+}
+
+void CoprocessorData::outputFormula(const char *file, const char *varMap)
+{
     FILE* f = fopen(file, "wr");
     if (f == nullptr) {
         fprintf(stderr, "could not open file %s\n", file), exit(1);
@@ -45,9 +50,9 @@ void Preprocessor::getCNFinfo(int& vars, int& cls)
     cls = level0 + clauses.size();
 }
 
-void Preprocessor::printFormula(FILE * fd, bool clausesOnly)
+void CoprocessorData::printFormula(FILE * fd, bool clausesOnly)
 {
-    if (!data.ok()) {   // unsat
+    if (!ok()) {   // unsat
         if (! clausesOnly) { fprintf(fd, "p cnf 0 1\n0\n"); }
         else { fprintf(fd, "0\n"); } // print the empty clause!
         return;
@@ -55,6 +60,11 @@ void Preprocessor::printFormula(FILE * fd, bool clausesOnly)
 
     vec<Lit>& trail = solver->trail;
     vec<CRef>& clauses = solver->clauses;
+
+    int nCls = 0;
+    for (int i = 0; i < clauses.size(); ++i) {
+        nCls = solver->ca[clauses[i]].can_be_deleted() ? nCls : nCls + 1 ;
+    }
 
     if (! clausesOnly) {   // calc and print header if necessary
         // count level 0 assignments
@@ -65,7 +75,7 @@ void Preprocessor::printFormula(FILE * fd, bool clausesOnly)
             }
         }
         // print header, if activated
-        fprintf(fd, "p cnf %u %i\n", (solver->nVars()) , level0 + clauses.size());
+        fprintf(fd, "p cnf %u %i\n", (solver->nVars()) , level0 + nCls);
     }
     // print assignments
     for (int i = 0; i < trail.size(); ++i) {
@@ -76,11 +86,11 @@ void Preprocessor::printFormula(FILE * fd, bool clausesOnly)
     }
     // print clauses
     for (int i = 0; i < clauses.size(); ++i) {
-        printClause(fd, clauses[i]);
+        if (! solver->ca[clauses[i]].can_be_deleted()) { printClause(fd, clauses[i]); }
     }
 }
 
-inline void Preprocessor::printClause(FILE * fd, CRef cr)
+inline void CoprocessorData::printClause(FILE * fd, CRef cr)
 {
     Clause& c = ca[cr];
     if (c.mark()) { return; }
@@ -94,7 +104,7 @@ inline void Preprocessor::printClause(FILE * fd, CRef cr)
 
 }
 
-inline void Preprocessor::printLit(FILE * fd, int l)
+inline void CoprocessorData::printLit(FILE * fd, int l)
 {
     if (l % 2 == 0) {
         fprintf(fd, "%i ", (l / 2) + 1);

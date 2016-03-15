@@ -27,6 +27,7 @@ set(LIB_SOURCES
     core/EnumerateMaster.cc
     simp/SimpSolver.cc
     utils/Compression.cc
+    utils/SimpleGraph.cc
     utils/Options.cc
     utils/Statistics-mt.cc
     utils/System.cc

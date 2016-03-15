@@ -156,19 +156,19 @@ int main(int argc, char** argv)
         // print pcs information into file
         if (0 != (const char*)opt_tuneFile) {
             FILE* pcsFile = fopen((const char*) opt_tuneFile , "wb"); // open file
-            fprintf(pcsFile, "# PCS Information for riss (core) %s  %.13s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
+            fprintf(pcsFile, "# PCS Information for riss (core) %s  %s \n#\n#\n# Global Parameters\n#\n#\n", solverVersion, gitSHA1);
             // ::printOptions(pcsFile, opt_tuneLevel,opt_tuneGranularity); // do not print the global options, as those are usually not relevant for tuning
             fprintf(pcsFile, "\n\n#\n#\n# Search Parameters\n#\n#\n");
-            coreConfig->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);
+            coreConfig->printOptions(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Parameters\n#\n#\n");
-            cp3config->printOptions(pcsFile,opt_tuneLevel,opt_tuneGranularity);
+            cp3config->printOptions(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Dependencies \n#\n#\n");
 //             fprintf(pcsFile, "\n\n#\n#\n# Global Dependencies \n#\n#\n");
 //             ::printOptionsDependencies(pcsFile, opt_tuneLevel);
             fprintf(pcsFile, "\n\n#\n#\n# Search Dependencies \n#\n#\n");
-            coreConfig->printOptionsDependencies(pcsFile, opt_tuneLevel);
+            coreConfig->printOptionsDependencies(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fprintf(pcsFile, "\n\n#\n#\n# Simplification Dependencies \n#\n#\n");
-            cp3config->printOptionsDependencies(pcsFile, opt_tuneLevel);
+            cp3config->printOptionsDependencies(pcsFile, opt_tuneLevel, opt_tuneGranularity);
             fclose(pcsFile);
             exit(0);
         }
@@ -314,7 +314,7 @@ int main(int argc, char** argv)
         #endif // CLASSIFIER
 
         // open file for proof
-        S->proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : nullptr;
+        S->proofFile = (proofFile) ?  ( string(proofFile) == "stderr" ? stderr : fopen((const char*) proofFile , "wb") ) : nullptr ;
         if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S->proofFile != nullptr) { fprintf(S->proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
         parse_DIMACS(in, *S);
@@ -348,7 +348,8 @@ int main(int argc, char** argv)
             if (S->proofFile != nullptr) {
                 lbool validProof = S->checkProof(); // check the proof that is generated inside the solver
                 if (verb > 0) { cerr << "c checked proof, valid= " << (validProof == l_Undef ? "?  " : (validProof == l_True ? "yes" : "no ")) << endl; }
-                fprintf(S->proofFile, "0\n"), fclose(S->proofFile);
+                fprintf(S->proofFile, "0\n");
+		if( S->proofFile != stderr ) fclose(S->proofFile);
             }
             if (S->verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -408,7 +409,7 @@ int main(int argc, char** argv)
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
             if (res != nullptr) { fclose(res); res = nullptr; }
-            if (S->proofFile != nullptr) {
+            if (S->proofFile != nullptr && S->proofFile != stderr) {
                 fclose(S->proofFile);   // close the current file
                 S->proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
                 fclose(S->proofFile);   // close the file again
@@ -427,6 +428,7 @@ int main(int argc, char** argv)
                 printf("c verified model\n");
             } else {
                 printf("c model invalid -- turn answer into UNKNOWN\n");
+		assert( false && "model should be correct" );
                 ret = l_Undef; // turn result into unknown, because the model is not correct
             }
             gzclose(in);

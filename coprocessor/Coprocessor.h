@@ -33,6 +33,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/techniques/Dense.h"
 #include "coprocessor/techniques/Symmetry.h"
 #include "coprocessor/techniques/HBR.h"
+#include "coprocessor/techniques/Experimental.h"
+#include "coprocessor/techniques/ModPrep.h"
 #include "coprocessor/Shuffler.h"
 
 #include "coprocessor/techniques/SLS.h"
@@ -129,10 +131,7 @@ class Preprocessor
     /** return info about formula to be writtern*/
     void getCNFinfo(int& vars, int& cls);
 
-    /** write formula into file of file descriptor
-     * @param clausesOnly: will not print the cnf header (e.g. to print something before)
-     */
-    void printFormula(FILE* fd, bool clausesOnly = false);
+
 
     /** disable the specified variable (external representation) for modelset-changing preprocessing (bve,ee,bce,cce,la,...)
      * @param lit literal in external representation (the whole variable will be frozen!)
@@ -179,6 +178,8 @@ class Preprocessor
     LiteralAddition la;
     EntailedRedundant entailedRedundant;
     HyperBinaryResolution hbr;
+    ExperimentalTechniques experimental;
+    ModPrep modprep;
     VarShuffler shuffler;
 
     SLS sls;
@@ -217,8 +218,7 @@ class Preprocessor
     void scanCheck(const std::string& headline);  // check clauses for duplicate literals
 
     // print formula
-    inline void printClause(FILE * fd, Riss::CRef cr);
-    inline void printLit(FILE * fd, int l);
+
     void printFormula(const std::string& headline);
 
 

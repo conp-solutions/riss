@@ -47,6 +47,7 @@ class Rewriter : public Technique<Rewriter>
     unsigned removedViaSubsubption;
     unsigned maxChain, minChain, foundChains;
 
+    Propagation& propagation;    // UP object
     Subsumption& subsumption;    // object that takes care of subsumption and strengthening
 
     // work data
@@ -63,7 +64,7 @@ class Rewriter : public Technique<Rewriter>
 
   public:
 
-    Rewriter(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption);
+    Rewriter(Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption);
 
     void reset();
 

@@ -180,6 +180,9 @@ bool Compression::deserialize(const string& filename, bool verbose)
 
 void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
 {
+    // get the highest possible variable in the compressed formula (the last element in the mapping), have to scan as we do not know the details in this method  
+    Var highestVar = 0;
+  
     // initialize mapping
     if (!isAvailable()) {
 
@@ -189,7 +192,15 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
         mapping = _mapping;
         trail = _trail;
 
-#if 0
+	// scan for the highest variable
+	for (Var var = _mapping.size(); var > 0; var--) {
+	  if( mapping[var - 1] != UNIT ) { // we found a variable that is eliminated. as we started from the end, this is the highest variable in the compressed formula
+	    highestVar = mapping[var - 1];
+	    break;
+	  }
+	}
+	
+        #if 0
         #ifndef NDEBUG
         // validate mapping in debug mode
         for (Var var = 0; var < mapping.size(); ++var) {
@@ -202,7 +213,7 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
             }
         }
         #endif
-#endif
+        #endif
     }
     // update current mapping
     else {
@@ -222,29 +233,29 @@ void Compression::update(vector<Var>& _mapping, vector<lbool>& _trail)
                 assert(trail[from] == l_Undef && "Variable already marked as unit");
 
                 trail[from] = _trail[var];
-            }
+            } else { // if the variable is still present we have to consider it for being the highest possible variable
+		if( highestVar < to ) highestVar = to;
+	    }
         }
     }
 
     // update forward mapping
     // reduce size of the forward table
-    // get the highest possible variable in the compressed formula (the last element in the mapping)
-    Var highestVar = _mapping[_mapping.size() - 1];
     // because 0 is also a variable, the forward mapping needs space for one additional variable
     forward.resize(highestVar + 1);
 
     // "to" is the variable in the compressed formula and "from" the name in the original formula
-    if( forward.size() != 0 ) {
-      for (Var from = 0, to = 0; from < mapping.size(); ++from) {
-	  // we found a variable in the old formula that is not a unit in the compressed
-	  // store the inverse direction in the forward map (to -> from) and increment
-	  // the "to" variable to write the next non-unit mapping to the next position
-	  if (mapping[from] != UNIT ) {
-	      assert( ( (forward.size() == 0 && to == 0) || to < forward.size()) && "Compressed variable name must not be larger than forward mapping");
+    if (forward.size() != 0) {
+        for (Var from = 0, to = 0; from < mapping.size(); ++from) {
+            // we found a variable in the old formula that is not a unit in the compressed
+            // store the inverse direction in the forward map (to -> from) and increment
+            // the "to" variable to write the next non-unit mapping to the next position
+            if (mapping[from] != UNIT) {
+                assert(((forward.size() == 0 && to == 0) || to < forward.size()) && "Compressed variable name must not be larger than forward mapping");
 
-	      forward[to++] = from;
-	  }
-      }
+                forward[to++] = from;
+            }
+        }
     }
 }
 

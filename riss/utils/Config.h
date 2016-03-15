@@ -70,7 +70,7 @@ class Config
     void printOptions(FILE* pcsFile, int printLevel, int granularity);
 
     /** print dependencies of the options that belong to this configuration */
-    void printOptionsDependencies(FILE* pcsFile, int printLevel = -1);
+    void printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity);
 
     /** set all options back to their default value */
     void reset();
@@ -171,7 +171,7 @@ bool Config::addPreset(const std::string& optionSet)
     } else if (optionSet == "INCSOLVE") {
         parseOptions("-rmf -sInterval=16 -lbdIgnLA -var-decay-b=0.85 -var-decay-e=0.85 -irlevel=1024 -rlevel=2 -incResCnt=3", false);
     }  else if (optionSet == "INCSIMP") {
-        parseOptions("-enabled_cp3:-subsimp:-fm:-no-cp3_fm_vMulAMO:-unhide:-cp3_uhdIters=5:-cp3_uhdEE:-cp3_uhdTrans:-xor:-no-xorFindSubs:-xorEncSize=3:-xorLimit=100000:-no-xorKeepUsed:-cp3_iters=2:-no-randInp:-cp3_inp_cons=50000:-cp3_iinp_cons=1000000:-inprocess", false);
+        parseOptions("-enabled_cp3 -inprocess -subsimp -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -no-randInp -cp3_inp_cons=50000 -cp3_iinp_cons=1000000", false);
     } else if (optionSet == "PPMAXSAT2015") {
         parseOptions("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bce-bcm -cp3_iters=2 -rlevel=2", false);
     } else if (optionSet == "CORESIZE2") {
@@ -537,23 +537,7 @@ bool Config::addPreset(const std::string& optionSet)
                      + std::string(" -alluiphack=2 -all_strength_res=5 -var-decay-e=0.7 -var-decay-b=0.7 -rMaxInc=1.5 -longConflict -cp3_sub_limit=300000 -specialIncReduceDB=1000 -rnd-freq=0 -minLBDFrozenClause=15 -enabled_cp3 -ccmin-mode=2 -no-bve_unlimited -incReduceDB=450 -hack=0 -firstReduceDB=16000 -no-ee -no-cp3_randomized -szLBDQueue=30 -no-rew -no-hte -cp3_bve_heap=0 -bve_strength -bve_red_lits=0 -bve_heap_updates=2 -no-3resolve ")
                      , false);
         /** old test configs for Blackbox */
-    } else if (optionSet == "OldRealTime.data1") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
-    } else if (optionSet == "OldRealTime.data2" || optionSet == "505-O") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=4 -actStart=2048"), false);
-    } else if (optionSet == "OldRealTime.data3") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -lbd-core-th=5 "), false);
-    } else if (optionSet == "OldRealTime.data4") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000"), false);
-    } else if (optionSet == "OldRealTime.data5" || optionSet == "505-N") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based"), false);
-    } else if (optionSet == "OldRealTime.data6" || optionSet == "505-Q") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=1000 -rinc=1.5"), false);
-    } else if (optionSet == "OldRealTime.data7") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -firstReduceDB=200000 -rtype=1 -rfirst=100 -rinc=1.5 -act-based"), false);
-    } else if (optionSet == "OldRealTime.data8") {
-        parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -inprocess -cp3_inp_cons=20000 -cp3_itechs=ue -no-dense -up"), false);
-    } else if (optionSet == "OldRealTime.data9" || optionSet == "505-M" || optionSet == "505") {
+    } else if (optionSet == "505-M" || optionSet == "505") {
         parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -keepWorst=0.01"), false);
     } else if (optionSet == "OldRealTime.data10") {
         parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -probe -no-pr-vivi -pr-bins -pr-lhbr -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
@@ -577,42 +561,28 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048 -longConflict"), false);
     } else if (optionSet == "OldRealTime.data20" || optionSet == "505-P") {
         parseOptions(std::string("-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed  -biAsserting -biAsFreq=4 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -revMin -init-act=3 -actStart=2048"), false);
-    }
-
-    /* new blackbox configurations */
-    else if (optionSet == "RealTime.data1") {
-        parseOptions(std::string("-keepWorst=0.01 -init-act=3 -rlevel=2 -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
-    } else if (optionSet == "RealTime.data2") {
-        parseOptions(std::string("-firstReduceDB=200000 -init-act=3 -rlevel=2 -rtype=1 -rfirst=1000 -rinc=1.5 -act-based -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
-    } else if (optionSet == "RealTime.data3") {
-        parseOptions(std::string("-init-act=4 -rlevel=2 -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
-    } else if (optionSet == "RealTime.data4") {
-        parseOptions(std::string("-biAsserting -biAsFreq=4 -init-act=3 -rlevel=2 -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3 -master"), false);
-    } else if (optionSet == "RealTime.data5") {
-        parseOptions(std::string("-firstReduceDB=200000 -init-act=3 -rlevel=2 -rtype=1 -rfirst=1000 -rinc=1.5 -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
-    } else if (optionSet == "RealTime.data6") {
-        parseOptions(std::string("-init-act=3 -rlevel=2 -longConflict -actStart=2048 -revMin -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
-    } else if (optionSet == "RealTime.data7") {
-        parseOptions(std::string("-init-act=3 -rlevel=2 -actStart=2048 -revMin -sUHLEsize=30 -enabled_cp3 -cp3_iters=2 -cp3_stats -bce -ee -bve -unhide -dense -fm -xor -bve_early -no-bce-bce -bce-cle -cp3_ee_level=3 -cp3_ee_it -no-cp3_fm_vMulAMO -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorLimit=100000 -no-xorKeepUsed -no-xorFindSubs -xorEncSize=3"), false);
-    } else if (optionSet == "RealTime.data8") {
-        parseOptions(std::string("-specialIncReduceDB=900 -minLBDFrozenClause=50 -minSizeMinimizingClause=15 -var-decay-e=0.99 -cla-decay=0.995 -rnd-freq=0.005 -rnd-seed=9.20756e+06 -phase-saving=1 -rtype=2 -rfirst=1000 -gc-frac=0.3 -alluiphack=2 -enabled_cp3 -cp3_randomized -up -subsimp -hte -cce -bve -bva -unhide -dense -cp3_ptechs=u3svghpwc -sls -cp3_bve_limit=2500000")
-                     + std::string(" -bve_unlimited -no-bve_gates -bve_cgrow=20 -bve_BCElim -bve_heap_updates=2 -bve_early -cp3_bva_push=1 -cp3_bva_limit=12000000 -cp3_bva_incInp=200 -no-cp3_bva_compl -cp3_cce_level=1 -cp3_hte_steps=214748 -sls-rnd-walk=500 -sls-adopt-cls -all_strength_res=3 -no-cp3_strength -cp3_str_limit=400000000 -cp3_call_inc=50 -cp3_uhdUHLE=0 -cp3_uhdNoShuffle"), false);
-    } else if (optionSet == "RealTime.data9") {
-        parseOptions(std::string("-incReduceDB=200 -minLBDFrozenClause=50 -minSizeMinimizingClause=15 -var-decay-b=0.99 -var-decay-e=0.99 -cla-decay=0.995 -rnd-freq=0.005 -rnd-seed=9.20756e+06 -rtype=2 -rfirst=1000 -gc-frac=0.3 -alluiphack=2 -laHack -hlaLevel=3 -hlaevery=8 -hlabound=1024 -enabled_cp3 -cp3_randomized -subsimp -bve -bva -unhide -3resolve -dense -cp3_ptechs=u3sghpvwc -sls -cp3_bve_limit=2500000 -no-bve_strength -no-bve_gates")
-                     + std::string(" -cp3_bve_heap=1 -bve_cgrow=-1 -bve_cgrow_t=10000 -bve_totalG -bve_early -cp3_bva_limit=12000000 -cp3_bva_incInp=20000 -no-cp3_bva_compl -cp3_bva_subOr -cp3_res3_steps=100000 -cp3_res_inpInc=2000 -sls-ksat-flips=-1 -sls-adopt-cls -all_strength_res=4 -cp3_sub_limit=400000000 -cp3_call_inc=50 -cp3_uhdIters=1 -cp3_uhdTrans -cp3_uhdUHLE=0 -cp3_uhdNoShuffle"), false);
-    } else if (optionSet == "RealTime.data10") {
-        parseOptions(std::string(" -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -actIncMode=2 -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -sUHLEsize=30 -sUHLElbd=12 -bve_early -cp3_ee_bIter=400000000 -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce"), false);
-    } else if (optionSet == "RealTime.data11") {
-        parseOptions(std::string("-K=0.7 -R=1.2 -firstReduceDB=2000 -specialIncReduceDB=1100 -incLBD -keepWorst=0.001 -biAsserting -biAsFreq=16 -var-decay-b=0.75 -var-decay-i=0.99 -var-decay-d=10000 -cla-decay=0.995 -init-act=3 -init-pol=5 -rlevel=2 -rtype=2 -rfirst=32 -rinc=3 -alluiphack=2 -varActB=2 -clsActB=1 -actIncMode=2 -rMax=1024 -rMaxInc=1.2 -laHack -laEEl -laEEp=66 -hlaLevel=1 -hlaevery=0 -hlaTop=512 -otfss -otfssMLDB=2 -learnDecP=50 -no-rer-l -rer-r=1 -rer-min-size=15 -rer-max-size=2 -rer-minLBD=30 -rer-maxLBD=15 -rer-new-act=4 -er-size=16 -er-lbd=18 -sUhdProbe=1 -sUhdPrSh=2 ")
-                     + std::string("-sUHLEsize=64 -sUHLElbd=12 -enabled_cp3 -cp3_vars=1000000 -cp3_cls=2000000 -no-cp3_limited -cp3_inp_cons=200000 -cp3_iters=2 -inc-inp -up -subsimp -rate -ee -bva -probe -dense -symm -cp3_ptechs= -cp3_itechs= -sls-flips=-1 -xor -cp3_bve_limit=50000000 -cp3_bve_heap=1 -bve_cgrow_t=10000 -bve_totalG -bve_heap_updates=2 -bve_early -cp3_bva_Vlimit=1000000 -cp3_bva_limit=12000000 -cp3_Xbva=2 -cp3_Ibva=2 -cp3_bva_Xlimit=0 -bce-limit=200000000 -no-rat-compl -rate-limit=900000000 -rate-min=5 -cp3_ee_glimit=100000 -cp3_ee_limit=2000000 -cp3_ee_bIter=400000000 ")
-                     + std::string(" -cp3_ee_it -cp3_fm_maxConstraints=0 -cp3_fm_maxA=3 -cp3_fm_grow=5 -cp3_fm_growT=1000 -no-cp3_fm_vMulAMO -cp3_fm_newAlk=1 -card_Elimit=600000 -pr-probeL=500000 -pr-keepL=0 -pr-viviP=60 -cp3_res_bin -cp3_res3_steps=2000000 -cp3_res3_ncls=1000000 -cp3_res_percent=0.005 -sls-rnd-walk=2200 -all_strength_res=4 -cp3_str_limit=3000000 -sym-min=4 -sym-ratio=0.1 -sym-iter=0 -sym-propF -sym-clLearn -sym-consT=100000 -cp3_uhdIters=8 -cp3_uhdTrans -cp3_uhdUHLE=0 -cp3_uhdProbe=3 -cp3_uhdPrSize=4 -cp3_uhdPrEE -xorLimit=120000 -xorSelect=1 -no-xorKeepUsed -no-xorFindSubs"), false);
-    } else if (optionSet == "RealTime.data12") {
-        parseOptions(std::string(" -K=0.7 -szLBDQueue=30 -szTrailQueue=4000 -specialIncReduceDB=1100 -minLBDFrozenClause=15 -minLBDMinimizingClause=9 -var-decay-b=0.99 -var-decay-e=0.99 -cla-decay=0.995 -rnd-seed=9.20756e+06 -phase-saving=0 -gc-frac=0.1 -alluiphack=2 -bve_early"), false);
-    } else if (optionSet == "RealTime.data13") {
-        parseOptions(std::string("-K=0.85 -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -firstReduceDB=8000 -incReduceDB=450 -specialIncReduceDB=2000 -lbdIgnL0 -quickRed -keepWorst=0.001 -biAsserting -biAsFreq=16 -minSizeMinimizingClause=50 -minLBDMinimizingClause=9 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-i=0.001 -var-decay-d=10000 -cla-decay=0.995")
-                     + std::string(" -rnd-freq=0.01 -init-act=3 -init-pol=5 -rlevel=1 -rtype=1 -rfirst=32 -alluiphack=2 -clsActB=2 -laHack -dyn -laEEl -laEEp=66 -hlaMax=25 -hlaLevel=1") + std::string(" -hlaevery=8 -hlabound=-1 -hlaTop=512 -sInterval=1 -otfss -otfssL -otfssMLDB=16 -learnDecP=80 -no-rer-l -rer-rn -er-size=16 -er-lbd=12 -ics -ics_window=40000 -ics_processLast=50000 -ics_keepNew -ics_relLBD=0.5 -ics_relSIZE=1.2 -sUhdProbe=1 -sUhdPrSh=8 -sUHLEsize=64 -sUHLElbd=12 -cp3_stats -bce -bve -bva -unhide -fm -bve_early -cp3_bva_limit=120000 -no-bce-bce -bce-cle -no-cp3_fm_vMulAMO -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce -cp3_res_bin -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE -xorMaxSize=9 -xorSelect=1 -no-xorKeepUsed -no-xorFindSubs"), false);
-    } else if (optionSet == "RealTime.data14") {
-        parseOptions(std::string("-R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -actIncMode=2 -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -sUHLEsize=30 -sUHLElbd=12 -enabled_cp3 -cp3_stats -bce -bve -unhide -fm -bve_early -no-bce-bce -bce-cle -cp3_ee_bIter=400000000 -no-cp3_fm_vMulAMO -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce -cp3_uhdIters=5 -cp3_uhdTrans -cp3_uhdEE"), false);
+    } else if (optionSet == "bioinfo") {
+        parseOptions(std::string("", false));  // TODO configuration line is too long, will not be used as a preset!
+    } else if (optionSet == "bits") {
+        parseOptions(std::string("-K=0.8 -szLBDQueue=248 -rem-lsf=0.333333 -rem-lsi=4.92762e-06 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-pol=4 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -rsw-iinc=1.45474 -clsActB=1 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -sscheDConflicts=978404991 -learnDecMS=30 -incResAct=50706301 -incResCnt=473655483", false));
+    } else if (optionSet == "community1") {
+        parseOptions(std::string("-K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-pol=1 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.766171 -reduce-frac=0.5 -no-updLearnAct -actStart=1024 -actDec=1.05263 -rMax=393403024", false));
+    } else if (optionSet == "community2") {
+        parseOptions(std::string("-K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -maxlearnts=432281422 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -init-act=4 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -incResPol=179061136", false));
+    } else if (optionSet == "hgen") {
+        parseOptions(std::string("-K=0.8 -R=1.15563 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -maxlearnts=358452683 -minSizeMinimizingClause=475586193 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-d=86198632 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false));
+    } else if (optionSet == "hitag2 ") {
+        parseOptions(std::string("-K=0.8 -sbr=1095963480 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false));
+    } else if (optionSet == "N-N-N") {
+        parseOptions(std::string("-K=0.8 -lpd=1030 -incReduceDB=435311378 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asc=37676665 -rem-asi=1.1 -var-decay-b=0.0882012 -var-decay-e=0.95 -cla-decay=0.999 -ccmin-mode=0 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -r-min-noBlock=792 -dynLimits -prob-step-width=456144523 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false));
+    } else if (optionSet == "nossum--sha1") {
+        parseOptions(std::string("", false));   // TODO configuration line is too long, will not be used as a preset!
+    } else if (optionSet == "planning") {
+        parseOptions(std::string(" -K=0.8 -sbr=643353723 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asc=110201572 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -cla-decay=0.999 -rnd-seed=7.18571e+07 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.831167 -reduce-frac=0.5 -actIncMode=3 -actStart=1024 -actDec=1.05263 -rMax=4717388 -rMaxInc=4.49565 -sscheInc=1.19546 -rer", false));
+    } else if (optionSet == "SGI-unsat") {
+        parseOptions(std::string(" -K=0.8 -lbdupd=0 -quickRed -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.999863 -cla-decay=0.999 -phase-saving=0 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263 -rMaxInc=14.1326", false));
+    } else if (optionSet == "synthesis-AES") {
+        parseOptions(std::string(" -K=0.8 -rem-lsf=0.333333 -rem-lsi=1.1 -rem-asi=1.1 -var-decay-b=0.95 -var-decay-e=0.95 -var-decay-i=0.000401703 -cla-decay=0.999 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -reduce-frac=0.5 -actStart=1024 -actDec=1.05263", false));
     }
 
     /* missing 505 configurations */
@@ -837,7 +807,7 @@ void Config::printOptions(FILE* pcsFile, int printLevel, int granularity)
 }
 
 inline
-void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
+void Config::printOptionsDependencies(FILE* pcsFile, int printLevel, int granularity)
 {
     sort((*optionListPtr), Option::OptionLt());
 
@@ -863,7 +833,7 @@ void Config::printOptionsDependencies(FILE* pcsFile, int printLevel)
         }
 
         // print the actual option
-        (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel);
+        (*optionListPtr)[i]->printOptionsDependencies(pcsFile, printLevel, granularity);
 
         // set prev values, so that print is nicer
         prev_cat  = (*optionListPtr)[i]->category;

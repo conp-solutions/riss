@@ -64,6 +64,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lbd_ignore_assumptions  (_cred, "lbdIgnLA",              "ignore top level literals for LBD calculation", false,                                                                  optionListPtr),
     opt_update_lbd              (_cred, "lbdupd",                "update LBD during (0=propagation,1=learning,2=never),", 1, IntRange(0, 2),                                              optionListPtr),
     opt_lbd_inc                 (_cred, "incLBD",                "allow to increment lbd of clauses dynamically", false,                                                                  optionListPtr),
+    opt_rem_inc_lbd             (_cred, "remIncLBD",             "reset delete flag if LBD of a learned clause increases", false,                                                         optionListPtr),
     opt_quick_reduce            (_cred, "quickRed",              "check only first two literals for being satisfied", false,                                                              optionListPtr),
     opt_keep_worst_ratio        (_cred, "keepWorst",             "keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true),  optionListPtr),
 
@@ -73,8 +74,8 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_learntsize_adjust_start_confl(_cred, "rem-asc",          "first number of conflicts to adjust learnt factors", 100,  IntRange(0, INT32_MAX),                                      optionListPtr),
     opt_learntsize_adjust_inc   (_cred, "rem-asi",               "learnt size increase", 1.1,  DoubleRange(0, false, HUGE_VAL, false),                                                    optionListPtr),
     opt_max_learnts             (_cred, "maxlearnts",            "number of learnt clauses to initialize geometric/static removal", 0, IntRange(0, INT32_MAX),                                                                optionListPtr),
-    
-    opt_dpll                    (_cm, "dpll",                    "Perform DPLL instead of CDCL (no restarts, no learning)", false,                                                        optionListPtr),
+
+    opt_dpll                    (_cm, "dpll",                    "Perform DPLL instead of CDCL (no restarts, no learning) #NoAutoT", false,                                                        optionListPtr),
 
     opt_biAsserting             (_cm, "biAsserting",             "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false,                                       optionListPtr),
     opt_biAssiMaxEvery          (_cm, "biAsFreq",                "The min nr. of clauses between two learned bi-asserting clauses", 4, IntRange(1, INT32_MAX),                            optionListPtr, &opt_biAsserting ),
@@ -125,28 +126,29 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_var_act_bump_mode       (_cs,    "varActB",              "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2),                 optionListPtr),
     opt_cls_act_bump_mode       (_cs,    "clsActB",              "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3),            optionListPtr),
 
-    opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences", true,                                                                             optionListPtr),
-    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse)", 1, IntRange(0, 2) ,                                                     optionListPtr),
-    opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes", false,                                                                             optionListPtr),
-    opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification)", false,                                                                         optionListPtr),
-    opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again", false,                                                                                    optionListPtr),
-    opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away", false,                                                              optionListPtr),
-    opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits", false,                                                                                     optionListPtr),
-    opt_keepLonger              ("CLAUSE SHARING", "keepLonger", "keep clauses for at least one remove round", false,                                                                     optionListPtr),
-    opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio", 0, DoubleRange(-10, true, 1, true), optionListPtr),
-    opt_useOriginal             ("CLAUSE SHARING", "independent",  "work on parsed formula (ignore global simplification, sharing currently unsound)", false,                               optionListPtr),
+    opt_receiveData             ("CLAUSE SHARING", "receive",    "receive shared clauses/equivalences #NoAutoT", true,                                                                             optionListPtr),
+    sharingType                 ("CLAUSE SHARING", "shareTime",  "when to share clause (0=new,1=prop,2=analyse) #NoAutoT", 1, IntRange(0, 2) ,                                                     optionListPtr),
+    opt_receiveEquivalences     ("CLAUSE SHARING", "recEE",      "receive equivalent literal classes #NoAutoT", false,                                                                             optionListPtr),
+    opt_refineReceivedClauses   ("CLAUSE SHARING", "refRec",     "refine received clauses (vivification) #NoAutoT", false,                                                                         optionListPtr),
+    opt_resendRefinedClauses    ("CLAUSE SHARING", "resRefRec",  "share refined clauses again #NoAutoT", false,                                                                                    optionListPtr),
+    opt_sendAll                 ("CLAUSE SHARING", "sendAll",    "ignore sharing limits and sends clause right away #NoAutoT", false,                                                              optionListPtr),
+    opt_dynLimit                ("CLAUSE SHARING", "dynLimits",  "use dynamic sharing limits #NoAutoT", false,                                                                                     optionListPtr),
+    opt_keepLonger              ("CLAUSE SHARING", "keepLonger", "keep clauses for at least one remove round #NoAutoT", false,                                                                     optionListPtr),
+    opt_recLBDfactor            ("CLAUSE SHARING", "recLBDf",    "how to construct LBD of received clause (0=0, pos: relative to size, neg: relative to avg LBD/size ratio #NoAutoT", 0, DoubleRange(-10, true, 1, true), optionListPtr),
+    opt_useOriginal             ("CLAUSE SHARING", "independent",  "work on parsed formula (ignore global simplification, sharing currently unsound) #NoAutoT", false,                             optionListPtr),
 
-    opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied", false,                                           optionListPtr),
+    opt_pq_order            ("Contrasat",   "pq-order",          "Use priority queue to decide the order in which literals are implied  #NoAutoT", false,                                           optionListPtr),
 
     opt_probing_step_width  ("MiPiSAT",     "prob-step-width",   "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX),              optionListPtr),
     opt_probing_limit       ("MiPiSAT",     "prob-limit",        "Limit how many variables with highest activity should be probed", 32, IntRange(1, INT32_MAX),                           optionListPtr),
 
     opt_cir_bump            ("cir-minisat", "cir-bump",          "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX),                         optionListPtr),
 
-    opt_act_based           ("999HACK",     "act-based",         "use activity for learned clauses", false,                                                                               optionListPtr),
-    opt_lbd_core_thresh     ("999HACK",     "lbd-core-th",       "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX),                                 optionListPtr),
-    opt_l_red_frac          ("999HACK",     "reduce-frac",       "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, 1, false),                   optionListPtr),
-    opt_keep_permanent_size ("999HACK",     "size-core",         "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX),                                optionListPtr),
+    opt_act_based           ("999HACK",     "act-based",          "use activity for learned clauses", false,                                                                               optionListPtr),
+    opt_avg_size_lbd_ratio  ("999HACK",     "act-lbd-size-ratio", "still use LBD for removal, if stddevLBD * X < stddevSize (if X is negative, invert comparison)", 0, DoubleRange(-10, true, 10, true), optionListPtr, &opt_act_based),
+    opt_lbd_core_thresh     ("999HACK",     "lbd-core-th",        "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX),                                 optionListPtr),
+    opt_l_red_frac          ("999HACK",     "reduce-frac",        "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, 1, false),                   optionListPtr),
+    opt_keep_permanent_size ("999HACK",     "size-core",          "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX),                                optionListPtr),
 
     opt_updateLearnAct      (_cm,           "updLearnAct",       "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true,                                             optionListPtr),
 
@@ -178,7 +180,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     sscheduleGrowFactor     ("SCHEDULE", "sscheInc",        "increment for conflicts per schedule round", 1.3, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &search_schedule),
 
     #ifndef NDEBUG
-    localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA", false,                                                    optionListPtr),
+    localLookaheadDebug("CORE -- LOCAL LOOK AHEAD", "laHackOutput", "output info about LA #NoAutoT", false,                                                    optionListPtr),
     #endif
     localLookAhead     ("CORE -- LOCAL LOOK AHEAD", "laHack",       "enable lookahead on level 0", false,                                             optionListPtr),
     tb                 ("CORE -- LOCAL LOOK AHEAD", "tabu",         "do not perform LA, if all considered LA variables are as before", true,          optionListPtr, &localLookAhead),
@@ -195,7 +197,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_laBound        ("CORE -- LOCAL LOOK AHEAD", "hlabound",     "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX),                      optionListPtr, &localLookAhead),
     opt_laTopUnit      ("CORE -- LOCAL LOOK AHEAD", "hlaTop",       "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr, &localLookAhead),
 
-    opt_hpushUnit       (_misc, "delay-units", "does not propagate unit clauses until solving is initialized", false,        optionListPtr),
+    opt_hpushUnit       (_misc, "delay-units", "does not propagate unit clauses until solving is initialized  #NoAutoT", false,        optionListPtr),
     opt_simplifyInterval(_misc, "sInterval",  "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr),
 
  opt_otfss ("SEARCH -- OTFSS", "otfss", "perform otfss during conflict analysis", false, optionListPtr ),
@@ -247,6 +249,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_use_reverse_minimization(_cm, "revMin",     "minimize learned clause by using reverse vivification", false,                              optionListPtr),
     reverse_minimizing_size     (_cm, "revMinSize", "max clause size for revMin" , 12, IntRange(2, INT32_MAX),                                   optionListPtr, &opt_use_reverse_minimization),
     lbLBDreverseClause          (_cm, "revMinLBD",  "max clause LBD for revMin", 6, IntRange(1, INT32_MAX),                                      optionListPtr, &opt_use_reverse_minimization),
+    opt_minimize_max_size       (_cm, "minmaxsize", "maximal learned clause size to apply minimization", 0, IntRange(0, INT32_MAX),              optionListPtr),
 
     // USING BIG information during search
     opt_uhdProbe                (_cm, "sUhdProbe",  "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0, 3), optionListPtr),
@@ -262,18 +265,18 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                             optionListPtr),
     opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                  optionListPtr),
 
-    opt_usePPpp(_misc, "usePP",         "use preprocessor for preprocessing", true,                                                                                   optionListPtr),
-    opt_usePPip(_misc, "useIP",         "use preprocessor for inprocessing", true,                                                                                    optionListPtr),
+    opt_usePPpp(_misc, "usePP",         "use preprocessor for preprocessing #NoAutoT", true,                                                                                   optionListPtr),
+    opt_usePPip(_misc, "useIP",         "use preprocessor for inprocessing #NoAutoT", true,                                                                                    optionListPtr),
 
     //
     // for incremental solving
     //
-    resetActEvery       ("CORE -- INCREMENTAL", "incResAct", "when incrementally called, reset activity every X calls (0=off)",                    0, IntRange(0, INT32_MAX) , optionListPtr),
-    resetPolEvery       ("CORE -- INCREMENTAL", "incResPol", "when incrementally called, reset polarities every X calls (0=off)",                  0, IntRange(0, INT32_MAX) , optionListPtr),
-    intenseCleaningEvery("CORE -- INCREMENTAL", "incClean",  "when incrementally called, extra clean learnt data base every X calls (0=off)",      0, IntRange(0, INT32_MAX) , optionListPtr),
-    incKeepSize         ("CORE -- INCREMENTAL", "incClSize", "keep size for extra cleaning (any higher is dropped)",                               5, IntRange(1, INT32_MAX) , optionListPtr),
-    incKeepLBD          ("CORE -- INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)",                               10, IntRange(1, INT32_MAX) , optionListPtr),
-    opt_reset_counters  ("CORE -- INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)",                                  100000, IntRange(0, INT32_MAX) , optionListPtr)
+    resetActEvery       ("CORE -- INCREMENTAL", "incResAct", "when incrementally called, reset activity every X calls (0=off)  #NoAutoT",                    0, IntRange(0, INT32_MAX) , optionListPtr),
+    resetPolEvery       ("CORE -- INCREMENTAL", "incResPol", "when incrementally called, reset polarities every X calls (0=off)  #NoAutoT",                  0, IntRange(0, INT32_MAX) , optionListPtr),
+    intenseCleaningEvery("CORE -- INCREMENTAL", "incClean",  "when incrementally called, extra clean learnt data base every X calls (0=off)  #NoAutoT",      0, IntRange(0, INT32_MAX) , optionListPtr),
+    incKeepSize         ("CORE -- INCREMENTAL", "incClSize", "keep size for extra cleaning (any higher is dropped)  #NoAutoT",                               5, IntRange(1, INT32_MAX) , optionListPtr),
+    incKeepLBD          ("CORE -- INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)  #NoAutoT",                               10, IntRange(1, INT32_MAX) , optionListPtr),
+    opt_reset_counters  ("CORE -- INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)  #NoAutoT",                                  100000, IntRange(0, INT32_MAX) , optionListPtr)
 {
     if (defaultPreset.size() != 0) { setPreset(defaultPreset); }    // set configuration options immediately
 }

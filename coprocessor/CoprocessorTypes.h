@@ -231,6 +231,9 @@ class CoprocessorData
     // sort
     void sortClauseLists(bool alsoLearnts = false);
 
+    /** add all formulas back to the solver */
+    void reSetupSolver();
+
 // delete timers
     /** gives back the current times, increases for the next technique */
     uint32_t getMyModTimer();
@@ -280,6 +283,20 @@ class CoprocessorData
     /** careful, should not be altered other than be the Dense object */
     std::vector<Riss::Lit>& getUndo() { return undo; }
 
+
+    /** print formula (DIMACs), and dense, if another filename is given */
+    void outputFormula(const char *file, const char *varMap = 0);
+
+  private:
+    /** write formula into file of file descriptor
+     * @param clausesOnly: will not print the cnf header (e.g. to print something before)
+     */
+    void printFormula(FILE* fd, bool clausesOnly = false);
+    inline void printClause(FILE * fd, Riss::CRef cr);
+    inline void printLit(FILE * fd, int l);
+
+  public:
+
     // for DRUP / DRAT proofs
     #ifdef DRATPROOF
 
@@ -293,6 +310,14 @@ class CoprocessorData
 
     /** return whether the solver outputs the drup proof! */
     bool outputsProof() const { return solver->outputsProof(); }
+    
+    template <class T>
+    /** check whether a clause would be addable to the proof */
+    bool checkClauseDRAT( const T& clause );
+    
+    template <class T>
+    /** check whether a clause is in the current proof */
+    bool proofHasClause( const T& clause );
 
     #else // no DRAT proofs
     template <class T>
@@ -300,6 +325,8 @@ class CoprocessorData
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     bool outputsProof() const { return false; }
+    template <class T>
+    bool checkClauseDRAT( const T& clause ) { return true; }
     #endif
 
     /// handling equivalent literals, not a constant list to be able to share it in priss (will not alter the list)
@@ -585,7 +612,7 @@ inline CoprocessorData::CoprocessorData(Riss::ClauseAllocator& _ca, Riss::Solver
     , currentlyInprocessing(false)
     , debugging(_debug)
     , lastCompressUndoLits(-1)
-    //, decompressedUndoLits(-1)
+      //, decompressedUndoLits(-1)
     , log(_log)
 {
 }
@@ -643,6 +670,7 @@ inline void CoprocessorData::resetPPhead()
 
 inline Riss::Var CoprocessorData::nextFreshVariable(char type)
 {
+    assert( solver->eqInfo.replacedBy.size() == solver->nVars() && "information for all variables has to be available" );
     // be careful here
     Riss::Var nextVar = solver->newVar(true, true, type);
     numberOfVars = solver->nVars();
@@ -653,7 +681,7 @@ inline Riss::Var CoprocessorData::nextFreshVariable(char type)
     occs.resize(2 * nVars());
     // std::cerr << "c resize occs to " << occs.size() << std::endl;
     lit_occurrence_count.resize(2 * nVars());
-
+    
     // std::cerr << "c new fresh variable: " << nextVar+1 << std::endl;
     return nextVar;
 }
@@ -679,17 +707,15 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
     }
     if (final == true) {
 
-        // std::cerr << "c compress variables to " << to+1 << std::endl;
-//     solver->assigns.shrink( solver->assigns.size() - to - 1);
+//         std::cerr << "c compress variables to " << to+1 << std::endl;
         solver->vardata.shrink_(solver->vardata.size() - to - 1);
         solver->activity.shrink_(solver->activity.size() - to - 1);
-//    solver->seen.shrink( solver->seen.size() - to - 1);
         solver->varFlags.shrink_(solver->varFlags.size() - to - 1);
 
         solver->rebuildOrderHeap();
 
-	// resize the renaming vector
-	solver->eqInfo.replacedBy.shrink_( solver->eqInfo.replacedBy.size() - solver->nVars() );
+        // resize the renaming vector
+        solver->eqInfo.replacedBy.shrink_(solver->eqInfo.replacedBy.size() - solver->nVars());
 	
         // set cp3 variable representation!
         numberOfVars = solver->nVars();
@@ -901,6 +927,143 @@ inline void CoprocessorData::cleanOccurrences()
         list(Riss::mkLit(v, true)).clear();
     }
     lit_occurrence_count.assign(0, nVars() * 2);
+}
+
+inline
+void CoprocessorData::reSetupSolver()
+{
+    assert(solver->decisionLevel() == 0 && "can re-setup solver only if it is at decision level 0!");
+    int kept_clauses = 0;
+
+    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
+    if (solver->trail_lim.size() > 0)
+        for (int i = 0 ; i < solver->trail_lim[0]; ++ i)
+            if (!solver->reason(var(solver->trail[i])).isBinaryClause() && solver->reason(var(solver->trail[i])).getReasonC() != CRef_Undef)
+                if (ca[ solver->reason(var(solver->trail[i])).getReasonC() ].can_be_deleted()) {
+                    solver->vardata[ var(solver->trail[i]) ].reason.setReason(CRef_Undef);
+                }
+
+    // give back into solver
+    for (int i = 0; i < solver->clauses.size(); ++i) {
+        const CRef cr = solver->clauses[i];
+        Clause& c = ca[cr];
+        assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
+        if (c.can_be_deleted()) {
+            c.mark(1);
+            ca.free(cr);
+        } else {
+            assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
+            if (c.size() > 1) {
+                if (solver->qhead == 0) {    // do not change the clause, if nothing has been propagated yet
+                    solver->attachClause(cr);
+                    solver->clauses[kept_clauses++] = cr; // add original clauss back!
+                    continue;
+                }
+
+                // do not watch literals that are false!
+                int j = 1;
+                for (int k = 0 ; k < 2; ++ k) {   // ensure that the first two literals are undefined!
+                    if (solver->value(c[k]) == l_False) {
+                        for (; j < c.size() ; ++j)
+                            if (solver->value(c[j]) != l_False)
+                            { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+                    }
+                }
+
+                // reduct of clause is empty, or unit
+                if (solver->value(c[0]) == l_False) { setFailed(); return; }
+                else if (solver->value(c[1]) == l_False) {
+                    if (enqueue(c[0]) == l_False) {
+                        addCommentToProof("learnt unit during resetup solver");
+                        addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                    } else {
+                        c.set_delete(true);
+                    }
+                    if (solver->propagate() != CRef_Undef) { setFailed(); return; }
+                    c.set_delete(true);
+                } else {
+                    solver->attachClause(cr);
+                    solver->clauses[kept_clauses++] = cr; // add original clauss back!
+                }
+            } else {
+                if (solver->value(c[0]) == l_Undef) {
+                    if (enqueue(c[0]) == l_False) {
+                        addCommentToProof("learnt unit during resetup solver");
+                        addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                        return;
+                    } else if (solver->value(c[0]) == l_False) {
+                        // assert( false && "This UNSAT case should be recognized before re-setup" );
+                        setFailed();
+                    }
+                }
+                c.set_delete(true);
+            }
+        }
+    }
+    int c_old = solver->clauses.size();
+    solver->clauses.shrink_(solver->clauses.size() - kept_clauses);
+
+    int learntToClause = 0;
+    kept_clauses = 0;
+    for (int i = 0; i < solver->learnts.size(); ++i) {
+        const CRef cr = solver->learnts[i];
+        Clause& c = ca[cr];
+        assert(c.size() != 0 && "empty clauses should be recognized before re-setup");
+        if (c.can_be_deleted()) {
+            c.mark(1);
+            ca.free(cr);
+            continue;
+        }
+        assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
+        if (c.learnt()) {
+            if (c.size() > 1) {
+                solver->learnts[kept_clauses++] = solver->learnts[i];
+            }
+        } else { // move subsuming clause from learnts to clauses
+            c.set_has_extra(true);
+            c.calcAbstraction();
+            learntToClause ++;
+            if (c.size() > 1) {
+                solver->clauses.push(cr);
+            }
+        }
+        assert(c.mark() == 0 && "only clauses without a mark should be passed back to the solver!");
+        if (c.size() > 1) {
+            // do not watch literals that are false!
+            int j = 1;
+            for (int k = 0 ; k < 2; ++ k) {   // ensure that the first two literals are undefined!
+                if (solver->value(c[k]) == l_False) {
+                    for (; j < c.size() ; ++j)
+                        if (solver->value(c[j]) != l_False)
+                        { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+                }
+            }
+            // assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+
+            // reduct of clause is empty, or unit
+            if (solver->value(c[0]) == l_False) { setFailed(); return; }
+            else if (solver->value(c[1]) == l_False) {
+                addCommentToProof("learnt unit during resetup solver");
+                addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                if (enqueue(c[0]) == l_False) {
+                    return;
+                }
+                if (solver->propagate() != CRef_Undef) { setFailed(); return; }
+                c.set_delete(true);
+            } else { solver->attachClause(cr); }
+        } else if (solver->value(c[0]) == l_Undef) {
+            if (enqueue(c[0]) == l_False) {
+                addCommentToProof("learnt unit during resetup solver");
+                addUnitToProof(c[0]);   // tell drup about this unit (whereever it came from)
+                return;
+            }
+        } else if (solver->value(c[0]) == l_False) {
+            // assert( false && "This UNSAT case should be recognized before re-setup" );
+            setFailed();
+        }
+
+    }
+    solver->learnts.shrink_(solver->learnts.size() - kept_clauses);
 }
 
 
@@ -1323,8 +1486,12 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
         Riss::Var v = var(solver->trail[i]);
         // FIXME TODO: there needs to be a better workaround for this!!
         if (solver->level(v) == 0) { solver->vardata[v].reason = Riss::CRef_Undef; }   // take care of reason clauses for literals at top-level
-        else if (solver->reason(v) != Riss::CRef_Undef && (ca[solver->reason(v)].reloced() || solver->locked(ca[solver->reason(v)]))) {
-            ca.reloc(solver->vardata[v].reason, to);
+        else if (
+            ! solver->reason(v).isBinaryClause()
+            && solver->reason(v).getReasonC() != Riss::CRef_Undef
+            && (ca[solver->reason(v).getReasonC() ].reloced() || solver->locked(ca[solver->reason(v).getReasonC() ]))
+        ) {
+            solver->vardata[v].reason.setReason(ca.relocC(solver->vardata[v].reason.getReasonC() , to));   // update reason
         }
     }
 
@@ -1599,6 +1766,19 @@ inline void CoprocessorData::addToProof(const T& clause, bool deleteFromProof, c
     solver->addToProof(clause, deleteFromProof, remLit);
 }
 
+template <class T>
+inline bool CoprocessorData::checkClauseDRAT(const T& clause)
+{
+  return solver->checkClauseDRAT(clause);
+}
+
+template <class T>
+inline bool CoprocessorData::proofHasClause(const T& clause)
+{
+  return solver->proofHasClause(clause);
+}
+
+
 inline void CoprocessorData::addUnitToProof(const Riss::Lit& l, bool deleteFromProof)
 {
     solver->addUnitToProof(l, deleteFromProof);
@@ -1763,6 +1943,7 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
             sizes[ Riss::toInt(~c[0])  ] ++;
             sizes[ Riss::toInt(~c[1])  ] ++;
+	    assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             sum += 2;
         }
     }
@@ -1784,6 +1965,7 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
+	    assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
             (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;
             sizes[Riss::toInt(~l0)] ++;
@@ -1804,6 +1986,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
     for (int i = 0 ; i < list.size(); ++i) {
         const Riss::Clause& c = ca[list[i]];
         if (c.size() != 2 || c.can_be_deleted()) { continue; }
+        assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
         sizes[ Riss::toInt(~c[0])  ] ++;
         sizes[ Riss::toInt(~c[1])  ] ++;
         sum += 2;
@@ -1826,6 +2009,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
     for (int i = 0 ; i < list.size(); ++i) {
         const Riss::Clause& c = ca[list[i]];
         if (c.size() != 2 || c.can_be_deleted()) { continue; }
+        assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
         const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
         (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
         (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;
@@ -1847,6 +2031,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
         for (int i = 0 ; i < list.size(); ++i) {
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
+            assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             sizes[ Riss::toInt(~c[0])  ] ++;
             sizes[ Riss::toInt(~c[1])  ] ++;
             sum += 2;
@@ -1872,6 +2057,7 @@ inline void BIG::recreate(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< 
         for (int i = 0 ; i < list.size(); ++i) {
             const Riss::Clause& c = ca[list[i]];
             if (c.size() != 2 || c.can_be_deleted()) { continue; }
+            assert( var(c[0]) < nVars && var(c[1]) < nVars && "only allow variables that are present" );
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
             (big[ Riss::toInt(~l0) ])[ sizes[Riss::toInt(~l0)] ] = l1;
             (big[ Riss::toInt(~l1) ])[ sizes[Riss::toInt(~l1)] ] = l0;

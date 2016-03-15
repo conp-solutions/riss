@@ -1,0 +1,109 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{xspace}
+\usepackage{hyperref}
+\newcommand{\todo}[1]{$\langle\!\langle$\marginpar[\raggedleft$\triangleright\triangleright\triangleright$]{$\triangleleft\triangleleft\triangleleft$}\textsf{#1}$\rangle\!\rangle$}
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+
+\usepackage{color}
+
+\begin{document}
+	
+% paper title
+\title{\textsc{CLaS} -- A Parallel SAT Solver that Combines CDCL, Look-Ahead and SLS Search Strategies}
+
+% author names and affiliations
+% use a multiple column layout for up to three different
+% affiliations
+
+\author{
+\IEEEauthorblockN{Adrian Balint}
+\IEEEauthorblockA{Universit{\"a}t Ulm, Germany}
+\and
+ \IEEEauthorblockN{Davide Lanti}
+ \IEEEauthorblockA{Free University of Bolzano, Italy}
+ \and
+ \IEEEauthorblockN{Ahmed Irfan}
+ \IEEEauthorblockA{ Fondazione Bruno Kessler, Italy
+}
+\IEEEauthorblockA{University of Trento, Italy}
+ \and
+\IEEEauthorblockN{Norbert Manthey}
+\IEEEauthorblockA{TU Dresden, Germany}
+}
+
+% conference papers do not typically use \thanks and this command
+% is locked out in conference mode. If really needed, such as for
+% the acknowledgment of grants, issue a \IEEEoverridecommandlockouts
+% after \documentclass
+
+% use for special paper notices
+%\IEEEspecialpapernotice{(Invited Paper)}
+
+\def\cp{\textsc{Coprocessor}\xspace}
+\def\glucose{\textsc{Glucose~2.2}\xspace}
+\def\minisat{\textsc{Minisat~2.2}\xspace}
+\def\riss{\textsc{Riss}\xspace}
+\def\pcasso{\textsc{PCasso}\xspace}
+\def\sparrow{\textsc{Sparrow}\xspace}
+\def\scp{\textsc{Sparrow+CP3}\xspace}
+\def\str{\textsc{SparrowToRiss}\xspace}
+\def\clas{\textsc{CLaS}\xspace}
+
+\definecolor{midgrey}{rgb}{0.5,0.5,0.5}
+\definecolor{darkred}{rgb}{0.7,0.1,0.1}
+\newcommand{\nnote}[1]{$[$\textcolor{darkred}{norbert}:~~\emph{\textcolor{midgrey}{#1}}$]$}
+
+\maketitle
+
+% the abstract is optional
+\begin{abstract}
+\clas is a parallel solver that executes the SLS solver \textsc{Sparrow} in parallel to the parallel search space partitioning SAT solver \textsc{Pcasso}. 
+Since \textsc{Pcasso} runs a CDCL solver in parallel to its search space partitioning, this solver represents a portfolio of an SLS solver, a CDCL solver, and a look-ahead based search space partitioning solver. 
+Yet, no information is exchanged between \textsc{Sparrow} and \textsc{Pcasso}. 
+\end{abstract}
+
+\section{Introduction}
+
+Portfolio SAT solvers are a robust way to solve the diverse formulas that arise from the huge range of applications of SAT, and the crafted instances. 
+In \textsc{CLaS}, three solving approaches are combined: CDCL, look ahead and SLS. 
+The solver \scp~\cite{SparrowToRiss} showed a good performance on hard combinatorial benchmarks in the SAT Competition 2013, and \pcasso~\cite{Pcasso2014} is a very robust parallel search space partitioning solver. 
+Hence, we combine the two solving approaches in parallel. 
+
+\section{Main Techniques}
+
+\scp uses the same configuration as the submitted sequential solver~\cite{SparrowCP2014}. 
+Before \sparrow is executed, \cp is used to simplify the formula. 
+One core of the CPU is reserved for \scp.
+
+The remaining 11 cores are used for \textsc{Pcasso}, which also uses \cp to simplify the input formula. 
+The simplification techniques are the same as for the SAT solver \riss as submitted to the sequential tracks~\cite{riss427}. 
+
+
+\section{Implementation details}
+
+The two solvers are executed in parallel by a Python script. 
+\sparrow is implemented in C.
+%
+\textsc{Pcasso} and \textsc{Coprocessor} are implemented in \CC. 
+%
+All solvers have been compiled with the GCC \CC compiler as  64\,bit binaries.
+
+\newpage
+
+\section{Availability}
+
+The source code of \textsc{CLaS} is available at \url{tools.computational-logic.org} for research purposes. 
+
+\section*{Acknowledgment}
+The authors would like to thank Armin Biere for many helpful discussions on formula simplification and the BWGrid \cite{bwgrid} project for providing computational resources to tune \cp. 
+This project was partially funded by the Deutsche Forschungsgemeinschaft (DFG) under the number SCHO 302/9-1.
+Finally, the authors would like to thank the ZIH of TU Dresden for providing the computational resources to develop, test and evaluate \clas and \pcasso.
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{local}
+
+\end{document}
+
+
