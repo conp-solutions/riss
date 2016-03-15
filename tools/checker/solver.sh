@@ -18,7 +18,8 @@
 #param="-config= -biAsserting -enabled_cp3 -up -dense"
 #param="-enabled_cp3 -cp3_inp_cons=2 -inprocess -lbd-core-th=4 -phase-bit=1 -rer-g -rer-ga=666666.6667 -config="
 #param="-lpd=4 -var-decay-b=0.9999 -rnd-freq=0.3333 -rnd-seed=6.10988e+07 -init-act=4 -rsw-int=4 -enabled_cp3 -inprocess -cp3_inp_cons=100 -cp3_iters=0 -bce -bva -dense -cp3_Abva -bce-bin -config= -checkModel -quiet "
-param="-biAsserting -config= "
+#param="-biAsserting -config= "
+param="-quiet -checkModel -config= -proof-oft-check=1 -enabled_cp3 -dense"
 
 #
 # select between printing a proof and not printing a proof

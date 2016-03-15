@@ -954,9 +954,10 @@ class Solver
     #ifdef DRATPROOF
     // DRUP proof
     bool outputsProof() const ;
+    vec<Lit> exportedClause; // temporary storage to write literals to proof
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
-    void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
+    void addToProof(const T& clause, bool deleteFromProof = false, Lit remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
+    void addUnitToProof(Lit l, bool deleteFromProof = false);   // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
     template <class T>
     bool checkClauseDRAT(const T& clause );
@@ -968,8 +969,8 @@ class Solver
     #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
-    void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
+    void addToProof(const T& clause, bool deleteFromProof = false, Lit remLit = lit_Undef) const {};
+    void addUnitToProof(Lit l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     template <class T>
     bool checkClauseDRAT(const T& clause ) { return true; }
@@ -2146,7 +2147,15 @@ inline bool Solver::checkClauseDRAT(const T& clause)
 {
     // if we use the online checker, check the clauses!
     if (onlineDratChecker != 0) {
-       return onlineDratChecker->addClause(clause, lit_Undef, true);
+      
+      const bool useExport = compression.isAvailable(); // indicate which data to be used
+      if( useExport ) {
+	exportedClause.growTo( clause.size() );
+	exportedClause.clear();
+	for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+      }
+      
+      return useExport ? onlineDratChecker->addClause(exportedClause, lit_Undef, true) : onlineDratChecker->addClause(clause, lit_Undef, true);
     } else return true;
 }
 
@@ -2154,29 +2163,55 @@ template <class T>
 inline bool Solver::proofHasClause(const T& clause)
 {
   if( onlineDratChecker != 0 ) {
-    return onlineDratChecker->hasClause(clause);
+    
+    const bool useExport = compression.isAvailable(); // indicate which data to be used
+    if( useExport ) {
+      exportedClause.growTo( clause.size() );
+      exportedClause.clear();
+      for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+    }
+    
+    return useExport ? onlineDratChecker->hasClause(exportedClause) : onlineDratChecker->hasClause(clause);
   } else return true;
 }
 
 
 template <class T>
-inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
+inline void Solver::addToProof(const T& clause, const bool deleteFromProof, Lit remLit)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
+    const bool useExport = compression.isAvailable(); // indicate which data to be used
+    if( useExport ) {
+      exportedClause.growTo( clause.size() );
+      exportedClause.clear();
+      for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+      remLit = compression.exportLit( remLit );
+    }
+    
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
-        if (deleteFromProof) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
-        else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false); }  // first version: work on global proof only!
+        if (deleteFromProof) { 
+	  if( useExport ) communication->getPM()->delFromProof( exportedClause, remLit, communication->getID(), false);  // first version: work on global proof only! TODO: change to local!
+	  else communication->getPM()->delFromProof(clause, remLit, communication->getID(), false);   // first version: work on global proof only! TODO: change to local!
+	}
+        else {
+	  if( useExport ) communication->getPM()->addToProof(exportedClause, remLit, communication->getID(), false);  // first version: work on global proof only!
+	  else communication->getPM()->addToProof(clause, remLit, communication->getID(), false);  // first version: work on global proof only!
+	}
         return;
     }
 
     // check before actually using the clause
     if (onlineDratChecker != 0) {
-        if (deleteFromProof) { onlineDratChecker->removeClause(clause, remLit); }
+        if (deleteFromProof) {
+	  if( useExport ) onlineDratChecker->removeClause(exportedClause , remLit);
+	  else onlineDratChecker->removeClause(clause, remLit); 
+	}
         else {
-            if( !onlineDratChecker->addClause(clause, remLit) ) {
+	    bool addedClause = (useExport ? onlineDratChecker->addClause( exportedClause, remLit) : onlineDratChecker->addClause( clause, remLit) );
+            if( ! addedClause  ) {
 	      cerr << "c WARNING: detected non DRAT clause, abort!" << endl;
 	      assert( false && "added clauses should be DRAT" );
 	      exit( 134 );
@@ -2186,28 +2221,45 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, cons
     // actually print the clause into the file
     if (deleteFromProof) { fprintf(proofFile, "d "); }
     if (remLit != lit_Undef) { fprintf(proofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }  // print this literal first (e.g. for DRAT clauses)
-    for (int i = 0; i < clause.size(); i++) {
-        if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
-        fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+    const int csize = useExport ? exportedClause.size() : clause.size();
+    if (useExport ) {
+      for (int i = 0; i < csize; i++) {
+	  if (exportedClause[i] == lit_Undef || exportedClause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
+	  fprintf(proofFile, "%i ", (var(exportedClause[i]) + 1) * (-2 * sign(exportedClause[i]) + 1));
+      }
+    } else {
+      for (int i = 0; i < csize; i++) {
+	  if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
+	  fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+      }
     }
     fprintf(proofFile, "0\n");
 
     if (config.opt_verboseProof == 2) {
         std::cerr << "c [PROOF] ";
         if (deleteFromProof) { std::cerr << " d "; }
-        for (int i = 0; i < clause.size(); i++) {
-            if (clause[i] == lit_Undef) { continue; }
-            std::cerr << clause[i] << " ";
-        }
+        if (useExport) {
+	  for (int i = 0; i < csize; i++) {
+	      if (exportedClause[i] == lit_Undef) { continue; }
+	      std::cerr << exportedClause[i] << " ";
+	  }
+	} else {
+	  for (int i = 0; i < csize; i++) {
+	      if (clause[i] == lit_Undef) { continue; }
+	      std::cerr << clause[i] << " ";
+	  }
+	}
         if (deleteFromProof && remLit != lit_Undef) { std::cerr << remLit; }
         std::cerr << " 0" << std::endl;
     }
 }
 
-inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
+inline void Solver::addUnitToProof(Lit l, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
+    if( compression.isAvailable() ) l = compression.exportLit(l);
+    
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
         if (deleteFromProof) { communication->getPM()->delFromProof(l, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addUnitToProof(l, communication->getID(), false); }  // first version: work on global proof only!

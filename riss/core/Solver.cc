@@ -1580,7 +1580,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             if (i->isBinary()) {   // handle binary clauses
                 const Lit& imp = i->blocker();
                 assert(ca[ i->cref() ].size() == 2 && "in this list there can only be binary clauses");
-                DOUT(if (config.opt_learn_debug) cerr << "c checked binary clause " << ca[i->cref() ] << " with implied literal having value " << toInt(value(imp)) << endl;);
+                DOUT(if (config.opt_learn_debug) cerr << "c checked binary clause " << ca[i->cref() ] << " with implied literal having value " << (value(imp)) << endl;);
                 if (value(imp) == l_False) {
                     if (!config.opt_long_conflict) {  // stop on the first conflict we see?
                         confl = i->cref();              // store the conflict
@@ -4721,7 +4721,7 @@ bool Solver::interleavedClauseStrengthening()
 	  } 
 	}
         for (; j < ca[learnts[i]].size(); ++ j) {    // check each literal and enqueue it negated -- do not use the reference, because lhbr in propagate can make it invalid
-            DOUT(if (config.opt_ics_debug) cerr << "c check lit " << j << "/" << c.size() << ": " << ca[learnts[i]][j] << " with value " << toInt(value(ca[learnts[i]][j])) << endl;);
+            DOUT(if (config.opt_ics_debug) cerr << "c check lit " << j << "/" << c.size() << ": " << ca[learnts[i]][j] << " with value " << (value(ca[learnts[i]][j])) << endl;);
             if (value(ca[learnts[i]][j]) == l_True) {    // just need to keep all previous and this literal
                 DOUT(if (config.opt_ics_debug) {
                 cerr << "c interrupt because of sat.lit, current trail " << endl;
@@ -4756,7 +4756,12 @@ bool Solver::interleavedClauseStrengthening()
                         #endif
                         if (value(learnt_clause[0]) == l_Undef) {  // propagate unit clause!
                             uncheckedEnqueue(learnt_clause[0]);
-                            if (propagate() != CRef_Undef) {
+			    int proofTopLevels = trail.size();
+			    bool propagationFailed = propagate() != CRef_Undef;
+			    if( outputsProof() ) {
+			      for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }		  
+			    }
+			    if (propagationFailed) {
                                 DOUT(if (config.opt_ics_debug) cerr << "c ICS cannot propagate the unit of a learned unit clause " << learnt_clause[0] << endl;);
                                 return false;
                             }
@@ -4794,6 +4799,7 @@ bool Solver::interleavedClauseStrengthening()
         if (droppedLit || k < j) {  // actually, something has been done
             icsShrinks ++; icsShrinkedLits += (d.size() - k);  // stats -- store the success of shrinking
             d.shrink(d.size() - k);
+	    DOUT(if (config.opt_ics_debug) cerr << "c ICS changed clause to " << d << " from " << oc << endl;);
             addCommentToProof("shrinked by ICS");
             addToProof(d); addToProof(oc, true); // add shorter clause, remove longer clause
         }
@@ -4810,13 +4816,15 @@ bool Solver::interleavedClauseStrengthening()
             if (value(d[0]) == l_Undef) {
                 uncheckedEnqueue(d[0]);
 		int proofTopLevels = trail.size();
-                if (propagate() != CRef_Undef) {
+		bool propagationFailed = propagate() != CRef_Undef;
+                if( outputsProof() ) {
+		  DOUT( cerr << "add all literals from the top level to the proof as well: " << proofTopLevels << " to " << trail.size() << endl; );
+		  for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }		  
+		}
+		if (propagationFailed) {
                     DOUT(if (config.opt_ics_debug) cerr << "c ICS return false, because unit " << d[0] << " cannot be propagated" << endl;);
                     return false;
                 }
-                if( outputsProof() ) {
-		  for (; proofTopLevels < trail.size(); ++ proofTopLevels) { addUnitToProof(trail[ proofTopLevels ]); }		  
-		}
             } else if (value(d[0]) == l_False) {
                 DOUT(if (config.opt_ics_debug) cerr << "c ICS learned falsified unit " << d[0] << endl;);
                 return false; // should not happen!
@@ -4865,6 +4873,8 @@ bool Solver::interleavedClauseStrengthening()
             break; // interrupt re-building the trail
         }
     }
+
+
     
     for (int i = 0 ; i < backupSolverState.size(); ++i) { varFlags[i].polarity = backupSolverState[i].polarity; }
     DOUT(if (config.opt_ics_debug) {
