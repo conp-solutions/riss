@@ -4,6 +4,7 @@ rm -f /tmp/verify_$$.cnf
 
 timeout 30 $1 $2 > /tmp/verify_$$.cnf 2> /tmp/verify2_$$.cnf;
 status=$?
+sleep 0.01 
 
 #echo "finish with state= $status" >> tmp.dat
 
@@ -25,7 +26,10 @@ then
 		rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 		exit 10
 	else
-		cat /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
+		echo "solver out:"
+		cat /tmp/verify_$$.cnf
+		echo "solver err:"
+		cat /tmp/verify2_$$.cnf
 		rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 		exit 15
 	fi

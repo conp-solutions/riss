@@ -193,10 +193,11 @@ communication->nrSendCattempt = (!multiUnits && !equivalences) ? communication->
     for (int i = 0 ; i < toSendSize; ++ i) { // repeat until allowed, stay in clause
         const Var v = var((*toSend)[i]);   // get variable to analyze
         rejectSend = false; // TODO: handle variables in clause! 
-        if( varFlags[v].modifiedPositiveModels || varFlags[v].modifiedNegativeModels ) rejectSend = true; // we modified models with this literal
+        if( communication->checkLiterals && (varFlags[v].modifiedPositiveModels || varFlags[v].modifiedNegativeModels) ) rejectSend = true; // we modified models with this literal
         if( v >= communication->getFormulaVariables() ) rejectSend = true;                                         // checks whether a variable is too high (not in the original formula)
-        if (!rejectSend) {  } // keep literal
-        else { // otherwise check how to proceed with variable that is
+        if (!rejectSend) { 
+	  (*toSend)[keep++] = (*toSend)[i];  // keep literal
+	} else { // otherwise check how to proceed with variable that is
             if (multiUnits || equivalences) { 
 	      (*toSend)[keep++] = (*toSend)[i];
 	      continue;

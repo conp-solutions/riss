@@ -177,6 +177,8 @@ class ClauseRingBuffer
     {
         lock();
 
+	assert( clauseSize != 0 && "should not send empty clauses" );
+	
         // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
         // overwrite current position (starts with 0)
         std::vector<Lit>& poolClause = pool[addHereNext].data;
@@ -795,6 +797,7 @@ class Communicator
         }
         #else
         if (!multiUnits && !equivalences) {
+	    assert( toSendSize != 0 && "should not send empty clauses" );
             data->getBuffer().addClause(id, clause, toSendSize); // usual buffer
             if (data->getExtraBuffer() != nullptr) {
                 data->getExtraBuffer()->addClause(data->getExtraBuffer()->specialAuthor(), clause, toSendSize);     // usual special buffer
