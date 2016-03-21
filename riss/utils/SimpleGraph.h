@@ -45,8 +45,8 @@ class SimpleGraph
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
    
-    std::vector<double> pagerank;
-    std::vector<int> articulationpoints;
+   
+    
     std::vector <double> narity;  
     
     
@@ -61,7 +61,8 @@ protected:
     //vectors for communityclassifying
     std::vector<std::vector<int>> comm;
     std::vector<int> n2c;
-    
+    std::vector<double> pagerank;
+    std::vector<int> articulationpoints;
 
   public:
     void computeCommunityNeighbors();

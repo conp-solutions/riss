@@ -56,8 +56,8 @@ class Graph : public SimpleGraph
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
    
-    std::vector<double> pagerank;
-    std::vector<int> articulationpoints;
+   
+   // std::vector<int> articulationpoints;
     std::vector <double> narity;  
 
   public:

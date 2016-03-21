@@ -23,7 +23,7 @@
 using namespace std;
 
 SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
-    pagerank(size),
+    pagerank(size, 0),
     node(size),
     nodeDeg(size, 0)
 {
@@ -42,7 +42,7 @@ SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
 }
 
 SimpleGraph::SimpleGraph(int size, bool mergeAtTheEnd, bool computingDerivative) :
-    pagerank(size),
+    pagerank(size, 0),
     node(size),
     nodeDeg(size, 0)
 {
