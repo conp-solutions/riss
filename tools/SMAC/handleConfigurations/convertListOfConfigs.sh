@@ -13,6 +13,10 @@ awk ' { for(i = 6; i < NF; ++ i ) printf " %s",$i; print "" }' $1 > $T
 l=`cat $T | wc -l`
 
 # convert each line separately
-for a in `seq 1 $l`; do python mapCSSCparams.py `head -n $a $T | tail -n 1`; done
+for a in `seq 1 $l`; 
+do 
+	OUT=$( python mapCSSCparams.py `head -n $a $T | tail -n 1` )
+	./riss -config= -cmd $OUT
+done
 
 

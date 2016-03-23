@@ -74,6 +74,7 @@ class Preprocessor
 
     int lastInpConflicts;     // number of conflicts when inprocessing has been called last time
     int formulaVariables;     // number of variables in the initial formula
+    int inprocessings;        // count number of inprocessings
 
   public:
 

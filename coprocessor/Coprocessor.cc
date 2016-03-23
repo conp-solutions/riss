@@ -37,6 +37,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , thisLearnts(0)
     , lastInpConflicts(0)
     , formulaVariables(-1)
+    , inprocessings(0)
 // classes for preprocessing methods
     , propagation(config, solver->ca, controller)
     , subsumption(config, solver->ca, controller, data, propagation)
@@ -1079,6 +1080,19 @@ lbool Preprocessor::inprocess()
         data.inprocessing();
         const bool wasDoingER = solver->getExtendedResolution();
 
+	if( inprocessings == 0 && config.opt_remL_inp ) {
+	  int removed = 0;
+	  for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
+	    Clause& c = ca[ data.getLEarnts()[i] ];
+	    if( c.mark() == 0 ) {
+	      data.addToProof(c, true); // remove clause from proof
+	      c.mark(1);                // mark the clause to be not used next time
+	      removed ++;
+	      c.set_delete(true);	// mark clause as deleted for coprocessor as well
+	    }
+	  }
+	}
+	inprocessings ++; // count number of inprocessings
 
         if (config.opt_randInp) { data.randomized(); }
         if (config.opt_inc_inp) { giveMoreSteps(); }

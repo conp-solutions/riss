@@ -78,6 +78,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit) #NoAutoT", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
     opt_randInp       (_cat, "randInp",         "Randomize Inprocessing", true,                                                                    optionListPtr, &opt_inprocess),
     opt_inc_inp       (_cat, "inc-inp",         "increase technique limits per inprocess step", false,                                             optionListPtr, &opt_inprocess),
+    opt_remL_inp      (_cat, "inp-remL",        "remove all learned clauses for first inprocessing", false,                                        optionListPtr, &opt_inprocess),
 
     opt_whiteList     (_cat2, "whiteList",      "variables whose set of solution is not touched", 0,                                               optionListPtr, &opt_enabled),
 

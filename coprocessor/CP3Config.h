@@ -56,6 +56,7 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_exit_pp     ;
     Riss::BoolOption opt_randInp     ;
     Riss::BoolOption opt_inc_inp     ;
+    Riss::BoolOption opt_remL_inp    ;
 
     Riss::StringOption opt_whiteList ;
 
