@@ -284,6 +284,7 @@ void BlockedClauseElimination::blockedClauseElimination()
             testedLits++; // count number of literals that have been tested for BCE
             // check whether a clause is a tautology wrt. the other clauses
             const Lit left = ~right; // complement
+            bool learntsInLeft = false;
             DOUT(if (config.opt_bce_debug)
                  cerr << "c BCE work on literal " << right << " with " << data.list(right).size() <<
                  " clauses " << endl;);
@@ -294,6 +295,8 @@ void BlockedClauseElimination::blockedClauseElimination()
                 if (c.can_be_deleted() || (!config.bceBinary && c.size() == 2 && !config.opt_bce_cle)) {
                     continue;    // do not work on uninteresting clauses!
                 }
+                
+                
 
                 if (config.opt_bce_cle) {
                     data.lits.clear(); // collect the literals that could be removed by CLE
@@ -312,6 +315,7 @@ void BlockedClauseElimination::blockedClauseElimination()
                 DOUT(if (config.opt_bce_debug) cerr << "c" << endl << "c BCE/CLE analyze clause " << c << endl;);
 
                 for (int j = 0; j < data.list(left).size(); ++j) {
+		  
 		    if( data.hasToPropagate() ) break; // we found a unit, stop working on BCE for now
 		  
                     Clause& d = ca[data.list(left)[j]];
@@ -320,6 +324,9 @@ void BlockedClauseElimination::blockedClauseElimination()
 		      continue;
 		    } // do not work on uninteresting clauses!
                     bceSteps++;
+		    
+		    learntsInLeft = learntsInLeft || d.learnt();
+		    
                     DOUT(if (config.opt_bce_debug) cerr << "c BCE/CLE compare with clause " << d << " (" << j << "/" << data.list(left).size() << ")" << endl;);
                     const Lit tautLit = tautologicResolvent(c, d,
                                                             right);        // check whether there is a literal that produces a tautologic resolvent
@@ -495,6 +502,7 @@ void BlockedClauseElimination::blockedClauseElimination()
                         successfulSimplification();
                         int k = 0, l = 0; // data.lits is a sub set of c, both c and data.lits are ordered!
                         int keptLiterals = 0;
+			bool modifiedClause = false;
                         DOUT(if (config.opt_bce_debug) cerr << "c cle turns clause " << c << endl;);
                         if (data.outputsProof()) { // store the original clause for deleting it from the proof
                             data.getSolver()->oc.clear();
@@ -519,6 +527,7 @@ void BlockedClauseElimination::blockedClauseElimination()
                         for (; k < c.size(); ++k) { c[keptLiterals++] = c[k]; } // keep the remaining literals as well!
                         assert((keptLiterals + data.lits.size() == c.size()) &&
                                "the size of the clause should not shrink without a reason");
+			if( c.size() != data.lits.size() ) modifiedClause = true;
                         c.shrink(data.lits.size()); // remvoe the other literals from this clause!
                         data.addCommentToProof("apply CLE to a clause"); // TODO also delete the original clause!
                         data.addToProof(c, false,
@@ -545,6 +554,14 @@ void BlockedClauseElimination::blockedClauseElimination()
                                 }
                             }
                         }
+                        
+                        if( !c.learnt() && learntsInLeft && modifiedClause ) { // turn all used learned clauses into original clauses
+			  for (int j = 0; j < data.list(left).size(); ++j) {
+			      Clause& d = ca[data.list(left)[j]];
+			      if (d.can_be_deleted()) continue;
+			      if( d.learnt() ) d.set_learnt( false ); // turn into original clause
+			  }
+			}
                     }
                 }
 
