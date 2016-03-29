@@ -169,8 +169,8 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
         vector<double>& ret)
 {
 
-    SimpleGraph *variablesGraph = nullptr;
-    if (computingVarGraph) { variablesGraph = new SimpleGraph(nVars, computingDerivative); }
+    Graph *variablesGraph = nullptr;
+    if (computingVarGraph) { variablesGraph = new Graph(nVars, computingDerivative); }
     uint64_t operations = 0, operationsV = 0;
     double time1 = cpuTime();
     vector<int> clsSizes(10, 0);   // stores number of clauses of a given size (here, store for 1 to 8)
@@ -331,8 +331,8 @@ uint64_t CNFClassifier::buildResolutionAndClausesGrapths(const BipartiteGraph& c
     if (computingClausesGraph || computingResolutionGraph) {
         double time1 = cpuTime();
 
-        SimpleGraph clausesGraph(clauses.size(), computingDerivative);
-        SimpleGraph resolutionGraph(clauses.size(), computingDerivative);
+        Graph clausesGraph(clauses.size(), computingDerivative);
+        Graph resolutionGraph(clauses.size(), computingDerivative);
         for (int i = 0; i < nVars; ++i) {
             const vector<int> al = clausesVariablesP.getAjacencyW(i);
             for (int k = 0; k < al.size(); ++k) {
@@ -448,9 +448,9 @@ void CNFClassifier::fband(vector<double>& ret)
         // Enrique, graphs declaration:
         int nLiterals = nVars * 2;
         uint64_t bigSteps = 0;
-        SimpleGraph exactlyOneLiterals(nLiterals, computingDerivative);
-        SimpleGraph fullAndGraph(nLiterals, computingDerivative);
-        SimpleGraph blockedAndGraph(nLiterals, computingDerivative);
+        Graph exactlyOneLiterals(nLiterals, computingDerivative);
+        Graph fullAndGraph(nLiterals, computingDerivative);
+        Graph blockedAndGraph(nLiterals, computingDerivative);
         litToClsMap.resize(2 * nVars); // setup enough vectors
         for (int i = 0; i < clauses.size(); ++i) {
             for (int j = 0; j < ca[clauses[i]].size(); ++j)
@@ -939,7 +939,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 
     // here I add cliques between the literals of the clauses in the xorList
     int nLiterals = nVars * 2;
-    SimpleGraph xorGraph(nLiterals, computingDerivative);
+    Graph xorGraph(nLiterals, computingDerivative);
     for (int i = 0; i < xorList.size(); ++i) {
         Clause& clause = ca[xorList[i]];
         int k = clause.size();
