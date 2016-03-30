@@ -82,11 +82,22 @@ BoolOption preclassify("CLASSIFY", "preclassify", "computes features needed for 
 BoolOption fileoutput("CLASSIFY", "fileoutput", "turn on/off the output of features to stdout", false);
 BoolOption nonZero("CLASSIFY", "nonZero", "consider a configuration as being good, only if its predicted propability is greater than 0", false);
 
+
 BoolOption tmpfilecommunication("CLASSIFY", "tmpfilecommunication", "sets if the weka interface uses temp files or stdout", false);
 
 
 BoolOption extractFeatures("GRAPHFEATURES", "extraFeatures", "turn on/off training (needs dataset, attrInfo, classifier)", false);
 
+BoolOption computeDiameter("GRAPHFEATURES", "diameter", "turn on/off to compute the graphdiameter", true);
+BoolOption computeRadius("GRAPHFEATURES", "radius", "turn on/off to compute the graphradius", true);
+BoolOption computeExzentricity("GRAPHFEATURES", "exzentricity", "turn on/off to compute every nodes exzentricity", true);
+BoolOption computeTreewidth("GRAPHFEATURES", "treewidth", "turn on/off to compute the treewidth of the graph", false);
+BoolOption computePagerank("GRAPHFEATURES", "pagerank", "turn on/off to compute every nodes pagerank", true);
+BoolOption computeArticulationpoints("GRAPHFEATURES", "articulationpoints", "turn on/off to compute the graphs articulationpoints", true);
+BoolOption computeCommunitystructure("GRAPHFEATURES", "communitystructure", "turn on/off to compute the graphs communitystructure", true);
+BoolOption computeDimensions("GRAPHFEATURES", "dimensions", "turn on/off to compute the graphs dimensions", true);
+BoolOption computeDegree("GRAPHFEATURES", "degree", "turn on/off to compute every nodes degree", true);
+BoolOption computeWeight("GRAPHFEATURES", "weight", "turn on/off to compute every nodes weight", true);
 
 StringOption wekaLocation("WEKA", "weka", "location to weka tool", "/usr/share/java/weka.jar");
 StringOption predictorLocation("WEKA", "predictor", "location to the predictor", "./predictor.jar");
@@ -388,6 +399,7 @@ void printFeatures(int argc, char** argv)
     cnfclassifier->setComputingDerivative(derivative);
 
     // in output features the actual calculation is done
+    cnfclassifier->setFeatureOptions(computeDiameter,computeRadius, computeExzentricity, computeTreewidth, computePagerank, computeArticulationpoints, computeCommunitystructure, computeDimensions, computeDegree, computeWeight);
     cnfclassifier->extractFeatures(features); // also print the formula name!!
   
     if (verb > 1) {

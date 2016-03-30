@@ -1230,7 +1230,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     
     
   //vigGraph->getCommunities(0.000001); //TODO: take a look at the precision
-  //  vigGraph->getDimension();	
+  vigGraph->getDimension();	
     /*
    
 		*/
@@ -1314,29 +1314,47 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     }
     
     vigGraph->finalizeGraph(); //finalize Graph (be sure to use sorted adjlists)
-    
+    if(exzentricity){
     vigGraph->computeExzentricityStatistics(quantilesCount);
     vigGraph->getExzentricityStatistics().infoToVector("variables exzentricity", featuresNames, ret);
-    
+    }
+    if(pagerank){
     vigGraph->computePagerankStatistics(quantilesCount);
     vigGraph->getPagerankStatistics().infoToVector("variables pagerank", featuresNames, ret);
-    
+    }
+    if(articulationpoints){
     vigGraph->computeArticulationpointsStatistics(quantilesCount);
     vigGraph->getArticulationpointsStatistics().infoToVector("graph articulationpoints", featuresNames, ret);
-    
+    }
+     if(communitystructure){
     vigGraph->computeCommunityStatistics(quantilesCount);
     vigGraph->getCommunitySizeStatistics().infoToVector("graph communities size", featuresNames, ret);
     vigGraph->getCommunityNeighborStatistics().infoToVector("graph communities neighbors", featuresNames, ret);
     vigGraph->getCommunityBridgeStatistics().infoToVector("graph communities bridgevariables", featuresNames, ret);
-    
-          ret.push_back(vigGraph->getRadius());
-	  featuresNames.push_back("graphradius");
-	  ret.push_back(vigGraph->getDiameter());
-	  featuresNames.push_back("graphdiameter");
-	 // ret.push_back(vigGraph->gettreewidth());
-	  //featuresNames.push_back("graphtreewidth");
-	  //vigGraph->getDegreeStatistics().
-    
+     }
+    if(radius){ 
+    ret.push_back(vigGraph->getRadius());
+    featuresNames.push_back("graphradius");
+    }
+    if(diameter){
+    ret.push_back(vigGraph->getDiameter());
+    featuresNames.push_back("graphdiameter");
+    }
+    if(treewidth){
+    ret.push_back(vigGraph->gettreewidth());
+    featuresNames.push_back("graphtreewidth");
+    }
+    if(degree){
+    vigGraph->getDegreeStatistics().infoToVector("variables degree", featuresNames, ret);
+    }
+    if(weight){
+    vigGraph->getWeightStatistics().infoToVector("variables weight", featuresNames, ret);
+    }
+   /* if(dimensions){
+    vigGraph->getWeightStatistics().infoToVector("variables weight", featuresNames, ret);
+    }
+	
+	*/ 
    //============================================================================================================
   //============================================================================================================= 
    

@@ -40,6 +40,8 @@ class CNFClassifier
     std::vector<int> timeIndexes;
     double mycpuTime;
     int verb;
+    
+    bool radius, diameter, articulationpoints, treewidth, pagerank, exzentricity, dimensions, communitystructure, degree, weight; //features to compute
 
     uint64_t buildClausesAndVariablesGrapths(BipartiteGraph& clausesVariablesP,
             BipartiteGraph& clausesVariablesN,
@@ -76,6 +78,21 @@ class CNFClassifier
 
     std::vector<double> outputFeatures(const char* formulaName);
 
+    void setFeatureOptions(bool diameter, bool radius, bool exzentricity, bool treewidth, bool pagerank, bool articulationpoints, bool communitystructure, bool dimensions, bool degree, bool weight){
+    
+      this->diameter=diameter;
+      this->radius=radius;
+      this->exzentricity=exzentricity;
+      this->treewidth=treewidth;
+      this->pagerank=pagerank;
+      this->articulationpoints=articulationpoints;
+      this->communitystructure=communitystructure;
+      this->dimensions=dimensions;
+      this->degree=degree;
+      this->weight=weight;
+      
+    }
+    
     bool isComputingClausesGraph() const
     {
         return computingClausesGraph;
