@@ -27,11 +27,11 @@ class SimpleGraph
 {
   private:
     void doPageRank();
-    int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
-    void compute_G_plus(SimpleGraph*& Graph_plus, const std::vector<int>& set);
+    //int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
+    //void compute_G_plus(SimpleGraph*& Graph_plus, const std::vector<int>& set);
     std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
     void getallcombinations(const std::vector<int>& nodes,std::vector<int> set,std::vector<std::vector<int>>& sets, int k, int position);
-    bool improved_recursive_treewidth(int k);
+   // bool improved_recursive_treewidth(int k);
     void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
     std::vector<std::vector<int>> getSets(const std::vector<int>& nodes, int k);
     void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
@@ -45,8 +45,8 @@ class SimpleGraph
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
    
-    std::vector<double> pagerank;
-    std::vector<int> articulationpoints;
+   
+    
     std::vector <double> narity;  
     
     
@@ -61,7 +61,8 @@ protected:
     //vectors for communityclassifying
     std::vector<std::vector<int>> comm;
     std::vector<int> n2c;
-    
+    std::vector<double> pagerank;
+    std::vector<int> articulationpoints;
 
   public:
     void computeCommunityNeighbors();
@@ -73,7 +74,7 @@ protected:
     double arity(int x);
     double arity();
     double getPageRank(int node);
-    int gettreewidth();
+    //int gettreewidth();
     void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
     bool thereisanedge(int nodeA, int nodeB);
     std::vector<int> getArticulationPoints();

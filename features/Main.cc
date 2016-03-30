@@ -389,7 +389,7 @@ void printFeatures(int argc, char** argv)
 
     // in output features the actual calculation is done
     cnfclassifier->extractFeatures(features); // also print the formula name!!
-
+  
     if (verb > 1) {
         cout.setf(ios::fixed);
         cout.precision(10);
@@ -467,8 +467,8 @@ int main(int argc, char** argv)
         }
 
         
-
-	//computeExtraGraphFeatures (argc, argv);
+        computeExtraGraphFeatures (argc, argv);
+	//printFeatures(argc, argv);
 	/*
 	communityInformation communityInformation(argc, argv, 1000000, 0.000001);
 

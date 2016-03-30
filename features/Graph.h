@@ -28,13 +28,13 @@ class Graph : public SimpleGraph
 {
   private:
     void doPageRank();
-    int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
-    void compute_G_plus(Graph*& Graph_plus, const std::vector<int>& set);
+    int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component, int& rec_depth);
+    void compute_G_plus(Graph* Graph_plus, const std::vector<int>& set);
     std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
-    void getallcombinations(const std::vector<int>& nodes,std::vector<int> set,std::vector<std::vector<int>>& sets, int k, int position);
-    bool improved_recursive_treewidth(int k);
+    void getallcombinations(const std::vector<int>& nodes,std::vector<int>& set,std::vector<std::vector<int>>& sets, int k, int position, int& rec_depth);
+    bool improved_recursive_treewidth(int k, int& rec_depth);
     void findtree(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
-    std::vector<std::vector<int>> getSets(const std::vector<int>& nodes, int k);
+    std::vector<std::vector<int>> getSets(const std::vector<int>& nodes, int k, int& rec_depth);
     void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
     //int size;
     //std::vector<adjacencyList> node;
@@ -56,8 +56,8 @@ class Graph : public SimpleGraph
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
    
-    std::vector<double> pagerank;
-    std::vector<int> articulationpoints;
+   
+   // std::vector<int> articulationpoints;
     std::vector <double> narity;  
 
   public:
@@ -92,6 +92,10 @@ class Graph : public SimpleGraph
     uint64_t computeStatistics(int quantilesCount);
     uint64_t computeNmergeStatistics(int quantilesCount);
     uint64_t computeOnlyStatistics(int quantilesCount);
+    uint64_t computeCommunityStatistics(int quantilesCount);
+    uint64_t computeExzentricityStatistics(int quantilesCount);
+    uint64_t computePagerankStatistics(int quantilesCount);
+    uint64_t computeArticulationpointsStatistics(int quantilesCount);
 
     /** finalize adjacency lists after all nodes have been added to the graph */
     void finalizeGraph();
@@ -123,6 +127,18 @@ class Graph : public SimpleGraph
        return exzentricityStatistics;
     }
     
+     const SequenceStatistics& getCommunityBridgeStatistics() const
+    {
+       return communityBridgeStatistics;
+    }
+     const SequenceStatistics& getCommunityNeighborStatistics() const
+    {
+       return communityNeighborStatistics;
+    }
+     const SequenceStatistics&  getCommunitySizeStatistics() const
+    {
+       return communitySizeStatistics;
+    }
      //--------------- TOOL FOR COMPUTING DIMENSIONS --------------------------------------------------
      
     std::pair< double, double > regresion(std::vector< std::pair< double, double > >& v)

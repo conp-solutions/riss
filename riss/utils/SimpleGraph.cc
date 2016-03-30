@@ -23,7 +23,7 @@
 using namespace std;
 
 SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
-    pagerank(size),
+    pagerank(size, 0),
     node(size),
     nodeDeg(size, 0)
 {
@@ -42,7 +42,7 @@ SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
 }
 
 SimpleGraph::SimpleGraph(int size, bool mergeAtTheEnd, bool computingDerivative) :
-    pagerank(size),
+    pagerank(size, 0),
     node(size),
     nodeDeg(size, 0)
 {
@@ -521,7 +521,7 @@ bool SimpleGraph::thereisanedge(int nodeA, int nodeB){ //TODO: Maybe check if Gr
   return false;
   
 }
-
+/*
 int SimpleGraph::gettreewidth(){
 
   bool check = false;
@@ -749,7 +749,7 @@ void SimpleGraph::compute_G_plus(SimpleGraph*& Graph_plus ,const vector<int>& se
 	}
   
 }
-
+*/
 vector<vector<int>> SimpleGraph::getConnectedComponents(const vector<int>& set){ //connected components without set
 
 Riss::MarkArray visited;
