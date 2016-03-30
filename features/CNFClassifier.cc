@@ -604,6 +604,7 @@ void CNFClassifier::fband(vector<double>& ret)
             }
         }
         // Enrique, Compute stats and output them
+        
         if (computeConstraints) {
             uint64_t exoSteps = constraintSteps, fandSteps = constraintSteps, bandSteps = constraintSteps;
             exoSteps += exactlyOneLiterals.computeOnlyStatistics(quantilesCount);
@@ -1221,9 +1222,11 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     
   //cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
-  //cerr<<vigGraph->getArticulationPoints()<<endl;
-  //cerr<<vigGraph->gettreewidth()<<endl;
-  //cerr<<vigGraph->getPageRank(0)<<endl;
+  //vector<int> vi= vigGraph->getArticulationPoints();
+ //  for(int l=0; l<vi.size();++l) cerr<<vi[l]<<endl;
+    cerr<<"computing treewidth"<<endl;
+   cerr<<vigGraph->gettreewidth()<<endl;
+   //cerr<<vigGraph->getPageRank(0)<<endl;
     
     
   //vigGraph->getCommunities(0.000001); //TODO: take a look at the precision
@@ -1231,6 +1234,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     /*
    
 		*/
+    
 };
 
 
@@ -1238,6 +1242,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 {
+  
     uint64_t operations = 0; // number of operations to compute features;
 
     // TODO should return the vector of features. If possible, the features should range between 0 and 1 - all the graph features could be scaled down by number of variables, number of clauses or some other measure
@@ -1272,8 +1277,69 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
 
     operations += buildResolutionAndClausesGrapths(clausesVariablesP, clausesVariablesN, ret);
+ 
+   //============================================================================================================
+  //=============================================graphExtraFeatures==============================================
 
+    vector<int> clsSizes(10, 0);
+    
+    Graph *vigGraph = nullptr;
+    if (computingVarGraph) { vigGraph = new Graph(nVars, computingDerivative); }
 
+     for (int i = 0; i < clauses.size(); ++i) {
+      
+        //You should know the difference between Java References, C++ Pointers, C++ References and C++ copies.
+        // Especially if you write your own methods and pass large objects that you want to modify, this makes a difference!
+        const Clause& c = ca[clauses[i]];
+        clsSizes[ c.size() + 1 < clsSizes.size() ? c.size() : clsSizes.size() - 1 ] ++; // cumulate number of occurrences of certain clause sizes
+
+        double wvariable = pow(2, -c.size());
+        for (int j = 0; j < c.size(); ++j) {
+            const Lit& l = c[j]; // for read access only, you could use a read-only reference of the type literal.
+            const Lit cpl = ~l;  // build the complement of the literal
+           
+            const Var v = var(l); // calculate a variable from the literal
+
+            // Adding edges for the variable graph
+            if (computingVarGraph) {
+                for (int k = j + 1; k < c.size(); ++k) {
+		                      vigGraph->addDirectedEdgeAndInvertedEdge(v,   
+                                   var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
+                }
+            }
+
+            assert(var(~l) == var(l) && "the two variables have to be the same");
+        }
+
+    }
+    
+    vigGraph->finalizeGraph(); //finalize Graph (be sure to use sorted adjlists)
+    
+    vigGraph->computeExzentricityStatistics(quantilesCount);
+    vigGraph->getExzentricityStatistics().infoToVector("variables exzentricity", featuresNames, ret);
+    
+    vigGraph->computePagerankStatistics(quantilesCount);
+    vigGraph->getPagerankStatistics().infoToVector("variables pagerank", featuresNames, ret);
+    
+    vigGraph->computeArticulationpointsStatistics(quantilesCount);
+    vigGraph->getArticulationpointsStatistics().infoToVector("graph articulationpoints", featuresNames, ret);
+    
+    vigGraph->computeCommunityStatistics(quantilesCount);
+    vigGraph->getCommunitySizeStatistics().infoToVector("graph communities size", featuresNames, ret);
+    vigGraph->getCommunityNeighborStatistics().infoToVector("graph communities neighbors", featuresNames, ret);
+    vigGraph->getCommunityBridgeStatistics().infoToVector("graph communities bridgevariables", featuresNames, ret);
+    
+          ret.push_back(vigGraph->getRadius());
+	  featuresNames.push_back("graphradius");
+	  ret.push_back(vigGraph->getDiameter());
+	  featuresNames.push_back("graphdiameter");
+	 // ret.push_back(vigGraph->gettreewidth());
+	  //featuresNames.push_back("graphtreewidth");
+	  //vigGraph->getDegreeStatistics().
+    
+   //============================================================================================================
+  //============================================================================================================= 
+    
     time1 = (cpuTime() - time1);
     timeIndexes.push_back(ret.size());
     featuresNames.push_back("features computation time");

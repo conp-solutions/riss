@@ -266,6 +266,39 @@ uint64_t Graph::addAndCountUndirectedEdge(int nodeA, int nodeB, double weight)
     return operations;
 }
 
+uint64_t Graph::computeExzentricityStatistics(int quantilesCount){
+
+  uint64_t operations =0;
+  
+  for(int i=0; i< size; ++i) exzentricityStatistics.addValue(getExzentricity(i));
+  operations += exzentricityStatistics.compute(quantilesCount);
+  
+  return operations;
+}
+
+uint64_t Graph::computePagerankStatistics(int quantilesCount){
+
+  uint64_t operations =0;
+  
+  for(int i=0; i< size; ++i) pagerankStatistics.addValue(getPageRank(i));
+  operations += pagerankStatistics.compute(quantilesCount);
+  
+  return operations;
+}
+
+uint64_t Graph::computeArticulationpointsStatistics(int quantilesCount){
+
+  uint64_t operations =0;
+  
+  if(articulationpoints.size() == 0) getArticulationPoints();
+  for(int i=0; i< articulationpoints.size(); ++i){
+     articulationpointsStatistics.addValue(articulationpoints[i]);
+   }
+  operations += articulationpointsStatistics.compute(quantilesCount);
+  
+  return operations;
+}
+
 uint64_t Graph::computeStatistics(int quantilesCount)
 {
     uint64_t operations = 0;
@@ -291,23 +324,31 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
     //  degreeStatistics.tostdio();
     
      // Statistics for the exzentricity 
-   for(int i=0; i< size; ++i) exzentricityStatistics.addValue(getExzentricity(i));
-     operations += exzentricityStatistics.compute(quantilesCount);
+     operations += computeExzentricityStatistics(quantilesCount);
 
    
    // Statistics for the pagerank 
-   for(int i=0; i< size; ++i) pagerankStatistics.addValue(getPageRank(i));
-     operations += pagerankStatistics.compute(quantilesCount);
+     operations += computePagerankStatistics(quantilesCount);
    
    // Statistics for the articulationpoints
-   if(articulationpoints.size() == 0) getArticulationPoints();
-   for(int i=0; i< articulationpoints.size(); ++i){
-     articulationpointsStatistics.addValue(articulationpoints[i]);
-   }
-     operations += articulationpointsStatistics.compute(quantilesCount);
-     operations += articulationpoints.size();
-   
-    //Statistics for the communities 
+     operations += computeArticulationpointsStatistics(quantilesCount);
+  
+   // Statistics for the weights
+    int j;
+    for (i = 0; i < size; ++i) {
+        for (j = 0; j < node[i].size(); ++j) {
+            weightStatistics.addValue(node[i][j].second);
+        }
+        operations += node[i].size();
+    }
+    operations += weightStatistics.compute(quantilesCount);
+    return operations;
+}
+
+uint64_t Graph::computeCommunityStatistics(int quantilesCount)
+{
+    uint64_t operations = 0;
+     //Statistics for the communities 
    if(comm.size() == 0) SimpleGraph::getCommunities(precision); 
         //number nodes per community
        for(int i=0; i<comm.size();++i) communitySizeStatistics.addValue(comm[i].size()); 
@@ -323,17 +364,7 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
        for(int i=0; i<comm.size();++i) communityBridgeStatistics.addValue(bridgenodes[i].size()); 
        operations += communityBridgeStatistics.compute(quantilesCount);
    
-   
-    // Statistics for the weights
-    int j;
-    for (i = 0; i < size; ++i) {
-        for (j = 0; j < node[i].size(); ++j) {
-            weightStatistics.addValue(node[i][j].second);
-        }
-        operations += node[i].size();
-    }
-    operations += weightStatistics.compute(quantilesCount);
-    return operations;
+       return operations;
 }
 
 
@@ -609,25 +640,27 @@ int Graph::gettreewidth(){
   bool check = false;
   int k = 0;
   vector<int> empty_vec, nodes;
+  int rec_depth = 0;
   
-  for(int a=0; a<node.size(); ++a) nodes.push_back(a);
+//  for(int a=0; a<node.size(); ++a) nodes.push_back(a);
   
-  int tw = recursive_treewidth(empty_vec, nodes);
- /*
+ // int tw = recursive_treewidth(empty_vec, nodes, rec_depth);
+ 
   while(!check){
  
     k++;
-    check = improved_recursive_treewidth(k);
+    check = improved_recursive_treewidth(k, rec_depth);
     
   }
   
   return k;
   
-  */
-  return tw;
+  
+  //return tw;
 }
 
-bool Graph::improved_recursive_treewidth(int k){
+
+bool Graph::improved_recursive_treewidth(int k, int& rec_depth){
   
   bool check, tbool;
   vector<int> nodes;
@@ -639,8 +672,8 @@ bool Graph::improved_recursive_treewidth(int k){
    if(node.size() <= k+1) return true;
  
    if((k<= 0.25*node.size()) || (k>= 0.4203*node.size())){
-     
-     vector<vector<int>> sets  = getSets(nodes, k+1);
+     rec_depth++;
+     vector<vector<int>> sets  = getSets(nodes, k+1, rec_depth);
      for(int i=0; i<sets.size(); ++i){
        
      vector<vector<int>> components = getConnectedComponents(sets[i]);
@@ -656,7 +689,8 @@ bool Graph::improved_recursive_treewidth(int k){
       tbool = true;
       for(int n=0;n<components.size();++n){
     
-	tbool = (tbool || (recursive_treewidth(empty_vec,components[n]) <= k));
+	tbool = ((recursive_treewidth(empty_vec,components[n], rec_depth) <= k));
+	if(!tbool) break;
 	
       }
       if(tbool) return true;
@@ -664,8 +698,9 @@ bool Graph::improved_recursive_treewidth(int k){
     }
   }
   else{
-  
-    vector<vector<int>> sets  = getSets(nodes, 0.4203*node.size());
+    
+    rec_depth++;
+    vector<vector<int>> sets  = getSets(nodes, 0.4203*node.size(), rec_depth);
     
     for(int i=0; i<sets.size(); ++i){
      vector<vector<int>> components = getConnectedComponents(sets[i]);
@@ -678,19 +713,21 @@ bool Graph::improved_recursive_treewidth(int k){
       
       if(check){
       
-	Graph *Graph_plus = new Graph(sets[i].size(), true);
-	
-	compute_G_plus(Graph_plus, sets[i]);
-	
-	tbool = Graph_plus->improved_recursive_treewidth(k);
-	
 	vector<vector<int>> components = getConnectedComponents(sets[i]);
 	
 	for(int j=0; j<components.size(); ++j){
 	
-	 tbool = (tbool || (recursive_treewidth(empty_vec,components[j]) <= k));
+	 tbool = ((recursive_treewidth(empty_vec,components[j], rec_depth) <= k));
+	 if(!tbool) break;
 	}
 	
+	Graph *Graph_plus = new Graph(sets[i].size(), true);
+	
+	compute_G_plus(Graph_plus, sets[i]);
+	
+	tbool = tbool && Graph_plus->improved_recursive_treewidth(k, rec_depth);
+	delete Graph_plus;
+        	
 	if(tbool) return true;
 	
       }
@@ -701,7 +738,8 @@ bool Graph::improved_recursive_treewidth(int k){
   return false;
 }
 
-int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& component){
+//rec_depth counting the depth of recursicion computing all needed sets
+int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& component, int& rec_depth){ 
 
   vector<int> newcomponent, newLset;
   newLset = Lset;
@@ -710,6 +748,7 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
   Riss::MarkArray visited;
   visited.create(node.size());
   visited.nextStep();
+  
   
   if(component.size() == 1){
     int Q = 0;
@@ -762,9 +801,10 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
  
    int Opt = numeric_limits<int>::max();
    
-   vector<vector<int>> sets  = getSets(component, component.size()/2);
+   rec_depth++;
+   vector<vector<int>> sets  = getSets(component, component.size()/2, rec_depth);
    for(int k =0; k< sets.size(); ++k){
-     int v1 = recursive_treewidth(Lset ,sets[k]);
+     int v1 = recursive_treewidth(Lset ,sets[k], rec_depth);
      tmp = v1;
      
       for(int j =0; j< sets[k].size(); ++j){
@@ -799,7 +839,7 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
       if(toadd) newcomponent.push_back(component[i]);
        }
      */
-     int v2 = recursive_treewidth(newLset, newcomponent);
+     int v2 = recursive_treewidth(newLset, newcomponent, rec_depth);
      
      newLset = Lset;
      newcomponent.clear();
@@ -813,29 +853,29 @@ int Graph::recursive_treewidth(const vector<int>& Lset,const vector<int>& compon
   
 }
 
-void Graph::compute_G_plus(Graph*& Graph_plus ,const vector<int>& set){
+void Graph::compute_G_plus(Graph* Graph_plus ,const vector<int>& set){
 
   vector<vector<int>> connected = getConnectedComponents(set);
 	
 	int node1, node2;
 	bool nod1, nod2;
-	
+	adjacencyList adj1, adj2;
 	
 	for(int j = 0; j < set.size(); ++j){
 	  node1 = set[j];
-	  const adjacencyList& adj1 =node[node1];
-	  for(int k = set.size() -1; k > j; ++k){
+	  adj1 =node[node1];
+	  for(int k = set.size() -1; k > j; --k){
 	    
 	    node2 = set[k];
-	    const adjacencyList& adj2 =node[node2];
+	    adj2 =node[node2];
 	    
 	    for(int l =0; l < connected.size(); ++l){
 	      nod1 = false;
 	      nod2 = false;
 	     for(int m=0; m < connected[l].size(); ++m){
-	       for(int n=0; n < adj1.size(); ++n) if(m == adj1[n].first) nod1 = true;
-	       for(int n=0; n < adj2.size(); ++n) if(m == adj2[n].first) nod2 = true;
-	       if(nod1 && nod2) Graph_plus->addUndirectedEdge(j,k);
+	       for(int n=0; n < adj1.size(); ++n) if(connected[l][m] == adj1[n].first) nod1 = true;
+	       for(int n=0; n < adj2.size(); ++n) if(connected[l][m] == adj2[n].first) nod2 = true;
+	       if(nod1 && nod2) Graph_plus->addDirectedEdgeAndInvertedEdge(j,k,1);
 	       
 	    }
 	      
@@ -844,6 +884,8 @@ void Graph::compute_G_plus(Graph*& Graph_plus ,const vector<int>& set){
 	  }
 	  
 	}
+	
+	Graph_plus->finalizeGraph();
   
 }
 
@@ -888,14 +930,14 @@ return components;
 
 }
 
-vector<vector<int>> Graph::getSets(const vector<int>& nodes, int k){
+vector<vector<int>> Graph::getSets(const vector<int>& nodes, int k, int& rec_depth){
 
   vector<int> set;
   vector<vector<int>> sets;
   
   for(int i=0;i<nodes.size()-(k-1);i++){
   set.push_back(nodes[i]);
-  if(k > 1) getallcombinations(nodes, set, sets, k-1, i+1);
+  if(k > 1){ rec_depth++; getallcombinations(nodes, set, sets, k-1, i+1, rec_depth);}
   else{ sets.push_back(set);}
   set.pop_back();  
   }
@@ -919,11 +961,11 @@ vector<vector<int>> Graph::getSets(const vector<int>& nodes, int k){
 }
 
 //void Graph::getallcombinations(const vector<int>& nodes,vector<int> set,vector<vector<int>>& sets, int k, int position){
-  void Graph::getallcombinations(const vector<int>& nodes,vector<int>& set, vector<vector<int>>& sets,int k, int position){
+  void Graph::getallcombinations(const vector<int>& nodes,vector<int>& set, vector<vector<int>>& sets,int k, int position, int& rec_depth){
   
     for(int i = position;i<nodes.size()-(k-1);i++){
     set.push_back(nodes[i]);
-    if(k > 1) getallcombinations(nodes, set, sets, k-1, i+1);
+    if(k > 1){rec_depth++; getallcombinations(nodes, set, sets, k-1, i+1, rec_depth);}
     else{ sets.push_back(set);}
     set.pop_back(); 
     }
