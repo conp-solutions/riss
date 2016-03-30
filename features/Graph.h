@@ -58,7 +58,7 @@ class Graph : public SimpleGraph
    
    
    // std::vector<int> articulationpoints;
-    std::vector <double> narity;  
+   // std::vector <double> narity;  
 
   public:
     void getDimension();

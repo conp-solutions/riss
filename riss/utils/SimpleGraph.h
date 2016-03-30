@@ -47,11 +47,12 @@ class SimpleGraph
    
    
     
-    std::vector <double> narity;  
+    
     
     
     
 protected:
+    std::vector <double> narity;  
     int size;
     std::vector<adjacencyList> node;
     std::vector<int> nodeDeg;

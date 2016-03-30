@@ -881,7 +881,8 @@ void SimpleGraph::getCommunities(double precision){
 		c.compute_communities();
                 n2c = c.n2c;
 		comm = c.Comm;
-		
+		communityneighbors.resize(comm.size());
+		bridgenodes.resize(comm.size());
 			cerr << "modularity = " << modularity << endl;
 			cerr << "communities = " << (int)c.ncomm << endl;
 			cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size()/getSize() << endl;
@@ -895,13 +896,14 @@ void SimpleGraph::getCommunities(double precision){
 void SimpleGraph::computeCommunityNeighbors(){
   
 if(comm.size() == 0) getCommunities(precision);
-
+cerr<<comm.size()<<endl;
  vector<int> adj; 
    for(int i=0; i<comm.size()-1; ++i){
      for(int j =0; j<comm[i].size(); ++j){
       adj = this->getAdjacency(comm[i][j]);
        for(int k=0; k<adj.size(); ++k){
        	 if (n2c[adj[k]] > i){
+	   
 	   communityneighbors[i].insert(n2c[adj[k]]);
 	   communityneighbors[n2c[adj[k]]].insert(i);
 	   if(communityneighbors[i].size() > (comm.size()-1)) break;

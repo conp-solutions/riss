@@ -1222,10 +1222,10 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     
   //cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
-  //vector<int> vi= vigGraph->getArticulationPoints();
- //  for(int l=0; l<vi.size();++l) cerr<<vi[l]<<endl;
-    cerr<<"computing treewidth"<<endl;
-   cerr<<vigGraph->gettreewidth()<<endl;
+ // vector<int> vi= vigGraph->getArticulationPoints();
+ //for(int l=0; l<vi.size();++l) cerr<<vi[l]<<endl;
+ //   cerr<<"computing treewidth"<<endl;
+   //cerr<<vigGraph->gettreewidth()<<endl;
    //cerr<<vigGraph->getPageRank(0)<<endl;
     
     
@@ -1339,7 +1339,8 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     
    //============================================================================================================
   //============================================================================================================= 
-    
+   
+	  
     time1 = (cpuTime() - time1);
     timeIndexes.push_back(ret.size());
     featuresNames.push_back("features computation time");

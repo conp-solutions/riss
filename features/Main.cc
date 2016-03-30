@@ -467,8 +467,8 @@ int main(int argc, char** argv)
         }
 
         
-        computeExtraGraphFeatures (argc, argv);
-	//printFeatures(argc, argv);
+        //computeExtraGraphFeatures (argc, argv);
+	printFeatures(argc, argv);
 	/*
 	communityInformation communityInformation(argc, argv, 1000000, 0.000001);
 

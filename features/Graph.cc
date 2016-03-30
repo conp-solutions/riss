@@ -347,23 +347,27 @@ uint64_t Graph::computeOnlyStatistics(int quantilesCount)
 
 uint64_t Graph::computeCommunityStatistics(int quantilesCount)
 {
+  
     uint64_t operations = 0;
      //Statistics for the communities 
    if(comm.size() == 0) SimpleGraph::getCommunities(precision); 
         //number nodes per community
+   
        for(int i=0; i<comm.size();++i) communitySizeStatistics.addValue(comm[i].size()); 
        operations += communitySizeStatistics.compute(quantilesCount);
-   
+    
        //number neighbors per community
        if(communityneighbors.size() == 0) SimpleGraph::computeCommunityNeighbors();
+       
        for(int i=0; i<comm.size();++i) communityNeighborStatistics.addValue(communityneighbors[i].size()); 
        operations += communityNeighborStatistics.compute(quantilesCount);
-   
+    
        //number bridgenodes per community
        if(bridgenodes.size() == 0) SimpleGraph::computeCommunityBridgeNodes();
+       
        for(int i=0; i<comm.size();++i) communityBridgeStatistics.addValue(bridgenodes[i].size()); 
        operations += communityBridgeStatistics.compute(quantilesCount);
-   
+  
        return operations;
 }
 
