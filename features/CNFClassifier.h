@@ -77,21 +77,6 @@ class CNFClassifier
     void graphExtraFeatures(std::vector<double>& ret);
 
     std::vector<double> outputFeatures(const char* formulaName);
-
-    void setFeatureOptions(bool diameter, bool radius, bool exzentricity, bool treewidth, bool pagerank, bool articulationpoints, bool communitystructure, bool dimensions, bool degree, bool weight){
-    
-      this->diameter=diameter;
-      this->radius=radius;
-      this->exzentricity=exzentricity;
-      this->treewidth=treewidth;
-      this->pagerank=pagerank;
-      this->articulationpoints=articulationpoints;
-      this->communitystructure=communitystructure;
-      this->dimensions=dimensions;
-      this->degree=degree;
-      this->weight=weight;
-      
-    }
     
     bool isComputingClausesGraph() const
     {
@@ -263,6 +248,24 @@ class CNFClassifier
     {
         this->computingVarGraph = computingVarGraph;
     }
+    
+    int getnVars(){
+    
+      return nVars;
+      
+    }
+    
+    Riss::ClauseAllocator& getCa(){
+    
+      return ca;
+    }
+    
+    Riss::vec<Riss::CRef>& getClauses(){
+    
+      return clauses;
+    }
+    
+    
 };
 
 #endif // CNFCLASSIFIER_H
