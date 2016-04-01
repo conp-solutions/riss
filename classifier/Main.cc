@@ -341,7 +341,8 @@ int main(int argc, char** argv)
 
 
         // parse the options
-        parseOptions(argc, argv, true);
+        bool foundHelp = parseOptions(argc, argv, true);
+	if (foundHelp) { exit(0); }  // stop after printing the help information
 	
 	
 	if( compareCNF ) {
