@@ -360,6 +360,13 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #endif
 
     //
+    // ModPrep
+    //
+    #ifndef NDEBUG
+    modprep_debug          (_cat_entailed, "modprep-debug",  "Debug Output for ModPrep",     0, IntRange(0, 5),         optionListPtr, &opt_modprep),
+    #endif
+    
+    //
     // Equivalence
     //
     opt_ee_level           (_cat_ee, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3),                    optionListPtr, &opt_ee),

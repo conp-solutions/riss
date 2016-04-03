@@ -344,6 +344,10 @@ class CP3Config : public Riss::Config
     Riss::IntOption  entailed_debug;
     #endif
 
+    #ifndef NDEBUG
+    Riss::IntOption  modprep_debug;
+    #endif
+    
 
 //
 // Equivalence

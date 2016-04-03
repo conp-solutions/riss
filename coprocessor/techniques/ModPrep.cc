@@ -36,7 +36,7 @@ bool ModPrep::process()
     int totalConflictLimit = 1000000; // number of conflicts that can be performed in total
 
     // usual code
-    DOUT(if (config.entailed_debug > 0) cerr << "c run MODPREP process" << endl;);
+    DOUT(if (config.modprep_debug > 0) cerr << "c run MODPREP process" << endl;);
     MethodTimer mt(&processTime);
 
     if (! performSimplification()) { return false; }   // do not do anything?!
@@ -46,7 +46,7 @@ bool ModPrep::process()
     data.lits.clear();
     data.clss.clear();
     
-    if( data.nVars() == 0 || data.getClauses().size() == 0 || data.getLEarnts().size() == 0 ) return false;
+    if( data.nVars() == 0 || data.getClauses().size() + data.getLEarnts().size() == 0 ) return false;
     
     // get communities here!
     
@@ -284,7 +284,7 @@ SimpleGraph* ModPrep::getVIG(int& step, int steplimit)
 bool ModPrep::getCommunities(vector< int >& communityPerVariable, SimpleGraph *& communities, SimpleGraph *& communityNeighbors)
 {
     // parameters
-    double precision = 0.000001;
+    double precision = 0.00001;
     int stepLimit = 1000000;  // TODO: make it a parameter
 
     // code
@@ -337,6 +337,18 @@ bool ModPrep::getCommunities(vector< int >& communityPerVariable, SimpleGraph *&
   
   // from a space point of view, we do not need the VIG any more!
   delete vigGraph; vigGraph = nullptr;
+  
+  DOUT(if (config.modprep_debug > 0) cerr << "c run MODPREP process" << endl;);
+  
+   // copy communities to be used outside this method in a generic manner
+   if( step < stepLimit ) {
+    communities = new SimpleGraph( c.Comm.size(), false );
+    for(int i=0; i<c.Comm.size(); ++i) {
+      for(int j=0; j< c.Comm[i].size(); j++){ 
+	communities->addDirectedEdge( i,j,1 );
+      }
+    }
+   }
   
   return false;
 }
