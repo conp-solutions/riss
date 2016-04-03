@@ -15,10 +15,14 @@ std::vector<std::string> featuresNames;
 CNFClassifier* classifier;
 Riss::ClauseAllocator& ca;
 Riss::vec<Riss::CRef>& clauses;
+bool derivative;
+bool computedex, computedcs, computedap, computedpa;
 
 public:
 
-GraphInformation(CNFClassifier* c): classifier(c), ca(c->getCa()), clauses(c->getClauses()){ 
+GraphInformation(CNFClassifier* c, bool d): classifier(c), ca(c->getCa()), clauses(c->getClauses()){ 
+ 
+  derivative = d;
   quantilesCount = c->getQuantilesCount();
   radius = false;
   diameter = false;
@@ -30,9 +34,15 @@ GraphInformation(CNFClassifier* c): classifier(c), ca(c->getCa()), clauses(c->ge
   dimensions = false;
   degree = false;
   weight = false;
+  computedex = false;
+  computedcs = false;
+  computedap = false;
+  computedpa= false;
+  
+  classifier->setComputingDerivative(derivative);
   
   vector<int> clsSizes(10, 0);
- if(classifier->isComputingVarGraph()) graph = new Graph(classifier->getnVars(), classifier->isComputingDerivative());
+  graph = new Graph(classifier->getnVars(), derivative);
   
    for (int i = 0; i < clauses.size(); ++i) {
       
@@ -49,12 +59,11 @@ GraphInformation(CNFClassifier* c): classifier(c), ca(c->getCa()), clauses(c->ge
             const Var v = var(l); // calculate a variable from the literal
 
             // Adding edges for the variable graph
-            if (classifier->isComputingVarGraph()) {
-                for (int k = j + 1; k < c.size(); ++k) {
+                            for (int k = j + 1; k < c.size(); ++k) {
 		                      graph->addDirectedEdgeAndInvertedEdge(v,   
                                    var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
                 }
-            }
+            
 
             assert(var(~l) == var(l) && "the two variables have to be the same");
         }
@@ -68,24 +77,38 @@ std::vector<double> getFeatures(){
 
   std::vector<double> ret;
   featuresNames.clear();
-  
+  classifier->clearfeaturesNames();
   classifier->extractFeatures(ret);
+  
+ 
   featuresNames = classifier->getFeaturesNames();
   
  if(exzentricity){
-    graph->computeExzentricityStatistics(quantilesCount);
+   if(!computedex){ 
+     graph->computeExzentricityStatistics(quantilesCount);
+     computedex = true;
+   }
     graph->getExzentricityStatistics().infoToVector("variables exzentricity", featuresNames, ret);
     }
     if(pagerank){
+      if(!computedpa){ 
     graph->computePagerankStatistics(quantilesCount);
+      computedpa = true;	
+      }
     graph->getPagerankStatistics().infoToVector("variables pagerank", featuresNames, ret);
     }
     if(articulationpoints){
+      if(!computedap){ 
     graph->computeArticulationpointsStatistics(quantilesCount);
+      computedap = true;	
+      }
     graph->getArticulationpointsStatistics().infoToVector("graph articulationpoints", featuresNames, ret);
     }
      if(communitystructure){
+       if(!computedcs){ 
     graph->computeCommunityStatistics(quantilesCount);
+       computedcs = true;	 
+      }
       graph->getCommunitySizeStatistics().infoToVector("graph communities size", featuresNames, ret);
       graph->getCommunityNeighborStatistics().infoToVector("graph communities neighbors", featuresNames, ret);
       graph->getCommunityBridgeStatistics().infoToVector("graph communities bridgevariables", featuresNames, ret);
@@ -119,6 +142,54 @@ std::vector<double> getFeatures(){
 std::vector<std::string> getFeaturesNames(){
 
   return this->featuresNames;
+  
+}
+
+void computeDerivative(bool b){
+
+  classifier->setComputingDerivative(b);
+  
+}
+
+void computeResolutionGraph(bool b){
+
+  classifier->setComputingResolutionGraph(b);
+  
+}
+
+void computeClausesGraph(bool b){
+
+  classifier->setComputingClausesGraph(b);
+  
+}
+
+void computeRwh(bool b){
+
+  classifier->setComputingRwh(b);
+  
+}
+
+void computeBinaryImplicationGraph(bool b){
+
+  classifier->setComputeBinaryImplicationGraph(b);
+  
+}
+
+void computeConstraints(bool b){
+
+  classifier->setComputeConstraints(b);
+  
+}
+
+void computeXor(bool b){
+
+  classifier->setComputeXor(b);
+  
+}
+
+void computeVarGraph(bool b){
+
+  classifier->setComputingVarGraph(b);
   
 }
 

@@ -295,21 +295,21 @@ void computeExtraGraphFeatures(int argc, char** argv)
   */  
     cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
     cnfclassifier->setVerb(verb);
-    cnfclassifier->setComputingClausesGraph(clausesf);
-    cnfclassifier->setComputingResolutionGraph(resolutionf);
-    cnfclassifier->setComputingRwh(rwh);
-    cnfclassifier->setComputeBinaryImplicationGraph(opt_big);
-    cnfclassifier->setComputeConstraints(opt_constraints);
-    cnfclassifier->setComputeXor(opt_xor);
-    cnfclassifier->setQuantilesCount(qcount);
+    cnfclassifier->setComputingClausesGraph(clausesf);//
+    cnfclassifier->setComputingResolutionGraph(resolutionf);//
+    cnfclassifier->setComputingRwh(rwh); //
+    cnfclassifier->setComputeBinaryImplicationGraph(opt_big); //
+    cnfclassifier->setComputeConstraints(opt_constraints); //
+    cnfclassifier->setComputeXor(opt_xor); //
+    cnfclassifier->setQuantilesCount(qcount);//
     cnfclassifier->setPlotsFileName(plotFile);
-    cnfclassifier->setComputingVarGraph(varf);
+    cnfclassifier->setComputingVarGraph(varf);//
     if (attr) {
         cnfclassifier->setAttrFileName(attrFile);
     } else {
         cnfclassifier->setAttrFileName(nullptr);
     }
-    cnfclassifier->setComputingDerivative(derivative);
+    cnfclassifier->setComputingDerivative(derivative); //
 
     
     // in output features the actual calculation is done
@@ -382,27 +382,19 @@ void printFeatures(int argc, char** argv)
 
     cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
     cnfclassifier->setVerb(verb);
-    cnfclassifier->setComputingClausesGraph(clausesf);
-    cnfclassifier->setComputingResolutionGraph(resolutionf);
-    cnfclassifier->setComputingRwh(rwh);
-    cnfclassifier->setComputeBinaryImplicationGraph(opt_big);
-    cnfclassifier->setComputeConstraints(opt_constraints);
-    cnfclassifier->setComputeXor(opt_xor);
     cnfclassifier->setQuantilesCount(qcount);
     cnfclassifier->setPlotsFileName(plotFile);
-    cnfclassifier->setComputingVarGraph(varf);
     if (attr) {
         cnfclassifier->setAttrFileName(attrFile);
     } else {
         cnfclassifier->setAttrFileName(nullptr);
     }
-    cnfclassifier->setComputingDerivative(derivative);
-
+  
     // in output features the actual calculation is done
    // cnfclassifier->extractFeatures(features); // also print the formula name!!
   
     
-    GraphInformation graphinformation(cnfclassifier);
+    GraphInformation graphinformation(cnfclassifier, derivative);
     graphinformation.computearticulationpoints(computeArticulationpoints);
     graphinformation.computecommunitystructure(computeCommunitystructure);
     graphinformation.computedegree(computeDegree);
@@ -413,9 +405,21 @@ void printFeatures(int argc, char** argv)
     graphinformation.computeradius(computeRadius);
     graphinformation.computetreewidth(computeTreewidth);
     graphinformation.computeweight(computeWeight);
+    graphinformation.computeClausesGraph(clausesf);//
+    graphinformation.computeResolutionGraph(resolutionf);//
+    graphinformation.computeRwh(rwh); //
+    graphinformation.computeBinaryImplicationGraph(opt_big); //
+    graphinformation.computeConstraints(opt_constraints); //
+    graphinformation.computeXor(opt_xor); //
+    graphinformation.computeVarGraph(varf);//
    
     features = graphinformation.getFeatures();
     
+    cerr<<features.size()<<endl;
+    cerr<<graphinformation.getFeaturesNames().size()<<endl;
+    
+    graphinformation.computeClausesGraph(false);
+    features = graphinformation.getFeatures();
     cerr<<features.size()<<endl;
     cerr<<graphinformation.getFeaturesNames().size()<<endl;
     

@@ -265,6 +265,11 @@ class CNFClassifier
       return clauses;
     }
     
+    void clearfeaturesNames(){
+    
+      featuresNames.clear();
+    }
+    
     
 };
 
