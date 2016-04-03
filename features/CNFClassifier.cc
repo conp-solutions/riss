@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "GraphInformation.h"
 
 #include <limits.h>
 #include <math.h>
@@ -210,7 +211,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
     for (i = 0; i < clauses.size(); ++i) {
         sizeN = clausesVariablesN.getBCount(i);
         sizeP = clausesVariablesP.getBCount(i);
-        nsize = sizeN + sizeP;
+        nsize = sizeN + sizeP;	
         cdeg.addValue(nsize);
         const double max0 = max(sizeN, sizeP);
         if (nsize > 0) {
@@ -1277,88 +1278,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
 
     operations += buildResolutionAndClausesGrapths(clausesVariablesP, clausesVariablesN, ret);
- 
-   //============================================================================================================
-  //=============================================graphExtraFeatures==============================================
-
-    vector<int> clsSizes(10, 0);
-    
-    Graph *vigGraph = nullptr;
-    if (computingVarGraph) { vigGraph = new Graph(nVars, computingDerivative); }
-
-     for (int i = 0; i < clauses.size(); ++i) {
-      
-        //You should know the difference between Java References, C++ Pointers, C++ References and C++ copies.
-        // Especially if you write your own methods and pass large objects that you want to modify, this makes a difference!
-        const Clause& c = ca[clauses[i]];
-        clsSizes[ c.size() + 1 < clsSizes.size() ? c.size() : clsSizes.size() - 1 ] ++; // cumulate number of occurrences of certain clause sizes
-
-        double wvariable = pow(2, -c.size());
-        for (int j = 0; j < c.size(); ++j) {
-            const Lit& l = c[j]; // for read access only, you could use a read-only reference of the type literal.
-            const Lit cpl = ~l;  // build the complement of the literal
-           
-            const Var v = var(l); // calculate a variable from the literal
-
-            // Adding edges for the variable graph
-            if (computingVarGraph) {
-                for (int k = j + 1; k < c.size(); ++k) {
-		                      vigGraph->addDirectedEdgeAndInvertedEdge(v,   
-                                   var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
-                }
-            }
-
-            assert(var(~l) == var(l) && "the two variables have to be the same");
-        }
-
-    }
-    
-    vigGraph->finalizeGraph(); //finalize Graph (be sure to use sorted adjlists)
-    if(exzentricity){
-    vigGraph->computeExzentricityStatistics(quantilesCount);
-    vigGraph->getExzentricityStatistics().infoToVector("variables exzentricity", featuresNames, ret);
-    }
-    if(pagerank){
-    vigGraph->computePagerankStatistics(quantilesCount);
-    vigGraph->getPagerankStatistics().infoToVector("variables pagerank", featuresNames, ret);
-    }
-    if(articulationpoints){
-    vigGraph->computeArticulationpointsStatistics(quantilesCount);
-    vigGraph->getArticulationpointsStatistics().infoToVector("graph articulationpoints", featuresNames, ret);
-    }
-     if(communitystructure){
-    vigGraph->computeCommunityStatistics(quantilesCount);
-    vigGraph->getCommunitySizeStatistics().infoToVector("graph communities size", featuresNames, ret);
-    vigGraph->getCommunityNeighborStatistics().infoToVector("graph communities neighbors", featuresNames, ret);
-    vigGraph->getCommunityBridgeStatistics().infoToVector("graph communities bridgevariables", featuresNames, ret);
-     }
-    if(radius){ 
-    ret.push_back(vigGraph->getRadius());
-    featuresNames.push_back("graphradius");
-    }
-    if(diameter){
-    ret.push_back(vigGraph->getDiameter());
-    featuresNames.push_back("graphdiameter");
-    }
-    if(treewidth){
-    ret.push_back(vigGraph->gettreewidth());
-    featuresNames.push_back("graphtreewidth");
-    }
-    if(degree){
-    vigGraph->getDegreeStatistics().infoToVector("variables degree", featuresNames, ret);
-    }
-    if(weight){
-    vigGraph->getWeightStatistics().infoToVector("variables weight", featuresNames, ret);
-    }
-   /* if(dimensions){
-    vigGraph->getWeightStatistics().infoToVector("variables weight", featuresNames, ret);
-    }
-	
-	*/ 
-   //============================================================================================================
-  //============================================================================================================= 
    
-	  
     time1 = (cpuTime() - time1);
     timeIndexes.push_back(ret.size());
     featuresNames.push_back("features computation time");

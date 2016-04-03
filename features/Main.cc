@@ -34,7 +34,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include "classifier/CompareSolver.h"
 
 #include "communityInformation.h"
-
+#include "GraphInformation.h"
 using namespace Riss;
 using namespace Coprocessor;
 using namespace std;
@@ -399,13 +399,30 @@ void printFeatures(int argc, char** argv)
     cnfclassifier->setComputingDerivative(derivative);
 
     // in output features the actual calculation is done
-    cnfclassifier->setFeatureOptions(computeDiameter,computeRadius, computeExzentricity, computeTreewidth, computePagerank, computeArticulationpoints, computeCommunitystructure, computeDimensions, computeDegree, computeWeight);
-    cnfclassifier->extractFeatures(features); // also print the formula name!!
+   // cnfclassifier->extractFeatures(features); // also print the formula name!!
   
+    
+    GraphInformation graphinformation(cnfclassifier);
+    graphinformation.computearticulationpoints(computeArticulationpoints);
+    graphinformation.computecommunitystructure(computeCommunitystructure);
+    graphinformation.computedegree(computeDegree);
+    graphinformation.computediameter(computeDiameter);
+    graphinformation.computedimensions(computeDimensions);
+    graphinformation.computeexzentricity(computeExzentricity);
+    graphinformation.computepagerank(computePagerank);
+    graphinformation.computeradius(computeRadius);
+    graphinformation.computetreewidth(computeTreewidth);
+    graphinformation.computeweight(computeWeight);
+   
+    features = graphinformation.getFeatures();
+    
+    cerr<<features.size()<<endl;
+    cerr<<graphinformation.getFeaturesNames().size()<<endl;
+    
     if (verb > 1) {
         cout.setf(ios::fixed);
         cout.precision(10);
-        vector<string> names = cnfclassifier->getFeaturesNames();
+        vector<string> names = graphinformation.getFeaturesNames();
 	cout << "Instance";
         for (int k = 0; k < features.size(); ++k) {
 	    std::replace( names[k].begin(), names[k].end(), ' ', '_');
@@ -481,18 +498,7 @@ int main(int argc, char** argv)
         
         //computeExtraGraphFeatures (argc, argv);
 	printFeatures(argc, argv);
-	/*
-	communityInformation communityInformation(argc, argv, 1000000, 0.000001);
-
-      
-       vector<vector<int>> vec =  communityInformation.getCommunities();
-       
-	for(int i=0; i<vec.size();++i){
-	cerr<<"community "<<i<<endl;
-	for(int j=0; j<vec[i].size();++j)cerr<<vec[i][j]<<endl;
-       }
-       
-     */
+	
         return 0;
 
         /**
