@@ -271,6 +271,7 @@ uint64_t Graph::computeExzentricityStatistics(int quantilesCount){
   uint64_t operations =0;
   
   for(int i=0; i< size; ++i) exzentricityStatistics.addValue(getExzentricity(i));
+  operations += size;
   operations += exzentricityStatistics.compute(quantilesCount);
   
   return operations;
@@ -281,6 +282,7 @@ uint64_t Graph::computePagerankStatistics(int quantilesCount){
   uint64_t operations =0;
   
   for(int i=0; i< size; ++i) pagerankStatistics.addValue(getPageRank(i));
+  operations += size;
   operations += pagerankStatistics.compute(quantilesCount);
   
   return operations;
@@ -294,6 +296,7 @@ uint64_t Graph::computeArticulationpointsStatistics(int quantilesCount){
   for(int i=0; i< articulationpoints.size(); ++i){
      articulationpointsStatistics.addValue(articulationpoints[i]);
    }
+  operations += articulationpoints.size();
   operations += articulationpointsStatistics.compute(quantilesCount);
   
   return operations;
@@ -1031,7 +1034,7 @@ void Graph::doPageRank(){
   }
   
 }
-void Graph::getDimension(){
+vector<double> Graph::getDimension(){
 
    int minx = 0;
     int maxx2 = 6;
@@ -1055,10 +1058,15 @@ void Graph::getDimension(){
 		polreg = regresion(v1);
 		expreg = regresion(v2);
 		
+		vector<double> ret;
+		ret.push_back(-polreg.first);
+		ret.push_back(-expreg.first);
 		
 	    		cerr << "dimension = " << -polreg.first << endl;
 			cerr << "decay = " << -expreg.first << endl;
 			cerr << "------------" << endl;
+			
+			return ret;
   
 }
 

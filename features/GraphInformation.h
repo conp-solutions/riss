@@ -29,7 +29,7 @@ GraphInformation(CNFClassifier* c, bool d): classifier(c), ca(c->getCa()), claus
   treewidth = false;
   articulationpoints = false;
   exzentricity = false;
-  pagerank = false;
+  pagerank = false; 
   communitystructure = false;
   dimensions = false;
   degree = false;
@@ -131,10 +131,13 @@ std::vector<double> getFeatures(){
     if(weight){
     graph->getWeightStatistics().infoToVector("variables weight", featuresNames, ret);
     }
-   /* if(dimensions){
-    vigGraph->getWeightStatistics().infoToVector("variables weight", featuresNames, ret);
-    }  
-  */
+    if(dimensions){
+    std::vector<double> dim = graph->getDimension();
+    ret.push_back(dim[0]);
+    ret.push_back(dim[1]);
+    featuresNames.push_back("dimension");
+    featuresNames.push_back("decay");
+    } 
    
    return ret;
 }

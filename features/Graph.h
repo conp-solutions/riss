@@ -61,7 +61,7 @@ class Graph : public SimpleGraph
    // std::vector <double> narity;  
 
   public:
-    void getDimension();
+    std::vector<double> getDimension();
     double getWeight(int nodeA, int nodeB);
     double arity(int x);
     double arity();

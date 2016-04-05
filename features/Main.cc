@@ -415,14 +415,6 @@ void printFeatures(int argc, char** argv)
    
     features = graphinformation.getFeatures();
     
-    cerr<<features.size()<<endl;
-    cerr<<graphinformation.getFeaturesNames().size()<<endl;
-    
-    graphinformation.computeClausesGraph(false);
-    features = graphinformation.getFeatures();
-    cerr<<features.size()<<endl;
-    cerr<<graphinformation.getFeaturesNames().size()<<endl;
-    
     if (verb > 1) {
         cout.setf(ios::fixed);
         cout.precision(10);
