@@ -17,6 +17,8 @@ Riss::ClauseAllocator& ca;
 Riss::vec<Riss::CRef>& clauses;
 bool derivative;
 bool computedex, computedcs, computedap, computedpa;
+std::vector<int> timeIndexes;
+double mycpuTime;
 
 public:
 
@@ -73,11 +75,28 @@ GraphInformation(CNFClassifier* c, bool d): classifier(c), ca(c->getCa()), claus
     graph->finalizeGraph(); //finalize
 }  
 
+ void setCpuTime(double cpuTime)
+    {
+        this->mycpuTime = cpuTime;
+    }
+    
+double getCpuTime() const
+    {
+        return mycpuTime;
+    }
+    
+ const std::vector<int>& getTimeIndexes() const
+    {
+        return timeIndexes;
+    }
+
 std::vector<double> getFeatures(){
 
   std::vector<double> ret;
   featuresNames.clear();
   classifier->clearfeaturesNames();
+  
+  double time1 = cpuTime(); // start timer
   classifier->extractFeatures(ret);
   
  
@@ -138,6 +157,13 @@ std::vector<double> getFeatures(){
     featuresNames.push_back("dimension");
     featuresNames.push_back("decay");
     } 
+    
+    time1 = (cpuTime() - time1);
+    featuresNames.push_back("features computation time");
+    ret.push_back(time1);
+    setCpuTime(time1);
+    timeIndexes.push_back(ret.size());
+    
    
    return ret;
 }

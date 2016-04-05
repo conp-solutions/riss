@@ -1251,7 +1251,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     // some useful code snippets:
 
     // measure time in seconds
-    double time1 = cpuTime(); // start timer
+    // double time1 = cpuTime(); // start timer
     // do some work here to measure the time for
     // TODO improve weights computation....
 
@@ -1279,11 +1279,11 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
     operations += buildResolutionAndClausesGrapths(clausesVariablesP, clausesVariablesN, ret);
    
-    time1 = (cpuTime() - time1);
+   // time1 = (cpuTime() - time1);
     timeIndexes.push_back(ret.size());
-    featuresNames.push_back("features computation time");
-    ret.push_back(time1);
-    setCpuTime(time1);
+    //featuresNames.push_back("features computation time");
+    //ret.push_back(time1);
+    //setCpuTime(time1);
 
     if (attrFileName != nullptr) {
         std::ofstream fnout;
