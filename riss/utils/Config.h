@@ -318,6 +318,8 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense") , false);
     } else if (optionSet == "Riss427-NoCLE") {
         parseOptions(std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -dense"), false);
+    } else if (optionSet == "Riss6") {
+        parseOptions(std::string(" -keepWorst=0.01 -rem-lsf=0.333333 -init-act=3 -init-pol=1 -rlevel=2 -r-ema-lslow=6.1e-05 -r-ema-tslow=0.000244 -vsids-i=0.766171 -no-updLearnAct -actDec=1.05263 -rMax=393403024 -enabled_cp3 -cp3_iters=2 -cp3_stats -bve -unhide -dense -bve_early -cp3_uhdIters=5 -no-cp3_uhdEE -cp3_bve_limit=35000000 -hbr -no-revMin"), false);
     }
     // "505" is defined below
     else if (optionSet == "RISSLGL3") {
