@@ -39,7 +39,7 @@ bool ClauseElimination::process(CoprocessorData& data)
     if (! performSimplification()) { return false; }   // do not do anything?!
     modifiedFormula = false;
 
-    if (data.outputsProof()) { printDRUPwarning(cerr, "CCE cannot produce DRUP/DRAT proofs yet"); }
+    if (data.outputsProof()) { printDRUPwarning(cerr, "CCE might not produce correct DRUP/DRAT proofs yet"); }
 
     // do not simplify, if the formula is considered to be too large!
     if (!data.unlimited() && (data.nVars() > config.opt_cce_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_cce_cls  && data.nTotLits() > config.opt_cce_lits)) { return false; }
@@ -299,6 +299,8 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
     if (doRemoveClause) {
         DOUT(if (config.cce_debug_out > 1) cerr << "clause " << ca[cr] << " is removed by cce" << endl;);
         ca[cr].set_delete(true);
+        data.addCommentToProof("clause is removed by cce");
+        data.addToProof(ca[cr], true); // delete this clause from the proof!
         data.removedClause(cr);
         assert((wData.toUndo.size() > 0 || preserveEE) && "should not add empty undo information to extension!");
         if (wData.toUndo.size() > 0) {

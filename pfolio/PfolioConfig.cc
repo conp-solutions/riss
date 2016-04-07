@@ -26,7 +26,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_verbosePfolio("PFOLIO - PROOF", "ppv", "verbose pfolio execution", false, optionListPtr)
 
     , threads("PFOLIO - INIT", "threads", "Number of threads to be used by the parallel solver.", 2, IntRange(1, 64), optionListPtr)
-    , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers", 0, optionListPtr)
+    , opt_defaultSetup("PFOLIO - INIT", "psetup", "how to setup client solvers(e.g. PLAIN)", 0, optionListPtr)
     , opt_incarnationSetups("PFOLIO - INIT", "pIncSetup", "incarnation configurations [N]confign[N+1]configN+1", 0, optionListPtr)
     , addExtraSetup("PFOLIO - INIT", "addSetup", "add pIncSetup configuration to preset (indepdently of preset)", true, optionListPtr)
     , opt_ppconfig("PFOLIO - INIT", "ppconfig", "the configuration to be used for the simplifier", 0, optionListPtr)
@@ -47,8 +47,7 @@ PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options
     , opt_sendRatio("SEND",   "sendRatio",   "", 0.1, DoubleRange(0, true, 1, true), optionListPtr)
 
     , opt_doBumpClauseActivity("SEND", "bumpSentCA", "bump activity of received clauses", false, optionListPtr)
-    , opt_sendIncModel("SEND", "sendIncModel", "allow sending with variables where the number of models potentially increased", true, optionListPtr)
-    , opt_sendDecModel("SEND", "sendDecModel", "llow sending with variables where the number of models potentially deecreased", false, optionListPtr)
+    , opt_checkLiterals("SEND", "checkLits", "control allowing sending and receiving information based on literal instead of variables", false, optionListPtr)
     , opt_useDynamicLimits("SEND", "dynLimits", "update sharing limits dynamically", false, optionListPtr)
     , opt_sendEquivalences("SEND", "shareEE", "share equivalent literals", true, optionListPtr)
 

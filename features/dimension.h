@@ -27,11 +27,10 @@ You should have received a copy of the GNU Lesser General Public License
 along with GraphFeatSAT. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "Graph.h"
+
 #include <vector>
 #include <stack>
-#ifndef VECTOR
-#endif
+#include "Graph.h"
 #include <algorithm>
 
 #ifndef DIMENSION_H

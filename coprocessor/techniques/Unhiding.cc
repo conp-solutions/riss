@@ -847,6 +847,7 @@ bool Unhiding::process()
             if (data.getEquivalences().size() > 0) {
                 modifiedFormula = modifiedFormula || ee.appliedSomething();
                 ee.applyEquivalencesToFormula(data);
+		assert( (!data.ok() || data.getEquivalences().size() == 0) && "all equivalence classes had to be processed" );
             }
             foundEE = false;
         }
@@ -879,6 +880,7 @@ bool Unhiding::process()
                 modifiedFormula = modifiedFormula || ee.appliedSomething();
                 ee.applyEquivalencesToFormula(data);
             }
+            assert( (!data.ok() || data.getEquivalences().size() == 0) && "all equivalence classes had to be processed" );
         }
 
     } // next iteration ?!

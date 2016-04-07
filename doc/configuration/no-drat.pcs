@@ -1,0 +1,35 @@
+#
+#
+# the forbidden clauses given in this file disable techniques that are not able to print DRAT proof during the execution of the solver
+# some further values might be excluded due to the actual domain of the parameters. CHECK ALL NON-BOOLEAN PARAMETERS!
+#
+#
+
+# preprocessing options
+{ fm=yes }  # does not work with drat proofs
+{ symm=yes }  # not all info from symmetry can be handled in DRAT proof
+# { ee=yes }  # does not work with drat proofs
+# { cce=yes }  # does not work with drat proofs
+{ xor=yes } # does not work with drat proofs
+{ dense=yes } # reduced excludable faulty configuration
+{ enabled_cp3=yes, pr-probe=yes, probe=yes } # necessary assignments and equivalences are not handled (yet)
+# { rate-ratm=yes } # rate-ratm has not to be used, implementation is buggy! example call: solvers/riss5drat/riss-debug -config= -proof=/dev/null -proof-oft-check=1 /home/nmanthey/satgroup/tools/checksmac/instances/Sat_Data/bench/SW-verification/GZIP_v1.2.4__v1.1/gzip_vc1012.cnf  -enabled_cp3 -rate -rate-ratm
+{ cp3_Xbva=1 } # would have to add intermediate clauses as well!
+{ cp3_Ibva=1 } # would have to add intermediate clauses as well!
+{ probe=yes }  # not all cases of probing can be handled
+
+# seem to fail together with inprocessing ... learnt clauses might be an issue
+{ rate-bcs=yes }  # blocked clause substitution is stronger than one-clause-RAT
+{ rate-ratm=yes } # rat minimization does not work
+{ bce-bcm=yes }   # blocked clause minimization seems to be not working, even when removing only a single literal
+{ bce-cle=yes }   # blocked clause minimization seems to be not working, even when removing only a single literal
+
+# search options
+{ hlaLevel=1 } # hlaLevel=5 for DRAT proofs!
+{ hlaLevel=4 } # hlaLevel=5 for DRAT proofs!
+{ laEEp=1 } # ee cannot be handled well for DRAT proofs
+{ laEEp=4 } # ee cannot be handled well for DRAT proofs
+{ prob-step-width=1 } # probing might lead to equivalences
+{ prob-step-width=4 } # probing might lead to equivalences
+{ cp3_uhdEE=yes }   # reasoning with equivalences does not work properly
+{ cp3_uhdPrEE=yes } # reasoning with equivalences does not work properly

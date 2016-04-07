@@ -51,23 +51,7 @@ void printStats(PSolver& solver)
     double cpu_time = cpuTime();
 
     double mem_used = memUsedPeak();
-//     printf("c restarts              : %"PRIu64" (%"PRIu64" conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts/solver.starts );
-//     printf("c blocked restarts      : %"PRIu64" (multiple: %"PRIu64") \n", solver.nbstopsrestarts,solver.nbstopsrestartssame);
-//     printf("c last block at restart : %"PRIu64"\n",solver.lastblockatrestart);
-//     printf("c nb ReduceDB           : %"PRIu64"\n", solver.nbReduceDB);
-//     printf("c nb removed Clauses    : %"PRIu64"\n",solver.nbRemovedClauses);
-//     printf("c nb learnts DL2        : %"PRIu64"\n", solver.nbDL2);
-//     printf("c nb learnts size 2     : %"PRIu64"\n", solver.nbBin);
-//     printf("c nb learnts size 1     : %"PRIu64"\n", solver.nbUn);
-//
-//     printf("c conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
-//     printf("c decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions*100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time );
-//     printf("c propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations/cpu_time);
-//     printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
-//     printf("c nb reduced Clauses    : %"PRIu64"\n",solver.nbReducedClauses);
-
     printf("c Memory used           : %.2f MB\n", mem_used);
-
     printf("c CPU time              : %g s\n", cpu_time);
 }
 
@@ -111,7 +95,7 @@ int main(int argc, char** argv)
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
+    StringOption drupFile("PROOF", "proof", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
 
     BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
@@ -294,12 +278,17 @@ int main(int argc, char** argv)
 
         // check model of the formula
         if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+	    gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+	    if (in == nullptr) {
+		printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+	    }
             if (check_DIMACS(in, S.model)) {
                 printf("c verified model\n");
             } else {
                 printf("c model invalid -- turn answer into UNKNOWN\n");
                 ret = l_Undef; // turn result into unknown, because the model is not correct
             }
+            gzclose(in);
         }
 
         // print solution to screen

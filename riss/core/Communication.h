@@ -177,6 +177,8 @@ class ClauseRingBuffer
     {
         lock();
 
+	assert( clauseSize != 0 && "should not send empty clauses" );
+	
         // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
         // overwrite current position (starts with 0)
         std::vector<Lit>& poolClause = pool[addHereNext].data;
@@ -262,7 +264,7 @@ class ClauseRingBuffer
         if (getMultiUnit(position)) {
             const std::vector<Lit>& units = getData(position);
             for (int j = 0 ; j < units.size(); ++ j) {
-                if (receiveData.canBeReceived(var(units[j]))) {      // we are allowed to receive that unit clause due to simplification
+                if (receiveData.canBeReceived( units[j] )) {      // we are allowed to receive that unit clause due to simplification
                     receivedUnits.push(units[j]);    // receive unit
                     #ifdef PCASSO
                     receivedUnitsDependencies. push(getDependency(position));   // store dependency level
@@ -274,7 +276,7 @@ class ClauseRingBuffer
             int usedSCCliterals = 0;
             const int oldSize = receivedEquivalences.size();
             for (int j = 0 ; j < eeSCC.size(); ++ j) {
-                if (receiveData.canBeReceived(var(eeSCC[j]))) {      // we are allowed to receive that unit clause due to simplification
+                if (receiveData.canBeReceived( eeSCC[j] )) {      // we are allowed to receive that unit clause due to simplification
                     receivedEquivalences.push(eeSCC[j]);    // receive unit
                     usedSCCliterals ++;
                     #ifdef PCASSO
@@ -293,7 +295,7 @@ class ClauseRingBuffer
             // usual clause
             const std::vector<Lit>& lits = getData(position);
             for (int i = 0 ; i < lits.size(); ++ i) {                     // check soundness of receiving
-                if (! receiveData.canBeReceived(var(lits[i]))) { return; }      // if a literal in the clause is locked, do not receive it
+                if (! receiveData.canBeReceived( lits[i] )) { return; }      // if a literal in the clause is locked, do not receive it
             }
             // otherwise, receiving is fine at the moment
             clauses.push_back(getClause(position, allocator));                 // create clause directly in clause allocator
@@ -616,8 +618,7 @@ class Communicator
         , lbdChange(0.0)   // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.02)
         , sendRatio(0.1)   // how many of the learned clauses should be shared? 10%?
         , doBumpClauseActivity(false)
-        , sendIncModel(true)           // allow sending with variables where the number of models potentially increased
-        , sendDecModel(false)          // allow sending with variables where the number of models potentially deecreased
+        , checkLiterals(true)           // allow sending with variables where the number of models potentially increased
         , useDynamicLimits(true)       // update sharing limits dynamically
         , sendEquivalences(true)       // share equivalence information
         , receiveEqiuvalences(false)   // receive equivalence information
@@ -688,6 +689,8 @@ class Communicator
     /** tell the number of shared variables */
     void setFormulaVariables(const int formulaVariables) { originalVars = formulaVariables; }
 
+    int getFormulaVariables() const { return originalVars; }
+    
     /** set whether this thread is the winner */
     bool setWinner(const bool newWinner)
     {
@@ -794,6 +797,7 @@ class Communicator
         }
         #else
         if (!multiUnits && !equivalences) {
+	    assert( toSendSize != 0 && "should not send empty clauses" );
             data->getBuffer().addClause(id, clause, toSendSize); // usual buffer
             if (data->getExtraBuffer() != nullptr) {
                 data->getExtraBuffer()->addClause(data->getExtraBuffer()->specialAuthor(), clause, toSendSize);     // usual special buffer
@@ -871,8 +875,7 @@ class Communicator
     float sendRatio;              // How big should the ratio of send clauses be?
     bool  doBumpClauseActivity;   // Should the activity of a received clause be increased from 0 to current activity
 
-    bool sendIncModel;            // allow sending with variables where the number of models potentially increased
-    bool sendDecModel;            // allow sending with variables where the number of models potentially deecreased
+    bool checkLiterals;           // control allowing sending and receiving information based on literal instead of variables
     bool useDynamicLimits;        // update sharing limits dynamically
     bool sendEquivalences;        // share equivalence information
     bool receiveEqiuvalences;     // receive equivalences

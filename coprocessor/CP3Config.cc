@@ -31,10 +31,10 @@ const char* _cat2         = "COPROCESSOR  TECHNIQUES";
 const char* _cat_bve      = "COPROCESSOR - BVE";
 const char* _cat_bva      = "COPROCESSOR - BVA";
 const char* _cat_bce      = "COPROCESSOR - BCE";
-const char* _cat_la       = "COPROCESSOR - LA";
+const char* _cat_la       = "COPROCESSOR - LA #NoAutoT";
 const char* _cat_cce      = "COPROCESSOR - CCE";
 const char* _cat_dense    = "COPROCESSOR - DENSE";
-const char* _cat_entailed = "COPROCESSOR - ENTAILED";
+const char* _cat_entailed = "COPROCESSOR - ENTAILED #NoAutoT";
 const char* _cat_ee       = "COPROCESSOR - EQUIVALENCE ELIMINATION";
 const char* _cat_ee_hash  = "COPROCESSOR - EQUIVALENCE ELIMINATION - HASHING";
 const char* _cat_fm       = "COPROCESSOR - FOURIERMOTZKIN";
@@ -43,7 +43,7 @@ const char* _cat_pr       = "COPROCESSOR - PROBING";
 const char* _cat_up       = "COPROCESSOR - UP";
 const char* _cat_res      = "COPROCESSOR - RES";
 const char* _cat_rew      = "COPROCESSOR - REWRITE #NoAutoT";
-const char* _cat_shuffle  = "COPROCESSOR - SHUFFLE";
+const char* _cat_shuffle  = "COPROCESSOR - SHUFFLE #NoAutoT";
 const char* _cat_sls      = "COPROCESSOR - SLS";
 const char* _cat_sub      = "COPROCESSOR - SUBSUMPTION";
 const char* _cat_sym      = "COPROCESSOR - SYMMETRY";
@@ -78,6 +78,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_exit_pp       (_cat, "cp3-exit-pp",     "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit) #NoAutoT", 0, IntRange(0, 3), optionListPtr, &opt_enabled),
     opt_randInp       (_cat, "randInp",         "Randomize Inprocessing", true,                                                                    optionListPtr, &opt_inprocess),
     opt_inc_inp       (_cat, "inc-inp",         "increase technique limits per inprocess step", false,                                             optionListPtr, &opt_inprocess),
+    opt_remL_inp      (_cat, "inp-remL",        "remove all learned clauses for first inprocessing", false,                                        optionListPtr, &opt_inprocess),
 
     opt_whiteList     (_cat2, "whiteList",      "variables whose set of solution is not touched", 0,                                               optionListPtr, &opt_enabled),
 
@@ -89,32 +90,31 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_subsimp        (_cat2, "subsimp",       "Use Subsumption during preprocessing", false,                                 optionListPtr, &opt_enabled),
     opt_hte            (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false,                optionListPtr, &opt_enabled),
 
-    opt_bce            (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false,                  optionListPtr, &opt_enabled),
-    opt_ent            (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false,            optionListPtr, &opt_enabled),
-    opt_exp            (_cat2, "exp",           "Use experimental simplification techniques", false,                           optionListPtr, &opt_enabled),
-    opt_la             (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing", false,       optionListPtr, &opt_enabled),
-    opt_cce            (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false,                optionListPtr, &opt_enabled),
-    opt_rate           (_cat2, "rate",          "Use resolution asymmetric tautologye limination during preprocessing", false, optionListPtr, &opt_enabled),
-    opt_ee             (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false,                     optionListPtr, &opt_enabled),
-    opt_bve            (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false,                optionListPtr, &opt_enabled),
-    opt_bva            (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false,                   optionListPtr, &opt_enabled),
-    opt_unhide         (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false,                      optionListPtr, &opt_enabled),
-    opt_probe          (_cat2, "probe",         "Use Probing/Clause Vivification", false,                                      optionListPtr, &opt_enabled),
-    opt_ternResolve    (_cat2, "3resolve",      "Use Ternary Clause Resolution", false,                                        optionListPtr, &opt_enabled),
-    opt_addRedBins     (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false,                                  optionListPtr, &opt_enabled),
-    opt_dense          (_cat2, "dense",         "Remove gaps in variables of the formula", false,                              optionListPtr, &opt_enabled),
-    opt_shuffle        (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false,          optionListPtr, &opt_enabled),
-    opt_simplify       (_cat2, "simplify",      "Apply easy simplifications to the formula", true,                             optionListPtr, &opt_enabled),
-    opt_symm           (_cat2, "symm",          "Do local symmetry breaking", false,                                           optionListPtr, &opt_enabled),
-    opt_FM             (_cat2, "fm",            "Use the Fourier Motzkin transformation", false,                               optionListPtr, &opt_enabled),
-    opt_hbr            (_cat2, "hbr",           "Use hyper binary resolution", false,                                          optionListPtr, &opt_enabled),
+    opt_bce            (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false,                     optionListPtr, &opt_enabled),
+    opt_modprep        (_cat2, "modprep",       "Use Modularity Based Preprocessing", false,                                      optionListPtr, &opt_enabled),
+    opt_ent            (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing #NoAutoT", false,      optionListPtr, &opt_enabled),
+    opt_exp            (_cat2, "exp",           "Use experimental simplification techniques #NoAutoT", false,                     optionListPtr, &opt_enabled),
+    opt_la             (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing #NoAutoT", false, optionListPtr, &opt_enabled),
+    opt_cce            (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false,                   optionListPtr, &opt_enabled),
+    opt_rate           (_cat2, "rate",          "Use resolution asymmetric tautologye limination during preprocessing", false,    optionListPtr, &opt_enabled),
+    opt_ee             (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false,                        optionListPtr, &opt_enabled),
+    opt_bve            (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false,                   optionListPtr, &opt_enabled),
+    opt_bva            (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false,                      optionListPtr, &opt_enabled),
+    opt_unhide         (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false,                         optionListPtr, &opt_enabled),
+    opt_probe          (_cat2, "probe",         "Use Probing/Clause Vivification", false,                                         optionListPtr, &opt_enabled),
+    opt_ternResolve    (_cat2, "3resolve",      "Use Ternary Clause Resolution", false,                                           optionListPtr, &opt_enabled),
+    opt_addRedBins     (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false,                                     optionListPtr, &opt_enabled),
+    opt_dense          (_cat2, "dense",         "Remove gaps in variables of the formula", false,                                 optionListPtr, &opt_enabled),
+    opt_shuffle        (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized #NoAutoT", false,    optionListPtr, &opt_enabled),
+    opt_simplify       (_cat2, "simplify",      "Apply easy simplifications to the formula", true,                                optionListPtr, &opt_enabled),
+    opt_symm           (_cat2, "symm",          "Do local symmetry breaking", false,                                              optionListPtr, &opt_enabled),
+    opt_FM             (_cat2, "fm",            "Use the Fourier Motzkin transformation", false,                                  optionListPtr, &opt_enabled),
+    opt_hbr            (_cat2, "hbr",           "Use hyper binary resolution", false,                                             optionListPtr, &opt_enabled),
 
     stepbystepoutput   (_cat2, "debugCNFbase",  "CNF filename prefix for step by step formulas", 0,                            optionListPtr, &opt_enabled),
 
     opt_ptechs         (_cat2, "cp3_ptechs",    "techniques for preprocessing", 0,                                             optionListPtr, &opt_enabled),
     opt_itechs         (_cat2, "cp3_itechs",    "techniques for inprocessing",  0,                                             optionListPtr, &opt_inprocess),
-
-    // use 2sat and sls only for high versions!
 
     opt_threads     (_cat,        "cp3_threads",   "Number of extra threads that should be used for preprocessing #NoAutoT", 0, IntRange(0, 64), optionListPtr, &opt_enabled),
     opt_sls         (_cat2,       "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false,         optionListPtr, &opt_enabled),
@@ -191,8 +191,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 
 
     #ifndef NDEBUG
-    opt_debug (_cat, "cp3-debug", "do more debugging", false,                                                                            optionListPtr, &opt_enabled),
-    opt_check (_cat, "cp3-check", "check solver state during simplification and before returning control to solver",  0, IntRange(0, 3), optionListPtr, &opt_enabled),
+    opt_debug (_cat, "cp3-debug", "do more debugging #NoAutoT", false,                                                                            optionListPtr, &opt_enabled),
+    opt_check (_cat, "cp3-check", "check solver state during simplification and before returning control to solver #NoAutoT",  0, IntRange(0, 4), optionListPtr, &opt_enabled),
     opt_log   (_cat, "cp3-log",   "Output log messages until given level #NoAutoT", 0, IntRange(0, 3),                                   optionListPtr, &opt_enabled),
     printAfter(_cat, "cp3-print", "print intermediate formula after given technique #NoAutoT", 0,                                        optionListPtr, &opt_debug),
     #endif
@@ -200,8 +200,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     //
     // parameters BVE
     //
-    opt_par_bve              (_cat_bve, "cp3_par_bve",            "Parallel BVE: 0 never, 1 heur., 2 always", 1, IntRange(0, 2),                                                                optionListPtr, &opt_bve),
-    opt_bve_verbose          (_cat_bve, "cp3_bve_verbose",        "Verbosity of preprocessor #NoAutoT", 0, IntRange(0, 4),                                                                               optionListPtr, &opt_bve),
+    opt_par_bve              (_cat_bve, "cp3_par_bve",            "Parallel BVE: 0 never, 1 heur., 2 always #NoAutoT", 1, IntRange(0, 2),                                                       optionListPtr, &opt_bve),
+    opt_bve_verbose          (_cat_bve, "cp3_bve_verbose",        "Verbosity of preprocessor #NoAutoT", 0, IntRange(0, 4),                                                                      optionListPtr, &opt_bve),
 
     opt_bve_limit            (_cat_bve, "cp3_bve_limit",          "perform at most this many clause derefferences", 25000000, IntRange(-1, INT32_MAX),                                          optionListPtr, &opt_bve),
     opt_learnt_growth        (_cat_bve, "cp3_bve_learnt_growth",  "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX),                         optionListPtr, &opt_bve),
@@ -226,9 +226,9 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_bveInpStepInc        (_cat_bve, "cp3_bve_inpInc",         "increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX),                                                     optionListPtr, &opt_bve),
 
 
-    par_bve_threshold        (_cat_bve, "par_bve_th",             "Threshold for use of BVE-Worker", 10000, IntRange(0, INT32_MAX),                                                             optionListPtr, &opt_par_bve),
-    postpone_locked_neighbors(_cat_bve, "postp_lockd_neighb",     "Postpone Elimination-Check if more neighbors are locked", 3, IntRange(0, INT32_MAX),                                         optionListPtr, &opt_par_bve),
-    opt_minimal_updates      (_cat_bve, "par_bve_min_upd",        "Omit LitOcc and Heap updates to reduce locking", false,                                                                      optionListPtr, &opt_par_bve),
+    par_bve_threshold        (_cat_bve, "par_bve_th",             "Threshold for use of BVE-Worker #NoAutoT", 10000, IntRange(0, INT32_MAX),                                                             optionListPtr, &opt_par_bve),
+    postpone_locked_neighbors(_cat_bve, "postp_lockd_neighb",     "Postpone Elimination-Check if more neighbors are locked #NoAutoT", 3, IntRange(0, INT32_MAX),                                         optionListPtr, &opt_par_bve),
+    opt_minimal_updates      (_cat_bve, "par_bve_min_upd",        "Omit LitOcc and Heap updates to reduce locking #NoAutoT", false,                                                                      optionListPtr, &opt_par_bve),
 
     //
     // BVA
@@ -347,9 +347,9 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #ifndef NDEBUG
     dense_debug_out        (_cat_dense, "cp3_dense_debug", "print debug output to screen", 0, IntRange(0, 2) ,                                optionListPtr, &opt_dense),
     #endif
-    opt_dense_inprocess    (_cat_dense, "dense_inp",       "use dense during inprocessing", false,                                            optionListPtr, &opt_dense),
+    opt_dense_inprocess    (_cat_dense, "dense_inp",       "use dense during inprocessing #NoAutoT", false,                                   optionListPtr, &opt_dense),
     opt_dense_fragmentation(_cat_dense, "cp3_dense_frag",  "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100), optionListPtr, &opt_dense),
-    opt_dense_keep_assigned(_cat_dense, "cp3_keep_set",    "keep already assigned literals", false,                                           optionListPtr, &opt_dense),
+    opt_dense_keep_assigned(_cat_dense, "cp3_keep_set",    "keep already assigned literals #NoAutoT", false,                                  optionListPtr, &opt_dense),
 
     //
     // Entailed
@@ -360,6 +360,13 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     #endif
 
     //
+    // ModPrep
+    //
+    #ifndef NDEBUG
+    modprep_debug          (_cat_entailed, "modprep-debug",  "Debug Output for ModPrep",     0, IntRange(0, 5),         optionListPtr, &opt_modprep),
+    #endif
+    
+    //
     // Equivalence
     //
     opt_ee_level           (_cat_ee, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3),                    optionListPtr, &opt_ee),
@@ -369,7 +376,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_eeGateBigFirst     (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates [should not be disabled!]", true, optionListPtr, &opt_ee),
     opt_ee_aagFile         (_cat_ee, "ee_aag", "write final circuit to this file", 0,                                                        optionListPtr, &opt_ee),
     #ifndef NDEBUG
-    ee_debug_out           (_cat_ee, "ee_debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
+    ee_debug_out           (_cat_ee, "ee-debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
     #endif
     opt_eeSub              (_cat_ee, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false,          optionListPtr, &opt_ee),
     opt_eeFullReset        (_cat_ee, "ee_reset",        "after Subs or Up, do full reset?", false,                                           optionListPtr, &opt_ee),
@@ -444,11 +451,11 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     //
     opt_hte_steps     (_cat_hte, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX), optionListPtr, &opt_hte),
 
-    opt_par_hte       (_cat_hte, "cp3_par_hte",    "Forcing Parallel HTE", false,                                                        optionListPtr, &opt_hte),
+    opt_par_hte       (_cat_hte, "cp3_par_hte",    "Forcing Parallel HTE #NoAutoT", false,                                                        optionListPtr, &opt_hte),
     #ifndef NDEBUG
     hte_debug_out     (_cat_hte, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4),                                    optionListPtr, &opt_hte),
     #endif
-    opt_hteTalk       (_cat_hte, "cp3_hteTalk",    "talk about algorithm execution", false,                                              optionListPtr, &opt_hte),
+    opt_hteTalk       (_cat_hte, "cp3_hteTalk",    "talk about algorithm execution #NoAutoT", false,                                              optionListPtr, &opt_hte),
     opt_hte_inpStepInc(_cat_hte, "cp3_hte_inpInc", "increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX),               optionListPtr, &opt_hte),
 
     //
@@ -566,12 +573,12 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_sub_callIncrease   (_cat_sub, "cp3_call_inc",     "max. limit increase per process call (subsimp is frequently called from other techniques)", 200, IntRange(0, INT32_MAX),           optionListPtr, &opt_subsimp),
     opt_sub_inpStepInc     (_cat_sub, "cp3_sub_inpInc",   "increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX),                                                          optionListPtr, &opt_subsimp),
 
-    opt_sub_par_strength   (_cat_sub, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0, 2),                                                             optionListPtr, &opt_subsimp),
+    opt_sub_par_strength   (_cat_sub, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always #NoAutoT", 1, IntRange(0, 2),                                                             optionListPtr, &opt_subsimp),
     opt_sub_lock_stats     (_cat_sub, "cp3_lock_stats",   "measure time waiting in spin locks #NoAutoT", false,                                                                               optionListPtr, &opt_subsimp),
-    opt_sub_par_subs       (_cat_sub, "cp3_par_subs",     "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0, 2),                                                               optionListPtr, &opt_subsimp),
-    opt_sub_par_subs_counts(_cat_sub, "par_subs_counts",  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0, 1),                                              optionListPtr, &opt_subsimp),
-    opt_sub_chunk_size     (_cat_sub, "susi_chunk_size",  "Size of Par SuSi Chunks", 100000, IntRange(1, INT32_MAX),                                                                          optionListPtr, &opt_subsimp),
-    opt_sub_par_str_minCls (_cat_sub, "par_str_minCls",   "number of clauses to start parallel strengthening", 250000, IntRange(1, INT32_MAX),                                                optionListPtr, &opt_subsimp),
+    opt_sub_par_subs       (_cat_sub, "cp3_par_subs",     "par subsumption: 0 never, 1 heuristic, 2 always #NoAutoT", 1, IntRange(0, 2),                                                               optionListPtr, &opt_subsimp),
+    opt_sub_par_subs_counts(_cat_sub, "par_subs_counts",  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector #NoAutoT", 1, IntRange(0, 1),                                              optionListPtr, &opt_subsimp),
+    opt_sub_chunk_size     (_cat_sub, "susi_chunk_size",  "Size of Par SuSi Chunks #NoAutoT", 100000, IntRange(1, INT32_MAX),                                                                          optionListPtr, &opt_subsimp),
+    opt_sub_par_str_minCls (_cat_sub, "par_str_minCls",   "number of clauses to start parallel strengthening #NoAutoT", 250000, IntRange(1, INT32_MAX),                                                optionListPtr, &opt_subsimp),
 
     #ifndef NDEBUG
     opt_sub_debug          (_cat_sub, "susi_debug",       "Debug Output for Subsumption", 0, IntRange(0, 3),                                                                                  optionListPtr, &opt_subsimp),
@@ -598,9 +605,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     sym_opt_total_conflicts(_cat_sym, "sym-consT",   "number of total conflicts for looking for being implied", 10000, IntRange(0, INT32_MAX) ,                                        optionListPtr, &opt_symm),
     #ifndef NDEBUG
     sym_debug_out          (_cat_sym, "sym-debug",   "debug output for probing", 0, IntRange(0, 4) ,                                                                                   optionListPtr, &opt_symm),
-    #endif
-
-    //
+    #endif   //
     // Unhide
     //
     opt_uhd_Iters     (_cat_uhd, "cp3_uhdIters",     "Number of iterations for unhiding", 3, IntRange(0, INT32_MAX),                                                 optionListPtr, &opt_unhide),
@@ -634,7 +639,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     opt_xor_checkNewSubsume(_cat_xor, "xorEncSubs",   "perform subsumption checks with newly added XOR clauses", false,                                 optionListPtr, &opt_xor),
     opt_xor_addAsLearnt    (_cat_xor, "xorEncL",      "add clause to encode XOR as learnt clause", false,                                               optionListPtr, &opt_xor),
     opt_xor_setPolarity    (_cat_xor, "xorSetPol",    "set default polarities based on XOR elimination order and UP(-1=neg,1=pos)", 0, IntRange(-1, 1), optionListPtr, &opt_xor),
-    opt_xor_addOnNewlyAdded(_cat_xor, "xorAddNew",    "add simplified XORs to list of variables that have been added during add", false,                optionListPtr, &opt_xor),
+    opt_xor_addOnNewlyAdded(_cat_xor, "xorAddNew",    "add simplified XORs to list of variables that have been added during add #NoAutoT", false,       optionListPtr, &opt_xor),
 
     #ifndef NDEBUG
     opt_xor_debug          (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5),                                            optionListPtr, &opt_xor),

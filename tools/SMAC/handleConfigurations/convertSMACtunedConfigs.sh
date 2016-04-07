@@ -18,7 +18,7 @@ do
 	# get the parameter format for Riss
 	config=`python mapCSSCparams.py $CONFIG`
 
-  ./riss -cmd $config
+  ./riss -config= -cmd $config
 
 	# remove all parameters of the default configuration and print the configuration to the screen
 	#echo "reduce full config: $config"

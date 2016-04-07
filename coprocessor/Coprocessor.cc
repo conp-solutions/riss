@@ -37,6 +37,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , thisLearnts(0)
     , lastInpConflicts(0)
     , formulaVariables(-1)
+    , inprocessings(0)
 // classes for preprocessing methods
     , propagation(config, solver->ca, controller)
     , subsumption(config, solver->ca, controller, data, propagation)
@@ -59,6 +60,8 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , entailedRedundant(config, solver->ca, controller, data)
     , hbr(config, solver->ca, controller, data, propagation)
     , shuffler(config)
+    , experimental(config, solver->ca, controller, data, *solver)
+    , modprep(config, solver->ca, controller, data, *solver)
     , sls(config, data, solver->ca, controller)
     , shuffleVariable(-1)
 {
@@ -399,7 +402,6 @@ lbool Preprocessor::performSimplification()
         }
 
         if (! data.ok()) { break; }  // stop here already
-
         if (config.opt_hbr) {
             if (config.opt_verbose > 0) { cerr << "c hbr ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") hyper binary resolution" << endl; }
@@ -410,6 +412,31 @@ lbool Preprocessor::performSimplification()
 
             DOUT(if (config.opt_debug)  { checkLists("after HBR"); scanCheck("after HBR"); });    // perform only if BCE finished the whole formula?!
         }
+        
+        if (! data.ok()) { break; }  // stop here already
+        if (config.opt_exp) {
+            if (config.opt_verbose > 0) { cerr << "c exp ..." << endl; }
+            if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") experimental techniques" << endl; }
+            if (status == l_Undef) { experimental.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); experimental.printStatistics(cerr); }
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-EXP.cnf").c_str(), 0););
+            data.checkGarbage(); // perform garbage collection
+
+            DOUT(if (config.opt_debug)  { checkLists("after EXP"); scanCheck("after EXP"); });    // perform only if BCE finished the whole formula?!
+        }
+
+        if (! data.ok()) { break; }  // stop here already
+        if (config.opt_modprep) {
+            if (config.opt_verbose > 0) { cerr << "c modprep ..." << endl; }
+            if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") modprep techniques" << endl; }
+            if (status == l_Undef) { modprep.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); modprep.printStatistics(cerr); }
+            DOUT(if ((const char*)config.stepbystepoutput != nullptr) outputFormula(string(string(config.stepbystepoutput) + "-MODPREP.cnf").c_str(), 0););
+            data.checkGarbage(); // perform garbage collection
+
+            DOUT(if (config.opt_debug)  { checkLists("after MODPREP"); scanCheck("after MODPREP"); });    // perform only if BCE finished the whole formula?!
+        }
+        
         //
         // end of simplification iteration
         //
@@ -501,6 +528,8 @@ lbool Preprocessor::performSimplification()
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_hbr) { hbr.printStatistics(cerr); }
+        if (config.opt_exp) { experimental.printStatistics(cerr); }
+        if (config.opt_modprep) { modprep.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
         if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
@@ -785,10 +814,26 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         else if (execute == 'H' && config.opt_hbr && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c HBR" << endl; }
             hbr.process();
-            change = rate.appliedSomething() || change;
+            change = hbr.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c HBR changed formula: " << change << endl; }
         }
-
+        
+        // EXP "X"
+        else if (execute == 'X' && config.opt_exp && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c EXP" << endl; }
+            experimental.process();
+            change = experimental.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c EXP changed formula: " << change << endl; }
+        }
+        
+        // MODPREP "m"
+        else if (execute == 'm' && config.opt_modprep && status == l_Undef && data.ok()) {
+            if (config.opt_verbose > 2) { cerr << "c MODPREP" << endl; }
+            modprep.process();
+            change = modprep.appliedSomething() || change;
+            if (config.opt_verbose > 1) { cerr << "c MODPREP changed formula: " << change << endl; }
+        }
+        
         // hte "h"
         else if (execute == 'h' && config.opt_hte && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c hte" << endl; }
@@ -928,6 +973,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_hbr) { hbr.printStatistics(cerr); }
+        if (config.opt_exp) { experimental.printStatistics(cerr); }
+        if (config.opt_modprep) { modprep.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
         if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
@@ -1033,6 +1080,19 @@ lbool Preprocessor::inprocess()
         data.inprocessing();
         const bool wasDoingER = solver->getExtendedResolution();
 
+	if( inprocessings == 0 && config.opt_remL_inp ) {
+	  int removed = 0;
+	  for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
+	    Clause& c = ca[ data.getLEarnts()[i] ];
+	    if( c.mark() == 0 ) {
+	      data.addToProof(c, true); // remove clause from proof
+	      c.mark(1);                // mark the clause to be not used next time
+	      removed ++;
+	      c.set_delete(true);	// mark clause as deleted for coprocessor as well
+	    }
+	  }
+	}
+	inprocessings ++; // count number of inprocessings
 
         if (config.opt_randInp) { data.randomized(); }
         if (config.opt_inc_inp) { giveMoreSteps(); }
@@ -1071,6 +1131,8 @@ void Preprocessor::giveMoreSteps()
     fourierMotzkin.giveMoreSteps();
     rate.giveMoreSteps();
     hbr.giveMoreSteps();
+    experimental.giveMoreSteps();
+    modprep.giveMoreSteps();
 }
 
 lbool Preprocessor::preprocessScheduled()
@@ -1187,7 +1249,7 @@ void Preprocessor::initializePreprocessor()
     for (int p = 0; p < 2; ++ p) {
         vec<CRef>& clss = (p == 0) ? data.getClauses() : data.getLEarnts();
         int& thisClss = (p == 0) ? thisClauses : thisLearnts;
-
+	
         for (int i = 0; i < clss.size(); ++i) {
             const CRef cr = clss[i];
             Clause& c = ca[cr];
@@ -1203,6 +1265,8 @@ void Preprocessor::initializePreprocessor()
                 c.set_delete(true);
                 thisClss ++;
             } else {
+		if( p == 1 && c.isCoreClause() ) continue; // do not add core clauses twice (only for clauses)
+	        assert( ( p == 1 || c.isCoreClause() || !c.learnt() ) && "core learnts should be in the clauses vector, usual learnts should be in the learnts vector" );
                 #ifndef NDEBUG
                 data.addClause(cr, config.opt_check);
                 #else
@@ -1213,9 +1277,10 @@ void Preprocessor::initializePreprocessor()
                 propagation.initClause(cr);
                 hte.initClause(cr);
                 cce.initClause(cr);
-                thisClss ++;
+                clss[ thisClss ++ ] = cr; // keep this clause!
             }
         }
+        clss.shrink_( clss.size() - thisClss ); // remove redundant clauses from vector!
     }
 
     if (config.opt_whiteList != 0 && string(config.opt_whiteList).size() != 0) {
@@ -1317,7 +1382,13 @@ void Preprocessor::destroyTechniques()
     if (config.opt_rate) { rate.destroy(); }
     if (config.opt_ent) { entailedRedundant.destroy(); }
     if (config.opt_hbr) { hbr.destroy(); }
+    if (config.opt_exp) { experimental.destroy(); }
+    if (config.opt_modprep) { modprep.destroy(); }
     if (config.opt_rew) { rewriter.destroy(); }
+    
+    // re-init replacedBy information during next round
+    assert ( (!data.ok() || data.getEquivalences().size() == 0) && "all equivalences should have been processed if the formula is not known to be unsatisfiable!" );
+    
 
 }
 
@@ -1472,31 +1543,48 @@ bool Preprocessor::checkLists(const string& headline)
     }
     cerr << "c found " << foundEmpty << " empty lists, out of " << data.nVars() * 2 << endl;
 
-    if (false) {
+    DOUT( if ( config.opt_check > 1) {
+      for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
+            const Clause& c = ca[data.getLEarnts()[i]];
+            if (c.can_be_deleted()) { continue; }
+            assert( data.checkClauseDRAT( c ) && "clauses of the current formula should be DRAT wrt the current proof!" );
+        }
+    } );
+    
+    DOUT( if ( config.opt_check > 2) {
+
         for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
             const Clause& c = ca[data.getLEarnts()[i]];
             if (c.can_be_deleted()) { continue; }
             for (int j = 0 ; j < data.getClauses().size(); ++ j) {
-                if (data.getLEarnts()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl; }
+                if (data.getLEarnts()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl; assert(false && "clause index duplicate in lists" );}
             }
         }
-
+	int totalClauses = 0;
         for (int i = 0 ; i < data.getClauses().size(); ++ i) {
             const Clause& c = ca[data.getClauses()[i]];
             if (c.can_be_deleted()) { continue; }
+            totalClauses ++;
             for (int j = i + 1 ; j < data.getClauses().size(); ++ j) {
-                if (data.getClauses()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getClauses()[i] << " in clause vector twice" << endl; }
+                if (data.getClauses()[i] == data.getClauses()[j]) { cerr << "c found clause " << data.getClauses()[i] << " in clause vector twice" << endl; assert(false && "clause index duplicate in lists" );}
             }
+            if( config.opt_check > 3 ) {
+	      if( ! data.proofHasClause( ca[data.getClauses()[i]] ) ) { cerr << "c could not find clause " << ca[data.getClauses()[i]] << " in proof" << endl;}
+	    }
         }
 
         for (int i = 0 ; i < data.getLEarnts().size(); ++ i) {
             const Clause& c = ca[data.getLEarnts()[i]];
             if (c.can_be_deleted()) { continue; }
+            totalClauses ++;
             for (int j = i + 1 ; j < data.getLEarnts().size(); ++ j) {
-                if (data.getLEarnts()[i] == data.getLEarnts()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl; }
+                if (data.getLEarnts()[i] == data.getLEarnts()[j]) { cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl; assert(false && "clause index duplicate in lists" );}
             }
+            if( config.opt_check > 3 ) {
+	      if( ! data.proofHasClause( ca[data.getLEarnts()[i]] ) ) { cerr << "c could not find clause " << ca[data.getLEarnts()[i]] << " in proof" << endl;}
+	    }
         }
-    }
+    } );
 
     return ret;
 }
@@ -1595,6 +1683,7 @@ void Preprocessor::fullCheck(const string& headline)
                         if (wcr  == cr) { didFind = true; break; }
                     }
                     if (! didFind) { cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl; }
+//                     assert( didFind && "clause should be in watch list of its two first literals" );
                 }
 
             }

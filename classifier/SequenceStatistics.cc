@@ -223,7 +223,7 @@ void SequenceStatistics::namesToVector(string prefix, vector<string>& v) const
         v.push_back(sstm.str());
     }
     if (computingDerivative) {
-        derivative->namesToVector(prefix + " derivative", v);
+        derivative->namesToVector(prefix + "_derivative", v);
     }
 }
 

@@ -40,6 +40,8 @@ class CNFClassifier
     std::vector<int> timeIndexes;
     double mycpuTime;
     int verb;
+    
+    bool radius, diameter, articulationpoints, treewidth, pagerank, exzentricity, dimensions, communitystructure, degree, weight; //features to compute
 
     uint64_t buildClausesAndVariablesGrapths(BipartiteGraph& clausesVariablesP,
             BipartiteGraph& clausesVariablesN,
@@ -75,7 +77,7 @@ class CNFClassifier
     void graphExtraFeatures(std::vector<double>& ret);
 
     std::vector<double> outputFeatures(const char* formulaName);
-
+    
     bool isComputingClausesGraph() const
     {
         return computingClausesGraph;
@@ -246,6 +248,29 @@ class CNFClassifier
     {
         this->computingVarGraph = computingVarGraph;
     }
+    
+    int getnVars(){
+    
+      return nVars;
+      
+    }
+    
+    Riss::ClauseAllocator& getCa(){
+    
+      return ca;
+    }
+    
+    Riss::vec<Riss::CRef>& getClauses(){
+    
+      return clauses;
+    }
+    
+    void clearfeaturesNames(){
+    
+      featuresNames.clear();
+    }
+    
+    
 };
 
 #endif // CNFCLASSIFIER_H

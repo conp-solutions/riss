@@ -68,6 +68,7 @@ class Symmetry;
 class RATElimination;
 class FourierMotzkin;
 class ExperimentalTechniques;
+class ModPrep;
 class BIG;
 }
 
@@ -107,6 +108,7 @@ class Solver
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
     friend class Coprocessor::ExperimentalTechniques;
+    friend class Coprocessor::ModPrep;
     friend class Riss::IncSolver; // for bmc
 
     #ifdef PCASSO
@@ -573,18 +575,18 @@ class Solver
         unsigned decision: 1;
         unsigned seen: 1;
         unsigned extra: 2; // TODO: use for special variable (not in LBD) and do not touch!
-        unsigned addModels: 1; // possibly increased number of models, e.g. by running CCE, BCE, RAT
-        unsigned delModels: 1; // possibly decreased number of models, e.g. by running CLE, BCM, RATM
+        unsigned modifiedPositiveModels: 1; // modified the models of the positive literal of this variable
+        unsigned modifiedNegativeModels: 1; // modified the models of the negative literal of this variable
         unsigned frozen: 1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
         #ifdef PCASSO
         unsigned varPT: 16; // partition tree level for this variable
         #endif
-        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), addModels(0), delModels(0), frozen(0)
+        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), modifiedPositiveModels(0), modifiedNegativeModels(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
         {}
-        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), addModels(0), delModels(0), frozen(0)
+        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), modifiedPositiveModels(0), modifiedNegativeModels(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
@@ -609,7 +611,7 @@ class Solver
 
         inline vec<Riss::Lit>& getEquivalenceStack() { return equivalencesStack; }
 
-        inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
+//         inline bool hasReplacements() const { return activeReplacements; }                     /// @return true means that there are variables pointing to other variables
         inline bool hasEquivalencesToProcess() const { return equivalencesStack.size() > 0; }
 
         inline void addEquivalenceClass(const Lit& a, const Lit& b, bool doShare = true
@@ -618,6 +620,7 @@ class Solver
                                         #endif
                                        )
         {
+	    assert( var(a) < solver->nVars() && var(b) < solver->nVars() && "do not add variables that are larger than stack size" );
             if (a != b) {
                 equivalencesStack.push(a);
                 equivalencesStack.push(b);
@@ -625,7 +628,7 @@ class Solver
                 #ifdef PCASSO
                 dependencyStack.push(dependencyLevel);
                 #endif
-                if (doShare) {
+                if (doShare && solver->isCommunicating()) {
                     temporary.clear();
                     temporary.push(a);
                     temporary.push(b);
@@ -644,13 +647,16 @@ class Solver
                                         #endif
                                        )
         {
-            for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
+            for (int i = 0 ; i < lits.size(); ++ i) { 
+	      assert( var(lits[i]) < solver->nVars() && "eq variables have to be in current formula" );
+	      equivalencesStack.push(lits[i]);
+	    }
             equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
             #ifdef PCASSO
             dependencyStack.push(dependencyLevel);
             #endif
 
-            if (doShare) {  // tell priss about shared equivalences
+            if (doShare && solver->isCommunicating() ) {  // tell priss about shared equivalences
                 temporary.clear();
                 for (int i = 0 ; i < lits.size(); ++ i) { temporary.push(lits[i]); }
                 #ifdef PCASSO
@@ -948,24 +954,36 @@ class Solver
     #ifdef DRATPROOF
     // DRUP proof
     bool outputsProof() const ;
+    vec<Lit> exportedClause; // temporary storage to write literals to proof
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
-    void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
+    void addToProof(const T& clause, bool deleteFromProof = false, Lit remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
+    void addUnitToProof(Lit l, bool deleteFromProof = false);   // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
+    template <class T>
+    bool checkClauseDRAT(const T& clause );
+    template <class T>
+    bool proofHasClause(const T& clause);
   public:
     lbool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
     #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
-    void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
+    void addToProof(const T& clause, bool deleteFromProof = false, Lit remLit = lit_Undef) const {};
+    void addUnitToProof(Lit l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
+    template <class T>
+    bool checkClauseDRAT(const T& clause ) { return true; }
+    template <class T>
+    void proofHasClause(const T& clause){ return true; }
   public:
     lbool checkProof() const { return l_Undef; } // if online checker is used, return whether the current proof is valid
   protected:
     #endif
 
+    /// check whether the given new clause already exists in the set of clauses given before
+    bool clauseAlreadyExists(const vec<CRef>& clauses, vec<Lit>& clause);
+    
     /*
      * restricted extended resolution (Audemard ea 2010)
      */
@@ -1130,6 +1148,8 @@ class Solver
     vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
     int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause; // stat counters
     double rerOverheadTrailLits, totalRERlits; // stats
+    
+    MarkArray rerRewriteArray;          // markArray to rewrite learned clauses
 
     // interleaved clause strengthening (ics)
     int lastICSconflicts;     // number of conflicts for last ICS
@@ -1423,6 +1443,8 @@ class Solver
     int sharingTimePoint; // when to share a learned clause (0=when learned, 1=when first used for propagation, 2=when first used during conflict analysis)
 
     Communicator* communication; /// communication with the outside, and control of this solver
+    
+    const bool isCommunicating() { return communication != nullptr; }
 
     /** return dependency level we are currently working on */
     unsigned currentDependencyLevel() const ;
@@ -1496,8 +1518,7 @@ class Solver
         float lbdChange;                           /// How fast should lbd send limit be adopted?
         float sendRatio;                           /// How big should the ratio of send clauses be?
 
-        bool sendIncModel;                         /// allow sending with variables where the number of models potentially increased
-        bool sendDecModel;                         /// allow sending with variables where the number of models potentially deecreased
+        bool checkLiterals;                        /// control allowing sending and receiving information based on literal instead of variables
         bool useDynamicLimits;                     /// update sharing limits dynamically
         bool sendAll;                              /// ignore sharing limits
         bool receiveAll;                           /// ignore limits for reception
@@ -1508,24 +1529,28 @@ class Solver
         CommunicationClient() : currentTries(0), receiveEvery(0), currentSendSizeLimit(0), receiveEE(false),
             refineReceived(false), resendRefined(false), doReceive(true), succesfullySend(0), succesfullyReceived(0),
             sendSize(0), sendLbd(0), sendMaxSize(0), sendMaxLbd(0), sizeChange(0), lbdChange(0), sendRatio(0),
-            sendIncModel(false), sendDecModel(false), useDynamicLimits(false), sendAll(false), receiveAll(false), keepLonger(false), lbdFactor(0) {}
+            checkLiterals(true), useDynamicLimits(false), sendAll(false), receiveAll(false), keepLonger(false), lbdFactor(0) {}
     } communicationClient;
 
     class VariableInformation
     {
         vec<VarFlags>& varInfo;
-        bool receiveInc;  // allow working with variables where the number of models increased
-        bool receiveDec;  // allow working with variable where the number decreased
+        bool receiveUseLit;  // allow working with variables where the number of models increased
       public:
-        VariableInformation(vec<VarFlags>& _varInfo, bool _receiveAdd, bool _receiveDel)
-            : varInfo(_varInfo), receiveDec(_receiveDel), receiveInc(_receiveAdd) {}
+        VariableInformation(vec<VarFlags>& _varInfo, bool checkLits)
+            : varInfo(_varInfo), receiveUseLit(checkLits) {}
 
-        bool canBeReceived(const Var& v) const
+        /** check based on the variable flags whether a certain literal is allowed to be received */
+        bool canBeReceived(const Lit& l) const
         {
-            return (!varInfo[v].addModels || receiveInc)   // if the variable has been modified and models have been added
-                   && (!varInfo[v].delModels || receiveDec);  // or models have been deleted
+	  const Var v = var(l);
+	  if( receiveUseLit ) { 
+	    if ( sign(l) ) return varInfo[v].modifiedNegativeModels;
+	    else  return varInfo[v].modifiedPositiveModels;
+	  } else return varInfo[v].modifiedNegativeModels || varInfo[v].modifiedPositiveModels;
         }
 
+        /** set dependency of a variable */
         void setDependency(const Var& v, const int& dep)
         {
             #ifdef PCASSO
@@ -2042,6 +2067,32 @@ inline int Solver::computeLBD(const T& lits, const int& litsSize)
     return distance;
 }
 
+inline bool Solver::clauseAlreadyExists(const vec<CRef>& clauses, vec<Lit>& clause){
+  char hit[ nVars() * 2 ];
+  memset( hit, 0, sizeof( char)  * nVars() * 2 );
+  
+  for( int i = 0 ; i < clause.size(); ++ i ) {
+    hit [ toInt( clause[i] ) ] = 1;
+  }
+  
+  bool found = false;
+  for( int i = 0 ; i < clauses.size(); ++ i ) {
+      const Clause& c = ca[ clauses[i] ];
+      if( clause.size() != c.size() ) continue; // size does not match
+      
+      bool failed = false;
+      for( int j = 0 ; j < c.size(); ++ j ) {
+	if( hit[ toInt(c[j]) ] != 1 ) { failed = true; break; }
+      }
+      if( ! failed ) {
+	std::cerr << "c found clause " << clause << " on position " << i << " as " << c << std::endl;
+	found = true;
+      }
+  }
+  
+  return found;
+}
+
 
 //
 // SECTION FOR DRAT PROOFS
@@ -2095,50 +2146,123 @@ inline bool Solver::outputsProof() const
 }
 
 template <class T>
-inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
+inline bool Solver::checkClauseDRAT(const T& clause)
+{
+    // if we use the online checker, check the clauses!
+    if (onlineDratChecker != 0) {
+      
+      const bool useExport = compression.isAvailable(); // indicate which data to be used
+      if( useExport ) {
+	exportedClause.growTo( clause.size() );
+	exportedClause.clear();
+	for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+      }
+      
+      return useExport ? onlineDratChecker->addClause(exportedClause, lit_Undef, true) : onlineDratChecker->addClause(clause, lit_Undef, true);
+    } else return true;
+}
+
+template <class T>
+inline bool Solver::proofHasClause(const T& clause)
+{
+  if( onlineDratChecker != 0 ) {
+    
+    const bool useExport = compression.isAvailable(); // indicate which data to be used
+    if( useExport ) {
+      exportedClause.growTo( clause.size() );
+      exportedClause.clear();
+      for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+    }
+    
+    return useExport ? onlineDratChecker->hasClause(exportedClause) : onlineDratChecker->hasClause(clause);
+  } else return true;
+}
+
+
+template <class T>
+inline void Solver::addToProof(const T& clause, const bool deleteFromProof, Lit remLit)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
+    const bool useExport = compression.isAvailable(); // indicate which data to be used
+    if( useExport ) {
+      exportedClause.growTo( clause.size() );
+      exportedClause.clear();
+      for( int i = 0 ; i < clause.size(); ++i ) exportedClause.push_( compression.exportLit( clause[i] ) );
+      remLit = compression.exportLit( remLit );
+    }
+    
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
-        if (deleteFromProof) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
-        else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false); }  // first version: work on global proof only!
+        if (deleteFromProof) { 
+	  if( useExport ) communication->getPM()->delFromProof( exportedClause, remLit, communication->getID(), false);  // first version: work on global proof only! TODO: change to local!
+	  else communication->getPM()->delFromProof(clause, remLit, communication->getID(), false);   // first version: work on global proof only! TODO: change to local!
+	}
+        else {
+	  if( useExport ) communication->getPM()->addToProof(exportedClause, remLit, communication->getID(), false);  // first version: work on global proof only!
+	  else communication->getPM()->addToProof(clause, remLit, communication->getID(), false);  // first version: work on global proof only!
+	}
         return;
     }
 
     // check before actually using the clause
     if (onlineDratChecker != 0) {
-        if (deleteFromProof) { onlineDratChecker->removeClause(clause, remLit); }
+        if (deleteFromProof) {
+	  if( useExport ) onlineDratChecker->removeClause(exportedClause , remLit);
+	  else onlineDratChecker->removeClause(clause, remLit); 
+	}
         else {
-            onlineDratChecker->addClause(clause, remLit);
+	    bool addedClause = (useExport ? onlineDratChecker->addClause( exportedClause, remLit) : onlineDratChecker->addClause( clause, remLit) );
+            if( ! addedClause  ) {
+	      cerr << "c WARNING: detected non DRAT clause, abort!" << endl;
+	      assert( false && "added clauses should be DRAT" );
+	      exit( 134 );
+	    }
         }
     }
     // actually print the clause into the file
     if (deleteFromProof) { fprintf(proofFile, "d "); }
     if (remLit != lit_Undef) { fprintf(proofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }  // print this literal first (e.g. for DRAT clauses)
-    for (int i = 0; i < clause.size(); i++) {
-        if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
-        fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+    const int csize = useExport ? exportedClause.size() : clause.size();
+    if (useExport ) {
+      for (int i = 0; i < csize; i++) {
+	  if (exportedClause[i] == lit_Undef || exportedClause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
+	  fprintf(proofFile, "%i ", (var(exportedClause[i]) + 1) * (-2 * sign(exportedClause[i]) + 1));
+      }
+    } else {
+      for (int i = 0; i < csize; i++) {
+	  if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
+	  fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+      }
     }
     fprintf(proofFile, "0\n");
 
     if (config.opt_verboseProof == 2) {
         std::cerr << "c [PROOF] ";
         if (deleteFromProof) { std::cerr << " d "; }
-        for (int i = 0; i < clause.size(); i++) {
-            if (clause[i] == lit_Undef) { continue; }
-            std::cerr << clause[i] << " ";
-        }
+        if (useExport) {
+	  for (int i = 0; i < csize; i++) {
+	      if (exportedClause[i] == lit_Undef) { continue; }
+	      std::cerr << exportedClause[i] << " ";
+	  }
+	} else {
+	  for (int i = 0; i < csize; i++) {
+	      if (clause[i] == lit_Undef) { continue; }
+	      std::cerr << clause[i] << " ";
+	  }
+	}
         if (deleteFromProof && remLit != lit_Undef) { std::cerr << remLit; }
         std::cerr << " 0" << std::endl;
     }
 }
 
-inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
+inline void Solver::addUnitToProof(Lit l, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
+    if( compression.isAvailable() ) l = compression.exportLit(l);
+    
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
         if (deleteFromProof) { communication->getPM()->delFromProof(l, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addUnitToProof(l, communication->getID(), false); }  // first version: work on global proof only!

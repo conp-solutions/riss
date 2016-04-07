@@ -27,22 +27,22 @@ You should have received a copy of the GNU Lesser General Public License
 along with GraphFeatSAT. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "Graph.h"
 #include <vector>
 #include <stack>
-#ifndef VECTOR
 
-#endif
 #include <algorithm>
 #include <stdio.h> 
 
 #ifndef COMMUNITY_H
 #define COMMUNITY_H
 
+#include "riss/utils/SimpleGraph.h"
+#include "riss/utils/Debug.h"
+
 using namespace std;
 
 //-------------------------------------------------------------------------------------------
-void shuffle(vector <int> &x) {
+inline void shuffle(vector <int> &x) {
 //-------------------------------------------------------------------------------------------
 // Randomly re-order elements of a vector
 //-------------------------------------------------------------------------------------------
@@ -54,13 +54,13 @@ void shuffle(vector <int> &x) {
 	}
 }
 //-------------------------------------------------------------------------------------------
-double abs2(double x){
+inline double abs2(double x){
 //-------------------------------------------------------------------------------------------
 	if(x<0)	return -x;
 	else	return x;
 }
 //-------------------------------------------------------------------------------------------
-bool my_bigger_communities(pair <int,double> x, pair <int,double> y) {
+inline bool my_bigger_communities(pair <int,double> x, pair <int,double> y) {
 	return x.second > y.second;
 }
 //-------------------------------------------------------------------------------------------
@@ -71,12 +71,12 @@ class Community {
 
  public:
 
-  Graph* g;
+  SimpleGraph* g;
   vector <int> n2c;      // Assigns every node a community (community identifiers belong to 0..n-1)
   vector <vector <int> > Comm;
   vector <pair <int,int> > Comm_order;
 
-  Community(Graph* g2) {
+  Community(SimpleGraph* g2) {
 	  if(g2 != NULL){
 		  g = g2;
 		  iterations = 0;
@@ -92,7 +92,7 @@ class Community {
 	  }
   }
   
-  Community(Graph* g2, vector<int> &n2cb){
+  Community(SimpleGraph* g2, vector<int> &n2cb){
 	  g = g2;
 	  iterations = 0;
 	  
@@ -117,15 +117,11 @@ double modularity() {
 	vector <double> aritym(g->getSize(), 0);
 
 	
-	for (Graph::EdgeIter it=g->begin(); it != g->end(); it++) {
-	
-	  //assert(it->orig >= 0 && it->orig < n2c.size());
+	for (SimpleGraph::EdgeIter it=g->begin(); it != g->end(); it++) {
+		//assert(it->orig >= 0 && it->orig < n2c.size());
 		//assert(it->dest >= 0 && it->dest < n2c.size());
-	
-	
-		if (n2c[it->orig] == n2c[it->dest]){ 
-		 	w += it->weight; 
-		}
+		if (n2c[it->orig] == n2c[it->dest]) 
+			w += it->weight;
 	}
 	
 	
@@ -158,7 +154,7 @@ bool one_level() {
 	vector <double> wc(g->getSize(), -1); // wc[c] = sum_{j\in c} w(n,j) for c not conected wc[c]=-1
 	vector <int> nc;                  // neigh communities
 	do {
-		//if(verbose) cerr << "Q=" << modularity() << endl;
+		DOUT( cerr << "c Q=" << modularity() << " at iteration " << iterations << endl; );
 		iterations++;
 		shuffle(random_order);
 		changed = false;
@@ -172,7 +168,7 @@ bool one_level() {
 				wc[nc[i]] = -1;
 			nc.clear();
 			nc.resize(0);
-			for (Graph::NeighIter it=g->begin(n); it != g->end(n); ++it) {
+			for (SimpleGraph::NeighIter it=g->begin(n); it != g->end(n); ++it) {
 				int c = n2c[it->dest];
 				if (it->dest != n) {
 					if (wc[c] == -1) {
@@ -209,7 +205,7 @@ bool one_level() {
 }
 
 //-------------------------------------------------------------------------------------------
-Graph* community2graph() {
+SimpleGraph* community2graph() {
 //-------------------------------------------------------------------------------------------
 // Given a graph "g" and a partition "n2c" generates a new grapf "g2" where nodes
 // are communities and edges are the sum of the edges between both communities.
@@ -223,11 +219,12 @@ Graph* community2graph() {
 	for (int i=0; i<n2c.size(); i++)
 		n2c[i] = ren[n2c[i]];
 
-	Graph* g2 = new Graph(aux,0);
+	SimpleGraph* g2 = new SimpleGraph(aux,0);
 
-	for (Graph::EdgeIter it=g->begin(); it != g->end(); ++it)
+	for (SimpleGraph::EdgeIter it=g->begin(); it != g->end(); ++it)
 		g2->addDirectedEdge(n2c[it->orig], n2c[it->dest], (double)it->weight);
 
+	g2->finalizeGraph(); // make sure the graph is ok
 	return g2;
 }
 
@@ -243,8 +240,11 @@ double compute_modularity_GFA(double precision) {
 	do {
 		double aux = c->modularity();
 		
+		DOUT( cerr <<"c\tpre improved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux <<endl; );
+		
 		improved = c->one_level() && abs2(c->modularity()-aux) > precision;
 		//improved = c->one_level();
+		DOUT( cerr <<"c\tipos mproved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux <<endl; );
 		
 		if (improved) {
 			c->g = c->community2graph();
@@ -256,7 +256,7 @@ double compute_modularity_GFA(double precision) {
 			c = new Community(c->g);
 		}
 		
-			cerr <<"\tQ = "<<modularity()<<" #comm = "<<ncomm<<endl;
+		DOUT( cerr <<"c\tQ = "<<modularity()<<" #comm = "<<ncomm<<endl; );
 		//c.g.print();
 	}
 	while (improved);
@@ -292,7 +292,7 @@ void connected() {
 			while (!nb.empty()) {
 				int n = nb.top();
 				nb.pop();
-				for(Graph::NeighIter it=g->begin(n); it != g->end(n); it++)
+				for(SimpleGraph::NeighIter it=g->begin(n); it != g->end(n); it++)
 				if (n2c[it->dest] == -1) {
 					n2c[it->dest] = c;
 					nb.push(it->dest);   
@@ -311,7 +311,7 @@ void compute_communities() {
 
 	Comm.resize(g->getSize());
 	for (int i=0; i<g->getSize(); i++)
-		Comm[n2c[i]].push_back(i+1);
+		Comm[n2c[i]].push_back(i); //original Version push_back(i+1)
 
 	for (int i=0; i< Comm.size(); i++)
 		Comm_order.push_back(make_pair(i,Comm[i].size()));

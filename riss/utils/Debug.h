@@ -22,6 +22,39 @@
     #define DOUT(x)
 #endif
 
+/// return whether a vector or vec of something has duplicate elements
+template<typename T>
+inline bool hasDuplicates(const T& data){
+  for( int i = 0 ; i < data.size(); ++i ) {
+    for( int j = i + 1; j < data.size(); ++ j ) {
+      if( data[i] == data[j] ) return true;
+    }
+  }
+  return false;
+}
+
+/// return whether a vector or vec of something has complementary elements
+template<typename T>
+inline bool hasComplementary(const T& data){
+  for( int i = 0 ; i < data.size(); ++i ) {
+    for( int j = i + 1; j < data.size(); ++ j ) {
+      if( data[i] == ~data[j] ) return true;
+    }
+  }
+  return false;
+}
+
+/// return whether an array of something has duplicate elements
+template<typename T>
+inline bool hasDuplicates(const T* data, int size){
+  for( int i = 0 ; i < size; ++i ) {
+    for( int j = i + 1; j < size; ++ j ) {
+      if( data[i] == data[j] ) return true;
+    }
+  }
+  return false;
+}
+
 namespace PcassoDebug
 {
 

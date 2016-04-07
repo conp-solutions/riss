@@ -1,5 +1,9 @@
 # ChangeLog for riss
 
+## v5.2.1
+
+ * DRAT proof can be emmited together with dense
+
 ## v5.2.0
 
  * print PCS always uses current value of printed option

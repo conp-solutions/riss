@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "GraphInformation.h"
 
 #include <limits.h>
 #include <math.h>
@@ -186,10 +187,10 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
                 clausesVariablesP.addEdge(v, i);
             }
 
-
             // Adding edges for the variable graph
             if (computingVarGraph) {
                 for (int k = j + 1; k < c.size(); ++k) {
+		  
                     operationsV += variablesGraph->addAndCountUndirectedEdge(v,
                                    var(c[k]), wvariable);
                 }
@@ -210,7 +211,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
     for (i = 0; i < clauses.size(); ++i) {
         sizeN = clausesVariablesN.getBCount(i);
         sizeP = clausesVariablesP.getBCount(i);
-        nsize = sizeN + sizeP;
+        nsize = sizeN + sizeP;	
         cdeg.addValue(nsize);
         const double max0 = max(sizeN, sizeP);
         if (nsize > 0) {
@@ -220,6 +221,7 @@ uint64_t CNFClassifier::buildClausesAndVariablesGrapths(BipartiteGraph& clausesV
             horn++;
         }
     }
+    
     operations += clauses.size();
     operations += cdeg.compute(quantilesCount);
     maxClauseSize = cdeg.getMax();
@@ -603,6 +605,7 @@ void CNFClassifier::fband(vector<double>& ret)
             }
         }
         // Enrique, Compute stats and output them
+        
         if (computeConstraints) {
             uint64_t exoSteps = constraintSteps, fandSteps = constraintSteps, bandSteps = constraintSteps;
             exoSteps += exactlyOneLiterals.computeOnlyStatistics(quantilesCount);
@@ -1182,12 +1185,12 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
     BipartiteGraph clausesVariablesN(clauses.size(), nVars, computingDerivative); // FIXME: norbert: you might not need all graphs at the same time. Since they consume memory, it might be good to destroy them, as soon as you do not need them any more, and to set them up as late as possible!
 
     buildClausesAndVariablesGrapths(clausesVariablesP, clausesVariablesN, ret);
-    
+   
      vector<int> clsSizes(10, 0);
     
     Graph *vigGraph = nullptr;
     if (computingVarGraph) { vigGraph = new Graph(nVars, computingDerivative); }
-    
+
      for (int i = 0; i < clauses.size(); ++i) {
       
         //You should know the difference between Java References, C++ Pointers, C++ References and C++ copies.
@@ -1205,7 +1208,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
             // Adding edges for the variable graph
             if (computingVarGraph) {
                 for (int k = j + 1; k < c.size(); ++k) {
-                    vigGraph->addDirectedEdge(v,   
+		                      vigGraph->addDirectedEdgeAndInvertedEdge(v,   
                                    var(c[k]), 1);//with undirected edges there would be problems finding features(e.g. diameter)
                 }
             }
@@ -1214,22 +1217,25 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
         }
 
     }
+    
     vigGraph->finalizeGraph(); //finalize
-    vigGraph->completeSingleVIG();//adding inverted edges
   //  for(int x=0; x < nVars; ++x) cerr << x << " : " << vigGraph->getAdjacency(x) <<endl;
     
   //cerr << vigGraph->getRadius()<<endl;
   //cerr << vigGraph->getDiameter()<<endl;
-  //cerr<<vigGraph->getArticulationPoints()<<endl;
-  //cerr<<vigGraph->gettreewidth()<<endl;
-  //cerr<<vigGraph->getPageRank(0)<<endl;
+ // vector<int> vi= vigGraph->getArticulationPoints();
+ //for(int l=0; l<vi.size();++l) cerr<<vi[l]<<endl;
+ //   cerr<<"computing treewidth"<<endl;
+   //cerr<<vigGraph->gettreewidth()<<endl;
+   //cerr<<vigGraph->getPageRank(0)<<endl;
     
     
   //vigGraph->getCommunities(0.000001); //TODO: take a look at the precision
-    vigGraph->getDimension();	
+  vigGraph->getDimension();	
     /*
    
 		*/
+    
 };
 
 
@@ -1237,6 +1243,7 @@ void CNFClassifier::graphExtraFeatures(vector<double>& ret)
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 {
+  
     uint64_t operations = 0; // number of operations to compute features;
 
     // TODO should return the vector of features. If possible, the features should range between 0 and 1 - all the graph features could be scaled down by number of variables, number of clauses or some other measure
@@ -1244,7 +1251,7 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
     // some useful code snippets:
 
     // measure time in seconds
-    double time1 = cpuTime(); // start timer
+    // double time1 = cpuTime(); // start timer
     // do some work here to measure the time for
     // TODO improve weights computation....
 
@@ -1271,13 +1278,12 @@ std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret)
 
 
     operations += buildResolutionAndClausesGrapths(clausesVariablesP, clausesVariablesN, ret);
-
-
-    time1 = (cpuTime() - time1);
+   
+   // time1 = (cpuTime() - time1);
     timeIndexes.push_back(ret.size());
-    featuresNames.push_back("features computation time");
-    ret.push_back(time1);
-    setCpuTime(time1);
+    //featuresNames.push_back("features computation time");
+    //ret.push_back(time1);
+    //setCpuTime(time1);
 
     if (attrFileName != nullptr) {
         std::ofstream fnout;

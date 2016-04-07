@@ -16,7 +16,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include <sys/resource.h>
 #include <fstream>
 #include <algorithm>
-
+#include <set>
 #include "CNFClassifier.h"
 #include "classifier/WekaDataset.h"
 #include "classifier/Configurations.h"
@@ -33,6 +33,8 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 
 #include "classifier/CompareSolver.h"
 
+#include "communityInformation.h"
+#include "GraphInformation.h"
 using namespace Riss;
 using namespace Coprocessor;
 using namespace std;
@@ -80,11 +82,22 @@ BoolOption preclassify("CLASSIFY", "preclassify", "computes features needed for 
 BoolOption fileoutput("CLASSIFY", "fileoutput", "turn on/off the output of features to stdout", false);
 BoolOption nonZero("CLASSIFY", "nonZero", "consider a configuration as being good, only if its predicted propability is greater than 0", false);
 
+
 BoolOption tmpfilecommunication("CLASSIFY", "tmpfilecommunication", "sets if the weka interface uses temp files or stdout", false);
 
 
 BoolOption extractFeatures("GRAPHFEATURES", "extraFeatures", "turn on/off training (needs dataset, attrInfo, classifier)", false);
 
+BoolOption computeDiameter("GRAPHFEATURES", "diameter", "turn on/off to compute the graphdiameter", true);
+BoolOption computeRadius("GRAPHFEATURES", "radius", "turn on/off to compute the graphradius", true);
+BoolOption computeExzentricity("GRAPHFEATURES", "exzentricity", "turn on/off to compute every nodes exzentricity", true);
+BoolOption computeTreewidth("GRAPHFEATURES", "treewidth", "turn on/off to compute the treewidth of the graph", false);
+BoolOption computePagerank("GRAPHFEATURES", "pagerank", "turn on/off to compute every nodes pagerank", true);
+BoolOption computeArticulationpoints("GRAPHFEATURES", "articulationpoints", "turn on/off to compute the graphs articulationpoints", true);
+BoolOption computeCommunitystructure("GRAPHFEATURES", "communitystructure", "turn on/off to compute the graphs communitystructure", true);
+BoolOption computeDimensions("GRAPHFEATURES", "dimensions", "turn on/off to compute the graphs dimensions", true);
+BoolOption computeDegree("GRAPHFEATURES", "degree", "turn on/off to compute every nodes degree", true);
+BoolOption computeWeight("GRAPHFEATURES", "weight", "turn on/off to compute every nodes weight", true);
 
 StringOption wekaLocation("WEKA", "weka", "location to weka tool", "/usr/share/java/weka.jar");
 StringOption predictorLocation("WEKA", "predictor", "location to the predictor", "./predictor.jar");
@@ -282,21 +295,21 @@ void computeExtraGraphFeatures(int argc, char** argv)
   */  
     cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
     cnfclassifier->setVerb(verb);
-    cnfclassifier->setComputingClausesGraph(clausesf);
-    cnfclassifier->setComputingResolutionGraph(resolutionf);
-    cnfclassifier->setComputingRwh(rwh);
-    cnfclassifier->setComputeBinaryImplicationGraph(opt_big);
-    cnfclassifier->setComputeConstraints(opt_constraints);
-    cnfclassifier->setComputeXor(opt_xor);
-    cnfclassifier->setQuantilesCount(qcount);
+    cnfclassifier->setComputingClausesGraph(clausesf);//
+    cnfclassifier->setComputingResolutionGraph(resolutionf);//
+    cnfclassifier->setComputingRwh(rwh); //
+    cnfclassifier->setComputeBinaryImplicationGraph(opt_big); //
+    cnfclassifier->setComputeConstraints(opt_constraints); //
+    cnfclassifier->setComputeXor(opt_xor); //
+    cnfclassifier->setQuantilesCount(qcount);//
     cnfclassifier->setPlotsFileName(plotFile);
-    cnfclassifier->setComputingVarGraph(varf);
+    cnfclassifier->setComputingVarGraph(varf);//
     if (attr) {
         cnfclassifier->setAttrFileName(attrFile);
     } else {
         cnfclassifier->setAttrFileName(nullptr);
     }
-    cnfclassifier->setComputingDerivative(derivative);
+    cnfclassifier->setComputingDerivative(derivative); //
 
     
     // in output features the actual calculation is done
@@ -369,29 +382,43 @@ void printFeatures(int argc, char** argv)
 
     cnfclassifier = new CNFClassifier(S.ca, S.clauses, S.nVars());
     cnfclassifier->setVerb(verb);
-    cnfclassifier->setComputingClausesGraph(clausesf);
-    cnfclassifier->setComputingResolutionGraph(resolutionf);
-    cnfclassifier->setComputingRwh(rwh);
-    cnfclassifier->setComputeBinaryImplicationGraph(opt_big);
-    cnfclassifier->setComputeConstraints(opt_constraints);
-    cnfclassifier->setComputeXor(opt_xor);
     cnfclassifier->setQuantilesCount(qcount);
     cnfclassifier->setPlotsFileName(plotFile);
-    cnfclassifier->setComputingVarGraph(varf);
     if (attr) {
         cnfclassifier->setAttrFileName(attrFile);
     } else {
         cnfclassifier->setAttrFileName(nullptr);
     }
-    cnfclassifier->setComputingDerivative(derivative);
-
+  
     // in output features the actual calculation is done
-    cnfclassifier->extractFeatures(features); // also print the formula name!!
-
+   // cnfclassifier->extractFeatures(features); // also print the formula name!!
+  
+    
+    GraphInformation graphinformation(cnfclassifier, derivative);
+    graphinformation.computearticulationpoints(computeArticulationpoints);
+    graphinformation.computecommunitystructure(computeCommunitystructure);
+    graphinformation.computedegree(computeDegree);
+    graphinformation.computediameter(computeDiameter);
+    graphinformation.computedimensions(computeDimensions);
+    graphinformation.computeexzentricity(computeExzentricity);
+    graphinformation.computepagerank(computePagerank);
+    graphinformation.computeradius(computeRadius);
+    graphinformation.computetreewidth(computeTreewidth);
+    graphinformation.computeweight(computeWeight);
+    graphinformation.computeClausesGraph(clausesf);//
+    graphinformation.computeResolutionGraph(resolutionf);//
+    graphinformation.computeRwh(rwh); //
+    graphinformation.computeBinaryImplicationGraph(opt_big); //
+    graphinformation.computeConstraints(opt_constraints); //
+    graphinformation.computeXor(opt_xor); //
+    graphinformation.computeVarGraph(varf);//
+   
+    features = graphinformation.getFeatures();
+    
     if (verb > 1) {
         cout.setf(ios::fixed);
         cout.precision(10);
-        vector<string> names = cnfclassifier->getFeaturesNames();
+        vector<string> names = graphinformation.getFeaturesNames();
 	cout << "Instance";
         for (int k = 0; k < features.size(); ++k) {
 	    std::replace( names[k].begin(), names[k].end(), ' ', '_');
@@ -465,9 +492,9 @@ int main(int argc, char** argv)
         }
 
         
-
-	computeExtraGraphFeatures (argc, argv);
-
+        //computeExtraGraphFeatures (argc, argv);
+	printFeatures(argc, argv);
+	
         return 0;
 
         /**

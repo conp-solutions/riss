@@ -11,6 +11,8 @@ bestcls=5000
 
 cnf=/tmp/runcnfuzz-$$.cnf
 sol=/tmp/runcnfuzz-$$.sol
+err=/tmp/runcnfuzz-$$.err
+out=/tmp/runcnfuzz-$$.out
 log=runcnfuzz-$$.log
 rm -f $log $cnf $sol
 echo "[runcnfuzz] running $prg"
@@ -44,7 +46,7 @@ do
 	then
 		test=$(($test+1))
 	fi
-  
+
   thiscls=`awk '/p cnf /{print $4}' $cnf`
   if [ $bestcls -ne "-1" ]
   then
@@ -54,20 +56,20 @@ do
   		continue
 	  fi
   fi
-  
-  ./toolCheck.sh $prg $cnf > /dev/null 2> /dev/null
+
+  ./toolCheck.sh $prg $cnf > $out 2> $err
   res=$?
 #  echo "result $res"
   case $res in
-    124) 
+    124)
     	echo "timeout with $seed" > $log
     	mv $cnf timeout-$seed.cnf
       continue
       ;;
-    10) 
+    10)
       continue
       ;;
-    20) 
+    20)
       continue
       ;;
     15)
@@ -78,6 +80,10 @@ do
   head="`awk '/p cnf /{print $3, $4}' $cnf`"
   echo "[runcnfuzz] bug-$seed $head             with exit code $res                         "
   echo $seed >> $log
+  echo "out"
+  cat $out
+  echo "err"
+  cat $err
   
   #
   # consider only bugs that are smaller then the ones we found already

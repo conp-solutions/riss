@@ -56,6 +56,7 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_exit_pp     ;
     Riss::BoolOption opt_randInp     ;
     Riss::BoolOption opt_inc_inp     ;
+    Riss::BoolOption opt_remL_inp    ;
 
     Riss::StringOption opt_whiteList ;
 
@@ -71,16 +72,9 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_up          ;
     Riss::BoolOption opt_subsimp     ;
     Riss::BoolOption opt_hte         ;
-    #if defined TOOLVERSION && TOOLVERSION < 355
-    const bool opt_bce;
-    #else
     Riss::BoolOption opt_bce         ;
-    #endif
-    #if defined TOOLVERSION && TOOLVERSION < 360
-    const bool opt_ent;
-    #else
-    Riss::BoolOption opt_ent        ;
-    #endif
+    Riss::BoolOption opt_modprep     ;
+    Riss::BoolOption opt_ent         ;
     Riss::BoolOption opt_exp         ;
     Riss::BoolOption opt_la          ;
     Riss::BoolOption opt_cce         ;
@@ -350,6 +344,10 @@ class CP3Config : public Riss::Config
     Riss::IntOption  entailed_debug;
     #endif
 
+    #ifndef NDEBUG
+    Riss::IntOption  modprep_debug;
+    #endif
+    
 
 //
 // Equivalence

@@ -33,6 +33,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/techniques/Dense.h"
 #include "coprocessor/techniques/Symmetry.h"
 #include "coprocessor/techniques/HBR.h"
+#include "coprocessor/techniques/Experimental.h"
+#include "coprocessor/techniques/ModPrep.h"
 #include "coprocessor/Shuffler.h"
 
 #include "coprocessor/techniques/SLS.h"
@@ -72,6 +74,7 @@ class Preprocessor
 
     int lastInpConflicts;     // number of conflicts when inprocessing has been called last time
     int formulaVariables;     // number of variables in the initial formula
+    int inprocessings;        // count number of inprocessings
 
   public:
 
@@ -176,6 +179,8 @@ class Preprocessor
     LiteralAddition la;
     EntailedRedundant entailedRedundant;
     HyperBinaryResolution hbr;
+    ExperimentalTechniques experimental;
+    ModPrep modprep;
     VarShuffler shuffler;
 
     SLS sls;
