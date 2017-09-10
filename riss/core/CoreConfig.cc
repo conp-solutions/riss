@@ -84,6 +84,10 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
     opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause",  "The min LBD required to minimize clause", 6, IntRange(0, INT32_MAX),                                                    optionListPtr),
 
+    opt_learned_clause_vivi     (_cm, "lcm",                     "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze); >2 experimental", 0, IntRange(0, 4),                                                        optionListPtr),
+    opt_lcm_full                (_cm, "lcm-full",                "at all restarts, always on all learned clauses", false , optionListPtr),
+    opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation", false , optionListPtr),
+
     opt_var_decay_start         (_cs,   "var-decay-b",           "The variable activity decay factor start value", 0.95, DoubleRange(0, false, 1, false),                                 optionListPtr),
     opt_var_decay_stop          (_cs,   "var-decay-e",           "The variable activity decay factor stop value", 0.95, DoubleRange(0, false, 1, false),                                  optionListPtr),
     opt_var_decay_inc           (_cs,   "var-decay-i",           "The variable activity decay factor increase ", 0.01, DoubleRange(0, false, 1, false),                                   optionListPtr),

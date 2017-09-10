@@ -472,6 +472,13 @@ class Solver
     void applyConfiguration(); // assigns relevant values of search configuration to data structures/counters
   protected:
 
+    int performSimplificationNext;
+
+    uint64_t nbLCM, nbLitsLCM, nbConflLits, nbLCMattempts, nbLCMsuccess;
+    Clock LCMTime;
+
+    bool simplifyLCM(); // learned clause minimization style inprocessing inside the solver, based on vivificatoin
+    int simplifyLearntLCM(Clause& c); // simplify a non-watched clause, and perform vivification on it
 
     long curRestart;
     // Helper structures:

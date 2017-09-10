@@ -179,7 +179,8 @@ class Clause
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         #ifndef PCASSO
-        unsigned lbd       : 21;
+        unsigned lbd       : 20;
+        unsigned lcm_simplified : 1; // run clause vivification on this clause already?
         unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
         unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
         unsigned isCore    : 1;
@@ -212,6 +213,7 @@ class Clause
             , has_extra(0)
             , reloced(0)
             , lbd(0)
+            , lcm_simplified(0)
             , wasPropagated(0)
             , usedInAnalyze(0)
             , isCore(0)
@@ -234,6 +236,7 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            lcm_simplified = rhs.lcm_simplified;
             wasPropagated = rhs.wasPropagated;
             usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
@@ -256,6 +259,7 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            lcm_simplified = rhs.lcm_simplified;
             wasPropagated = rhs.wasPropagated;
             usedInAnalyze = rhs.usedInAnalyze;
             isCore = rhs.isCore;
@@ -288,6 +292,7 @@ class Clause
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
+        assert(header.lcm_simplified == 0);
 
         for (int i = 0; i < ps.size(); i++)
             for (int j = i + 1; j < ps.size(); j++) {
@@ -364,7 +369,7 @@ class Clause
     }
 
     int          size()      const   { return header.size; }
-    void         shrink(int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; }  header.size -= i; }
+    void         shrink(int i)         { assert(i <= size()); assert(i >= 0); if (header.has_extra) { data[header.size - i] = data[header.size]; }  header.size -= i; }
     void         pop()              { shrink(1); }
     bool         learnt()      const   { return header.learnt; }
     void         learnt(bool learnt)   { header.learnt = learnt; }
@@ -403,6 +408,9 @@ class Clause
 
     bool isCoreClause() const { return header.isCore; }
     void setCoreClause(bool c) { header.isCore = c; }
+
+    bool wasLcmSimplified() const { return header.lcm_simplified; }
+    void setLcmSimplified() { header.lcm_simplified = 1; }
 
     bool wasPropagated() const { return header.wasPropagated; }
     void setPropagated() { header.wasPropagated = 1; }

@@ -77,6 +77,8 @@ Solver::Solver(CoreConfig* externalConfig, const char* configName) :    // CoreC
     , nbRemovedClauses(0), nbReducedClauses(0), nbDL2(0), nbBin(0), nbUn(0), nbReduceDB(0)
     , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), nbstopsrestarts(0), nbstopsrestartssame(0), lastblockatrestart(0)
     , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+    , performSimplificationNext(0)
+    , nbLCM(0), nbLitsLCM(0), nbConflLits(0), nbLCMattempts(0), nbLCMsuccess(0)
     , curRestart(1)
 
 
@@ -2577,6 +2579,164 @@ Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
 }
 
 
+int Solver::simplifyLearntLCM(Clause& c)
+{
+    Lit impliedLit = lit_Undef; // literal that is implied by the negation of some other literals
+    int i, j, maxLevel = 0;
+    ReasonStruct confl;
+
+    assert(decisionLevel() == 0 && "LCM has to be performed on level 0");
+    for (i = 0, j = 0; i < c.size(); i++) {
+        if (value(c[i]) == l_Undef) {
+            newDecisionLevel();
+            uncheckedEnqueue(~c[i]);
+            c[j++] = c[i];
+            confl = propagate();
+            if (confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) {
+                // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \bot \equiv F \land (l_1 \lor ... \lor l_{i-1})
+                // or something similar, based on conflict analysis with the clause we just got as conflict
+                break;
+            }
+        } else if (value(c[i]) == l_True && config.opt_learned_clause_vivi > 2) { // <- enable only in case conflict resultion is performed below. the actual break does not work!
+            impliedLit = c[i]; // store to be able to use it for conflict analysis afterwards
+            c[j++] = c[i];  // not necessary, as will be resolved out later anyways (or use as basis for conflict)?
+
+            // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \l_i \equiv
+            // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} \land \neg l_i -> \bot, with confl = reason(l_i)
+            confl = reason(var(c[i]));
+            assert((confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) && "the assignment to the literal has to have a reason");
+            break;
+        }
+    }
+    c.shrink(c.size() - j);
+    maxLevel = decisionLevel(); // this is the LBD of the clause
+    if (c.lbd() > maxLevel) { c.setLBD(maxLevel); }
+    if (config.opt_learned_clause_vivi > 1 && (confl.isBinaryClause() || confl.getReasonC() != CRef_Undef)) {
+        conflict.clear(); // use the conflict vector, as it's a class member. make sure to clear it afterwards again!
+
+        analyzeFinal(confl, conflict, impliedLit);
+        if (impliedLit != lit_Undef) {
+            conflict.push(impliedLit); // add the final literal of the clause here, has to be done after analyzeFinal!
+        }
+        if (conflict.size() < c.size()) {
+            nbConflLits += c.size() - conflict.size();
+            assert(c.size() >= conflict.size() && "shrink should not increase size");
+            c.shrink(c.size() - conflict.size()); // shrink clause!
+        }
+        conflict.clear();
+    }
+
+    cancelUntil(0);
+    return maxLevel;
+}
+
+bool Solver::simplifyLCM()
+{
+    // make sure we do not miss something
+    if (!ok || propagate() != CRef_Undef) {
+        return ok = false;
+    }
+
+    MethodClock lcmMethodClock(LCMTime);  // measure the time for the remainder of this function in the given clock
+
+    nbLCM ++;
+    assert(decisionLevel() == 0 && "run learned clause minimization only on level 0");
+    removeSatisfied(clauses); // TODO: test whether actually necessary when being executed "right after" reduceDB()
+
+    int ci, cj;
+    for (ci = 0, cj = 0; ci < learnts.size(); ci++) {
+        const CRef cr = learnts[ci];
+        Clause& c = ca[cr];
+        if (c.mark()) { continue; } // this clause can be dropped
+
+        bool false_lit = false, sat = false;
+        // in the first 2 positions, there should not be a falsified literal after propagation!
+        int i = 2, j = 2;
+        if (c.size() > 2) {
+            if (value(c[0]) == l_True || value(c[1]) == l_True) {
+                sat = true;
+            } else {
+                for (i = 2; i < c.size(); i++) {
+                    if (value(c[i]) == l_True) {
+                        sat = true;
+                        break;
+                    }
+                }
+                if (!sat) {
+                    for (i = 2; i < c.size(); i++) {
+                        if (value(c[i]) != l_False) {
+                            c[j++] = c[i]; // TODO FIXME: has to end up in drat proof!
+                            if (value(c[i]) == l_True) {
+                                sat = true;
+                                break;
+                            }
+                        } else {
+                            DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM drop literal " << c[i] << std::endl;);
+                        }
+                    }
+                    c.shrink(i - j);
+                }
+            }
+            // a clause might become satisfiable during the analysis. remove such a clause!
+            if (sat) {
+                removeClause(cr);
+                continue;
+            }
+        } else {
+            if (value(c[0]) == l_True || value(c[1]) == l_True) {
+                learnts[cj++] = learnts[ci];
+                continue; // jump over satisfied binary clauses!
+            }
+        }
+
+        if (!config.opt_lcm_full) { // use efficiency filters?
+            // if clause is in first half of sorted learned clauses, or has been processed in the past, ignore it
+            if (ci < learnts.size() / 2 || c.wasLcmSimplified()) {
+                learnts[cj++] = learnts[ci];
+                continue;
+            }
+        }
+
+        int oldSize = c.size();
+        detachClause(cr, true); // expensive, hence perform as late as possible
+
+        nbLCMattempts ++;
+        // simplifying the clause does not change it's memory location, hence c is still valid afterwards
+        int newLBD = simplifyLearntLCM(c);
+        nbLitsLCM += oldSize - c.size();
+        nbLCMsuccess = oldSize > c.size() ? nbLCMsuccess + 1 : nbLCMsuccess;
+        // add clause back to the data structures
+        addToProof(c); // for now, support DRUP only (where deleting the other clause, or many literals at the same time does not really matter)
+        if (c.size() > 1) {
+            attachClause(cr);
+            learnts[cj++] = learnts[ci];
+
+            if (c.size() < oldSize) { // re-calculate LBD for the clause, if it became smaller
+                if (newLBD < c.lbd()) {
+                    c.setLBD(newLBD);
+                }
+            }
+
+            c.setLcmSimplified();
+        } else if (c.size() == 1) {
+            uncheckedEnqueue(c[0]);
+            if (propagate() != CRef_Undef) {
+                ok = false;
+                return false;
+            }
+            // free clause, as it's satisfiable now
+            c.mark(1);
+            ca.free(cr);
+        } else {
+            ok = false;
+            break;
+        }
+    }
+    // fill gaps unneeded space
+    learnts.shrink(ci - cj);
+    checkGarbage();
+    return ok;
+}
 
 /*_________________________________________________________________________________________________
 |
@@ -2603,6 +2763,14 @@ lbool Solver::search(int nof_conflicts)
     starts++;
     int proofTopLevels = 0;
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
+
+    // simplify
+    if (config.opt_lcm_full || (performSimplificationNext == 1 && config.opt_learned_clause_vivi > 0)) {
+        sort(learnts, reduceDB_lbd_lt(ca));
+        if (!simplifyLCM()) { return l_False; }
+        performSimplificationNext = 0;
+    }
+
     for (;;) {
         propagationTime.start();
         const int beforeTrail = trail.size();
@@ -3104,6 +3272,8 @@ void Solver::clauseRemoval()
         curRestart = config.opt_reduceType == 0 ? (conflicts / nbclausesbeforereduce) + 1 : curRestart; // update only during dynamic restarts
         reduceDB();
         nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
+
+        performSimplificationNext = 1;  // after clause reduction, performing one more analysis of clauses is ok
     }
 }
 
@@ -4031,6 +4201,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         printf("c IntervalRestarts: %d\n", intervalRestart);
         printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements);
         printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units);
+        printf("c LCM: %lf s, %d nbLCM, %d LCMclsAttempts, %d nbLCMclsSuccess, %d npConflLCMlits, %d nbLCMlits\n", LCMTime.getCpuTime(), nbLCM, nbLCMattempts, nbLCMsuccess, nbConflLits, nbLitsLCM);
         #endif
     }
 
