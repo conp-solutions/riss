@@ -2762,6 +2762,7 @@ bool Solver::simplifyLCM()
         if (outputsProof()) { // respect proof
             addCommentToProof("delete clause based on LCM", true);
             if (add_tmp.size() < c.size() && c.size() > 1) {
+                addToProof(add_tmp, true);
                 addToProof(c);
             }
         }
