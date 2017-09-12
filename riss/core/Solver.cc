@@ -78,7 +78,7 @@ Solver::Solver(CoreConfig* externalConfig, const char* configName) :    // CoreC
     , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), nbstopsrestarts(0), nbstopsrestartssame(0), lastblockatrestart(0)
     , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
     , performSimplificationNext(0)
-    , nbLCM(0), nbLitsLCM(0), nbConflLits(0), nbLCMattempts(0), nbLCMsuccess(0)
+    , nbLCM(0), nbLitsLCM(0), nbConflLits(0), nbLCMattempts(0), nbLCMsuccess(0), npLCMimpDrop(0), nbRound1Lits(0), nbRound2Lits(0)
     , curRestart(1)
 
 
@@ -4216,7 +4216,7 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         printf("c IntervalRestarts: %d\n", intervalRestart);
         printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements);
         printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units);
-        printf("c LCM: %lf s, %d nbLCM, %d LCMclsAttempts, %d nbLCMclsSuccess, %d npConflLCMlits, %d nbLCMlits\n", LCMTime.getCpuTime(), nbLCM, nbLCMattempts, nbLCMsuccess, nbConflLits, nbLitsLCM);
+        printf("c LCM: %lf s, %ld nbLCM, %ld LCMclsAttempts, %ld nbLCMclsSuccess, %ld npConflLCMlits, %ld nbLCMlits, %ld positiveDrop, %ld litsR1, %ld litsR2\n", LCMTime.getCpuTime(), nbLCM, nbLCMattempts, nbLCMsuccess, nbConflLits, nbLitsLCM, nbLCMsuccess, nbRound1Lits, nbRound2Lits);
         #endif
     }
 
