@@ -84,7 +84,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
     opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause",  "The min LBD required to minimize clause", 6, IntRange(0, INT32_MAX),                                                    optionListPtr),
 
-    opt_learned_clause_vivi     (_cm, "lcm",                     "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze); >2 experimental", 0, IntRange(0, 4),                                                        optionListPtr),
+    opt_learned_clause_vivi     (_cm, "lcm",                     "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze, 3=vivi+unionanalyze, 4+reverse, >4 X-4, and-reverse)", 0, IntRange(0, 24),                                                        optionListPtr),
     opt_lcm_full                (_cm, "lcm-full",                "at all restarts, always on all learned clauses", false , optionListPtr),
     opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation", false , optionListPtr),
 
@@ -266,7 +266,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     // DRUP
     opt_verboseProof    ("CORE -- PROOF", "verb-proof",      "also print comments into the proof, 2=print proof also to stderr #NoAutoT", 0, IntRange(0, 2) ,                  optionListPtr),
     opt_rupProofOnly    ("CORE -- PROOF", "rup-only",        "do not print delete lines into proof #NoAutoT", false,                                                           optionListPtr),
-    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking) #NoAutoT", 0, IntRange(0, 10), optionListPtr),
+    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking, only if -proof is specified) #NoAutoT", 0, IntRange(0, 10), optionListPtr),
 
     opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                             optionListPtr),
     opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                  optionListPtr),
