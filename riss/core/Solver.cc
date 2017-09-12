@@ -2586,6 +2586,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
     int round = 0;
     roundLits[0] = c.size();
     while (vivificationConfig > 0 && c.size() > 1) {
+        bool minimized = false;
         round ++;
         const int roundViviConfig = vivificationConfig % 5;
         vivificationConfig /= 5;
@@ -2657,6 +2658,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
             if (nblevels < c.lbd()) {
                 c.setLBD(nblevels);
             }
+            minimized = true;
         }
         cancelUntil(0);
 
@@ -2664,6 +2666,8 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
             c.reverse();
         }
         roundLits[round] = c.size();
+
+        if (!minimized) { break; } // no need for a second iteration if no minimization was achieved in the first iteration
     }
 
     nbRound1Lits += roundLits[0] - roundLits[1];
