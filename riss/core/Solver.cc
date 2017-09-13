@@ -2581,7 +2581,6 @@ Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
 
 int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
 {
-    bool secondIteration = false;
     int roundLits[3];
     int round = 0;
     roundLits[0] = c.size();
@@ -2591,10 +2590,11 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         const int roundViviConfig = vivificationConfig % 5;
         vivificationConfig /= 5;
 
+        assert(round <= 2 && "have at most 2 rounds");
         // if this round should not perform any simplification, jump to the next round (and work with reversed clause)
-        if (roundViviConfig == 0) { secondIteration = true; roundLits[round] = c.size(); continue; }
+        if (roundViviConfig == 0) {roundLits[round] = c.size(); continue; }
 
-        if (secondIteration) { // reverse clause in second iteration!
+        if (round==2) { // reverse clause in second iteration!
             c.reverse();
         }
 
@@ -2662,7 +2662,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         }
         cancelUntil(0);
 
-        if (secondIteration) { // reverse clause in second iteration!
+        if (round==2) { // reverse clause in second iteration!
             c.reverse();
         }
         roundLits[round] = c.size();
