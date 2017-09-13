@@ -2705,6 +2705,36 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
 
 bool Solver::simplifyLCM()
 {
+  /* some notes on theory:
+   imply a negative literal:
+
+f, (l1 lm)
+f, -l1, ..., -le -> -lf
+f, -l1, ..., -le, -lg ... -lm -> -lf
+
+f, -l1, ..., -le, -lg ... -lm, lf -> \bot
+f -> l1, ...,le, -lf, lg, ... lm
+f -> C \setminus lf
+f,C \equiv f, C \setminus lf
+
+imply a positive literal:
+
+f, (l1 lm)
+f, -l1, ..., -le -> lf
+f, -l1, ..., -le, -lf -> lf \land -lf -> \bot
+f -> (l1, ..., le, lf)
+f,C \equiv f, (l1, ..., le, lf) -> subsume! == shrink case
+
+conflict:
+
+f,D, -l1, ..., -lf -> -D
+
+f,D \equiv f,D,(l1,...,lf), i.e. f,D \to (l1,...,lf)? (yes, see the above)
+
+f, -l1, ..., -le, -lf -> \bot
+f -> l1, ...,le, -lf, lg, ... lm
+f -> C \setminus lf
+   * */
     // make sure we do not miss something
     if (!ok || propagate() != CRef_Undef) {
         return ok = false;
