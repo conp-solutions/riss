@@ -78,7 +78,7 @@ Solver::Solver(CoreConfig* externalConfig, const char* configName) :    // CoreC
     , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), nbstopsrestarts(0), nbstopsrestartssame(0), lastblockatrestart(0)
     , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
     , performSimplificationNext(0)
-    , nbLCM(0), nbLitsLCM(0), nbConflLits(0), nbLCMattempts(0), nbLCMsuccess(0), npLCMimpDrop(0), nbRound1Lits(0), nbRound2Lits(0)
+    , nbLCM(0), nbLitsLCM(0), nbConflLits(0), nbLCMattempts(0), nbLCMsuccess(0), npLCMimpDrop(0), nbRound1Lits(0), nbRound2Lits(0), nbLCMfalsified(0)
     , curRestart(1)
 
 
@@ -2744,6 +2744,106 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
     return c.lbd();
 }
 
+bool Solver::simplifyClause_viviLCM(const CRef cr, bool fullSimplify)
+{
+    Clause& c = ca[cr];
+    bool keepClause = false;
+    bool false_lit = false, sat = false;
+    // in the first 2 positions, there should not be a falsified literal after propagation!
+    int i = 2, j = 2;
+    if (outputsProof()) { add_tmp.clear(); } // keep track of all literals of the clause to have a proper DRAT proof!
+
+    if (c.size() > 2) {
+        if (value(c[0]) == l_True || value(c[1]) == l_True) {
+            sat = true;
+        } else {
+            for (i = 2; i < c.size(); i++) {
+                if (value(c[i]) == l_True) {
+                    sat = true;
+                    break;
+                }
+            }
+            if (!sat) {
+                if (outputsProof()) for (int k = 0 ; k < c.size(); ++k) { add_tmp.push(c[k]); } // store full clause before any removal
+                for (i = 2; i < c.size(); i++) {
+                    if (value(c[i]) != l_False) {
+                        DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM keep literal " << c[i] << std::endl;);
+                        c[j++] = c[i]; // TODO FIXME: has to end up in drat proof!
+                        if (value(c[i]) == l_True) {
+                            sat = true;
+                            break;
+                        }
+                    } else {
+                        DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM drop literal " << c[i] << std::endl;);
+                    }
+                }
+                nbLCMfalsified += (i - j);
+                c.shrink(i - j);
+            }
+        }
+        // a clause might become satisfiable during the analysis. remove such a clause!
+        if (sat) {
+            removeClause(cr, true); // this will also delete the clause from the DRAT proof!
+            return false; // drop the clause!
+        }
+        DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM final clause: " << c << std::endl;);
+    } else {
+        if (value(c[0]) == l_True || value(c[1]) == l_True) {
+            return true; // keep satisfied binary clauses, and do not continue with these clauses
+        }
+    }
+
+    if (!config.opt_lcm_full && !fullSimplify) { // use efficiency filters?
+        // if clause is in first half of sorted learned clauses, or has been processed in the past, ignore it
+        return true;
+    }
+
+    int oldSize = c.size();
+    detachClause(cr, true); // expensive, hence perform as late as possible
+
+    nbLCMattempts ++;
+    // simplifying the clause does not change it's memory location, hence c is still valid afterwards
+    DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM test   clause index " << cr << " with literals: " << c << " and trail: " << trail << std::endl;);
+    int newLBD = simplifyLearntLCM(c, config.opt_learned_clause_vivi);
+    nbLitsLCM += oldSize - c.size();
+    nbLCMsuccess = oldSize > c.size() ? nbLCMsuccess + 1 : nbLCMsuccess;
+    DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM result clause index " << cr << " with literals: " << c << std::endl;);
+
+    if (outputsProof()) { // respect proof
+        addCommentToProof("delete clause based on LCM, removed literals might be stronger than DRUP", true);
+        if (add_tmp.size() > c.size() && c.size() >= 1) {
+            addToProof(c);
+            addToProof(add_tmp, true); // for now, keep this removed!
+        }
+    }
+
+    // add clause back to the data structures
+    if (c.size() > 1) {
+        attachClause(cr);
+        keepClause = true;
+
+        if (c.learnt() && c.size() < oldSize) { // re-calculate LBD for the clause, if it became smaller
+            if (newLBD < c.lbd()) {
+                c.setLBD(newLBD);
+            }
+        }
+
+        c.setLcmSimplified();
+    } else if (c.size() == 1) {
+        uncheckedEnqueue(c[0]);
+        if (propagate() != CRef_Undef) {
+            ok = false;
+            return false;
+        }
+        // free clause, as it's satisfiable now
+        c.mark(1);
+        ca.free(cr);
+    } else {
+        ok = false;
+    }
+    return keepClause;
+}
+
 bool Solver::simplifyLCM()
 {
   /* some notes on theory:
@@ -2794,104 +2894,12 @@ f -> C \setminus lf
         Clause& c = ca[cr];
         if (c.mark()) { continue; } // this clause can be dropped
 
-        bool false_lit = false, sat = false;
-        // in the first 2 positions, there should not be a falsified literal after propagation!
-        int i = 2, j = 2;
-        if (outputsProof()) { add_tmp.clear(); } // keep track of all literals of the clause to have a proper DRAT proof!
-
-        if (c.size() > 2) {
-            if (value(c[0]) == l_True || value(c[1]) == l_True) {
-                sat = true;
-            } else {
-                for (i = 2; i < c.size(); i++) {
-                    if (value(c[i]) == l_True) {
-                        sat = true;
-                        break;
-                    }
-                }
-                if (!sat) {
-                    if (outputsProof()) for (int k = 0 ; k < c.size(); ++k) { add_tmp.push(c[k]); } // store full clause before any removal
-                    for (i = 2; i < c.size(); i++) {
-                        if (value(c[i]) != l_False) {
-                            DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM keep literal " << c[i] << std::endl;);
-                            c[j++] = c[i]; // TODO FIXME: has to end up in drat proof!
-                            if (value(c[i]) == l_True) {
-                                sat = true;
-                                break;
-                            }
-                        } else {
-                            DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM drop literal " << c[i] << std::endl;);
-                        }
-                    }
-                    c.shrink(i - j);
-                }
-            }
-            // a clause might become satisfiable during the analysis. remove such a clause!
-            if (sat) {
-                removeClause(cr,true); // this will also delete the clause from the DRAT proof!
-                continue;
-            }
-            DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM final clause: " << c << std::endl;);
-        } else {
-            if (value(c[0]) == l_True || value(c[1]) == l_True) {
-                learnts[cj++] = learnts[ci];
-                continue; // jump over satisfied binary clauses!
-            }
-        }
-
-        if (!config.opt_lcm_full) { // use efficiency filters?
-            // if clause is in first half of sorted learned clauses, or has been processed in the past, ignore it
-            if (ci < learnts.size() / 2 || c.wasLcmSimplified()) {
-                learnts[cj++] = learnts[ci];
-                continue;
-            }
-        }
-
-        int oldSize = c.size();
-        detachClause(cr, true); // expensive, hence perform as late as possible
-
-        nbLCMattempts ++;
-        // simplifying the clause does not change it's memory location, hence c is still valid afterwards
-        DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM test   clause index " << cr << " with literals: " << c << " and trail: " << trail << std::endl;);
-        int newLBD = simplifyLearntLCM(c, config.opt_learned_clause_vivi);
-        nbLitsLCM += oldSize - c.size();
-        nbLCMsuccess = oldSize > c.size() ? nbLCMsuccess + 1 : nbLCMsuccess;
-        DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM result clause index " << cr << " with literals: " << c << std::endl;);
-
-        if (outputsProof()) { // respect proof
-            addCommentToProof("delete clause based on LCM", true);
-            if (add_tmp.size() > c.size() && c.size() >= 1) {
-                addToProof(c);
-		addToProof(add_tmp, true); // for now, keep this removed!
-            }
-        }
-
-        // add clause back to the data structures
-        if (c.size() > 1) {
-            attachClause(cr);
-            learnts[cj++] = learnts[ci];
-
-            if (c.size() < oldSize) { // re-calculate LBD for the clause, if it became smaller
-                if (newLBD < c.lbd()) {
-                    c.setLBD(newLBD);
-                }
-            }
-
-            c.setLcmSimplified();
-        } else if (c.size() == 1) {
-            uncheckedEnqueue(c[0]);
-            if (propagate() != CRef_Undef) {
-                ok = false;
-                return false;
-            }
-            // free clause, as it's satisfiable now
-            c.mark(1);
-            ca.free(cr);
-        } else {
-            ok = false;
-            break;
-        }
+        bool keep = simplifyClause_viviLCM(cr, ci < learnts.size() / 2 || c.wasLcmSimplified());
+        if (keep) { learnts[cj++] = learnts[ci]; }
+        if (!ok) { break; } // stop in case we found an empty clause
     }
+
+
     // fill gaps unneeded space
     learnts.shrink(ci - cj);
     checkGarbage();
@@ -4362,7 +4370,8 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         printf("c IntervalRestarts: %d\n", intervalRestart);
         printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements);
         printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units);
-        printf("c LCM: %lf s, %ld nbLCM, %ld LCMclsAttempts, %ld nbLCMclsSuccess, %ld npConflLCMlits, %ld nbLCMlits, %ld positiveDrop, %ld litsR1, %ld litsR2\n", LCMTime.getCpuTime(), nbLCM, nbLCMattempts, nbLCMsuccess, nbConflLits, nbLitsLCM, nbLCMsuccess, nbRound1Lits, nbRound2Lits);
+        printf("c LCM: %lf s, %ld nbLCM, %ld LCMclsAttempts, %ld nbLCMclsSuccess, %ld npConflLCMlits, %ld nbLCMlits, %ld falsified, %ld positiveDrop, %ld litsR1, %ld litsR2\n",
+               LCMTime.getCpuTime(), nbLCM, nbLCMattempts, nbLCMsuccess, nbConflLits, nbLitsLCM, nbLCMfalsified, npLCMimpDrop, nbRound1Lits, nbRound2Lits);
         #endif
     }
 
