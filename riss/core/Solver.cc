@@ -2696,6 +2696,7 @@ bool Solver::simplifyLCM()
     nbLCM ++;
     assert(decisionLevel() == 0 && "run learned clause minimization only on level 0");
     removeSatisfied(clauses); // TODO: test whether actually necessary when being executed "right after" reduceDB()
+    watches.cleanAll();
 
     int ci, cj;
     for (ci = 0, cj = 0; ci < learnts.size(); ci++) {
@@ -2737,7 +2738,7 @@ bool Solver::simplifyLCM()
             }
             // a clause might become satisfiable during the analysis. remove such a clause!
             if (sat) {
-                removeClause(cr); // this will also delete the clause from the DRAT proof!
+                removeClause(cr,true); // this will also delete the clause from the DRAT proof!
                 continue;
             }
             DOUT(if (config.opt_lcm_dbg) std::cerr << "LCM final clause: " << c << std::endl;);
@@ -2769,9 +2770,9 @@ bool Solver::simplifyLCM()
 
         if (outputsProof()) { // respect proof
             addCommentToProof("delete clause based on LCM", true);
-            if (add_tmp.size() < c.size() && c.size() > 1) {
-                addToProof(add_tmp, true);
+            if (add_tmp.size() > c.size() && c.size() >= 1) {
                 addToProof(c);
+		addToProof(add_tmp, true); // for now, keep this removed!
             }
         }
 
