@@ -2584,6 +2584,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
     int roundLits[3];
     int round = 0;
     roundLits[0] = c.size();
+    DOUT(vec<Lit> originalClause; for(int i = 0 ; i < c.size(); ++i ) originalClause.push(c[i]););
     while (vivificationConfig > 0 && c.size() > 1) {
         bool minimized = false;
         round ++;
@@ -2623,6 +2624,13 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
                 // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \l_i \equiv
                 // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} \land \neg l_i -> \bot, with confl = reason(l_i)
                 confl = reason(var(c[i]));
+                DOUT(
+                if (config.opt_lcm_dbg) {
+                std::cerr << "c LCM with trail " << trail << " find implied literal " << impliedLit << "@" << level(var(impliedLit)) << " at " << decisionLevel() << std::endl;
+                    if (confl.isBinaryClause()) { std::cerr << " LCM with reason lit " << confl.getReasonL() << std::endl; } //r
+                    else { std::cerr << " with clause [" << confl.getReasonC() << "] " << ca[confl.getReasonC()] << std::endl; }
+                }
+                );
                 assert((confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) && "the assignment to the literal has to have a reason");
                 break;
 	      } else {
@@ -2673,6 +2681,17 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         if (round==2) { // reverse clause in second iteration!
             c.reverse();
         }
+        DOUT(for(int m = 0 ; m < c.size(); ++ m ){
+	  bool found = false;
+	  for(int n = 0; n < originalClause.size(); ++ n ) {
+	    if( c[m] == originalClause[n] ) { found = true; break; }
+	  }
+	  if (!found) {
+	    std::cerr << "c shrinked clause " << c << " is not a subset of the original clause any more: " << originalClause << std::endl;
+	    assert(false && "new clause should be a subset of the original clause");
+	  }
+	}
+	);
         roundLits[round] = c.size();
 
         if (!minimized) { break; } // no need for a second iteration if no minimization was achieved in the first iteration
