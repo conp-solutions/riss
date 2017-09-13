@@ -2615,7 +2615,8 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
                     // or something similar, based on conflict analysis with the clause we just got as conflict
                     break;
                 }
-            } else if (value(c[i]) == l_True && roundViviConfig > 2) { // <- enable only in case conflict resultion is performed below. the actual break does not work!
+            } else if (value(c[i]) == l_True) {
+	      if(roundViviConfig > 2) { // <- enable only in case conflict resultion is performed below. the actual break does not work!
                 impliedLit = c[i]; // store to be able to use it for conflict analysis afterwards
                 c[j++] = c[i];  // not necessary, as will be resolved out later anyways (or use as basis for conflict)?
 
@@ -2624,6 +2625,13 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
                 confl = reason(var(c[i]));
                 assert((confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) && "the assignment to the literal has to have a reason");
                 break;
+	      } else {
+		// keep the satisfied literal, in case configuration tells not to use conflict analysis here
+		c[j++] = c[i];
+	      }
+            } else {
+                // F \land (-l1,...,-lk} -> {-li}
+                DOUT(if (config.opt_lcm_dbg) std::cerr << "c at level " << decisionLevel() << " drop falsified literal from clause: " << c[i] << "@" << level(var(c[i])) << std::endl;);
             }
         }
 
