@@ -77,6 +77,9 @@ class Probing : public Technique<Probing>
     /** perform clause vivification */
     void clauseVivification();
 
+    /** perform LCM on each clause of the formula (very similar to vivification) */
+    void clauseVivificationLCM();
+
     /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
     void reSetupSolver();
 
@@ -110,6 +113,11 @@ class Probing : public Technique<Probing>
     unsigned viviChecks;      // number of steps performed by vivification
     unsigned viviSize;        // size of clauses that are vivified
     unsigned lhbr_news;       // number of clauses that have been added by lhbr
+
+    double lcmTime;      // seconds spend for LCM
+    unsigned lcmLits;    // number of removed literals through LCM
+    unsigned lcmCls;     // number of clauses modified by LCM
+    unsigned lcmSteps;   // number of steps for LCM
 };
 
 };
