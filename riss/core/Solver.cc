@@ -2595,7 +2595,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         // if this round should not perform any simplification, jump to the next round (and work with reversed clause)
         if (roundViviConfig == 0) {roundLits[round] = c.size(); continue; }
 
-        if (round==2) { // reverse clause in second iteration!
+        if (round == 2) { // reverse clause in second iteration!
             c.reverse();
         }
         DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM round " << round << " with config " << roundViviConfig << " start with clause: " << c << std::endl;);
@@ -2620,26 +2620,26 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
                     break;
                 }
             } else if (value(c[i]) == l_True) {
-	      if(roundViviConfig > 2) { // <- enable only in case conflict resultion is performed below. the actual break does not work!
-                impliedLit = c[i]; // store to be able to use it for conflict analysis afterwards
-                c[j++] = c[i];  // not necessary, as will be resolved out later anyways (or use as basis for conflict)?
+                if (roundViviConfig > 2) { // <- enable only in case conflict resultion is performed below. the actual break does not work!
+                    impliedLit = c[i]; // store to be able to use it for conflict analysis afterwards
+                    c[j++] = c[i];  // not necessary, as will be resolved out later anyways (or use as basis for conflict)?
 
-                // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \l_i \equiv
-                // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} \land \neg l_i -> \bot, with confl = reason(l_i)
-                confl = reason(var(c[i]));
-                DOUT(
-                if (config.opt_lcm_dbg) {
-                std::cerr << "c LCM with trail " << trail << " find implied literal " << impliedLit << "@" << level(var(impliedLit)) << " at " << decisionLevel() << std::endl;
-                    if (confl.isBinaryClause()) { std::cerr << " LCM with reason lit " << confl.getReasonL() << std::endl; } //r
-                    else { std::cerr << " with clause [" << confl.getReasonC() << "] " << ca[confl.getReasonC()] << std::endl; }
+                    // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \l_i \equiv
+                    // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} \land \neg l_i -> \bot, with confl = reason(l_i)
+                    confl = reason(var(c[i]));
+                    DOUT(
+                    if (config.opt_lcm_dbg) {
+                    std::cerr << "c LCM with trail " << trail << " find implied literal " << impliedLit << "@" << level(var(impliedLit)) << " at " << decisionLevel() << std::endl;
+                        if (confl.isBinaryClause()) { std::cerr << " LCM with reason lit " << confl.getReasonL() << std::endl; } //r
+                        else { std::cerr << " with clause [" << confl.getReasonC() << "] " << ca[confl.getReasonC()] << std::endl; }
+                    }
+                    );
+                    assert((confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) && "the assignment to the literal has to have a reason");
+                    break;
+                } else {
+                    // keep the satisfied literal, in case configuration tells not to use conflict analysis here
+                    // c[j++] = c[i];
                 }
-                );
-                assert((confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) && "the assignment to the literal has to have a reason");
-                break;
-	      } else {
-		// keep the satisfied literal, in case configuration tells not to use conflict analysis here
-		c[j++] = c[i];
-	      }
             } else {
                 // F \land (-l1,...,-lk} -> {-li}
                 DOUT(if (config.opt_lcm_dbg) std::cerr << "c at level " << decisionLevel() << " drop falsified literal from clause: " << c[i] << "@" << level(var(c[i])) << std::endl;);
@@ -2647,19 +2647,19 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         }
 
         c.shrink(c.size() - j);
-	DOUT(for(int m = 0 ; m < c.size(); ++ m ) {
-	  bool found = false;
-	  for(int n = 0; n < originalClause.size(); ++n ) { if (c[m] == originalClause[n]) { found = true; break; } }
-	    if(!found) { std::cerr << "c shrinked clause " << c << "(" << c.size() << "," << c[m] << ") is not a subset of the original clause any more: " << originalClause << "(" << originalClause.size() << ")" << std::endl; }
-	    assert(found && "clause should be a subclause of the other, maybe with gaps" );
-	} );
-         DOUT(if (config.opt_lcm_dbg && outputsProof()) {
+        DOUT(for (int m = 0 ; m < c.size(); ++ m) {
+        bool found = false;
+        for (int n = 0; n < originalClause.size(); ++n) { if (c[m] == originalClause[n]) { found = true; break; } }
+            if (!found) { std::cerr << "c shrinked clause " << c << "(" << c.size() << "," << c[m] << ") is not a subset of the original clause any more: " << originalClause << "(" << originalClause.size() << ")" << std::endl; }
+            assert(found && "clause should be a subclause of the other, maybe with gaps");
+        });
+        DOUT(if (config.opt_lcm_dbg && outputsProof()) {
         // test adding and removing the current clause to the proof
         std::cerr << "c test adding and removing UP fail clause " << c << " to/from the proof, with impliedLit " << impliedLit << std::endl;
         addToProof(c);
-        addToProof(c, true);
-        std::cerr << "c proof test succeeded" << std::endl;
-  } );
+            addToProof(c, true);
+            std::cerr << "c proof test succeeded" << std::endl;
+        });
         #if 0
         if (impliedLit == lit_Undef) { c.shrink(c.size() - j); }
         else {
@@ -2710,7 +2710,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         }
         cancelUntil(0);
 
-        if (round==2) { // reverse clause in second iteration!
+        if (round == 2) { // reverse clause in second iteration!
             c.reverse();
         }
         DOUT(for(int m = 0 ; m < c.size(); ++ m ){
@@ -2744,7 +2744,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
     return c.lbd();
 }
 
-bool Solver::simplifyClause_viviLCM(const CRef cr, bool fullSimplify)
+bool Solver::simplifyClause_viviLCM(const Riss::CRef cr, int LCMconfig, bool fullySimplify)
 {
     Clause& c = ca[cr];
     bool keepClause = false;
@@ -2793,7 +2793,7 @@ bool Solver::simplifyClause_viviLCM(const CRef cr, bool fullSimplify)
         }
     }
 
-    if (!config.opt_lcm_full && !fullSimplify) { // use efficiency filters?
+    if (!config.opt_lcm_full && !fullySimplify) { // use efficiency filters?
         // if clause is in first half of sorted learned clauses, or has been processed in the past, ignore it
         return true;
     }
@@ -2804,7 +2804,7 @@ bool Solver::simplifyClause_viviLCM(const CRef cr, bool fullSimplify)
     nbLCMattempts ++;
     // simplifying the clause does not change it's memory location, hence c is still valid afterwards
     DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM test   clause index " << cr << " with literals: " << c << " and trail: " << trail << std::endl;);
-    int newLBD = simplifyLearntLCM(c, config.opt_learned_clause_vivi);
+    int newLBD = simplifyLearntLCM(c, LCMconfig);
     nbLitsLCM += oldSize - c.size();
     nbLCMsuccess = oldSize > c.size() ? nbLCMsuccess + 1 : nbLCMsuccess;
     DOUT(if (config.opt_lcm_dbg) std::cerr << "c LCM result clause index " << cr << " with literals: " << c << std::endl;);
@@ -2894,14 +2894,14 @@ f -> C \setminus lf
         Clause& c = ca[cr];
         if (c.mark()) { continue; } // this clause can be dropped
 
-        bool keep = simplifyClause_viviLCM(cr, ci < learnts.size() / 2 || c.wasLcmSimplified());
+        bool keep = simplifyClause_viviLCM(cr, config.opt_learned_clause_vivi, ! c.wasLcmSimplified() && ci >= learnts.size() / 2);  // only run full LCM on new good clauses
         if (keep) { learnts[cj++] = learnts[ci]; }
         if (!ok) { break; } // stop in case we found an empty clause
     }
-
-
     // fill gaps unneeded space
     learnts.shrink(ci - cj);
+
+
     checkGarbage();
     return ok;
 }

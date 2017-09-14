@@ -411,6 +411,7 @@ class Clause
 
     bool wasLcmSimplified() const { return header.lcm_simplified; }
     void setLcmSimplified() { header.lcm_simplified = 1; }
+    void resetLcmSimplified() { header.lcm_simplified = 0; }
 
     bool wasPropagated() const { return header.wasPropagated; }
     void setPropagated() { header.wasPropagated = 1; }
