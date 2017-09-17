@@ -86,7 +86,7 @@ class CoreConfig : public Config
     IntOption opt_lb_lbd_minimzing_clause;
     IntOption opt_learned_clause_vivi;
     BoolOption opt_lcm_full;
-    BoolOption opt_lcm_dbg;
+    IntOption opt_lcm_dbg;
 
     DoubleOption opt_var_decay_start; // start value default: 0.95 glucose 2.3: 0.8
     DoubleOption opt_var_decay_stop;  // stop value  default: 0.95 glucose 2.3: 0.95
@@ -175,6 +175,7 @@ class CoreConfig : public Config
     StringOption polFile;
     #ifndef NDEBUG
     IntOption opt_printDecisions;
+    BoolOption opt_ordered_branch;
     #endif
 
     IntOption opt_rMax;

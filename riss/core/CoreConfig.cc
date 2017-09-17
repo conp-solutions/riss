@@ -86,7 +86,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
     opt_learned_clause_vivi     (_cm, "lcm",                     "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze, 3=vivi+unionanalyze, 4+reverse, >4 X-4, and-reverse)", 0, IntRange(0, 24),                                                        optionListPtr),
     opt_lcm_full                (_cm, "lcm-full",                "at all restarts, always on all learned clauses", false , optionListPtr),
-    opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation", false , optionListPtr),
+    opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation", 0, IntRange(0, 5), optionListPtr),
 
     opt_var_decay_start         (_cs,   "var-decay-b",           "The variable activity decay factor start value", 0.95, DoubleRange(0, false, 1, false),                                 optionListPtr),
     opt_var_decay_stop          (_cs,   "var-decay-e",           "The variable activity decay factor stop value", 0.95, DoubleRange(0, false, 1, false),                                  optionListPtr),
@@ -173,6 +173,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     polFile            (_init, "polFile",    "use these polarities", 0,                                                          optionListPtr),
     #ifndef NDEBUG
     opt_printDecisions (_init, "printDec",   "1=print decisions, 2=print all enqueues, 3=show clauses #NoAutoT", 0, IntRange(0, 3),      optionListPtr),
+    opt_ordered_branch (_init, "orderDec",   "always pick decisions bottom up #NoAutoT", false,                                  optionListPtr),
     #endif
 
     opt_rMax   (_cr, "rMax",    "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX),            optionListPtr),
