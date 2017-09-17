@@ -2288,6 +2288,40 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, Lit 
         remLit = compression.exportLit(remLit);
     }
 
+    // use an external tool to check the current addition?
+    #ifndef NDEBUG
+    if (!deleteFromProof && (const char*)config.opt_external_check != nullptr) {
+
+        char formulaFileName[L_tmpnam];
+        if (!tmpnam(formulaFileName)) {
+            throw "cannot allocate temporary file for dump formula";
+        }
+        // write current CNF to this file
+        dumpAndExit(formulaFileName, false, true); // do not exit, write full state
+        char proofFileName[L_tmpnam];
+        if (! tmpnam(proofFileName)) {
+            throw "cannot allocate temporary file for dump proof";
+        }
+
+        FILE* f = fopen(proofFileName, "w");
+        if (f == nullptr) {
+            fprintf(stderr, "could not open proof file %s\n", proofFileName), exit(1);
+        }
+        stringstream s;
+        s << clause;
+        fprintf(f, "%s 0\n", s.str().c_str());
+
+        std::cerr << "c to check adding current clause, call " << (const char*)config.opt_external_check << " " << formulaFileName << " " << proofFileName << std::endl;
+        string toExecute = string((const char*)config.opt_external_check) + " "
+                           + string(formulaFileName) + " "
+                           + string(proofFileName);
+        int returnCode = system(toExecute.c_str());
+        std::cerr << "c finished with " << returnCode << std::endl;
+        assert(returnCode == 0 && "checking new clause on current state has to go right");
+        // exit(6); // for debugging stop here for now
+    }
+    #endif
+
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;

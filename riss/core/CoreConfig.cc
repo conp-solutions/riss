@@ -179,6 +179,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     #ifndef NDEBUG
     opt_printDecisions (_init, "printDec",   "1=print decisions, 2=print all enqueues, 3=show clauses #NoAutoT", 0, IntRange(0, 3),      optionListPtr),
     opt_ordered_branch (_init, "orderDec",   "always pick decisions bottom up #NoAutoT", false,                                  optionListPtr),
+    opt_external_check (_init, "extChecker",  "point to a proofchecking tool that runs X CNF PROOF with $? = 0", 0, optionListPtr),
     #endif
 
     opt_rMax   (_cr, "rMax",    "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX),            optionListPtr),

@@ -183,6 +183,7 @@ class CoreConfig : public Config
     #ifndef NDEBUG
     IntOption opt_printDecisions;
     BoolOption opt_ordered_branch;
+    StringOption opt_external_check;
     #endif
 
     IntOption opt_rMax;
