@@ -84,9 +84,13 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
     opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause",  "The min LBD required to minimize clause", 6, IntRange(0, INT32_MAX),                                                    optionListPtr),
 
-    opt_learned_clause_vivi     (_cm, "lcm",                     "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze, 3=vivi+unionanalyze, 4+reverse, >4 X-4, and-reverse)", 0, IntRange(0, 24),                                                        optionListPtr),
-    opt_lcm_full                (_cm, "lcm-full",                "at all restarts, always on all learned clauses", false , optionListPtr),
-    opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation", 0, IntRange(0, 5), optionListPtr),
+    opt_learned_clause_vivi     (_cm, "lcm",                     "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze, 3=vivi+unionanalyze, 4+reverse, >4 X-4, and-reverse)", 0, IntRange(0, 24), optionListPtr),
+    opt_lcm_freq                (_cm, "lcm-freq",                "Use LCM after every X reduceDB calls", 1, IntRange(1, INT32_MAX), optionListPtr),
+    opt_lcm_min_size            (_cm, "lcm-min-size",            "Apply LCM only to clauses that have at least X literals", 1, IntRange(1, INT32_MAX), optionListPtr),
+    opt_lcm_full                (_cm, "lcm-full",                "at all restarts, always on all learned clauses #NoAutoT", false , optionListPtr),
+#ifndef NDEBUG
+    opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation #NoAutoT", 0, IntRange(0, 5), optionListPtr),
+#endif
 
     opt_var_decay_start         (_cs,   "var-decay-b",           "The variable activity decay factor start value", 0.95, DoubleRange(0, false, 1, false),                                 optionListPtr),
     opt_var_decay_stop          (_cs,   "var-decay-e",           "The variable activity decay factor stop value", 0.95, DoubleRange(0, false, 1, false),                                  optionListPtr),

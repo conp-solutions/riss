@@ -84,9 +84,15 @@ class CoreConfig : public Config
     IntOption opt_biAssiMaxEvery;   // number of conflicts until another bi-asserting clause is allowed to be learned
     IntOption opt_lb_size_minimzing_clause;
     IntOption opt_lb_lbd_minimzing_clause;
+    
+    // LCM
     IntOption opt_learned_clause_vivi;
+    IntOption opt_lcm_freq;
+    IntOption opt_lcm_min_size;
     BoolOption opt_lcm_full;
+#ifndef NDEBUG
     IntOption opt_lcm_dbg;
+#endif
 
     DoubleOption opt_var_decay_start; // start value default: 0.95 glucose 2.3: 0.8
     DoubleOption opt_var_decay_stop;  // stop value  default: 0.95 glucose 2.3: 0.95

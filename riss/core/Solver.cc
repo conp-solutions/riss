@@ -2940,6 +2940,11 @@ bool Solver::simplifyLCM()
         const CRef cr = learnts[ci];
         Clause& c = ca[cr];
         if (c.mark()) { continue; } // this clause can be dropped
+        if (c.size() < config.opt_lcm_min_size) {
+	   // do not look at clauses that have less than the given amount of literals
+	  learnts[cj++] = learnts[ci];
+	  continue;
+	}
 
         bool keep = simplifyClause_viviLCM(cr, config.opt_learned_clause_vivi, ! c.wasLcmSimplified() && ci >= learnts.size() / 2);  // only run full LCM on new good clauses
         if (keep) { learnts[cj++] = learnts[ci]; }
@@ -2980,11 +2985,12 @@ lbool Solver::search(int nof_conflicts)
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
 
     // simplify
-    if (config.opt_lcm_full || (performSimplificationNext == 1 && config.opt_learned_clause_vivi > 0)) {
+    if (config.opt_lcm_full || (config.opt_learned_clause_vivi > 0 && performSimplificationNext > 0 && performSimplificationNext % config.opt_lcm_freq == 0)) {
         // from time to time we have to interfere with partial restarts, but LCM overrules, to be able to run once in a while
         if(decisionLevel() > 0) {
 	  cancelUntil(0); 
 	}
+	performSimplificationNext = 0;
         sort(learnts, reduceDB_lbd_lt(ca));
         if (!simplifyLCM()) { return l_False; }
         performSimplificationNext = 0;
@@ -3505,7 +3511,7 @@ void Solver::clauseRemoval()
         nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
 
         DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM allow LCM once" << std::endl;);
-        performSimplificationNext = 1;  // after clause reduction, performing one more analysis of clauses is ok
+        performSimplificationNext ++;  // after clause reduction, performing one more analysis of clauses is ok
     }
 }
 

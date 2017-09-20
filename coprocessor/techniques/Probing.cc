@@ -133,14 +133,28 @@ bool Probing::process()
         // clean solver again!
         cleanSolver();
 
-        #ifndef NDEBUG
-        for (int i = beforeClauses; i < data.getClauses().size(); ++ i) {
-            DOUT(if (config.pr_debug_out > 2) cerr << "c add clause to all data structures " << data.getClauses()[i] << endl;);
-            data.addClause(data.getClauses()[i], config.pr_debug_out > 0);
-        }     // incorporate new clauses into the solver
-        #else
-        for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i]); }     // incorporate new clauses into the solver
-        #endif
+	if (config.pr_lcm && data.ok() && modifiedFormula) // as the routine might have modified existing clauses as well, perform a full re-add of actual clauses!
+	{
+	  data.cleanOccurrences();
+	  for(int p = 0; p < 2; ++ p)
+	  {
+	    const vec<CRef>& clauseList = p == 0 ? data.getClauses() : data.getLEarnts();
+	    for (int i = 0; i < clauseList.size(); ++ i) {
+		if(ca[clauseList[i]].can_be_deleted()) continue; // skip clause that we do not care about any more
+		DOUT(if (config.pr_debug_out > 2) cerr << "c add clause to all data structures " << clauseList[i] << endl;);
+		data.addClause(clauseList[i]);
+	    }
+	  }
+	} else {
+	  #ifndef NDEBUG
+	  for (int i = beforeClauses; i < data.getClauses().size(); ++ i) {
+	      DOUT(if (config.pr_debug_out > 2) cerr << "c add clause to all data structures " << data.getClauses()[i] << endl;);
+	      data.addClause(data.getClauses()[i], config.pr_debug_out > 0);
+	  }     // incorporate new clauses into the solver
+	  #else
+	  for (int i = beforeClauses; i < data.getClauses().size(); ++ i) { data.addClause(data.getClauses()[i]); }     // incorporate new clauses into the solver
+	  #endif
+	}
         probeLHBRs = probeLHBRs + data.getClauses().size() - beforeVivClauses; // stats
 
         if (beforeLClauses < data.getLEarnts().size()) {
@@ -1138,13 +1152,22 @@ void Probing::clauseVivificationLCM()
     for (int iteration = 0; iteration < config.pr_lcm_iterations; ++ iteration) {
         int keptClauses = 0, processedClauses = 0;
         vec<CRef>& clauses = data.getClauses();
-        for (; processedClauses < clauses.size(); ++processedClauses) {
-            if (!data.unlimited() && lcmSteps > config.pr_lcmLimit) { break; } // stop right here
-
+	const int oldSize = clauses.size();
+        for (; processedClauses < clauses.size()
+	  && data.ok()                                             // unsat?
+	  && (data.unlimited() || lcmSteps <= config.pr_lcmLimit)  // within limits?
+	  ; ++processedClauses) {
+            
             const CRef cr = clauses[processedClauses];
             Clause& c = ca[cr];
+	    if (c.can_be_deleted()) { continue; }
+
+	    if (c.size() < config.pr_lcm_min_size) { 
+	      clauses[keptClauses++] = clauses[processedClauses];
+	      continue;
+	    }
+	    
             const int oldSize = c.size();
-            if (c.can_be_deleted()) { continue; }
             lcmSteps += c.size(); // somewhat keep track of steps. number of propagated literals would be a better estimate, but is not accessible from Coprossor easily
 
             bool keep = solver.simplifyClause_viviLCM(cr, config.pr_lcm_vivi, true); // allow this clause to be simplified
@@ -1155,10 +1178,13 @@ void Probing::clauseVivificationLCM()
                 lcmCls ++;
                 modifiedFormula = true;
             }
-            if (!data.ok()) { break; } // stop in case we found an empty clause
         }
-        // in case we stop in the middle, make sure we keep the remaining clauses!
-        for (; processedClauses < clauses.size(); ++processedClauses) { clauses[keptClauses++] = clauses[processedClauses]; }
+	
+	// in case we did not find unsat, move the rest of the clauses to shrink afterwards
+	if(data.ok())
+	{
+	  for (; processedClauses < clauses.size(); ++processedClauses) { clauses[keptClauses++] = clauses[processedClauses]; }
+	}
         // fill gaps unneeded space
         clauses.shrink(clauses.size() - keptClauses);
     }

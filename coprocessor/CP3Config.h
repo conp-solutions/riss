@@ -482,6 +482,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption pr_vivi       ;
     Riss::BoolOption pr_lcm        ;
     Riss::IntOption pr_lcm_vivi    ;
+    Riss::IntOption pr_lcm_min_size;
     Riss::IntOption pr_keepLearnts ;
     Riss::IntOption pr_keepImplied ;
     Riss::IntOption pr_viviPercent ;
