@@ -143,7 +143,6 @@ void Mprocessor::simplify()
     // if we are densing, the the units should be rewritten and kept, and, the soft clauses need to be rewritten!
     if (cpconfig.opt_dense) {
         cpconfig.opt_dense_keep_assigned = true; // keep the units on the trail!
-        cpconfig.opt_dense_store_forward = true; // store a forward mapping
     }
 
     preprocessor = new Preprocessor(S, cpconfig);
