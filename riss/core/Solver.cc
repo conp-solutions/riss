@@ -752,7 +752,7 @@ void Solver::removeClause(Riss::CRef cr, bool strict)
     // tell DRUP that clause has been deleted, if this was not done before already!
     if (c.mark() == 0) {
         addCommentToProof("delete via clause removal", true);
-	// assert(false && "stop here for debugging");
+        // assert(false && "stop here for debugging");
         addToProof(c, true); // clause has not been removed yet
     }
     DOUT(if (config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;);
@@ -2711,7 +2711,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         #endif
 
         if (roundViviConfig > 1 && (confl.isBinaryClause() || confl.getReasonC() != CRef_Undef)) {
-        conflict.clear(); // use the conflict vector, as it's a class member. make sure to clear it afterwards again!
+            conflict.clear(); // use the conflict vector, as it's a class member. make sure to clear it afterwards again!
             DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM run LCM analysis with impliedLit " << impliedLit << std::endl;);
 
             DOUT(if (config.opt_lcm_dbg > 1 && !confl.isBinaryClause()) std::cerr << "c LCM        conflict clause: " << ca[confl.getReasonC()] << " with trail " << trail << std::endl;);
@@ -2742,7 +2742,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         }
 
         if (c.size() < inputSize) {
-        int nblevels = computeLBD(c, c.size());
+            int nblevels = computeLBD(c, c.size());
             if (nblevels < c.lbd()) {
                 c.setLBD(nblevels);
             }
@@ -2751,7 +2751,7 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         cancelUntil(0);
 
         if (round == 2) { // reverse clause in second iteration!
-        c.reverse();
+            c.reverse();
         }
         DOUT(for (int m = 0 ; m < c.size(); ++ m) {
         bool found = false;
@@ -2776,9 +2776,9 @@ int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
         roundLits[round] = c.size();
 
         if (!minimized) { break; } // no need for a second iteration if no minimization was achieved in the first iteration
-}
+    }
 
-nbRound1Lits += roundLits[0] - roundLits[1];
+    nbRound1Lits += roundLits[0] - roundLits[1];
     if (round > 1) { nbRound2Lits += roundLits[1] - roundLits[2]; }
 
     return c.lbd();
@@ -2872,13 +2872,13 @@ bool Solver::simplifyClause_viviLCM(const Riss::CRef cr, int LCMconfig, bool ful
         c.setLcmSimplified();
     } else if (c.size() == 1) {
         uncheckedEnqueue(c[0]); // this clause is already added to the proof
-	int breforeTrail = trail.size();
-	int beforePropTopLevelLits = trail.size();
+        int breforeTrail = trail.size();
+        int beforePropTopLevelLits = trail.size();
         if (propagate() != CRef_Undef) {
             ok = false;
             return false;
         }
-	if (decisionLevel() == 0) { handleTopLevelUnits(breforeTrail, beforePropTopLevelLits); }
+        if (decisionLevel() == 0) { handleTopLevelUnits(breforeTrail, beforePropTopLevelLits); }
         // free clause, as it's satisfiable now
         c.mark(1);
         ca.free(cr);
@@ -2920,14 +2920,14 @@ bool Solver::simplifyLCM()
     f -> l1, ...,le, -lf, lg, ... lm
     f -> C \setminus lf
      * */
-    
+
     assert(qhead == trail.size() && "make sure we are in a good state before LCM");
-    
+
     // make sure we do not miss something
     if (!ok || propagate() != CRef_Undef) {
         return ok = false;
     }
-    
+
     MethodClock lcmMethodClock(LCMTime);  // measure the time for the remainder of this function in the given clock
 
     nbLCM ++;
@@ -2941,10 +2941,10 @@ bool Solver::simplifyLCM()
         Clause& c = ca[cr];
         if (c.mark()) { continue; } // this clause can be dropped
         if (c.size() < config.opt_lcm_min_size) {
-	   // do not look at clauses that have less than the given amount of literals
-	  learnts[cj++] = learnts[ci];
-	  continue;
-	}
+            // do not look at clauses that have less than the given amount of literals
+            learnts[cj++] = learnts[ci];
+            continue;
+        }
 
         bool keep = simplifyClause_viviLCM(cr, config.opt_lcm_style, ! c.wasLcmSimplified() && ci >= learnts.size() / 2);  // only run full LCM on new good clauses
         if (keep) { learnts[cj++] = learnts[ci]; }
@@ -2987,10 +2987,10 @@ lbool Solver::search(int nof_conflicts)
     // simplify
     if (config.opt_lcm && (config.opt_lcm_full || (config.opt_lcm_style > 0 && performSimplificationNext > 0 && performSimplificationNext % config.opt_lcm_freq == 0))) {
         // from time to time we have to interfere with partial restarts, but LCM overrules, to be able to run once in a while
-        if(decisionLevel() > 0) {
-	  cancelUntil(0); 
-	}
-	performSimplificationNext = 0;
+        if (decisionLevel() > 0) {
+            cancelUntil(0);
+        }
+        performSimplificationNext = 0;
         sort(learnts, reduceDB_lbd_lt(ca));
         if (!simplifyLCM()) { return l_False; }
         performSimplificationNext = 0;
@@ -3003,15 +3003,15 @@ lbool Solver::search(int nof_conflicts)
         propagationTime.stop();
 
         if (decisionLevel() == 0) { handleTopLevelUnits(beforeTrail, proofTopLevels); }
-        
+
         // in case of full LCM debugging, check for lcm in each round, on level 0, whenever there is no conflict
         DOUT(
-	  if (config.opt_lcm && (config.opt_lcm_full && decisionLevel() == 0 && confl == CRef_Undef && config.opt_lcm_style > 0)) {
-	      sort(learnts, reduceDB_lbd_lt(ca));
-	      if (!simplifyLCM()) { return l_False; }
-	      performSimplificationNext = 0;
-	  }
-	);
+        if (config.opt_lcm && (config.opt_lcm_full && decisionLevel() == 0 && confl == CRef_Undef && config.opt_lcm_style > 0)) {
+        sort(learnts, reduceDB_lbd_lt(ca));
+            if (!simplifyLCM()) { return l_False; }
+            performSimplificationNext = 0;
+        }
+        );
 
         if (confl != CRef_Undef) { // CONFLICT
 
@@ -3039,8 +3039,8 @@ lbool Solver::search(int nof_conflicts)
 
             // in case of full lcm debugging, restart after every conflict!
             DOUT(if (config.opt_lcm_full && config.opt_lcm_style > 0) cancelUntil(0););
-            
-	    varDecayActivity();
+
+            varDecayActivity();
             claDecayActivity();
 
         } else { // there has not been a conflict
@@ -3511,7 +3511,7 @@ void Solver::clauseRemoval()
         nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
 
         DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM allow LCM once" << std::endl;);
-        if(config.opt_lcm) performSimplificationNext ++;  // after clause reduction, performing one more analysis of clauses is ok
+        if (config.opt_lcm) { performSimplificationNext ++; } // after clause reduction, performing one more analysis of clauses is ok
     }
 }
 
