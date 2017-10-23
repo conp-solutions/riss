@@ -2946,7 +2946,7 @@ bool Solver::simplifyLCM()
 	  continue;
 	}
 
-        bool keep = simplifyClause_viviLCM(cr, config.opt_learned_clause_vivi, ! c.wasLcmSimplified() && ci >= learnts.size() / 2);  // only run full LCM on new good clauses
+        bool keep = simplifyClause_viviLCM(cr, config.opt_lcm_style, ! c.wasLcmSimplified() && ci >= learnts.size() / 2);  // only run full LCM on new good clauses
         if (keep) { learnts[cj++] = learnts[ci]; }
         if (!ok) { break; } // stop in case we found an empty clause
     }
@@ -2985,7 +2985,7 @@ lbool Solver::search(int nof_conflicts)
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
 
     // simplify
-    if (config.opt_lcm_full || (config.opt_learned_clause_vivi > 0 && performSimplificationNext > 0 && performSimplificationNext % config.opt_lcm_freq == 0)) {
+    if (config.opt_lcm && (config.opt_lcm_full || (config.opt_lcm_style > 0 && performSimplificationNext > 0 && performSimplificationNext % config.opt_lcm_freq == 0))) {
         // from time to time we have to interfere with partial restarts, but LCM overrules, to be able to run once in a while
         if(decisionLevel() > 0) {
 	  cancelUntil(0); 
@@ -3006,7 +3006,7 @@ lbool Solver::search(int nof_conflicts)
         
         // in case of full LCM debugging, check for lcm in each round, on level 0, whenever there is no conflict
         DOUT(
-	  if (config.opt_lcm_full && decisionLevel() == 0 && confl == CRef_Undef && config.opt_learned_clause_vivi > 0) {
+	  if (config.opt_lcm && (config.opt_lcm_full && decisionLevel() == 0 && confl == CRef_Undef && config.opt_lcm_style > 0)) {
 	      sort(learnts, reduceDB_lbd_lt(ca));
 	      if (!simplifyLCM()) { return l_False; }
 	      performSimplificationNext = 0;
@@ -3038,7 +3038,7 @@ lbool Solver::search(int nof_conflicts)
             if (analysisResult != l_Undef) { return analysisResult; }           // if techniques on learned clauses reveal unsatisfiability of the formula, return this result
 
             // in case of full lcm debugging, restart after every conflict!
-            DOUT(if (config.opt_lcm_full && config.opt_learned_clause_vivi > 0) cancelUntil(0););
+            DOUT(if (config.opt_lcm_full && config.opt_lcm_style > 0) cancelUntil(0););
             
 	    varDecayActivity();
             claDecayActivity();
@@ -3511,7 +3511,7 @@ void Solver::clauseRemoval()
         nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
 
         DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM allow LCM once" << std::endl;);
-        performSimplificationNext ++;  // after clause reduction, performing one more analysis of clauses is ok
+        if(config.opt_lcm) performSimplificationNext ++;  // after clause reduction, performing one more analysis of clauses is ok
     }
 }
 

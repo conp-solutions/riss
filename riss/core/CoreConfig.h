@@ -86,7 +86,8 @@ class CoreConfig : public Config
     IntOption opt_lb_lbd_minimzing_clause;
     
     // LCM
-    IntOption opt_learned_clause_vivi;
+    BoolOption opt_lcm;
+    IntOption opt_lcm_style;
     IntOption opt_lcm_freq;
     IntOption opt_lcm_min_size;
     BoolOption opt_lcm_full;
