@@ -23,7 +23,7 @@ cnfuzz: cnfuzz.c Makefile
 drat-trim: drat-trim.c
 	gcc -O2 -o drat-trim drat-trim.c -static -lrt
 
-verify: 
+verify: verify_model.c
 	g++ verify_model.c -o verify -O3 
 
 clean:

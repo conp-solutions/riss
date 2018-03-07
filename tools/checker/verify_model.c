@@ -154,6 +154,7 @@ static int libpdex_satisfies_problem(polarity_t *model, size_t model_ctr, litera
 
             // Model too small
             if (var >= model_ctr) {
+                printf("found variable that is not present in model: %d\n", var);
                 return 0;
             }
 
