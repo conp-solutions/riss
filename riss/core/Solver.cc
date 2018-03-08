@@ -77,6 +77,8 @@ Solver::Solver(CoreConfig* externalConfig, const char* configName) :    // CoreC
     , nbRemovedClauses(0), nbReducedClauses(0), nbDL2(0), nbBin(0), nbUn(0), nbReduceDB(0)
     , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), nbstopsrestarts(0), nbstopsrestartssame(0), lastblockatrestart(0)
     , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+    , performSimplificationNext(0)
+    , nbLCM(0), nbLitsLCM(0), nbConflLits(0), nbLCMattempts(0), nbLCMsuccess(0), npLCMimpDrop(0), nbRound1Lits(0), nbRound2Lits(0), nbLCMfalsified(0)
     , curRestart(1)
 
 
@@ -750,6 +752,7 @@ void Solver::removeClause(Riss::CRef cr, bool strict)
     // tell DRUP that clause has been deleted, if this was not done before already!
     if (c.mark() == 0) {
         addCommentToProof("delete via clause removal", true);
+        // assert(false && "stop here for debugging");
         addToProof(c, true); // clause has not been removed yet
     }
     DOUT(if (config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;);
@@ -1026,6 +1029,15 @@ void Solver::cancelUntil(int level)
 Lit Solver::pickBranchLit()
 {
     Var next = var_Undef;
+
+    DOUT(
+    if (config.opt_ordered_branch) {
+    Var v = 0;
+    for (; v < nVars(); ++v) {
+            if (value(v) == l_Undef) { return mkLit(v); }
+        }
+    }
+    )
 
     // NuSMV: PREF MOD
     // Selection from preferred list
@@ -1686,6 +1698,7 @@ void Solver::analyzeFinal(const Solver::ReasonStruct& conflictingClause, vec< Li
         const Clause& c = ca[conflictingClause.getReasonC()];
         for (int i = 0 ; i < c.size(); ++ i) {
             if (level(var(c[i])) > 0) {
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c mark " << var(c[i]) << std::endl;);
                 varFlags[var(c[i])].seen = 1;
             }
         }
@@ -1693,6 +1706,7 @@ void Solver::analyzeFinal(const Solver::ReasonStruct& conflictingClause, vec< Li
         for (int i = 0 ; i < 2; ++ i) {
             const Var v = var((i == 0 ? otherLit : conflictingClause.getReasonL()));
             if (level(v) > 0) {
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c mark " << v << std::endl;);
                 varFlags[v].seen = 1;
             }
         }
@@ -1810,7 +1824,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 {
     assert((decisionLevel() == 0 || !duringAddingClauses) && "clauses can only be added at level 0!");
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
-    DOUT(if (config.opt_learn_debug) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl;);
+    DOUT(if (config.opt_learn_debug) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits: " << trail << endl;);
 
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
@@ -2082,7 +2096,7 @@ void Solver::reduceDB()
 
 void Solver::removeSatisfied(vec<CRef>& cs)
 {
-
+    assert(qhead == trail.size() && "only perform in case trail is fully handled as proof already");
     int i, j;
     for (i = j = 0; i < cs.size(); i++) {
         Clause& c = ca[cs[i]];
@@ -2577,6 +2591,372 @@ Lit Solver::performSearchDecision(lbool& returnValue, vec<Lit>& tmp_Lits)
 }
 
 
+int Solver::simplifyLearntLCM(Clause& c, int vivificationConfig)
+{
+    int roundLits[3];
+    int round = 0;
+    roundLits[0] = c.size();
+    DOUT(vec<Lit> originalClause; for (int i = 0 ; i < c.size(); ++i) originalClause.push(c[i]););
+    while (vivificationConfig > 0 && c.size() > 1) {
+        bool minimized = false;
+        round ++;
+        const int roundViviConfig = vivificationConfig % 5;
+        vivificationConfig /= 5;
+
+        assert(round <= 2 && "have at most 2 rounds");
+        // if this round should not perform any simplification, jump to the next round (and work with reversed clause)
+        if (roundViviConfig == 0) {roundLits[round] = c.size(); continue; }
+
+        if (round == 2) { // reverse clause in second iteration!
+            c.reverse();
+        }
+        DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM round " << round << " with config " << roundViviConfig << " start with clause: " << c << std::endl;);
+
+        Lit impliedLit = lit_Undef; // literal that is implied by the negation of some other literals
+        int i = 0, j = 0, maxLevel = 0;
+        ReasonStruct confl(CRef_Undef);
+
+        assert(decisionLevel() == 0 && "LCM has to be performed on level 0");
+        const int inputSize = c.size();
+        for (i = 0, j = 0; i < c.size(); i++) {
+            DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c look into lit " << c[i] << " [" << i << "/" << c.size() << "], wrote " << j << " literals already" << std::endl;);
+            if (value(c[i]) == l_Undef) {
+                newDecisionLevel();
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM enqueue literal " << ~c[i] << " with trail " << trail << std::endl;);
+                uncheckedEnqueue(~c[i]);
+                c[j++] = c[i];
+                confl = propagate();
+                if (confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) {
+                    DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM propagation failed with conflict " << ca[confl.getReasonC()] << std::endl;);
+                    // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \bot \equiv F \land (l_1 \lor ... \lor l_{i-1})
+                    // or something similar, based on conflict analysis with the clause we just got as conflict
+                    break;
+                }
+            } else if (value(c[i]) == l_True) {
+                if (roundViviConfig > 2) { // <- enable only in case conflict resultion is performed below. the actual break does not work!
+                    impliedLit = c[i]; // store to be able to use it for conflict analysis afterwards
+                    c[j++] = c[i];  // not necessary, as will be resolved out later anyways (or use as basis for conflict)?
+
+                    // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} -> \l_i \equiv
+                    // F \bigvee \neg l_1 \land ... \land \neg l_{i-1} \land \neg l_i -> \bot, with confl = reason(l_i)
+                    confl = reason(var(c[i]));
+                    DOUT(
+                    if (config.opt_lcm_dbg > 2) {
+                    std::cerr << "c LCM with trail " << trail << " find implied literal " << impliedLit << "@" << level(var(impliedLit)) << " at " << decisionLevel() << std::endl;
+                        if (confl.isBinaryClause()) { std::cerr << " LCM with reason lit " << confl.getReasonL() << std::endl; } //r
+                        else { std::cerr << " with clause [" << confl.getReasonC() << "] " << ca[confl.getReasonC()] << std::endl; }
+                    }
+                    );
+                    assert((confl.isBinaryClause() || confl.getReasonC() != CRef_Undef) && "the assignment to the literal has to have a reason");
+                    break;
+                } else {
+                    DOUT(if (config.opt_lcm_dbg > 2) {
+                    std::cerr << "c drop true literals " << c[i] << "@" << level(var(c[i])) << " with reason ";
+                        ReasonStruct& r =  reason(var(c[i]));
+                        if (r.isBinaryClause()) { std::cerr << " lit " << r.getReasonL() << std::endl; }
+                        else {
+                            if (r.getReasonC() == CRef_Undef) { std::cerr << " <decision> or <top level unit>" << std::endl; }
+                            else { std::cerr << " cls[" << r.getReasonC() << "]: " << ca[r.getReasonC()] << std::endl; }
+                        }
+                    }
+                        );
+                    // keep the satisfied literal, because moving it away can fail!
+                    c[j++] = c[i];
+                    break; // this part until c[j] is subsumed by other a combination of other clauses in the formula (seems to be hyper-resolution to get the subsumed clause)
+                }
+            } else {
+                assert(value(c[i]) == l_False && "there are only 3 case for a truth assignment");
+                // F \land (-l1,...,-lk} -> {-li}
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c at level " << decisionLevel() << " drop falsified literal from clause: " << c[i] << "@" << level(var(c[i])) << std::endl;);
+            }
+        }
+
+        DOUT(if (config.opt_lcm_dbg > 2) { std::cerr << "c remove last " << c.size() - j << " literals from " << c << std::endl; if (j > 0) std::cerr << "c last kept lit: " << c[j - 1] << std::endl; })
+        c.shrink(c.size() - j);
+        DOUT(for (int m = 0 ; m < c.size(); ++ m) {
+        bool found = false;
+        for (int n = 0; n < originalClause.size(); ++n) { if (c[m] == originalClause[n]) { found = true; break; } }
+            if (!found) { std::cerr << "c shrinked clause " << c << "(" << c.size() << "," << c[m] << ") is not a subset of the original clause any more: " << originalClause << "(" << originalClause.size() << ")" << std::endl; }
+            assert(found && "clause should be a subclause of the other, maybe with gaps");
+        });
+        DOUT(if (config.opt_lcm_dbg && outputsProof()) {
+        // test adding and removing the current clause to the proof
+        std::cerr << "c test adding and removing UP fail clause " << c << " to/from the proof, with impliedLit " << impliedLit << std::endl;
+
+        if (config.opt_lcm_dbg > 4) {
+                for (int z = 0 ; z < trail.size(); ++ z) {
+                    ReasonStruct& r =  reason(var(trail[z]));
+                    std::cerr << "c trail[" << z << "]: " << trail[z] << "@" << level(var(trail[z])) << " with reason ";
+                    if (r.isBinaryClause()) { std::cerr << " lit " << r.getReasonL() << std::endl; }
+                    else {
+                        if (r.getReasonC() == CRef_Undef) { std::cerr << " <decision> or <top level unit>" << std::endl; }
+                        else { std::cerr << " cls[" << r.getReasonC() << "]: " << ca[r.getReasonC()] << std::endl; }
+                    }
+                }
+            }
+
+
+            addToProof(c);
+            addToProof(c, true);
+            std::cerr << "c proof test succeeded" << std::endl;
+        });
+        #if 0
+        if (impliedLit == lit_Undef) { c.shrink(c.size() - j); }
+        else {
+            std::cerr << "c shrink " << c << " with implied lit " << impliedLit << " at position " << j << std::endl;
+            c.shrink(c.size() - (j + 1)); // keep literal litImplied!
+            std::cerr << "c result after shrinking: " << c << std::endl;
+            assert(c.last() == impliedLit && "implied lit has to be kept in case this clause cannot be reduced further");
+        }
+        #endif
+
+        if (roundViviConfig > 1 && (confl.isBinaryClause() || confl.getReasonC() != CRef_Undef)) {
+            conflict.clear(); // use the conflict vector, as it's a class member. make sure to clear it afterwards again!
+            DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM run LCM analysis with impliedLit " << impliedLit << std::endl;);
+
+            DOUT(if (config.opt_lcm_dbg > 1 && !confl.isBinaryClause()) std::cerr << "c LCM        conflict clause: " << ca[confl.getReasonC()] << " with trail " << trail << std::endl;);
+            analyzeFinal(confl, conflict, impliedLit);
+            if (impliedLit != lit_Undef) {
+                conflict.push(impliedLit); // add the final literal of the clause here, has to be done after analyzeFinal!
+            }
+            if (conflict.size() < c.size()) {
+                nbConflLits += c.size() - conflict.size();
+                assert(c.size() >= conflict.size() && "shrink should not increase size");
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c started with reduced clause " << c << " and now turn it into learned clause " << conflict << std::endl;);
+                c.shrink(c.size() - conflict.size()); // shrink clause!
+                for (int k = 0; k < c.size(); ++ k) { c[k] = conflict[k]; } // and actually use the literals of conflict
+            } else if (false && impliedLit != lit_Undef && c.last() == impliedLit && j == c.size()) { // this is no valid operation, unless we actually did not shrink c above!
+                // in case analysis did not result in removing a literal from c, at least drop the impliedLit as in usual vivification
+                assert(c[j - 1] == impliedLit && c.size() >= j && "until here, the position of impliedLit should be fixed");
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c started with reduced clause " << c << " and now turn it into learned clause " << conflict << std::endl;);
+                c[j - 1] = c.last(); // drop the literal "impliedLit" from the clause
+                c.pop();
+                npLCMimpDrop ++;
+            } else {
+                DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c rejected produced conflict " << conflict << " for " << c << std::endl;);
+            }
+            conflict.clear();
+
+            // analyzeFinal will place the literals in reverse order in c. Make sure we can convert this back
+            if (roundViviConfig > 3) { c.reverse(); }
+        }
+
+        if (c.size() < inputSize) {
+            int nblevels = computeLBD(c, c.size());
+            if (nblevels < c.lbd()) {
+                c.setLBD(nblevels);
+            }
+            minimized = true;
+        }
+        cancelUntil(0);
+
+        if (round == 2) { // reverse clause in second iteration!
+            c.reverse();
+        }
+        DOUT(for (int m = 0 ; m < c.size(); ++ m) {
+        bool found = false;
+        for (int n = 0; n < originalClause.size(); ++ n) {
+                if (c[m] == originalClause[n]) { found = true; break; }
+            }
+            if (!found) {
+                std::cerr << "c shrinked clause " << c << " is not a subset of the original clause any more: " << originalClause << std::endl;
+                assert(false && "new clause should be a subset of the original clause");
+            }
+        }
+            );
+        DOUT(if (config.opt_lcm_dbg && outputsProof()) {
+        // test adding and removing the current clause to the proof
+        std::cerr << "c test adding and removing clause " << c << " to/from the proof" << std::endl;
+        addToProof(c);
+            addToProof(c, true);
+            std::cerr << "c proof test succeeded" << std::endl;
+        });
+
+        DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM round " << round << " final clause: " << c << std::endl;);
+        roundLits[round] = c.size();
+
+        if (!minimized) { break; } // no need for a second iteration if no minimization was achieved in the first iteration
+    }
+
+    nbRound1Lits += roundLits[0] - roundLits[1];
+    if (round > 1) { nbRound2Lits += roundLits[1] - roundLits[2]; }
+
+    return c.lbd();
+}
+
+bool Solver::simplifyClause_viviLCM(const Riss::CRef cr, int LCMconfig, bool fullySimplify)
+{
+    assert(qhead == trail.size() && "make sure, we are working on level 0 and the PROOF is up to date!");
+    Clause& c = ca[cr];
+    bool keepClause = false;
+    bool false_lit = false, sat = false;
+    // in the first 2 positions, there should not be a falsified literal after propagation!
+    int i = 2, j = 2;
+    if (outputsProof()) { add_tmp.clear(); } // keep track of all literals of the clause to have a proper DRAT proof!
+
+    if (c.size() > 2) {
+        if (value(c[0]) == l_True || value(c[1]) == l_True) {
+            sat = true;
+        } else {
+            for (i = 2; i < c.size(); i++) {
+                if (value(c[i]) == l_True) {
+                    sat = true;
+                    break;
+                }
+            }
+            if (!sat) {
+                if (outputsProof()) for (int k = 0 ; k < c.size(); ++k) { add_tmp.push(c[k]); } // store full clause before any removal
+                for (i = 2; i < c.size(); i++) {
+                    if (value(c[i]) != l_False) {
+                        DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "LCM keep literal " << c[i] << std::endl;);
+                        c[j++] = c[i]; // TODO FIXME: has to end up in drat proof!
+                        if (value(c[i]) == l_True) {
+                            sat = true;
+                            break;
+                        }
+                    } else {
+                        DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "LCM drop literal " << c[i] << std::endl;);
+                    }
+                }
+                nbLCMfalsified += (i - j);
+                c.shrink(i - j);
+            }
+        }
+        // a clause might become satisfiable during the analysis. remove such a clause!
+        if (sat) {
+            removeClause(cr, true); // this will also delete the clause from the DRAT proof!
+            return false; // drop the clause!
+        }
+        DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "LCM final clause: " << c << std::endl;);
+    } else {
+        if (value(c[0]) == l_True || value(c[1]) == l_True) {
+            return true; // keep satisfied binary clauses, and do not continue with these clauses
+        }
+    }
+
+    if (!config.opt_lcm_full && !fullySimplify) { // use efficiency filters?
+        // if clause is in first half of sorted learned clauses, or has been processed in the past, ignore it
+        return true;
+    }
+
+    int oldSize = c.size();
+    detachClause(cr, true); // expensive, hence perform as late as possible
+
+    nbLCMattempts ++;
+    // simplifying the clause does not change it's memory location, hence c is still valid afterwards
+    DOUT(if (config.opt_lcm_dbg > 2) std::cerr << std::endl  << std::endl  << std::endl  << std::endl  << std::endl << "c LCM test   clause index " << cr << " with literals: " << c << " and trail: " << trail << std::endl;);
+    int newLBD = simplifyLearntLCM(c, LCMconfig);
+    nbLitsLCM += oldSize - c.size();
+    nbLCMsuccess = oldSize > c.size() ? nbLCMsuccess + 1 : nbLCMsuccess;
+    DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM result clause index " << cr << " with literals: " << c << std::endl << std::endl  << std::endl  << std::endl  << std::endl;);
+
+    if (outputsProof()) { // respect proof
+        addCommentToProof("delete clause based on LCM, removed literals might be stronger than DRUP", true);
+        if (add_tmp.size() > c.size() && c.size() >= 1) {
+            addToProof(c);
+            addToProof(add_tmp, true); // for now, keep this removed!
+        }
+    }
+
+    // add clause back to the data structures
+    if (c.size() > 1) {
+        attachClause(cr);
+        keepClause = true;
+
+        if (c.learnt() && c.size() < oldSize) { // re-calculate LBD for the clause, if it became smaller
+            if (newLBD < c.lbd()) {
+                c.setLBD(newLBD);
+            }
+        }
+
+        c.setLcmSimplified();
+    } else if (c.size() == 1) {
+        uncheckedEnqueue(c[0]); // this clause is already added to the proof
+        int breforeTrail = trail.size();
+        int beforePropTopLevelLits = trail.size();
+        if (propagate() != CRef_Undef) {
+            ok = false;
+            return false;
+        }
+        if (decisionLevel() == 0) { handleTopLevelUnits(breforeTrail, beforePropTopLevelLits); }
+        // free clause, as it's satisfiable now
+        c.mark(1);
+        ca.free(cr);
+    } else {
+        ok = false;
+    }
+    return keepClause;
+}
+
+bool Solver::simplifyLCM()
+{
+    /* some notes on theory:
+     imply a negative literal:
+
+    f, (l1 lm)
+    f, -l1, ..., -le -> -lf
+    f, -l1, ..., -le, -lg ... -lm -> -lf
+
+    f, -l1, ..., -le, -lg ... -lm, lf -> \bot
+    f -> l1, ...,le, -lf, lg, ... lm
+    f -> C \setminus lf
+    f,C \equiv f, C \setminus lf
+
+    imply a positive literal:
+
+    f, (l1 lm)
+    f, -l1, ..., -le -> lf
+    f, -l1, ..., -le, -lf -> lf \land -lf -> \bot
+    f -> (l1, ..., le, lf)
+    f,C \equiv f, (l1, ..., le, lf) -> subsume! == shrink case
+
+    conflict:
+
+    f,D, -l1, ..., -lf -> -D
+
+    f,D \equiv f,D,(l1,...,lf), i.e. f,D \to (l1,...,lf)? (yes, see the above)
+
+    f, -l1, ..., -le, -lf -> \bot
+    f -> l1, ...,le, -lf, lg, ... lm
+    f -> C \setminus lf
+     * */
+
+    assert(qhead == trail.size() && "make sure we are in a good state before LCM");
+
+    // make sure we do not miss something
+    if (!ok || propagate() != CRef_Undef) {
+        return ok = false;
+    }
+
+    MethodClock lcmMethodClock(LCMTime);  // measure the time for the remainder of this function in the given clock
+
+    nbLCM ++;
+    assert(decisionLevel() == 0 && "run learned clause minimization only on level 0");
+    removeSatisfied(clauses); // TODO: test whether actually necessary when being executed "right after" reduceDB()
+    watches.cleanAll();
+
+    int ci, cj;
+    for (ci = 0, cj = 0; ci < learnts.size(); ci++) {
+        const CRef cr = learnts[ci];
+        Clause& c = ca[cr];
+        if (c.mark()) { continue; } // this clause can be dropped
+        if (c.size() < config.opt_lcm_min_size) {
+            // do not look at clauses that have less than the given amount of literals
+            learnts[cj++] = learnts[ci];
+            continue;
+        }
+
+        bool keep = simplifyClause_viviLCM(cr, config.opt_lcm_style, ! c.wasLcmSimplified() && ci >= learnts.size() / 2);  // only run full LCM on new good clauses
+        if (keep) { learnts[cj++] = learnts[ci]; }
+        if (!ok) { break; } // stop in case we found an empty clause
+    }
+    // fill gaps unneeded space
+    learnts.shrink(ci - cj);
+
+
+    checkGarbage();
+    return ok;
+}
 
 /*_________________________________________________________________________________________________
 |
@@ -2603,6 +2983,19 @@ lbool Solver::search(int nof_conflicts)
     starts++;
     int proofTopLevels = 0;
     if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
+
+    // simplify
+    if (config.opt_lcm && (config.opt_lcm_full || (config.opt_lcm_style > 0 && performSimplificationNext > 0 && performSimplificationNext % config.opt_lcm_freq == 0))) {
+        // from time to time we have to interfere with partial restarts, but LCM overrules, to be able to run once in a while
+        if (decisionLevel() > 0) {
+            cancelUntil(0);
+        }
+        performSimplificationNext = 0;
+        sort(learnts, reduceDB_lbd_lt(ca));
+        if (!simplifyLCM()) { return l_False; }
+        performSimplificationNext = 0;
+    }
+
     for (;;) {
         propagationTime.start();
         const int beforeTrail = trail.size();
@@ -2610,6 +3003,15 @@ lbool Solver::search(int nof_conflicts)
         propagationTime.stop();
 
         if (decisionLevel() == 0) { handleTopLevelUnits(beforeTrail, proofTopLevels); }
+
+        // in case of full LCM debugging, check for lcm in each round, on level 0, whenever there is no conflict
+        DOUT(
+        if (config.opt_lcm && (config.opt_lcm_full && decisionLevel() == 0 && confl == CRef_Undef && config.opt_lcm_style > 0)) {
+        sort(learnts, reduceDB_lbd_lt(ca));
+            if (!simplifyLCM()) { return l_False; }
+            performSimplificationNext = 0;
+        }
+        );
 
         if (confl != CRef_Undef) { // CONFLICT
 
@@ -2634,6 +3036,9 @@ lbool Solver::search(int nof_conflicts)
 
             lbool analysisResult = conflictAnalysis(confl, learnt_clause);  // perform conflict analysis with all its functionality
             if (analysisResult != l_Undef) { return analysisResult; }           // if techniques on learned clauses reveal unsatisfiability of the formula, return this result
+
+            // in case of full lcm debugging, restart after every conflict!
+            DOUT(if (config.opt_lcm_full && config.opt_lcm_style > 0) cancelUntil(0););
 
             varDecayActivity();
             claDecayActivity();
@@ -3104,6 +3509,9 @@ void Solver::clauseRemoval()
         curRestart = config.opt_reduceType == 0 ? (conflicts / nbclausesbeforereduce) + 1 : curRestart; // update only during dynamic restarts
         reduceDB();
         nbclausesbeforereduce = config.opt_reduceType == 0 ? nbclausesbeforereduce + searchconfiguration.incReduceDB : nbclausesbeforereduce; // update only during dynamic restarts
+
+        DOUT(if (config.opt_lcm_dbg > 2) std::cerr << "c LCM allow LCM once" << std::endl;);
+        if (config.opt_lcm) { performSimplificationNext ++; } // after clause reduction, performing one more analysis of clauses is ok
     }
 }
 
@@ -4031,6 +4439,8 @@ lbool Solver::solve_(const SolveCallType preprocessCall)
         printf("c IntervalRestarts: %d\n", intervalRestart);
         printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements);
         printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units);
+        printf("c LCM: %lf s, %ld nbLCM, %ld LCMclsAttempts, %ld nbLCMclsSuccess, %ld npConflLCMlits, %ld nbLCMlits, %ld falsified, %ld positiveDrop, %ld litsR1, %ld litsR2\n",
+               LCMTime.getCpuTime(), nbLCM, nbLCMattempts, nbLCMsuccess, nbConflLits, nbLitsLCM, nbLCMfalsified, npLCMimpDrop, nbRound1Lits, nbRound2Lits);
         #endif
     }
 

@@ -10,7 +10,7 @@
 set -e
 
 # solvers with their specific parameters
-solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio')
+solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL:-lcm' 'riss-core -config=CSSC2014' 'pfolio')
 
 # parameters that are the same for all solvers
 params="-mem-lim=2048"

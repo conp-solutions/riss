@@ -84,6 +84,15 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_lb_size_minimzing_clause(_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX),                                                  optionListPtr),
     opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause",  "The min LBD required to minimize clause", 6, IntRange(0, INT32_MAX),                                                    optionListPtr),
 
+    opt_lcm                     (_cm, "lcm",                     "Perform LCM during search (Chu-Min Li, 2017)", false,                                       optionListPtr),
+    opt_lcm_style               (_cm, "lcm-style",               "Use vivifaction for learned clauses (1=plain vivi, 2=vivi+analyze, 3=vivi+unionanalyze, 4+reverse, >4 X-4, and-reverse)", 18, IntRange(0, 24), optionListPtr, &opt_lcm),
+    opt_lcm_freq                (_cm, "lcm-freq",                "Use LCM after every X reduceDB calls", 2, IntRange(1, INT32_MAX), optionListPtr, &opt_lcm),
+    opt_lcm_min_size            (_cm, "lcm-min-size",            "Apply LCM only to clauses that have at least X literals", 1, IntRange(1, INT32_MAX), optionListPtr, &opt_lcm),
+    opt_lcm_full                (_cm, "lcm-full",                "at all restarts, always on all learned clauses #NoAutoT", false , optionListPtr, &opt_lcm),
+#ifndef NDEBUG
+    opt_lcm_dbg                 (_cm, "lcm-dbg",                 "debug LCM computation #NoAutoT", 0, IntRange(0, 5), optionListPtr),
+#endif
+
     opt_var_decay_start         (_cs,   "var-decay-b",           "The variable activity decay factor start value", 0.95, DoubleRange(0, false, 1, false),                                 optionListPtr),
     opt_var_decay_stop          (_cs,   "var-decay-e",           "The variable activity decay factor stop value", 0.95, DoubleRange(0, false, 1, false),                                  optionListPtr),
     opt_var_decay_inc           (_cs,   "var-decay-i",           "The variable activity decay factor increase ", 0.01, DoubleRange(0, false, 1, false),                                   optionListPtr),
@@ -169,6 +178,8 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     polFile            (_init, "polFile",    "use these polarities", 0,                                                          optionListPtr),
     #ifndef NDEBUG
     opt_printDecisions (_init, "printDec",   "1=print decisions, 2=print all enqueues, 3=show clauses #NoAutoT", 0, IntRange(0, 3),      optionListPtr),
+    opt_ordered_branch (_init, "orderDec",   "always pick decisions bottom up #NoAutoT", false,                                  optionListPtr),
+    opt_external_check (_init, "extChecker",  "point to a proofchecking tool that runs X CNF PROOF with $? = 0", 0, optionListPtr),
     #endif
 
     opt_rMax   (_cr, "rMax",    "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX),            optionListPtr),
@@ -262,7 +273,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     // DRUP
     opt_verboseProof    ("CORE -- PROOF", "verb-proof",      "also print comments into the proof, 2=print proof also to stderr #NoAutoT", 0, IntRange(0, 2) ,                  optionListPtr),
     opt_rupProofOnly    ("CORE -- PROOF", "rup-only",        "do not print delete lines into proof #NoAutoT", false,                                                           optionListPtr),
-    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking) #NoAutoT", 0, IntRange(0, 10), optionListPtr),
+    opt_checkProofOnline("CORE -- PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking, only if -proof is specified) #NoAutoT", 0, IntRange(0, 10), optionListPtr),
 
     opt_verb    (_misc, "solververb",   "Verbosity level (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                             optionListPtr),
     opt_inc_verb(_misc, "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more). #NoAutoT", 0, IntRange(0, 2),                                                  optionListPtr),

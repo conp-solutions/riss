@@ -85,6 +85,16 @@ class CoreConfig : public Config
     IntOption opt_lb_size_minimzing_clause;
     IntOption opt_lb_lbd_minimzing_clause;
 
+    // LCM
+    BoolOption opt_lcm;
+    IntOption opt_lcm_style;
+    IntOption opt_lcm_freq;
+    IntOption opt_lcm_min_size;
+    BoolOption opt_lcm_full;
+    #ifndef NDEBUG
+    IntOption opt_lcm_dbg;
+    #endif
+
     DoubleOption opt_var_decay_start; // start value default: 0.95 glucose 2.3: 0.8
     DoubleOption opt_var_decay_stop;  // stop value  default: 0.95 glucose 2.3: 0.95
     DoubleOption opt_var_decay_inc;   // increase value default: 0 glucose 2.3: 0.01
@@ -172,6 +182,8 @@ class CoreConfig : public Config
     StringOption polFile;
     #ifndef NDEBUG
     IntOption opt_printDecisions;
+    BoolOption opt_ordered_branch;
+    StringOption opt_external_check;
     #endif
 
     IntOption opt_rMax;

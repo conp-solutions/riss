@@ -472,6 +472,23 @@ class Solver
     void applyConfiguration(); // assigns relevant values of search configuration to data structures/counters
   protected:
 
+    int performSimplificationNext;
+
+    uint64_t nbLCM, nbLitsLCM, nbConflLits, nbLCMattempts, nbLCMsuccess, npLCMimpDrop, nbRound1Lits, nbRound2Lits, nbLCMfalsified;
+    Clock LCMTime;
+
+    bool simplifyLCM(); // learned clause minimization style inprocessing inside the solver, based on vivificatoin
+
+    /** run all the simplification that is necessary for one lause
+     * Note: this method assumes the clause is detached before being called
+     * @param cr index of the clause to be processed (might be learned or original clause)
+     * @param LCMconfig 5x5 number of what to do in forward and backward iteration of LCM (3*5+5 seems to be strongest)
+     * @param fullySimplify allow to actually run vivification on that clause, otherwise, only falsified literals are removed
+     * @return true, if the clause reference should be kept. In case false is returned, the clause is already removed from the solver
+     */
+    bool simplifyClause_viviLCM(const Riss::CRef cr, int LCMconfig, bool fullySimplify = true);
+
+    int simplifyLearntLCM(Clause& c, int vivificationConfig); // simplify a non-watched clause, and perform vivification on it
 
     long curRestart;
     // Helper structures:
@@ -2270,6 +2287,40 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, Lit 
         for (int i = 0 ; i < clause.size(); ++i) { exportedClause.push_(compression.exportLit(clause[i])); }
         remLit = compression.exportLit(remLit);
     }
+
+    // use an external tool to check the current addition?
+    #ifndef NDEBUG
+    if (!deleteFromProof && (const char*)config.opt_external_check != nullptr) {
+
+        char formulaFileName[L_tmpnam];
+        if (!tmpnam(formulaFileName)) {
+            throw "cannot allocate temporary file for dump formula";
+        }
+        // write current CNF to this file
+        dumpAndExit(formulaFileName, false, true); // do not exit, write full state
+        char proofFileName[L_tmpnam];
+        if (! tmpnam(proofFileName)) {
+            throw "cannot allocate temporary file for dump proof";
+        }
+
+        FILE* f = fopen(proofFileName, "w");
+        if (f == nullptr) {
+            fprintf(stderr, "could not open proof file %s\n", proofFileName), exit(1);
+        }
+        stringstream s;
+        s << clause;
+        fprintf(f, "%s 0\n", s.str().c_str());
+
+        std::cerr << "c to check adding current clause, call " << (const char*)config.opt_external_check << " " << formulaFileName << " " << proofFileName << std::endl;
+        string toExecute = string((const char*)config.opt_external_check) + " "
+                           + string(formulaFileName) + " "
+                           + string(proofFileName);
+        int returnCode = system(toExecute.c_str());
+        std::cerr << "c finished with " << returnCode << std::endl;
+        assert(returnCode == 0 && "checking new clause on current state has to go right");
+        // exit(6); // for debugging stop here for now
+    }
+    #endif
 
     if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;

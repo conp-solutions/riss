@@ -480,10 +480,15 @@ class CP3Config : public Riss::Config
     Riss::IntOption pr_prLimit     ;
     Riss::BoolOption pr_EE         ;
     Riss::BoolOption pr_vivi       ;
+    Riss::BoolOption pr_lcm        ;
+    Riss::IntOption pr_lcm_vivi    ;
+    Riss::IntOption pr_lcm_min_size;
     Riss::IntOption pr_keepLearnts ;
     Riss::IntOption pr_keepImplied ;
     Riss::IntOption pr_viviPercent ;
     Riss::IntOption pr_viviLimit   ;
+    Riss::IntOption pr_lcmLimit    ;
+    Riss::IntOption pr_lcm_iterations;
     Riss::IntOption  pr_opt_inpStepInc1      ;
     Riss::IntOption  pr_opt_inpStepInc2      ;
     Riss::IntOption  pr_keepLHBRs  ;
@@ -494,6 +499,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_viv_vars;  // variable limit to enable
     Riss::IntOption opt_viv_cls;   // clause limit to enable
     Riss::IntOption opt_viv_lits;  // total literals limit to enable
+    Riss::IntOption opt_lcm_vars;  // variable limit to enable
+    Riss::IntOption opt_lcm_cls;   // clause limit to enable
+    Riss::IntOption opt_lcm_lits;  // total literals limit to enable
     #ifndef NDEBUG
     Riss::IntOption pr_debug_out;
     #endif
