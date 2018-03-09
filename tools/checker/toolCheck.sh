@@ -40,6 +40,8 @@ else
 
      if [ "$status" -ne "20" ]
      then
+         echo "solver output:"
+         cat /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 	rm -f /tmp/verify_$$.cnf /tmp/verify2_$$.cnf
 	exit $status
      fi
