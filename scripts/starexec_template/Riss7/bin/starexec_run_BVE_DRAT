@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# call riss from the directory where this script is located
+RISSDIR="$(dirname "${BASH_SOURCE[0]}" )"
+"$RISSDIR"/riss -config=plain_BVE:BVEEARLY:plain_ABVA $1 -proofFormat=DRAT -proof=$2/proof.out

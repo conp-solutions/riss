@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+#make riss
+cd riss7
+rm -rf build
+mkdir -p build
+cd build
+cmake .. -DQUIET=ON -DCMAKE_BUILD_TYPE=Release -DDRATPROOF=ON
+
+# build binary
+make riss-core -j $(nproc)
+
+# move binary
+mv bin/riss-core ../../bin/riss

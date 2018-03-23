@@ -1,0 +1,3 @@
+This directory has the template structure to submit the solver to starexec.
+The only missing piece is the source of the solver, which should be placed
+in a directory called "riss7" next to this README file.
