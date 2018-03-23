@@ -114,7 +114,7 @@ int main(int argc, char** argv)
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, DRUP or DRAT)", "DRAT");
 
 
-    StringOption opt_config("MAIN", "config", "Use a preset configuration", "505");
+    StringOption opt_config("MAIN", "config", "Use a preset configuration", "700");
     IntOption    opt_maxConflicts("MAIN", "maxConflicts", "Limit the number of conflicts for the search.\n", -1, IntRange(-1, INT32_MAX));
     BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
     BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
