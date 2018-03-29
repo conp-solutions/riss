@@ -1,0 +1,92 @@
+\documentclass[conference]{IEEEtran}
+% packages
+\usepackage{xspace}
+\usepackage{hyperref}
+\usepackage{todonotes}
+\usepackage{tikz}
+\usepackage[utf8]{inputenc}
+
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+\def\ea{\,et\,al.\ }
+
+\begin{document}
+	
+% paper title
+\title{Riss 7.1}
+
+% author names and affiliations
+% use a multiple column layout for up to three different
+% affiliations
+\author{
+\IEEEauthorblockN{Norbert Manthey}
+\IEEEauthorblockA{nmanthey@conp-solutions.com\\Dresden, Germany}
+}
+
+\maketitle
+
+\def\coprocessor{\textsc{Coprocessor}\xspace}
+\def\glucose{\textsc{Glucose~2.2}\xspace}
+\def\minisat{\textsc{Minisat~2.2}\xspace}
+\def\riss{\textsc{Riss}\xspace}
+\def\priss{\textsc{Priss}\xspace}
+
+% the abstract is optional
+\begin{abstract}
+The sequential SAT solver \riss combines a heavily modified Minisat-style solving engine of \glucose with a state-of-the-art preprocessor \textsc{Coprocessor} and adds many modifications to the search process. 
+\riss allows to use inprocessing based on \coprocessor.
+Based on this \riss, we create a parallel portfolio solver \priss, which allows clause sharing among the incarnations, as well as sharing information about equivalent literals. 
+\end{abstract}
+
+\section{Introduction}
+
+The CDCL solver \riss is a highly configurable SAT solver based on \textsc{Minisat}~\cite{EenS:2003} and \glucose ~\cite{AudemardS:2009,Audemard:2012:RRS:2405292.2405308}, implemented in \CC. 
+Many search algorithm extensions have been added, and \riss is equipped with the preprocessor \textsc{Coprocessor}~\cite{Manthey:2012}. 
+Furthermore, \riss supports automated configuration selection based on CNF formulas features, emitting DRAT proofs for many techniques and comments why proof extensions are made, and incremental solving.
+The solver is continuously tested for being able to build, correctly solve CNFs with several configurations, and compile against the IPASIR interface.
+For automated configuration, \riss is also able to emit its parameter specification on a detail level specified by the user.
+The repository of the solver provides a basic tutorial on how it can be used, and the solver provides parameters that allow to emit detailed information about the executed algorithm in case it is compiled in debug mode (look for ``debug´´ in the help output).
+While \riss also implements model enumeration, parallel solving, and parallel model enumeration, this document focusses only on the differences to \textsc{Riss 7}, which has been submitted to SAT Competition 2017. 
+
+\section{SAT Competition Specifics}
+
+While last years submissions did not make full use of the implemented formula simplification techniques, the configuration submitted to the NoLimit track of the competition now uses XOR reasoning~\cite{SoosNC:2009} and cardinality reasoning~\cite{Mlazycard} again.
+These techniques have been disabled last year, as they can not print DRAT proofs efficiently.
+
+\section{Modifications of the Search - LCM}
+
+Last years winning solver family was the ``Maple\_LCM'' solvers, which are based on learned clause minimization (LCM)~\cite{lcm-ijcai2017}.
+The implementation of LCM in \riss has a few modifications to those in the original publication, namely:
+% 
+\begin{enumerate}
+ \item apply LCM after every second reduction
+ \item when simplifying a clause, try to simplify it in reverse order as well
+ \item when a clause could be reduced, use a resolution based simplification to reduce the size further
+\end{enumerate}
+% 
+The first modification helps to reduce the overhead LCM might introduce on clauses that would be removed in the next clause removal phase.
+The second modifications uses a Bloom filter like effect following the assumption: if a clause can be reduced by performing vivification in one particular order, then using the reverse order might allow to drop even more literals.
+On the other hand, for clauses that cannot be reduced, no additional cost is introduced.
+Hence, the second modification focusses on clauses that can be reduced.
+Finally, the last modification makes the reduction more effective: while vivification stops when a conflict is found and proceeds with the current set of literals, applying conflict analysis with resolution allows to remove further redundant literals.
+Cycles for reduction are only spend on clauses that could be reduced in the first place.
+
+
+\section{Modifications of the Simplifier}
+
+To be able to emit DRAT proofs for the main track, many simplification techniques of Coprocessor had to be disabled, among them reasoning with XORs and cardinality constraints~\cite{Mlazycard}. 
+In the NoLimit track, these techniques are enabled again.
+
+\section{Availability}
+
+The source of the solver is publicly available under the LGPL v2 license at \url{https://github.com/conp-solutions/riss}.
+The version with the git tag ``v7.1.0'' is used for the submission.
+The submitted starexec package can be reproduced by running ``./scripts/make-starexec.sh'' on this commit.
+
+\section*{Acknowledgment}
+The author would like to thank the developers of \glucose and \minisat. 
+The development of this project was supported by the DFG grant HO 1294/11-1.
+
+\bibliographystyle{IEEEtran}
+\bibliography{local}
+
+\end{document}
