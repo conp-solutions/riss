@@ -42,6 +42,9 @@ git gc
 git prune
 popd
 
+# get the source for cmake 3
+wget https://cmake.org/files/v3.0/cmake-3.0.0-1-src.tar.bz2
+
 # compress, include git files
 zip -r -9 Riss7.1.zip * .git*
 
