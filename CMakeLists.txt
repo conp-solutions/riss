@@ -31,7 +31,7 @@ function(add_component directory)
 endfunction()
 
 execute_process(
-  COMMAND git rev-list v7.0.0..HEAD --count
+  COMMAND git rev-list v7.1.0..HEAD --count
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_VERSION_STRING
   OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -43,10 +43,10 @@ execute_process(
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
 if(GIT_VERSION_STRING)
-  set(GIT_VERSION_STRING  "7.0.${GIT_VERSION_STRING}")
+  set(GIT_VERSION_STRING  "7.1.${GIT_VERSION_STRING}")
   version(${GIT_VERSION_STRING})
 else()
-  version("7.0.0")
+  version("7.1.0")
 endif()
 
 option(DRATPROOF       "Produce DRAFT-proofs (disabled by default)" OFF)
