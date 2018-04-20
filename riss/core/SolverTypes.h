@@ -153,9 +153,17 @@ class  lbool
 // const lbool l_True  (lbool((uint8_t)0))
 // const lbool l_False (lbool((uint8_t)1))
 // const lbool l_Undef (lbool((uint8_t)2))
-#define l_True  (Riss::lbool((uint8_t)0))
-#define l_False (Riss::lbool((uint8_t)1))
-#define l_Undef (Riss::lbool((uint8_t)2))
+#ifndef l_True
+    #define l_True  (Riss::lbool((uint8_t)0))
+#endif
+
+#ifndef l_False
+    #define l_False (Riss::lbool((uint8_t)1))
+#endif
+
+#ifndef l_Undef
+    #define l_Undef (Riss::lbool((uint8_t)2))
+#endif
 
 inline int   toInt(lbool l) { return l.value; }
 inline lbool toLbool(int   v) { return lbool((uint8_t)v);  }
