@@ -183,7 +183,7 @@ class ClauseRingBuffer
         // overwrite current position (starts with 0)
         std::vector<Lit>& poolClause = pool[addHereNext].data;
         // if there has been a clause at this position before, then this clause is removed right now ...
-        if (pool[addHereNext].author != -1 && proofMaster != 0) { proofMaster->delFromProof(poolClause, lit_Undef, -1, false); }     // can work only on the global proof
+        if (pool[addHereNext].author != ~0U && proofMaster != 0) { proofMaster->delFromProof(poolClause, lit_Undef, -1, false); }     // can work only on the global proof
 
         assert((!multiUnits || !equivalence) && "cannot have both properties");
         pool[addHereNext].author = authorID;
@@ -227,7 +227,7 @@ class ClauseRingBuffer
             // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
             // overwrite current position (starts with 0)
             std::vector<Lit>& poolClause = pool[addHereNext].data;
-            if (pool[addHereNext].author != -1 && proofMaster != 0) { proofMaster->delFromProof(poolClause, lit_Undef, -1, false); }     // can work only on the global proof
+            if (pool[addHereNext].author != ~0U && proofMaster != 0) { proofMaster->delFromProof(poolClause, lit_Undef, -1, false); }     // can work only on the global proof
             pool[addHereNext].author = authorID;
             poolClause.resize(1);
             poolClause[0] = units[i];
