@@ -40,7 +40,7 @@ addons:
     notification_email: norbert.manthey@googlemail.com
     build_command_prepend: "mkdir -p coverity-dir; cd coverity-dir; cmake -DDRATPROOF=ON -DCMAKE_BUILD_TYPE=Release ..; make clean"
     build_command: "make all -j 4"
-    branch_pattern: master
+    branch_pattern: coverity-scan
 
 # install a recent version of astyle
 before_script:
