@@ -3,7 +3,7 @@ Copyright (c) 2012, Norbert Manthey, LGPL v2, see LICENSE
 **************************************************************************************************/
 
 #ifndef RISS_COPROCESSOR_HH
-#define RISS_COPRECESSOR_HH
+#define RISS_COPROCESSOR_HH
 
 
 #include "riss/core/Solver.h"

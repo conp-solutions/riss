@@ -54,6 +54,7 @@ option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(WARNINGS        "Set verbose warning flags" ON)
 option(PROFILING       "Compile for gprof profiling" OFF)
 option(FPIC            "Build shared library with -fpic" OFF)
+option(FLTO            "Build code with FLTO" OFF)
 option(ERROR           "Turn warnings into errors" OFF)
 option(QUIET           "Disable all #warnings" OFF)
 
@@ -114,9 +115,11 @@ include(GitSignature)
 add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -std=c++11 -g -DNDBG")
 
 # Link time optimization command line parameters
-set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -flto")     # link time optimization
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")  # link time optimization
-add_definitions("-flto")
+if(FLTO)
+  set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -flto")     # link time optimization
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")  # link time optimization
+  add_definitions("-flto")
+endif()
 
 if(ERRORS)
   message(STATUS "Treat warnings as errors")

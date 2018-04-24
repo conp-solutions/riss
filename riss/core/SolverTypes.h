@@ -75,9 +75,6 @@ enum ProofStyle {
 struct Lit {
     int32_t x; // be explicit about the number of bits!
 
-    // Use this as a constructor:
-    friend Lit mkLit(Var var, bool sign = false);
-
     bool operator == (Lit p) const { return x == p.x; }
     bool operator != (Lit p) const { return x != p.x; }
     bool operator < (Lit p) const { return x < p.x;  }   // '<' makes p, ~p adjacent in the ordering.
@@ -490,7 +487,7 @@ class Clause
         uint32_t* iHeader = (uint32_t*)(&header);
         while (*iHeader != *cHeader || __sync_bool_compare_and_swap(iHeader, uint32_t(*cHeader), uint32_t(*sHeader)) == false) {
             // integrity check on first literal to prevent deadlocks
-            if (header.size == 0 || lit_Undef != first && data[0].lit.x != first.x) {
+            if (header.size == 0 || (lit_Undef != first && data[0].lit.x != first.x)) {
                 return false;
             }
             // renew header
