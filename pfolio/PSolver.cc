@@ -158,7 +158,7 @@ PSolver::~PSolver()
 
     kill();
 
-    sleep(0.2);
+    sleep(1);
 
     if (globalSimplifier != 0)       { delete globalSimplifier; }
     if (globalSimplifierConfig != 0) { delete globalSimplifierConfig; }
