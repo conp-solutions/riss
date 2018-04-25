@@ -36,9 +36,10 @@ static void printLitVec(const vec<Lit>& litvec)
 static void printClauses(ClauseAllocator& ca, vector<CRef>& list, bool skipDeleted)
 {
     for (unsigned i = 0; i < list.size(); ++i) {
-        if (list[i] == CRef_Undef || skipDeleted && ca[list[i]].can_be_deleted()) {
+        if (list[i] == CRef_Undef || (skipDeleted && ca[list[i]].can_be_deleted())) {
             continue;
         }
+
         cerr << ca[list[i]] << (ca[list[i]].can_be_deleted() ? " delete" : " valid") << endl;
     }
 
@@ -167,8 +168,8 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data,
 
         // Heuristic Cutoff
         if (!config.opt_force_gates && !config.opt_unlimited_bve
-                && (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-                    data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+                && ((data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10) ||
+                    (data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)))) {
             if (doStatistics) { ++stats.skippedVars; }
             continue;
         }
@@ -375,8 +376,8 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data,
         // ---------------------------------------------------------//
         // Heuristic Cutoff if Gate-Search is forced
         if (config.opt_force_gates && !foundGate && !config.opt_unlimited_bve
-                && (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-                    data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+                && ((data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10) ||
+                    (data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)))) {
             if (doStatistics) { ++stats.skippedVars; }
 
             assert(rwlock_count == 1);
@@ -747,9 +748,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     ++neg_stats[cr_n];
                 }
                 if (p.learnt() || n.learnt()) {
-                    if ((config.opt_resolve_learnts > 1
-                            || config.opt_resolve_learnts > 0 && !(p.learnt() && n.learnt())
-                        ) && newLits <= max(p.size(), n.size()) + config.opt_learnt_growth) {
+                    if (config.opt_resolve_learnts > 1
+                            || (config.opt_resolve_learnts > 0 && !(p.learnt() && n.learnt())
+                                && newLits <= max(p.size(), n.size()) + config.opt_learnt_growth)) {
                         lit_learnts += newLits;
                         ++new_learnts;
                     }
@@ -1414,7 +1415,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
 
         // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
         // if other_fst < fst, then other has to be longer
-        if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size()) {
+        if (other_fst > fst || (other_fst < fst && other.size() <= strengthener.size())) {
             continue;
         }
 
@@ -1614,7 +1615,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
 
         // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
         // if other_fst < fst, then other has to be longer
-        if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size()) {
+        if (other_fst > fst || (other_fst < fst && other.size() <= strengthener.size())) {
             continue;
         }
 

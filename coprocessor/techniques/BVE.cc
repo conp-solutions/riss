@@ -416,8 +416,8 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
 
         // Heuristic Cutoff Gate-Search
         if (!config.opt_force_gates && !config.opt_unlimited_bve &&
-                (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-                 data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+                ((data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10) ||
+                 (data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)))) {
             if (doStatistics) { ++skippedVars; }
             continue;
         }
@@ -436,8 +436,8 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& work
 
         // Heuristic Cutoff Anticipation (if no Gate Found)
         if (!config.opt_unlimited_bve && !foundGate &&
-                (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10
-                 || data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)
+                ((data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10)
+                 || (data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))
                 )
            ) {
             if (doStatistics) { ++skippedVars; }
