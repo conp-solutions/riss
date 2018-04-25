@@ -369,9 +369,10 @@ void Resolving::addRedundantBinaries()
                 const Lit l = data.lits[i];
                 // cerr << "c check lit: " << l << " [" << i << "/" << data.lits.size() << "]" << endl;
                 // add new levels or abort!
-                if (l == lit_Undef)
+                if (l == lit_Undef) {
                     if (i + 1 < data.lits.size() && data.lits[i + 1] != lit_Undef) { data.lits.push_back(lit_Undef); level ++; continue;}
                     else { break; }
+                }
 
                 // work only on "old" literals!
                 for (int j = 0 ; j < big[ toInt(l) ].size(); ++ j) {
