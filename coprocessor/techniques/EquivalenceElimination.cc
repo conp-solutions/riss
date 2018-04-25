@@ -305,7 +305,8 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
     // as long as there are variables inside the queue
     while (currentPtr->size() > 0) {
         ++iter;
-        if (iter & 127 == 0) { cerr << "c at iteration " << iter << " there are " << currentPtr->size() << " variables" << endl; }
+        DOUT(if ((iter & 127) == 0) { cerr << "c at iteration " << iter << " there are " << currentPtr->size() << " variables" << endl; });
+
         // iterate over the different gate types
         const Var v = currentPtr->front();
         currentPtr->pop_front();
@@ -1616,7 +1617,7 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
             if (hit < 3) { continue; }   // these gates do not match!
             freeLit = lits[3];
 
-            if (pol ^ sign(freeLit) == qPol) { freeLit = ~freeLit; }
+            if ((pol ^ sign(freeLit)) == qPol) { freeLit = ~freeLit; }
             data.addUnitToProof(freeLit);
             if (l_False == data.enqueue(freeLit)) { return; }
             //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;

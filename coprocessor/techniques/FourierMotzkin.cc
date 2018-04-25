@@ -1381,7 +1381,7 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
             int probes = 0, failedProbes = 0; // stats for number of propagations and failed propagations (to detect unsat)
             bool inStepLimit = true;
             while (true) {    // find another k-bit number, until all possible combinations inside the range have been tested
-                if (firstIteration || (bitField & 1 != 0)) {   // consider this combination if its either the first iteration, or if the least siginificant bit is set
+                if (firstIteration || ((bitField & 1) != 0)) {   // consider this combination if its either the first iteration, or if the least siginificant bit is set
 //      if( config.opt_semDebug ) cerr << "c probe " << probes << "  with bitfield " << bitField << " and with trail: " << solver.trail << endl;
                     solver.newDecisionLevel(); // go to decision level 1!
                     assert(solver.trail.size() == solver.qhead && "should not propagate more than required");
