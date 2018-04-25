@@ -865,8 +865,10 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
         for (int j = 0 ; j < g.size() ; ++ j) {
             const Var v = var(g.get(j));
             // one bit must not be stamped!
-            if ((bitType[ v ] & 4) == 0)
-                if (count != 0) { return false; } else { count++; }
+            if ((bitType[ v ] & 4) == 0) {
+                if (count != 0) { return false; }
+                count++;
+            }
         }
         //cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
         return true;
