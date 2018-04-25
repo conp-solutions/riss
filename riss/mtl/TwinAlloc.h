@@ -3,7 +3,7 @@ Copyright (c) 2015, Norbert Manthey, LGPL v2, see LICENSE
 **************************************************************************************************/
 // idea introduced in: SunOS by Jeff Bonwick
 
-#ifndef RISS_RISS_TWINALLOC_H_
+#ifndef RISS_TWINALLOC_H_
 #define RISS_TWINALLOC_H_
 
 #include <cstdlib>
