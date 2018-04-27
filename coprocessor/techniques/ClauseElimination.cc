@@ -278,7 +278,8 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
     if (! doRemoveClause && config.opt_ccelevel > 2) {
         // TODO: go for ABCE
         for (int i = 0 ; i < wData.cla.size() ; ++i) {
-            if (doRemoveClause = markedBCE(data, wData.cla[i], wData.array)) {
+            doRemoveClause = markedBCE(data, wData.cla[i], wData.array);
+            if (doRemoveClause) {
                 preserveEE = false;
                 wData.toUndo.push_back(lit_Undef);
                 wData.toUndo.push_back(wData.cla[i]);

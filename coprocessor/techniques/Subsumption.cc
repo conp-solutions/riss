@@ -189,7 +189,7 @@ bool Subsumption::hasToSubsume() const
 lbool Subsumption::fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
 {
     // run subsumption for the whole queue
-    if (heap == 0 && controller.size() > 0 && (config.opt_sub_par_subs == 2 || config.opt_sub_par_subs == 1 && (data.getSubsumeClauses().size() > 100000 || (data.getSubsumeClauses().size() > 50000 && 10 * data.nCls() > 22 * data.nVars())))) {
+    if (heap == 0 && controller.size() > 0 && (config.opt_sub_par_subs == 2 || (config.opt_sub_par_subs == 1 && (data.getSubsumeClauses().size() > 100000 || (data.getSubsumeClauses().size() > 50000 && 10 * data.nCls() > 22 * data.nVars()))))) {
         parallelSubsumption(doStatistics); // use parallel, is some conditions have been met
         //data.correctCounters();    //
     } else {

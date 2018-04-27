@@ -521,8 +521,8 @@ void Circuit::getFASUMGates(const Var& v, vector< Coprocessor::Circuit::Gate >& 
                     && var(gates[i].b()) == var(gates[j].b())
                     && var(gates[i].c()) == var(gates[j].c())) {
                 // gates have same variables, check for same polarity. if true, kick later gate out!
-                bool pol = sign(gates[i].a()) ^ sign(gates[i].b()) ^ sign(gates[i].c()) ^ sign(gates[i].x());
-                if (pol == sign(gates[j].a()) ^ sign(gates[j].b()) ^ sign(gates[j].c()) ^ sign(gates[j].x())) {
+                bool pol = (sign(gates[i].a()) ^ sign(gates[i].b())) ^ (sign(gates[i].c()) ^ sign(gates[i].x()));
+                if (pol == ((sign(gates[j].a()) ^ sign(gates[j].b())) ^ (sign(gates[j].c()) ^ sign(gates[j].x())))) {
                     // gates are equivalent! XOR(a,b,c) with same polarity
                     gates[i] = gates[ gates.size() - 1 ];
                     gates.pop_back();
@@ -843,9 +843,9 @@ void Circuit::getXORGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 )
             ) {
                 // gates have same variables, check for same polarity. if true, kick later gate out!
-                bool pol = sign(gates[i].a()) ^ sign(gates[i].b()) ^ sign(gates[i].c());
+                bool pol = (sign(gates[i].a()) ^ sign(gates[i].b())) ^ sign(gates[i].c());
                 // if same pol, than one is obsolete
-                if (pol == sign(gates[j].a()) ^ sign(gates[j].b()) ^ sign(gates[j].c())) {
+                if (pol == ((sign(gates[j].a()) ^ sign(gates[j].b())) ^ sign(gates[j].c()))) {
                     // gates are equivalent! XOR(a,b,c) with same polarity
                     gates[i] = gates[ gates.size() - 1 ];
                     gates.pop_back();

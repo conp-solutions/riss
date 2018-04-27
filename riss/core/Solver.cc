@@ -3585,7 +3585,7 @@ bool Solver::handleRestarts(int& nof_conflicts, const int conflictC)
 
             }
         } else { // static restarts (luby, geometric, constant)
-            if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
+            if ((nof_conflicts >= 0 && conflictC >= nof_conflicts) || !withinBudget()) {
                 // do counter implication restart before partial restart
                 if (cir_bump_ratio != 0) {
                     counterImplicationRestart();
@@ -4165,7 +4165,7 @@ lbool Solver::initSolve(int solves)
         int i = 0, j = 0;
         for (; i < learnts.size(); ++ i) {
             Clause& c = ca[ learnts[i] ];
-            if (c.size() > config.incKeepSize || c.lbd() > config.incKeepLBD && !locked(c)) {   // remove clauses with too large size or lbd
+            if ((c.size() > config.incKeepSize || c.lbd() > config.incKeepLBD) && !locked(c)) {   // remove clauses with too large size or lbd
                 removeClause(learnts[i]);
             } else {
                 learnts[j++] = learnts[i]; // move clause forward!

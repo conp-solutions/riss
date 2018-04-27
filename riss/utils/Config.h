@@ -813,8 +813,7 @@ bool Config::parseOptions(int& argc, char** argv, bool strict, int activeLevel)
                 // fprintf(stderr, "checking %d: %s against flag <%s> (%s)\n", i, argv[i], Option::getOptionList()[k]->name, parsed_ok ? "ok" : "skip");
             }
 
-            if (!parsed_ok)
-            {
+            if (!parsed_ok) {
                 if (strict && match(argv[i], "-")) {
                     fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString());
                     exit(1);

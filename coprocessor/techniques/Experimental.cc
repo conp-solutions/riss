@@ -237,12 +237,13 @@ void ExperimentalTechniques::reSetupSolver()
                         if (solver.propagate() != CRef_Undef) { data.setFailed(); return; }
                         c.set_delete(true);
                     } else { solver.attachClause(cr); }
-                } else if (solver.value(c[0]) == l_Undef)
+                } else if (solver.value(c[0]) == l_Undef) {
                     if (data.enqueue(c[0]) == l_False) { return; }
-                    else if (solver.value(c[0]) == l_False) {
+                    if (solver.value(c[0]) == l_False) {
                         // assert( false && "This UNSAT case should be recognized before re-setup" );
                         data.setFailed();
                     }
+                }
             }
         }
     }

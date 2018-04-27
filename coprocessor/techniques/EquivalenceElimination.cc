@@ -305,7 +305,8 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
     // as long as there are variables inside the queue
     while (currentPtr->size() > 0) {
         ++iter;
-        if (iter & 127 == 0) { cerr << "c at iteration " << iter << " there are " << currentPtr->size() << " variables" << endl; }
+        DOUT(if ((iter & 127) == 0) { cerr << "c at iteration " << iter << " there are " << currentPtr->size() << " variables" << endl; });
+
         // iterate over the different gate types
         const Var v = currentPtr->front();
         currentPtr->pop_front();
@@ -864,8 +865,10 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
         for (int j = 0 ; j < g.size() ; ++ j) {
             const Var v = var(g.get(j));
             // one bit must not be stamped!
-            if ((bitType[ v ] & 4) == 0)
-                if (count != 0) { return false; } else { count++; }
+            if ((bitType[ v ] & 4) == 0) {
+                if (count != 0) { return false; }
+                count++;
+            }
         }
         //cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
         return true;
@@ -1397,9 +1400,10 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
             for (int j = hit; j < 3; ++ j) {
                 if (var(lits[j]) == var(ob)) { const Lit tmp = lits[hit]; lits[hit] = lits[j]; lits[j] = tmp; hit++; break; }
             }
-            if (hit < 2)   // check for the free literal
+            if (hit < 2) {  // check for the free literal
                 if (hit == 0) { /*cerr << "failed with one of literal " << oa << " ," << ob << endl;*/ continue; }   // this xor gate does not match 2 variables!
                 else if (freeLit == lit_Undef) { freeLit = ob ; }   // this literal is the literal that does not match!
+            }
 
 //       if( freeLit != lit_Undef ) cerr << "c freelit = " << freeLit << endl;
             const Lit oc = getReplacement(other.c());
@@ -1467,9 +1471,10 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
                 for (int k = hit; k < 3; ++ k)
                     if (var(ol) == var(lits[k]))   // if this variable matches, remember that it does! collect the polarity!
                     { const Lit tmp = lits[hit]; lits[hit] = lits[k]; lits[k] = tmp; hit++; pol = pol ^ sign(ol); break; }
-                if (hit != j + 1)
+                if (hit != j + 1) {
                     if (freeLit == lit_Undef) { freeLit = ol; }
-                    else { freeLit == lit_Error; break; }
+                    else { freeLit = lit_Error; break; }
+                }
             }
             if (freeLit == lit_Error) { continue; }   // these gates do not match!
 
@@ -1530,9 +1535,10 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
             for (int j = hit; j < 4; ++ j) {
                 if (var(lits[j]) == var(ob)) { const Lit tmp = lits[hit]; lits[hit] = lits[j]; lits[j] = tmp; hit++; break; }
             }
-            if (hit < 2)   // check for the free literal
+            if (hit < 2) {   // check for the free literal
                 if (hit == 0) {/*cerr << "failed with one of literal " << oa << " ," << ob << endl; */continue; }   // this xor gate does not match 3 variables!
                 else if (freeLit == lit_Undef) { freeLit = ob ; }   // this literal is the literal that does not match!
+            }
 
 //       if( freeLit != lit_Undef ) cerr << "c 2 freelit = " << freeLit << endl;
             const Lit oc = getReplacement(other.c());
@@ -1540,9 +1546,10 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
                 if (var(lits[j]) == var(oc)) { const Lit tmp = lits[hit]; lits[hit] = lits[j]; lits[j] = tmp; hit++; break; }
             }
 
-            if (hit < 3)   // check for the free literal
+            if (hit < 3) {  // check for the free literal
                 if (hit < 2) {/*cerr << "failed with one of literal " << oa << " ," << ob << ", " << oc << endl;*/ continue; }   // this xor gate does not match 3 variables!
                 else if (freeLit == lit_Undef) { freeLit = oc ; }   // this literal is the literal that does not match!
+            }
 
 //       if( freeLit != lit_Undef ) cerr << "c 3 freelit = " << freeLit << endl;
             const Lit od = getReplacement(other.x());
@@ -1616,7 +1623,7 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
             if (hit < 3) { continue; }   // these gates do not match!
             freeLit = lits[3];
 
-            if (pol ^ sign(freeLit) == qPol) { freeLit = ~freeLit; }
+            if ((pol ^ sign(freeLit)) == qPol) { freeLit = ~freeLit; }
             data.addUnitToProof(freeLit);
             if (l_False == data.enqueue(freeLit)) { return; }
             //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
