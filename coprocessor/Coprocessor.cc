@@ -1300,7 +1300,7 @@ void Preprocessor::initializePreprocessor()
         if (config.opt_verbose > 0) { cerr << "c locked " << lockedWhiteVars << " white variables" << endl; }
 
         // do not repeat this process in the future -> delete pointer to file name
-        config.opt_whiteList = 0;
+        config.opt_whiteList = "";
     }
     /*
     uint32_t clausesSize = (*solver).clauses.size();
