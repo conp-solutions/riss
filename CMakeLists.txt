@@ -131,7 +131,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     message(STATUS "enable verbose compiler warnings")
     add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
                     "-Wno-unused-variable -Wno-unused-function -Wno-unused-parameter"
-                    "-Wno-sign-compare -Wno-parentheses -Wno-delete-non-virtual-dtor")
+                    "-Wno-sign-compare -Wno-parentheses -Wno-delete-non-virtual-dtor"
+                    "-Wclass-memaccess")
    endif()
    if(QUIET)
      message(STATUS "disable #warnings")
