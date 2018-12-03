@@ -23,6 +23,16 @@ function(version version_string)
   set(SOVERSION ${VERSION_MAJOR} PARENT_SCOPE)
 endfunction()
 
+# Allow to include options only in case the compiler supports them
+include(CheckCXXCompilerFlag)
+macro(add_cxx_flag_if_supported flagname)
+  check_cxx_compiler_flag("${flagname}" HAVE_FLAG_${flagname})
+
+  if(HAVE_FLAG_${flagname})
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flagname}" )
+  endif()
+endmacro()
+
 # Adds a subdirectories but only if it exists
 function(add_component directory)
   if(EXISTS ${CMAKE_SOURCE_DIR}/${directory})
