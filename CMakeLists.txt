@@ -139,10 +139,14 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
   if(WARNINGS)
     message(STATUS "enable verbose compiler warnings")
-    add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
+    add_definitions("-Wall -Wextra -ffloat-store"
                     "-Wno-unused-variable -Wno-unused-function -Wno-unused-parameter"
-                    "-Wno-sign-compare -Wno-parentheses -Wno-delete-non-virtual-dtor"
-                    "-Wclass-memaccess")
+                    "-Wno-sign-compare -Wno-parentheses")
+
+   add_cxx_flag_if_supported("-Wno-delete-non-virtual-dtor")
+   add_cxx_flag_if_supported("-Wno-unused-but-set-variable")
+   add_cxx_flag_if_supported("-Wno-class-memaccess")
+
    endif()
    if(QUIET)
      message(STATUS "disable #warnings")
