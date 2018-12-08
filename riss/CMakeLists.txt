@@ -69,12 +69,12 @@ endif()
 # Create a symlink to the binary as shortcut
 add_custom_command(TARGET  riss-core POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
-add_custom_command(TARGET  riss-simp POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
+#add_custom_command(TARGET  riss-simp POST_BUILD
+#                   COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
 add_custom_command(TARGET  riss-core POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink riss-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
-add_custom_command(TARGET  riss-simp POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink riss-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
+#add_custom_command(TARGET  riss-simp POST_BUILD
+#                   COMMAND ${CMAKE_COMMAND} -E create_symlink riss-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/riss)
 
 if(STATIC_BINARIES)
   target_link_libraries(riss-core riss-lib-static coprocessor-lib-static)
