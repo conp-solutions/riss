@@ -4082,12 +4082,15 @@ lbool Solver::initSolve(int solves)
             memset(jw, 0, sizeof(double) * nVars());
             memset(moms, 0, sizeof(int32_t) * nVars());
 
-            for (int i = 0 ; i < clauses.size(); ++ i) {
-                const Clause& c = ca[clauses[i]];
-                const double cs = 1 / (pow(2.0, c.size()));
-                for (int j = 0 ; j < c.size(); ++ j) {
-                    jw[ var(c[j]) ] = (sign(c[j]) ? jw[ var(c[j]) ]  - cs : jw[ var(c[j]) ] + cs);
-                    moms[ var(c[j]) ] = (sign(c[j]) ? moms[ var(c[j]) ]  - 1 : moms[ var(c[j]) ] + 1);
+            // only execute if actually used
+            if (config.opt_init_act == 6 || (config.opt_init_pol >= 1 && config.opt_init_pol <= 4)) {
+                for (int i = 0 ; i < clauses.size(); ++ i) {
+                    const Clause& c = ca[clauses[i]];
+                    const double cs = 1 / (pow(2.0, c.size()));
+                    for (int j = 0 ; j < c.size(); ++ j) {
+                        jw[ var(c[j]) ] = (sign(c[j]) ? jw[ var(c[j]) ]  - cs : jw[ var(c[j]) ] + cs);
+                        moms[ var(c[j]) ] = (sign(c[j]) ? moms[ var(c[j]) ]  - 1 : moms[ var(c[j]) ] + 1);
+                    }
                 }
             }
             // set initialization based on calculated values
