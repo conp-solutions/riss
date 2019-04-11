@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# let's use a more recent toolchain
+scl enable devtoolset-7 bash || true
+
 # check whether we have to build cmake
 BUILD_CMAKE=0
 cmake --version | grep -q " [3-9]\." || BUILD_CMAKE=1
