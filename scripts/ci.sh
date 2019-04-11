@@ -113,10 +113,12 @@ do
     # check each solver
     for s in "${solver[@]}"
     do
-        echo "Run fuzzer with $n_runs cnfs on $s"
+        echo "Run fuzzer with $n_runs cnfs on $s ($build_folder/bin/$s)"
+        ls -l $build_folder/bin/$s
 
         # write wrapper script to call solver with parameters
-        echo "$build_folder/bin/$s $params \$1" > solver-wrapper.sh
+        echo "set -x" > solver-wrapper.sh
+        echo "$build_folder/bin/$s $params \$1" >> solver-wrapper.sh
         echo "exit \$?" >> solver-wrapper.sh
         chmod +x solver-wrapper.sh
 
