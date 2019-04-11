@@ -37,11 +37,12 @@ mkdir -p build
 cd build
 cmake .. -DQUIET=ON -DCMAKE_BUILD_TYPE=Release -DDRATPROOF=ON
 
-# build binary
-make riss-core -j $(nproc)
+# build binary as well as coprocessor, in case other tools need it
+make riss-core coprocessor -j $(nproc)
 
 # move binary
 mv bin/riss-core ../../bin/riss
+mv bin/coprocessor ../../bin/coprocessor
 
 # clean up cmake files
 cd ..
