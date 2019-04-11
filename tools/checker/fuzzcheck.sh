@@ -85,6 +85,9 @@ do
   cat $out
   echo "($SECONDS s) err"
   cat $err
+
+  # in case we see an "interesting" error, rerun with tracing and full output
+  [ $res -le 30 ] || bash -x ./toolCheck.sh $prg $cnf
   
   #
   # consider only bugs that are smaller then the ones we found already
