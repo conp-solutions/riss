@@ -114,7 +114,7 @@ do
     for s in "${solver[@]}"
     do
         echo "Run fuzzer with $n_runs cnfs on $s ($build_folder/bin/$s)"
-        ls -l $build_folder/bin/$s
+        ls -l $(echo "$build_folder/bin/$s" | awk '{print $1}')
 
         # write wrapper script to call solver with parameters
         echo "set -x" > solver-wrapper.sh
