@@ -12,7 +12,7 @@
 \begin{document}
 	
 % paper title
-\title{Riss 7.1}
+\title{Riss 7.1 at SAT Race 2019}
 
 % author names and affiliations
 % use a multiple column layout for up to three different
@@ -34,7 +34,7 @@
 \begin{abstract}
 The sequential SAT solver \riss combines a heavily modified Minisat-style solving engine of \glucose with a state-of-the-art preprocessor \textsc{Coprocessor} and adds many modifications to the search process. 
 \riss allows to use inprocessing based on \coprocessor.
-Based on this \riss, we create a parallel portfolio solver \priss, which allows clause sharing among the incarnations, as well as sharing information about equivalent literals. 
+As unsatisfiability proofs are mandatory in 2019, but many simplification techniques cannot produce them, a special configuration is submitted, which first uses all relevant simplification techniques, and in case of unsatisfiability, falls back to the less powerful configuration that supports proofs.
 \end{abstract}
 
 \section{Introduction}
@@ -44,42 +44,25 @@ Many search algorithm extensions have been added, and \riss is equipped with the
 Furthermore, \riss supports automated configuration selection based on CNF formulas features, emitting DRAT proofs for many techniques and comments why proof extensions are made, and incremental solving.
 The solver is continuously tested for being able to build, correctly solve CNFs with several configurations, and compile against the IPASIR interface.
 For automated configuration, \riss is also able to emit its parameter specification on a detail level specified by the user.
-The repository of the solver provides a basic tutorial on how it can be used, and the solver provides parameters that allow to emit detailed information about the executed algorithm in case it is compiled in debug mode (look for ``debug´´ in the help output).
+The repository of the solver provides a basic tutorial on how it can be used, and the solver provides parameters that allow to emit detailed information about the executed algorithm in case it is compiled in debug mode (look for ``debug'' in the help output).
 While \riss also implements model enumeration, parallel solving, and parallel model enumeration, this document focusses only on the differences to \textsc{Riss 7}, which has been submitted to SAT Competition 2017. 
+Compared to the version of 2018, only the \textsc{NOUNSAT} configuration has been added.
 
-\section{SAT Competition Specifics}
+\section{SAT Competition Specifics -- NOUNSAT configuration}
 
-While last years submissions did not make full use of the implemented formula simplification techniques, the configuration submitted to the NoLimit track of the competition now uses XOR reasoning~\cite{SoosNC:2009} and cardinality reasoning~\cite{Mlazycard} again.
-These techniques have been disabled last year, as they can not print DRAT proofs efficiently.
+The default configuration uses only variable elimination~\cite{EenB:2005} and bounded variable addition~\cite{Mbva} as simplification, both of which can produce unsatisfiability proofs.
+\newpage
 
-\section{Modifications of the Search - LCM}
-
-Last years winning solver family was the ``Maple\_LCM'' solvers, which are based on learned clause minimization (LCM)~\cite{lcm-ijcai2017}.
-The implementation of LCM in \riss has a few modifications to those in the original publication, namely:
-% 
-\begin{enumerate}
- \item apply LCM after every second reduction
- \item when simplifying a clause, try to simplify it in reverse order as well
- \item when a clause could be reduced, use a resolution based simplification to reduce the size further
-\end{enumerate}
-% 
-The first modification helps to reduce the overhead LCM might introduce on clauses that would be removed in the next clause removal phase.
-The second modifications uses a Bloom filter like effect following the assumption: if a clause can be reduced by performing vivification in one particular order, then using the reverse order might allow to drop even more literals.
-On the other hand, for clauses that cannot be reduced, no additional cost is introduced.
-Hence, the second modification focusses on clauses that can be reduced.
-Finally, the last modification makes the reduction more effective: while vivification stops when a conflict is found and proceeds with the current set of literals, applying conflict analysis with resolution allows to remove further redundant literals.
-Cycles for reduction are only spend on clauses that could be reduced in the first place.
-
-
-\section{Modifications of the Simplifier}
-
-To be able to emit DRAT proofs for the main track, many simplification techniques of Coprocessor had to be disabled, among them reasoning with XORs and cardinality constraints~\cite{Mlazycard}. 
-In the NoLimit track, these techniques are enabled again.
+While recent SAT competitions come with a \textsc{nolimits} track, this years event requires unsatisfiability proofs.
+To comply, simplification techniques that cannot produce proofs have been disabled in this situation.
+Differently, this years version comes with the \textsc{NOUNSAT} configuration, which basically cannot produce unsatisfiability answers.
+This means, that all simplification techniques are available for formulas that are satisfiable, or cannot be solved.
+In case the formula turns out to be unsatisfiable, the procedure is solved one more time, using the configuration that can produce unsatisfiability proofs.
 
 \section{Availability}
 
 The source of the solver is publicly available under the LGPL v2 license at \url{https://github.com/conp-solutions/riss}.
-The version with the git tag ``v7.1.0'' is used for the submission.
+The version with the git tag ``satrace-2019'' is used for the submission.
 The submitted starexec package can be reproduced by running ``./scripts/make-starexec.sh'' on this commit.
 
 \section*{Acknowledgment}
