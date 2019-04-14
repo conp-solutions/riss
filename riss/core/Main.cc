@@ -127,6 +127,8 @@ int main(int argc, char** argv)
 
     IntOption    opt_assumeFirst("MAIN", "assumeFirst", "Assume the first X positive literals for search.", 0, IntRange(0, INT32_MAX));
 
+    BoolOption   opt_nounsat("MAIN", "nounsat", "turn UNSAT answers into UNKNOWN", false);
+
     IntOption    opt_tuneGranularity("PARAMETER CONFIGURATION", "pcs-granularity", "Sample intervals into given number of values, 0=use intervals.\n", 0, IntRange(0, INT32_MAX));
     IntOption    opt_tuneLevel("PARAMETER CONFIGURATION", "pcs-dLevel", "dependency level to be considered (-1 = all).\n", -1, IntRange(-1, INT32_MAX));
     StringOption opt_tuneFile("PARAMETER CONFIGURATION", "pcs-file",   "File to write configuration to (exit afterwards)", 0);
@@ -338,6 +340,19 @@ int main(int argc, char** argv)
         //signal(SIGXCPU,SIGINT_interrupt);
 
         if (!S->simplify()) {
+            // turn UNSAT into UNKNOWN?
+            if(opt_nounsat) {
+                if (res != nullptr) {
+                    if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"), fclose(res); }
+                    else { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                    res = nullptr;
+                }
+                if (opt_modelStyle) { printf("UNSAT"); }
+                else { printf("s UNSATISFIABLE\n"); }
+                cout.flush(); cerr.flush();
+                exit(0);
+            }
+
             if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
@@ -404,6 +419,9 @@ int main(int argc, char** argv)
                 exit(30);
             }
         }
+
+        // fake UNSAT into UNKNOWN, in case the user demands it
+        if(ret == l_False && opt_nounsat) ret = l_Undef;
 
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {

@@ -125,6 +125,7 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet", "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+    BoolOption   opt_nounsat("MAIN", "nounsat", "turn UNSAT answers into UNKNOWN", false);
 
     try {
         CoreConfig coreConfig;
@@ -244,6 +245,19 @@ int main(int argc, char** argv)
         }
 
         if (!S.okay()) {
+            // turn UNSAT into UNKNOWN?
+            if(opt_nounsat) {
+                if (res != nullptr) {
+                    if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"), fclose(res); }
+                    else { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                    res = nullptr;
+                }
+                if (opt_modelStyle) { printf("UNSAT"); }
+                else { printf("s UNSATISFIABLE\n"); }
+                cout.flush(); cerr.flush();
+                exit(0);
+            }
+
             if (res != nullptr) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
@@ -278,6 +292,9 @@ int main(int argc, char** argv)
 
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);
+
+        // fake UNSAT into UNKNOWN, in case the user demands it
+        if(ret == l_False && opt_nounsat) ret = l_Undef;
 
         if (S.verbosity > 0) {
             printStats(S);

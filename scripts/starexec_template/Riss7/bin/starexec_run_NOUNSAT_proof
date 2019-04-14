@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# call riss from the directory where this script is located
+RISSDIR="$(dirname "${BASH_SOURCE[0]}" )"
+
+# call the solver without a special configuration, no proof will be generated, which is good enough for SAT
+STATUS=0
+"$RISSDIR"/riss -nounsat $1 > "$RISSDIR"/out 2> "$RISSDIR"/err || STATUS=$?
+
+if [ $STATUS -eq 0 ]
+then
+	echo "c found formula to be unsat after $SECONDS seconds, retry with drat-enabled configuration"
+	# produce a proof for unsat one more time ...
+	"$RISSDIR"/riss -config=plain_BVE:BVEEARLY:plain_ABVA $1 -proofFormat=DRAT -proof=$2/proof.out || STATUS=$?
+else
+	# display info of SAT run
+	cat "$RISSDIR"/out || true
+        cat "$RISSDIR"/err 1>&2 || true
+fi
+
+# forward exit code of SAT solver
+exit $STATUS
