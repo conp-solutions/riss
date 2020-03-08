@@ -7,7 +7,7 @@ env:
   global:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
    #   via the "travis encrypt" command using the project repo's public key
-   - secure: "cJDvRJ3pvCc9yALvzZVUeUZVuR+y/LWkkSlmPCY7oONCsHb+U0aVXzd+F6SHN+K105iKd0gVbB5gg5MWJ8RE7UyWoxdZGc1t39yxXZQy9YfzhEsn1KsSZWZi3KJNOjtWYfYDaBpPl4xbgoKXhWj+bMC9qXAwLhksornOtVne9EQsFTf1lB4Pr+K5Os3ZSVt5ie7ry7P7GDPvdQCaINh2qDxdEEdIgTYXAkvI3xBbVLZ6TGR8Fv+efMouH1UmkW3nelKj734i1hSD/UvbT/hCt+3wNL3VsDb5BigqHrXwmBpYnW4qIq24dqqTlBY9ydJRtx2HdDuZw/dnFdhc5MNgjEfiZr1tdIpF61pXr2+jHBEZ/A+Kc8kAMf7LzAZQw/2eQO2yjIYkyiETiJB8FT4Nr47z1qf8ctDiGpQluFlM79VUjec7SLH/8THE+rBjaZXuXWZG5Q/VMjldVZrweTujZnj8YjR6mSMwb1hrgp4ulP0ZRLNngquQYBqISJ/fRt4w+k7P41VwWnJlJHGZutwbolnL/HtLUQdlL9i2B+9qE/9BQOUOdTpXlvAckuiPtrBf0kTLQfnmTzlS2NfZeJUWfpL+oig7IO2RgCASj6OUD3NicYrBkmt+3CHxWorfrWTcBvoirQkQBFy3er3Sjda/TxfcHsHfK2DYGKnUFYB+kx4="
+   - secure: "HdFzmL7TxqaOpr9pKwvqv1TahWO1Ci7Qbt00Yhh/bZozt9OvY2rCwiED0co9sTwIrcKXIUiB0jBkxRTVFgMvqit4N8vvcw7mYD7y7xIetirOd7Q/mw6jV8uqazs1Y0sl3Fs0UHexbrWR3mIAFyQ4bcceq4rX4XIiV6VEuyC9tsE="
 
 # Riss requires cmake version 2.8.8 or higher, Travis might come with 2.8.7
 #addons:
@@ -30,17 +30,17 @@ before_install:
   - sudo update-alternatives --install /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-8 60
   - sudo update-alternatives --install /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-8 60
   - sudo update-alternatives --install /usr/bin/x86_64-linux-gnu-gcc x86_64-linux-gnu-gcc /usr/bin/x86_64-linux-gnu-gcc-8 60 --slave /usr/bin/x86_64-linux-gnu-g++ x86_64-linux-gnu-g++ /usr/bin/x86_64-linux-gnu-g++-8
-  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+  - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
 addons:
   coverity_scan:
     project:
-      name: "nmanthey/riss-solver"
-      description: "Build submitted via Travis CI"
-    notification_email: norbert.manthey@googlemail.com
-    build_command_prepend: "mkdir -p coverity-dir; cd coverity-dir; cmake -DDRATPROOF=ON -DCMAKE_BUILD_TYPE=Release ..; make clean"
-    build_command: "make all -j 4"
-    branch_pattern: coverity-scan
+      name: "conp-solutions/riss"
+      description: "<Your project description here>"
+    notification_email: nmanthey@conp-solutions.com
+    build_command_prepend: "<Your build preprocessing command here>"
+    build_command: "<Your build command here>"
+    branch_pattern: coverity_scan
 
 # install a recent version of astyle
 before_script:
