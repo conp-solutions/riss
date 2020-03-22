@@ -2005,7 +2005,9 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
             ee.shrink(ee.size() - keep);
         }
 
-        for (int i = 0 ; i < ee.size(); ++ i) {
+        while( start < ee.size() && ee[start] == lit_Undef) start ++; // handle removed classes from white-list
+
+        for (int i = start ; i < ee.size(); ++ i) {
             if (ee[i] == lit_Undef) {
                 // handle current EE class!
                 end = i - 1;
