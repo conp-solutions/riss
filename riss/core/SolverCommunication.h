@@ -425,7 +425,7 @@ inline
                             std::cerr << "c adding received reduced clause is falsified" << std::endl;
                             ok = false; return 1;
                         }
-                        c.mark();
+                        c.mark(1);
                         ok = (propagate() == CRef_Undef);
                         if (!ok) {
                             std::cerr << "c adding received reduced unit clause failed" << std::endl;
