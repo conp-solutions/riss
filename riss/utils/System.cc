@@ -72,7 +72,7 @@ static inline int memReadPeak(void)
 double Riss::memUsed() { return (double)memReadStat(0) * (double)getpagesize() / (1024 * 1024); }
 double Riss::memUsedPeak()
 {
-    double peak = memReadPeak() / 1024;
+    double peak = memReadPeak() / 1024.0;
     return peak == 0 ? memUsed() : peak;
 }
 
@@ -82,7 +82,7 @@ double Riss::memUsed(void)
 {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
-    return (double)ru.ru_maxrss / 1024;
+    return (double)ru.ru_maxrss / 1024.0;
 }
 double Riss::memUsedPeak(void) { return memUsed(); }
 
@@ -94,7 +94,7 @@ double Riss::memUsed(void)
 {
     malloc_statistics_t t;
     malloc_zone_statistics(nullptr, &t);
-    return (double)t.max_size_in_use / (1024 * 1024);
+    return (double)t.max_size_in_use / (1024.0 * 1024.0);
 }
 
 double Riss::memUsedPeak(void) { return memUsed(); }
