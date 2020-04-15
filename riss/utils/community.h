@@ -254,7 +254,7 @@ class Community
 // Given a graph "g", computes a partition "n2c" by the GFA method, applying "one-level" while it is possible,
 // and collapsing communities into nodes applying "community2graph".
 //-------------------------------------------------------------------------------------------
-        bool improved;
+        bool improved = false;
         Community* c = new Community(g);
 
         do {
