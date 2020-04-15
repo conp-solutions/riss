@@ -13,7 +13,7 @@ struct libpriss {
     Riss::vec<Riss::Lit> assumptions;
     Riss::PSolver* solver;
     Riss::lbool lastResult;
-    libpriss() : lastResult(l_Undef) {}  // default constructor to ensure everything is set to 0
+    libpriss() : solver(nullptr), lastResult(l_Undef) {}  // default constructor to ensure everything is set to 0
 };
 
 // #pragma GCC visibility push(hidden)
