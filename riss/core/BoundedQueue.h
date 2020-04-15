@@ -44,7 +44,7 @@ class bqueue
     bool expComputed;
     double exp, value;
   public:
-    bqueue(void) : first(0), last(0), sumofqueue(0), maxsize(0), queuesize(0), expComputed(false) { }
+    bqueue(void) : first(0), last(0), sumofqueue(0), maxsize(0), queuesize(0), expComputed(false), exp(0), value(0) { }
 
     void initSize(int size) {growTo(size); exp = 2.0 / (size + 1);} // Init size of bounded size queue
 
