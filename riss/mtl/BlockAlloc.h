@@ -303,7 +303,7 @@ BlockAllocator<T>::alloc(int size, T** diffPtr)
         while ((1 << k) <= totalSize) { k++; }
 
         // get more space, tell outside about offset between the two memory fields
-        T* diff = realloc((1 << k));
+        T* diff = realloc((1UL << k));
         if (diffPtr != nullptr) { *diffPtr = diff; }
 
     }
