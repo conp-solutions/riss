@@ -142,7 +142,10 @@ class SimpleGraph
 
     //--------------- ITERATOR ON EDGES --------------------------------------------------
 
-    typedef struct {int orig; int dest; double weight;} edgeNewDef;
+    struct edgeNewDef{
+        int orig; int dest; double weight;
+        edgeNewDef() : orig(-1), dest(-1), weight(1) {}
+    };
 
     class EdgeIter;                          // Iterator to traverse all EDGES of the Graph
     friend class EdgeIter;
