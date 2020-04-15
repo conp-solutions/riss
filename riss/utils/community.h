@@ -82,6 +82,9 @@ class Community
 
     Community(SimpleGraph* g2)
     {
+        ncomm = 0;
+        iterations = 0;
+
         if (g2 != NULL) {
             g = g2;
             iterations = 0;
@@ -101,6 +104,7 @@ class Community
 
     Community(SimpleGraph* g2, vector<int>& n2cb)
     {
+        ncomm = 0;
         g = g2;
         iterations = 0;
 
