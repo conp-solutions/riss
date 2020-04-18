@@ -31,7 +31,7 @@ void SLS::createRandomAssignment()
 {
     // init random assignment
     for (Var v = 0 ; v < data.nVars(); v++) {
-        varData[v].polarity = (rand() % 1 == 0 ? true : false);
+        varData[v].polarity = (rand() % 2 == 0 ? true : false);
         // (assignment, v, ( (rand() & 1) == 1 ? l_True : l_False) );
     }
 }
