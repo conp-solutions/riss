@@ -236,6 +236,7 @@ bool ModPrep::getRandomCommunities(int randomCommunities, vector< int >& communi
                 if (step > stepLimit) {
                     delete communityNeighbors ; communityNeighbors = nullptr;
                     delete communities ; communities = nullptr;
+                    delete vigGraph; vigGraph = nullptr;
                     DOUT(cerr << "c reached limit during creating communities" << endl;);
                     return true;
                 }
@@ -328,6 +329,7 @@ bool ModPrep::getCommunities(vector< int >& communityPerVariable, SimpleGraph *&
                 step++;
                 if (step > stepLimit) {
                     delete communityNeighbors ; communityNeighbors = nullptr;
+                    delete vigGraph; vigGraph = nullptr;
                     return false;
                 }
             }
