@@ -207,7 +207,7 @@ bool EquivalenceElimination::process(CoprocessorData& data)
         for (int i = 0 ; i < data.getClauses().size(); ++ i)
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
             for (int i = 0 ; i < data.getLEarnts().size(); ++ i)
-                if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
+                if (!ca[  data.getLEarnts()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
             cerr << "====================================" << endl;
             cerr << "Solver Trail: " << endl;
             data.printTrail(cerr);
@@ -1822,7 +1822,7 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
             for (int i = 0 ; i < data.getClauses().size(); ++ i)
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
             for (int i = 0 ; i < data.getLEarnts().size(); ++ i)
-                if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
+                if (!ca[  data.getLEarnts()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
             cerr << "====================================" << endl << endl;
         }
         cerr << endl;
@@ -1982,7 +1982,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                     if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
                 cerr << "c learnts: " << endl;
                 for (int i = 0 ; i < data.getLEarnts().size(); ++ i)
-                    if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
+                    if (!ca[  data.getLEarnts()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
                 cerr << "====================================" << endl << endl;
             }
 
