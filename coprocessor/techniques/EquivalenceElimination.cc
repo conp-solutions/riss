@@ -1982,7 +1982,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                     if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
                 cerr << "c learnts: " << endl;
                 for (int i = 0 ; i < data.getLEarnts().size(); ++ i)
-                    if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
+                    if (!ca[  data.getLEarnts()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
                 cerr << "====================================" << endl << endl;
             }
 
