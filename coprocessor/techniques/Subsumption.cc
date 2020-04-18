@@ -23,6 +23,7 @@ Subsumption::Subsumption(CP3Config& _config, ClauseAllocator& _ca, ThreadControl
     , strengtheningStepper(config.opt_sub_strLimit)
     , callIncrease(config.opt_sub_callIncrease)
     , limitIncreases(0)
+    , chunk_size(config.opt_sub_chunk_size)
 {
 }
 
