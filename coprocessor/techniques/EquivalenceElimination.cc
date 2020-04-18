@@ -1822,7 +1822,7 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
             for (int i = 0 ; i < data.getClauses().size(); ++ i)
                 if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getClauses()[i] ] << endl; }
             for (int i = 0 ; i < data.getLEarnts().size(); ++ i)
-                if (!ca[  data.getClauses()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
+                if (!ca[  data.getLEarnts()[i] ].can_be_deleted()) { cerr << ca[  data.getLEarnts()[i] ] << endl; }
             cerr << "====================================" << endl << endl;
         }
         cerr << endl;
