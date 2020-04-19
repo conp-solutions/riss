@@ -660,7 +660,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
     int oldEquivalences = data.getEquivalences().size();
 
     DOUT(if (config.ee_debug_out > 0) cerr << "c this algorithm is not final yet, and might produce incorrect results" << endl;);
-    return false; // do not execute this algorithm!
+    if(!config.opt_ee_wip) return false; // do not execute this algorithm, unless you are willing to fix it
 
     /** a variable in a circuit can participate in non-clustered gates only, or also participated in clustered gates */
     vector< vector<int32_t> > varTable(data.nVars());    // store for each variable which gates have this variable as input
