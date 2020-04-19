@@ -372,6 +372,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
     ee_debug_out           (_cat_ee, "ee-debug", "print debug output to screen", 0, IntRange(0, 3),                                          optionListPtr, &opt_ee),
     #endif
     opt_eeSub              (_cat_ee, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false,          optionListPtr, &opt_ee),
+    opt_ee_wip             (_cat_ee, "cp3_ee_wip",      "run algorithms that might be broken and need fixing", false,                        optionListPtr, &opt_ee),
     opt_eeFullReset        (_cat_ee, "ee_reset",        "after Subs or Up, do full reset?", false,                                           optionListPtr, &opt_ee),
     opt_ee_limit           (_cat_ee, "cp3_ee_limit",    "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX),     optionListPtr, &opt_ee),
     opt_ee_inpStepInc      (_cat_ee, "cp3_ee_inpInc",   "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX),             optionListPtr, &opt_ee),

@@ -371,6 +371,7 @@ class CP3Config : public Riss::Config
     Riss::IntOption  ee_debug_out           ;
     #endif
     Riss::BoolOption opt_eeSub            ;
+    Riss::BoolOption opt_ee_wip           ;
     Riss::BoolOption opt_eeFullReset      ;
     Riss::IntOption  opt_ee_limit         ;
     Riss::IntOption  opt_ee_inpStepInc    ;
