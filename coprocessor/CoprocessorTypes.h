@@ -696,7 +696,7 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
         solver->varFlags[to].assigns = solver->varFlags[from].assigns; solver->varFlags[from].assigns = l_Undef;
         solver->vardata[to]  = solver->vardata[from];  solver->vardata[from] = Riss::Solver::VarData();
         solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
-        solver->varFlags[to].seen = solver->varFlags[to].seen; solver->varFlags[to].seen = 0;
+        solver->varFlags[to].seen = solver->varFlags[from].seen; solver->varFlags[to].seen = 0;
         solver->varFlags[to].polarity = solver->varFlags[from].polarity; solver->varFlags[from].polarity = 0;
         solver->varFlags[to].decision = solver->varFlags[from].decision; solver->varFlags[from].decision = false;
         solver->varFlags[to].frozen = solver->varFlags[from].frozen; solver->varFlags[from].frozen = false;
