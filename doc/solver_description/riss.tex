@@ -12,7 +12,7 @@
 \begin{document}
 	
 % paper title
-\title{Riss 7.1 at SAT Race 2019}
+\title{Riss 7}
 
 % author names and affiliations
 % use a multiple column layout for up to three different
@@ -34,7 +34,7 @@
 \begin{abstract}
 The sequential SAT solver \riss combines a heavily modified Minisat-style solving engine of \glucose with a state-of-the-art preprocessor \textsc{Coprocessor} and adds many modifications to the search process. 
 \riss allows to use inprocessing based on \coprocessor.
-As unsatisfiability proofs are mandatory in 2019, but many simplification techniques cannot produce them, a special configuration is submitted, which first uses all relevant simplification techniques, and in case of unsatisfiability, falls back to the less powerful configuration that supports proofs.
+As unsatisfiability proofs are mandatory, but many simplification techniques cannot produce them, a special configuration is submitted, which first uses all relevant simplification techniques, and in case of unsatisfiability, falls back to the less powerful configuration that supports proofs.
 \end{abstract}
 
 \section{Introduction}
@@ -47,6 +47,7 @@ For automated configuration, \riss is also able to emit its parameter specificat
 The repository of the solver provides a basic tutorial on how it can be used, and the solver provides parameters that allow to emit detailed information about the executed algorithm in case it is compiled in debug mode (look for ``debug'' in the help output).
 While \riss also implements model enumeration, parallel solving, and parallel model enumeration, this document focusses only on the differences to \textsc{Riss 7}, which has been submitted to SAT Competition 2017. 
 Compared to the version of 2018, only the \textsc{NOUNSAT} configuration has been added.
+For 2020, mainly defects reported by Coverity have been addressed.
 
 \section{SAT Competition Specifics -- NOUNSAT configuration}
 
@@ -62,12 +63,11 @@ In case the formula turns out to be unsatisfiable, the procedure is solved one m
 \section{Availability}
 
 The source of the solver is publicly available under the LGPL v2 license at \url{https://github.com/conp-solutions/riss}.
-The version with the git tag ``satrace-2019'' is used for the submission.
+The version with the git tag ``satcomp-2020'' is used for the submission.
 The submitted starexec package can be reproduced by running ``./scripts/make-starexec.sh'' on this commit.
 
 \section*{Acknowledgment}
 The author would like to thank the developers of \glucose and \minisat. 
-The development of this project was supported by the DFG grant HO 1294/11-1.
 
 \bibliographystyle{IEEEtran}
 \bibliography{local}
