@@ -38,10 +38,13 @@ EOF
 }
 
 # Handle CLI
-while getopts "adeho:p:t" o; do
+while getopts "ac:deho:p:t" o; do
     case "${o}" in
         a)
             AWK="${OPTARG}"
+            ;;
+        c)
+            COPROCESSOR="${OPTARG}"
             ;;
         d)
             DEBUG="true"
