@@ -189,6 +189,20 @@ if [ "$SIMPLIFY_STATUS" -ne 0 ] && [ "$SIMPLIFY_STATUS" -ne 20 ] && [ "$SIMPLIFY
     exit $SIMPLIFY_STATUS
 fi
 
+# In case the formula is unsat, fake the empty formula to work around a
+# sharpSAT bug that cannot handle empty clauses
+if [ "$SIMPLIFY_STATUS" -eq 20 ]
+then
+    cat << EOF > "$SIMPLIFIED_CNF"
+p cnf 2 4
+1 2 0
+-1 2 0
+1 -2 0
+-1 -2 0
+EOF
+
+fi
+
 # Assemble the new output formula
 echo "c simplified, model count equivalent, formula" > "$TMP_OUTPUT"
 echo "$P_LINE" >> "$TMP_OUTPUT"
