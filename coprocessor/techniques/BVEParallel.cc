@@ -1096,14 +1096,6 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data, const bool d
                 cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl;
             }
             pthread_rwlock_t mutex = allocatorRWLock.getValue(); // FIXME reicht hier auch eine reference?
-            #ifndef __APPLE__ // Does not work on OS-X
-            assert(mutex.__data.__nr_readers == 0);
-            assert(mutex.__data.__readers_wakeup == 0);
-            assert(mutex.__data.__writer_wakeup == 0);
-            assert(mutex.__data.__nr_readers_queued == 0);
-            assert(mutex.__data.__writer == 0);
-            assert(mutex.__data.__lock == 0);
-            #endif
             controller.runJobs(jobs);
 
             if (!data.ok()) {
