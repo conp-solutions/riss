@@ -12,6 +12,7 @@ COPROCESSOR="$SCRIPT_DIR/../build/bin/coprocessor"
 OUTPUT_LOCATION=""
 DEBUG=""
 AWK="awk"
+COPROCESSOR_FAILBACK="false"
 
 usage () 
 {
@@ -25,6 +26,7 @@ cat << EOF
 
   -a AWK ........... (GNU) awk tool to be used, (default: $AWK)
   -c coprocessor ... location of coprocessor (default: $COPROCESSOR)
+  -F ............... fail back to no simplification in case coprocessor fails
   -p CLI ........... add this CLI parameters to coprocessor
   -o FILE .......... write simplified file to this location, instead of solving
   
@@ -38,7 +40,7 @@ EOF
 }
 
 # Handle CLI
-while getopts "ac:deho:p:t" o; do
+while getopts "ac:deFho:p:t" o; do
     case "${o}" in
         a)
             AWK="${OPTARG}"
@@ -48,6 +50,9 @@ while getopts "ac:deho:p:t" o; do
             ;;
         d)
             DEBUG="true"
+            ;;
+        F)
+            COPROCESSOR_FAILBACK="true"
             ;;
         e)  set -e
             ;;
@@ -178,15 +183,25 @@ declare -i SIMPLIFY_STATUS=0
     -whiteList="$WHITE_FILE" \
     -dimacs="$SIMPLIFIED_CNF" \
     -no-dense \
+    -search=0 \
     2> "$CP3_STDERR" \
     1> /dev/null || SIMPLIFY_STATUS=$?
 echo "c simplficitaion returned with $SIMPLIFY_STATUS"
+
 if [ "$SIMPLIFY_STATUS" -ne 0 ] && [ "$SIMPLIFY_STATUS" -ne 20 ] && [ "$SIMPLIFY_STATUS" -ne 10 ]; then
     echo "c exit, due to simplification status $SIMPLIFY_STATUS"
     echo "=== BEGIN COPROCESSOR STDERR ==="
     cat "$CP3_STDERR"
     echo "===  END  COPROCESSOR STDERR ==="
-    exit $SIMPLIFY_STATUS
+    if [ "$COPROCESSOR_FAILBACK" != "true" ]
+    then
+        exit $SIMPLIFY_STATUS
+    else
+        # skip faulty simplification
+        cp "$WEIGHT_FREE_CNF" "$SIMPLIFIED_CNF" 
+        echo "c recover failed simplification by skipping over it"
+        SIMPLIFY_STATUS=0
+    fi
 fi
 
 # In case the formula is unsat, fake the empty formula to work around a
