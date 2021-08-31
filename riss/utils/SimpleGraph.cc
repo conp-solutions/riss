@@ -12,6 +12,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <limits>
 #include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
 #include "riss/utils/community.h"
