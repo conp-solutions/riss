@@ -48,3 +48,5 @@ tools/checker/solver-wrapper.sh
 
 # backup files
 *~
+
+install/

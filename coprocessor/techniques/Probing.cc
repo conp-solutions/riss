@@ -87,7 +87,7 @@ bool Probing::process()
         vec<Solver::VarFlags> polarity;
         solver.varFlags.copyTo(polarity);
 
-        DOUT(if (config.pr_debug_out > 0) cerr << "c brefore probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;);
+        DOUT(if (config.pr_debug_out > 0) cerr << "c before probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;);
 
         const int beforeClauses = data.getClauses().size();
         const int beforeLClauses = data.getLEarnts().size();

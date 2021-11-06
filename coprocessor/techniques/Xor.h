@@ -20,7 +20,7 @@ Copyright (c) 2013, Norbert Manthey, LGPL v2, see LICENSE
 namespace Coprocessor
 {
 
-/** this class is used forthe gauss elimination algorithm
+/** this class is used for the gauss elimination algorithm
  */
 class XorReasoning : public Technique<XorReasoning>
 {
