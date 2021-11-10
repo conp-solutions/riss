@@ -50,3 +50,5 @@ tools/checker/solver-wrapper.sh
 *~
 
 install/
+
+.vscode/
