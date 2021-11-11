@@ -12,47 +12,45 @@ Copyright (c) 2016, Norbert Manthey, LGPL v2, see LICENSE
 
 // using namespace Riss;
 
-namespace Coprocessor
-{
+namespace Coprocessor {
 
-/** experimental techniques, test bed
- */
-class ModPrep : public Technique<ModPrep>
-{
+    /** experimental techniques, test bed
+     */
+    class ModPrep : public Technique<ModPrep> {
 
-    CoprocessorData& data;
-    Riss::Solver& solver;
+        CoprocessorData& data;
+        Riss::Solver& solver;
 
-    double processTime;
+        double processTime;
 
-  public:
-    ModPrep(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Riss::Solver& _solver);
+    public:
+        ModPrep(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Riss::Solver& _solver);
 
-    void reset();
+        void reset();
 
-    /** run experimental technique
-    * @return true, if something has been altered
-    */
-    bool process();
+        /** run experimental technique
+         * @return true, if something has been altered
+         */
+        bool process();
 
-    void printStatistics(std::ostream& stream);
+        void printStatistics(std::ostream& stream);
 
-    void giveMoreSteps();
+        void giveMoreSteps();
 
-    void destroy();
+        void destroy();
 
-    /** remove all clauses from the watch lists inside the solver */
-    void cleanSolver();
+        /** remove all clauses from the watch lists inside the solver */
+        void cleanSolver();
 
-  protected:
+    protected:
+        bool getRandomCommunities(int randomCommunities, std::vector<int>& communityPerVariable, SimpleGraph*& communities,
+                                  SimpleGraph*& communityNeighbors);
 
-    bool getRandomCommunities(int randomCommunities, std::vector< int >& communityPerVariable, SimpleGraph*& communities, SimpleGraph*& communityNeighbors);
+        bool getCommunities(vector<int>& communityPerVariable, SimpleGraph*& communities, SimpleGraph*& communityNeighbors);
 
-    bool getCommunities(vector< int >& communityPerVariable, SimpleGraph*& communities, SimpleGraph*& communityNeighbors);
+        SimpleGraph* getVIG(int& step, int steplimit);
+    };
 
-    SimpleGraph* getVIG(int& step, int steplimit);
-};
-
-}
+} // namespace Coprocessor
 
 #endif

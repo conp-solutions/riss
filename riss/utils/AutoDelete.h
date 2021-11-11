@@ -15,12 +15,17 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <malloc.h>
 
 /** this object frees a pointer before a method /statementblock is left */
-class MethodFree
-{
+class MethodFree {
     void*& pointer;
-  public:
-    MethodFree(void*& ptr) : pointer(ptr) {}
-    ~MethodFree() { free(pointer); pointer = 0; }   // also set pointer to 0!
+
+public:
+    MethodFree(void*& ptr)
+        : pointer(ptr) {
+    }
+    ~MethodFree() {
+        free(pointer);
+        pointer = 0;
+    } // also set pointer to 0!
 };
 
 #endif

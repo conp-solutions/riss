@@ -19,7 +19,6 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-
 #ifndef RISS_Minisat_XAlloc_h
 #define RISS_Minisat_XAlloc_h
 
@@ -28,28 +27,26 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdio.h>
 
 #if __cplusplus <= 199711L
-    // be backward compatible, and define pointer to 0 as follows
-    #define nullptr 0
+// be backward compatible, and define pointer to 0 as follows
+#define nullptr 0
 #endif
 
-namespace Riss
-{
+namespace Riss {
 
-//=================================================================================================
-// Simple layer on top of malloc/realloc to catch out-of-memory situtaions and provide some typing:
+    //=================================================================================================
+    // Simple layer on top of malloc/realloc to catch out-of-memory situtaions and provide some typing:
 
-class OutOfMemoryException {};
-static inline void* xrealloc(void *ptr, size_t size)
-{
-    void* mem = realloc(ptr, size);
-    if (mem == nullptr && errno == ENOMEM) {
-        throw OutOfMemoryException();
-    } else {
-        return mem;
+    class OutOfMemoryException {};
+    static inline void* xrealloc(void* ptr, size_t size) {
+        void* mem = realloc(ptr, size);
+        if (mem == nullptr && errno == ENOMEM) {
+            throw OutOfMemoryException();
+        } else {
+            return mem;
+        }
     }
-}
 
-//=================================================================================================
-}
+    //=================================================================================================
+} // namespace Riss
 
 #endif

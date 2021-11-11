@@ -25,20 +25,19 @@ using namespace std;
 
 //=================================================================================================
 
-
-void printStats(Solver& solver)
-{
+void printStats(Solver& solver) {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
     printf("c restarts              : %" PRIu64 "\n", solver.starts);
-    printf("c conflicts             : %-12" PRIu64 "   (%.0f /sec)\n", solver.conflicts, solver.conflicts   / cpu_time);
-    printf("c decisions             : %-12" PRIu64 "   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions * 100 / (float)solver.decisions, solver.decisions   / cpu_time);
+    printf("c conflicts             : %-12" PRIu64 "   (%.0f /sec)\n", solver.conflicts, solver.conflicts / cpu_time);
+    printf("c decisions             : %-12" PRIu64 "   (%4.2f %% random) (%.0f /sec)\n", solver.decisions,
+           (float)solver.rnd_decisions * 100 / (float)solver.decisions, solver.decisions / cpu_time);
     printf("c propagations          : %-12" PRIu64 "   (%.0f /sec)\n", solver.propagations, solver.propagations / cpu_time);
-    printf("c conflict literals     : %-12" PRIu64 "   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
+    printf("c conflict literals     : %-12" PRIu64 "   (%4.2f %% deleted)\n", solver.tot_literals,
+           (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
     printf("c Memory used           : %.2f MB\n", mem_used);
     printf("c CPU time              : %g s\n", cpu_time);
 }
-
 
 static Solver* solver;
 
@@ -46,58 +45,64 @@ static bool receivedInterupt = false;
 
 // Terminate by notifying the solver and back out gracefully. This is mainly to have a test-case
 // for this feature of the Solver as it may take longer than an immediate call to '_exit()'.
-static void SIGINT_interrupt(int signum) { solver->interrupt(); }
+static void SIGINT_interrupt(int signum) {
+    solver->interrupt();
+}
 
 // Note that '_exit()' rather than 'exit()' has to be used. The reason is that 'exit()' calls
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
-static void SIGINT_exit(int signum)
-{
-    printf("\n"); printf("c *** INTERRUPTED ***\n");
-//     if (solver->verbosity > 0){
-//         printStats(*solver);
-//         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
+static void SIGINT_exit(int signum) {
+    printf("\n");
+    printf("c *** INTERRUPTED ***\n");
+    //     if (solver->verbosity > 0){
+    //         printStats(*solver);
+    //         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
     solver->interrupt();
-    if (receivedInterupt) { _exit(1); }
-    else { receivedInterupt = true; }
+    if (receivedInterupt) {
+        _exit(1);
+    } else {
+        receivedInterupt = true;
+    }
 }
-
 
 //=================================================================================================
 // Main:
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     try {
         setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
 
         // Extra options:
         //
-        IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-        BoolOption   pre("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+        IntOption verb("MAIN", "verb", "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+        BoolOption pre("MAIN", "pre", "Completely turn on/off any preprocessing.", true);
         StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
-        IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         StringOption opt_config("MAIN", "config", "Use a preset configuration", "505");
-        BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+        BoolOption opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
 
         StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
-        StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
+        StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)",
+                                     "DRUP");
 
         const char* _cat = "COPROCESSOR 3";
-        StringOption undoFile(_cat, "undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
-        BoolOption   post(_cat, "post",   "perform post processing", false);
-        StringOption modelFile(_cat, "model",  "read model from SAT solver from this file");
-        IntOption    opt_search(_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
+        StringOption undoFile(_cat, "undo", "write information about undoing simplifications into given file (and var map into X.map file)");
+        BoolOption post(_cat, "post", "perform post processing", false);
+        StringOption modelFile(_cat, "model", "read model from SAT solver from this file");
+        IntOption opt_search(_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
 
-        bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
+        bool foundHelp = ::parseOptions(argc, argv); // parse all global options
         CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
         foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-        if (foundHelp) { exit(0); }  // stop after printing the help information
+        if (foundHelp) {
+            exit(0);
+        } // stop after printing the help information
 
-        if (opt_cmdLine) {  // print the command line options
+        if (opt_cmdLine) { // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -109,7 +114,7 @@ int main(int argc, char** argv)
         Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
-        double      initial_time = cpuTime();
+        double initial_time = cpuTime();
 
         S.verbosity = verb;
 
@@ -167,8 +172,10 @@ int main(int argc, char** argv)
             }
 
             // open file for proof
-            S.proofFile = (drupFile) ? fopen((const char*) drupFile, "wb") : nullptr;
-            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+            S.proofFile = (drupFile) ? fopen((const char*)drupFile, "wb") : nullptr;
+            if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) {
+                fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat);
+            } // we are writing proofs of the given format!
 
             parse_DIMACS(in, S);
             gzclose(in);
@@ -180,7 +187,8 @@ int main(int argc, char** argv)
 
             double parsed_time = cpuTime();
             if (S.verbosity > 0) {
-                printf("c |  Parse time:           %12.2f s                                                                 |\n", parsed_time - initial_time);
+                printf("c |  Parse time:           %12.2f s                                                                 |\n",
+                       parsed_time - initial_time);
             }
 
             // Change to signal-handlers that will only notify the solver and allow it to terminate
@@ -193,7 +201,8 @@ int main(int argc, char** argv)
 
             double simplified_time = cpuTime();
             if (S.verbosity > 0) {
-                printf("c |  Simplification time:  %12.2f s                                                                 |\n", simplified_time - parsed_time);
+                printf("c |  Simplification time:  %12.2f s                                                                 |\n",
+                       simplified_time - parsed_time);
                 printf("c |                                                                                                       |\n");
             }
 
@@ -204,8 +213,8 @@ int main(int argc, char** argv)
                 if (S.verbosity > 0) {
                     printf("c ==============================[ Writing DIMACS ]=========================================================\n");
                 }
-                //S.toDimacs((const char*)dimacs);
-                preprocessor.outputFormula((const char*) dimacs);
+                // S.toDimacs((const char*)dimacs);
+                preprocessor.outputFormula((const char*)dimacs);
             }
 
             if ((const char*)undoFile != 0) {
@@ -216,9 +225,16 @@ int main(int argc, char** argv)
             }
 
             if (!S.okay()) {
-                if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
-                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
-                else { printf("s UNSATISFIABLE\n"); }
+                if (S.proofFile != nullptr) {
+                    fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
+                } // tell proof about result!
+                if (res != nullptr) {
+                    fprintf(res, "s UNSATISFIABLE\n");
+                    fclose(res);
+                    cerr << "s UNSATISFIABLE" << endl;
+                } else {
+                    printf("s UNSATISFIABLE\n");
+                }
                 if (S.verbosity > 0) {
                     printf("c =========================================================================================================\n");
                     printf("c Solved by simplification\n");
@@ -226,12 +242,13 @@ int main(int argc, char** argv)
                     printf("\n");
                 }
 
-                cerr.flush(); cout.flush();
-                #ifdef NDEBUG
-                exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
-                #else
+                cerr.flush();
+                cout.flush();
+#ifdef NDEBUG
+                exit(20); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
                 return (20);
-                #endif
+#endif
             } else {
                 lbool ret = l_Undef;
                 if (opt_search > 0) {
@@ -243,13 +260,15 @@ int main(int argc, char** argv)
                     ret = S.solveLimited(dummy);
                 }
                 if (ret == l_True) {
-                    if (S.proofFile != 0) { fclose(S.proofFile); }  // close proof file!
+                    if (S.proofFile != 0) {
+                        fclose(S.proofFile);
+                    } // close proof file!
                     preprocessor.extendModel(S.model);
                     const int printVariables = (preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables());
                     if (res != nullptr) {
                         cerr << "s SATISFIABLE" << endl;
                         fprintf(res, "s SATISFIABLE\nv ");
-                        for (int i = 0; i < printVariables ; i++)
+                        for (int i = 0; i < printVariables; i++)
                             if (S.model[i] != l_Undef) {
                                 fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
                             }
@@ -262,28 +281,34 @@ int main(int argc, char** argv)
                             }
                         printf(" 0\n");
                     }
-                    cerr.flush(); cout.flush();
-                    #ifdef NDEBUG
-                    exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
-                    #else
+                    cerr.flush();
+                    cout.flush();
+#ifdef NDEBUG
+                    exit(10); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
                     return (10);
-                    #endif
+#endif
                 } else if (ret == l_False) {
-                    if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
-                    if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                    if (S.proofFile != nullptr) {
+                        fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
+                    } // tell proof about result!
+                    if (res != nullptr) {
+                        fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+                    }
                     printf("s UNSATISFIABLE\n");
-                    cerr.flush(); cout.flush();
-                    #ifdef NDEBUG
-                    exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
-                    #else
+                    cerr.flush();
+                    cout.flush();
+#ifdef NDEBUG
+                    exit(20); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
                     return (20);
-                    #endif
+#endif
                 }
             }
         } else {
-//
-// process undo here!
-//
+            //
+            // process undo here!
+            //
             Preprocessor preprocessor(&S, cp3config);
             if (undoFile == 0) {
                 cerr << "c ERROR: no undo file specified" << endl;
@@ -293,7 +318,10 @@ int main(int argc, char** argv)
             int solution = preprocessor.parseModel(modelFile == 0 ? string("") : string(modelFile));
             bool good = solution != -1;
             good = good && preprocessor.parseUndoInfo(string(undoFile));
-            if (!good) { cerr << "c will not continue because of above errors" << endl; return 1; }
+            if (!good) {
+                cerr << "c will not continue because of above errors" << endl;
+                return 1;
+            }
 
             if (solution == 10) {
                 preprocessor.extendModel(S.model);
@@ -315,34 +343,40 @@ int main(int argc, char** argv)
                         }
                     printf(" 0\n");
                 }
-                cerr.flush(); cout.flush();
-                #ifdef NDEBUG
-                exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
-                #else
+                cerr.flush();
+                cout.flush();
+#ifdef NDEBUG
+                exit(10); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
                 return (10);
-                #endif
+#endif
             } else if (solution == 20) {
-                if (res != nullptr) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                if (res != nullptr) {
+                    fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+                }
                 printf("s UNSATISFIABLE\n");
-                cerr.flush(); cout.flush();
-                #ifdef NDEBUG
-                exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
-                #else
+                cerr.flush();
+                cout.flush();
+#ifdef NDEBUG
+                exit(20); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
                 return (20);
-                #endif
+#endif
             } else {
-                if (res != nullptr) { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                if (res != nullptr) {
+                    fprintf(res, "s UNKNOWN\n"), fclose(res);
+                }
                 printf("s UNKNOWN\n");
             }
-
         }
 
-        cerr.flush(); cout.flush();
-        #ifdef NDEBUG
-        exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
-        #else
+        cerr.flush();
+        cout.flush();
+#ifdef NDEBUG
+        exit(0); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
         return (0);
-        #endif
+#endif
     } catch (OutOfMemoryException&) {
         printf("c =========================================================================================================\n");
         printf("s UNKNOWN\n");

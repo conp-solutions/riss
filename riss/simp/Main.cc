@@ -51,9 +51,7 @@ using namespace Coprocessor;
 
 //=================================================================================================
 
-
-void printStats(Solver& solver)
-{
+void printStats(Solver& solver) {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
     printf("c restarts              : %lu (%lu conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts / solver.starts);
@@ -66,66 +64,72 @@ void printStats(Solver& solver)
     printf("c nb learnts size 1     : %lu\n", solver.nbUn);
 
     printf("c conflicts             : %-12lu   (%.0f /sec)\n", solver.conflicts, cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
-    printf("c decisions             : %-12lu   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions * 100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time);
+    printf("c decisions             : %-12lu   (%4.2f %% random) (%.0f /sec)\n", solver.decisions,
+           solver.decisions == 0 ? 0 : (float)solver.rnd_decisions * 100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time);
     printf("c propagations          : %-12lu   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations / cpu_time);
-    printf("c conflict literals     : %-12lu   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
+    printf("c conflict literals     : %-12lu   (%4.2f %% deleted)\n", solver.tot_literals,
+           solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
     printf("c nb reduced Clauses    : %lu\n", solver.nbReducedClauses);
     printf("c Memory used           : %.2f MB\n", mem_used);
     printf("c CPU time              : %g s\n", cpu_time);
 }
 
-
 static Solver* solver;
 static bool receivedInterupt = false;
 // Terminate by notifying the solver and back out gracefully. This is mainly to have a test-case
 // for this feature of the Solver as it may take longer than an immediate call to '_exit()'.
-static void SIGINT_interrupt(int signum) { solver->interrupt(); }
+static void SIGINT_interrupt(int signum) {
+    solver->interrupt();
+}
 
 // Note that '_exit()' rather than 'exit()' has to be used. The reason is that 'exit()' calls
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
-static void SIGINT_exit(int signum)
-{
-    printf("\n"); printf("c *** INTERRUPTED ***\n");
-//     if (solver->verbosity > 0){
-//         printStats(*solver);
-//         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
+static void SIGINT_exit(int signum) {
+    printf("\n");
+    printf("c *** INTERRUPTED ***\n");
+    //     if (solver->verbosity > 0){
+    //         printStats(*solver);
+    //         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
     solver->interrupt();
-    if (receivedInterupt) { _exit(1); }
-    else { receivedInterupt = true; }
+    if (receivedInterupt) {
+        _exit(1);
+    } else {
+        receivedInterupt = true;
+    }
 }
-
 
 //=================================================================================================
 // Main:
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     setUsageHelp("c USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
 
-    #if defined(__linux__)
+#if defined(__linux__)
     fpu_control_t oldcw, newcw;
-    _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
+    _FPU_GETCW(oldcw);
+    newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE;
+    _FPU_SETCW(newcw);
     printf("c WARNING: for repeatability, setting FPU to use double precision\n");
-    #endif
+#endif
     // Extra options:
     //
-    IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-    IntOption    vv("MAIN", "vv",   "Verbosity every vv conflicts", 10000, IntRange(1, INT32_MAX));
-    BoolOption   pre("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+    IntOption verb("MAIN", "verb", "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+    IntOption vv("MAIN", "vv", "Verbosity every vv conflicts", 10000, IntRange(1, INT32_MAX));
+    BoolOption pre("MAIN", "pre", "Completely turn on/off any preprocessing.", true);
     StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
-    IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
-    IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+    IntOption cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
+    IntOption mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
     StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
 
-    BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
-    BoolOption   opt_modelStyle("MAIN", "oldModel", "present model on screen in old format", false);
-    BoolOption   opt_quiet("MAIN", "quiet", "Do not print the model", false);
-    BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
-    BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
-    BoolOption   opt_nounsat("MAIN", "nounsat", "turn UNSAT answers into UNKNOWN", false);
+    BoolOption opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
+    BoolOption opt_modelStyle("MAIN", "oldModel", "present model on screen in old format", false);
+    BoolOption opt_quiet("MAIN", "quiet", "Do not print the model", false);
+    BoolOption opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
+    BoolOption opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
+    BoolOption opt_nounsat("MAIN", "nounsat", "turn UNSAT answers into UNKNOWN", false);
 
     try {
         CoreConfig coreConfig;
@@ -133,7 +137,7 @@ int main(int argc, char** argv)
         coreConfig.parseOptions(argc, argv);
         cp3config.parseOptions(argc, argv);
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) { // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -155,7 +159,9 @@ int main(int argc, char** argv)
         // tell solver that it is parsing - no need to add clauses to proof twice
         S.parsing = 1;
 
-        if (!pre) { S.eliminate(true); }
+        if (!pre) {
+            S.eliminate(true);
+        }
 
         S.verbosity = verb;
 
@@ -165,7 +171,6 @@ int main(int argc, char** argv)
         // interrupts:
         signal(SIGINT, SIGINT_exit);
         signal(SIGXCPU, SIGINT_exit);
-
 
         if (S.verbosity > 0) {
             printf("c =================[ riss (core) %s  %30s ]===================================\n", solverVersion, gitSHA1);
@@ -212,8 +217,10 @@ int main(int argc, char** argv)
         }
 
         // open file for proof
-        S.proofFile = (drupFile) ? fopen((const char*) drupFile, "wb") : nullptr;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+        S.proofFile = (drupFile) ? fopen((const char*)drupFile, "wb") : nullptr;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != nullptr) {
+            fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat);
+        } // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
@@ -224,46 +231,62 @@ int main(int argc, char** argv)
             printf("c |  Number of variables:       %12d                                                              |\n", S.nVars());
             printf("c |  Number of clauses:         %12d                                                              |\n", S.nClauses());
             printf("c |  Number of total literals:  %12d                                                              |\n", S.nTotLits());
-            printf("c |  Parse time:                %12.2f s                                                            |\n", parsed_time - initial_time);
+            printf("c |  Parse time:                %12.2f s                                                            |\n",
+                   parsed_time - initial_time);
             printf("c |                                                                                                       |\n");
         }
 
-        if (opt_parseOnly) { exit(0); }   // simply stop here!
+        if (opt_parseOnly) {
+            exit(0);
+        } // simply stop here!
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
-        //signal(SIGINT, SIGINT_interrupt);
-        //signal(SIGXCPU,SIGINT_interrupt);
+        // signal(SIGINT, SIGINT_interrupt);
+        // signal(SIGXCPU,SIGINT_interrupt);
 
         // finished parsing -- any clauses added now needs to be added to proof
         S.parsing = 0;
         S.eliminate(true);
         double simplified_time = cpuTime();
         if (S.verbosity > 0) {
-            printf("c |  Simplification time:  %12.2f s                                                                 |\n", simplified_time - parsed_time);
+            printf("c |  Simplification time:  %12.2f s                                                                 |\n",
+                   simplified_time - parsed_time);
             printf("c |                                                                                                       |\n");
         }
 
         if (!S.okay()) {
             // turn UNSAT into UNKNOWN?
-            if(opt_nounsat) {
+            if (opt_nounsat) {
                 if (res != nullptr) {
-                    if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"), fclose(res); }
-                    else { fprintf(res, "s UNKNOWN\n"), fclose(res); }
+                    if (opt_modelStyle) {
+                        fprintf(res, "UNKNOWN\n"), fclose(res);
+                    } else {
+                        fprintf(res, "s UNKNOWN\n"), fclose(res);
+                    }
                     res = nullptr;
                 }
-                if (opt_modelStyle) { printf("UNSAT"); }
-                else { printf("s UNSATISFIABLE\n"); }
-                cout.flush(); cerr.flush();
+                if (opt_modelStyle) {
+                    printf("UNSAT");
+                } else {
+                    printf("s UNSATISFIABLE\n");
+                }
+                cout.flush();
+                cerr.flush();
                 exit(0);
             }
 
             if (res != nullptr) {
-                if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
-                else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                if (opt_modelStyle) {
+                    fprintf(res, "UNSAT\n"), fclose(res);
+                } else {
+                    fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+                }
             }
             // add the empty clause to the proof, close proof file
-            if (S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); }
+            if (S.proofFile != nullptr) {
+                fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
+            }
 
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -273,9 +296,13 @@ int main(int argc, char** argv)
             }
 
             // choose among output formats!
-            if (opt_modelStyle) { printf("UNSAT"); }
-            else { printf("s UNSATISFIABLE\n"); }
-            cout.flush(); cerr.flush();
+            if (opt_modelStyle) {
+                printf("UNSAT");
+            } else {
+                printf("s UNSATISFIABLE\n");
+            }
+            cout.flush();
+            cerr.flush();
             exit(20);
         }
 
@@ -294,14 +321,15 @@ int main(int argc, char** argv)
         lbool ret = S.solveLimited(dummy);
 
         // fake UNSAT into UNKNOWN, in case the user demands it
-        if(ret == l_False && opt_nounsat) ret = l_Undef;
+        if (ret == l_False && opt_nounsat)
+            ret = l_Undef;
 
         if (S.verbosity > 0) {
             printStats(S);
         }
 
         // check model of the formula
-        if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+        if (ret == l_True && opt_checkModel && argc != 1) { // check the model if the formla was given via a file!
             if (check_DIMACS(in, S.model)) {
                 printf("c verified model\n");
             } else {
@@ -311,54 +339,74 @@ int main(int argc, char** argv)
         }
 
         // print solution to screen
-        if (opt_modelStyle) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
-        else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
+        if (opt_modelStyle) {
+            printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n");
+        } else {
+            printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
+        }
 
         // put empty clause on proof
-        if (ret == l_False && S.proofFile != nullptr) { fprintf(S.proofFile, "0\n"); }
+        if (ret == l_False && S.proofFile != nullptr) {
+            fprintf(S.proofFile, "0\n");
+        }
 
         // print solution into file
         if (res != nullptr) {
             if (ret == l_True) {
-                if (opt_modelStyle) { fprintf(res, "SAT\n"); }
-                else { fprintf(res, "s SATISFIABLE\nv "); }
+                if (opt_modelStyle) {
+                    fprintf(res, "SAT\n");
+                } else {
+                    fprintf(res, "s SATISFIABLE\nv ");
+                }
                 for (int i = 0; i < S.model.size(); i++)
-                    //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+                //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                 {
                     fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
                 }
                 fprintf(res, " 0\n");
             } else if (ret == l_False) {
-                if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
-                else { fprintf(res, "s UNSATISFIABLE\n"); }
-            } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
-            else { fprintf(res, "s UNKNOWN\n"); }
+                if (opt_modelStyle) {
+                    fprintf(res, "UNSAT\n");
+                } else {
+                    fprintf(res, "s UNSATISFIABLE\n");
+                }
+            } else if (opt_modelStyle) {
+                fprintf(res, "UNKNOWN\n");
+            } else {
+                fprintf(res, "s UNKNOWN\n");
+            }
             fclose(res);
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == nullptr) {
-            if (!opt_modelStyle) { printf("v "); }
+        if (!opt_quiet && ret == l_True && res == nullptr) {
+            if (!opt_modelStyle) {
+                printf("v ");
+            }
             for (int i = 0; i < S.model.size(); i++)
-                //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+            //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
             {
                 printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
             }
             printf(" 0\n");
         }
 
-        cout.flush(); cerr.flush();
+        cout.flush();
+        cerr.flush();
 
-        #ifdef NDEBUG
-        exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
-        #else
+#ifdef NDEBUG
+        exit(ret == l_True ? 10 : ret == l_False ? 20 : 0); // (faster than "return", which will invoke the destructor for 'Solver')
+#else
         return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
-        #endif
+#endif
     } catch (OutOfMemoryException&) {
         // printf("c ===============================================================================\n");
         printf("c Warning: caught an exception\n");
-        if (opt_modelStyle) { printf("UNKNOWN\n"); }
-        else { printf("s UNKNOWN\n"); }
+        if (opt_modelStyle) {
+            printf("UNKNOWN\n");
+        } else {
+            printf("s UNKNOWN\n");
+        }
         exit(0);
     }
 }

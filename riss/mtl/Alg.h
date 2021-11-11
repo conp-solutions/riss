@@ -25,77 +25,75 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/Vec.h"
 
-namespace Riss
-{
+namespace Riss {
 
-//=================================================================================================
-// Useful functions on std::vector-like types:
+    //=================================================================================================
+    // Useful functions on std::vector-like types:
 
-//=================================================================================================
-// Removing and searching for elements:
-//
+    //=================================================================================================
+    // Removing and searching for elements:
+    //
 
-template<class V, class T>
-static inline void remove(V& ts, const T& t)
-{
-    int j = 0;
-    for (; j < ts.size() && ts[j] != t; j++) {};
-    assert(j < ts.size() && "item must appear in std::vector");
-    //if( j >= ts.size() ) exit (47 ); // todo remove after debug!
-    for (; j < ts.size() - 1; j++) { ts[j] = ts[j + 1]; }
-    ts.pop();
-}
-
-/// remove but do not keep the order (push last element to deleted position
-template<class V, class T>
-static inline void removeUnSort(V& ts, const T& t)
-{
-    int j = 0;
-    for (; j < ts.size() && ts[j] != t; j++) {};
-    assert(j < ts.size() && "item must appear in std::vector");
-    ts[j] = ts[ts.size() - 1];
-    ts.pop();
-}
-
-
-
-template<class V, class T>
-static inline bool find(V& ts, const T& t)
-{
-    int j = 0;
-    for (; j < ts.size() && ts[j] != t; j++) {};
-    return j < ts.size();
-}
-
-
-//=================================================================================================
-// Copying vectors with support for nested std::vector types:
-//
-
-// Base case:
-template<class T>
-static inline void copy(const T& from, T& to)
-{
-    to = from;
-}
-
-// Recursive case:
-template<class T>
-static inline void copy(const vec<T>& from, vec<T>& to, bool append = false)
-{
-    if (!append) {
-        to.clear();
+    template <class V, class T>
+    static inline void remove(V& ts, const T& t) {
+        int j = 0;
+        for (; j < ts.size() && ts[j] != t; j++) {
+        };
+        assert(j < ts.size() && "item must appear in std::vector");
+        // if( j >= ts.size() ) exit (47 ); // todo remove after debug!
+        for (; j < ts.size() - 1; j++) {
+            ts[j] = ts[j + 1];
+        }
+        ts.pop();
     }
-    for (int i = 0; i < from.size(); i++) {
-        to.push();
-        copy(from[i], to.last());
+
+    /// remove but do not keep the order (push last element to deleted position
+    template <class V, class T>
+    static inline void removeUnSort(V& ts, const T& t) {
+        int j = 0;
+        for (; j < ts.size() && ts[j] != t; j++) {
+        };
+        assert(j < ts.size() && "item must appear in std::vector");
+        ts[j] = ts[ts.size() - 1];
+        ts.pop();
     }
-}
 
-template<class T>
-static inline void append(const vec<T>& from, vec<T>& to) { copy(from, to, true); }
+    template <class V, class T>
+    static inline bool find(V& ts, const T& t) {
+        int j = 0;
+        for (; j < ts.size() && ts[j] != t; j++) {
+        };
+        return j < ts.size();
+    }
 
-//=================================================================================================
-}
+    //=================================================================================================
+    // Copying vectors with support for nested std::vector types:
+    //
+
+    // Base case:
+    template <class T>
+    static inline void copy(const T& from, T& to) {
+        to = from;
+    }
+
+    // Recursive case:
+    template <class T>
+    static inline void copy(const vec<T>& from, vec<T>& to, bool append = false) {
+        if (!append) {
+            to.clear();
+        }
+        for (int i = 0; i < from.size(); i++) {
+            to.push();
+            copy(from[i], to.last());
+        }
+    }
+
+    template <class T>
+    static inline void append(const vec<T>& from, vec<T>& to) {
+        copy(from, to, true);
+    }
+
+    //=================================================================================================
+} // namespace Riss
 
 #endif

@@ -8,8 +8,7 @@
 using namespace std;
 using namespace Riss;
 
-int main()
-{
+int main() {
     Compression compression = Riss::Compression();
 
     vector<Var> mapping(10);

@@ -24,23 +24,22 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define RISS_Minisat_System_h
 
 #if defined(__linux__)
-    #include <fpu_control.h>
+#include <fpu_control.h>
 #endif
 
-#include "riss/mtl/XAlloc.h"   // to find nullptr if std11 is not used
+#include "riss/mtl/XAlloc.h" // to find nullptr if std11 is not used
 #include "riss/mtl/IntTypes.h"
 
 //-------------------------------------------------------------------------------------------------
 
-namespace Riss
-{
+namespace Riss {
 
-static inline double cpuTime(void); // CPU-time in seconds.
-static inline double wallClockTime(void); //Wall-Clock-time in seconds
-extern double memUsed();            // Memory in mega bytes (returns 0 for unsupported architectures).
-extern double memUsedPeak();        // Peak-memory in mega bytes (returns 0 for unsupported architectures).
+    static inline double cpuTime(void);       // CPU-time in seconds.
+    static inline double wallClockTime(void); // Wall-Clock-time in seconds
+    extern double memUsed();                  // Memory in mega bytes (returns 0 for unsupported architectures).
+    extern double memUsedPeak();              // Peak-memory in mega bytes (returns 0 for unsupported architectures).
 
-}
+} // namespace Riss
 
 //-------------------------------------------------------------------------------------------------
 // Implementation of inline functions:
@@ -48,9 +47,13 @@ extern double memUsedPeak();        // Peak-memory in mega bytes (returns 0 for 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #include <time.h>
 
-static inline double Riss::cpuTime(void) { return (double)clock() / CLOCKS_PER_SEC; }
+static inline double Riss::cpuTime(void) {
+    return (double)clock() / CLOCKS_PER_SEC;
+}
 #warning WALLCLOCKTIME NOT SUPPORTED HERE
-static inline double Riss::wallClockTime(void) { return (double) clock() / CLOCKS_PER_SEC; }
+static inline double Riss::wallClockTime(void) {
+    return (double)clock() / CLOCKS_PER_SEC;
+}
 #else
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -58,35 +61,31 @@ static inline double Riss::wallClockTime(void) { return (double) clock() / CLOCK
 #include <time.h>
 
 #ifdef __APPLE__
-    #include <mach/clock.h>
-    #include <mach/mach.h>
+#include <mach/clock.h>
+#include <mach/mach.h>
 #endif
 
-static inline double Riss::cpuTime(void)
-{
+static inline double Riss::cpuTime(void) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
 }
 
-
 #ifndef __APPLE__ // Mac OS does not support the linux wall clock
-static inline double Riss::wallClockTime(void)
-{
+static inline double Riss::wallClockTime(void) {
     struct timespec timestamp;
     clock_gettime(CLOCK_MONOTONIC, &timestamp);
-    return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
+    return ((double)timestamp.tv_sec) + ((double)timestamp.tv_nsec / 1000000000);
 }
 
 #else // use the Mac wall clock instead
-static inline double Riss::wallClockTime(void)
-{
+static inline double Riss::wallClockTime(void) {
     clock_serv_t cclock;
     mach_timespec_t mts;
     host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
     clock_get_time(cclock, &mts);
     mach_port_deallocate(mach_task_self(), cclock);
-    return ((double) mts.tv_sec) + ((double) mts.tv_nsec / 1000000000);
+    return ((double)mts.tv_sec) + ((double)mts.tv_nsec / 1000000000);
 }
 
 #endif
@@ -95,8 +94,7 @@ static inline double Riss::wallClockTime(void)
 
 // implement clocks independent on the operating system
 
-static inline void nanosleep(int nanoseconds)
-{
+static inline void nanosleep(int nanoseconds) {
     // Nanosleep
     struct timespec req;
     req.tv_nsec = nanoseconds;
@@ -105,31 +103,67 @@ static inline void nanosleep(int nanoseconds)
 }
 
 /** simple class that combines cpu and wall clock time */
-class Clock
-{
+class Clock {
     double cTime, wTime;
-  public:
-    Clock() : cTime(0), wTime(0) {}
-    void start() { cTime = Riss::cpuTime() - cTime; wTime = Riss::wallClockTime() - wTime; }
-    void stop() {  cTime = Riss::cpuTime() - cTime; wTime = Riss::wallClockTime() - wTime;  }
-    double getCpuTime() const { return cTime; }
-    double getWallClockTime() const { return wTime; }
-    void reset() { cTime = 0; wTime = 0; }
-    double getRunningCpuTime()  const { return Riss::cpuTime() - cTime; };
-    double getRunningWallTime() const { return Riss::wallClockTime() - wTime; };
+
+public:
+    Clock()
+        : cTime(0)
+        , wTime(0) {
+    }
+    void start() {
+        cTime = Riss::cpuTime() - cTime;
+        wTime = Riss::wallClockTime() - wTime;
+    }
+    void stop() {
+        cTime = Riss::cpuTime() - cTime;
+        wTime = Riss::wallClockTime() - wTime;
+    }
+    double getCpuTime() const {
+        return cTime;
+    }
+    double getWallClockTime() const {
+        return wTime;
+    }
+    void reset() {
+        cTime = 0;
+        wTime = 0;
+    }
+    double getRunningCpuTime() const {
+        return Riss::cpuTime() - cTime;
+    };
+    double getRunningWallTime() const {
+        return Riss::wallClockTime() - wTime;
+    };
 };
 
 /** Method clock - class that stopes the time from the call until the focus is lost */
-class MethodClock
-{
-  private:
+class MethodClock {
+private:
     Clock& clock;
     bool stopped;
-  public:
-    MethodClock(Clock& c) : clock(c), stopped(false) { clock.start(); };
-    ~MethodClock() { if (!stopped) { clock.stop(); }  }
-    void stop() { clock.stop(); stopped = true;}
-    void cont() { if (stopped) {clock.start(); stopped = false;} }
+
+public:
+    MethodClock(Clock& c)
+        : clock(c)
+        , stopped(false) {
+        clock.start();
+    };
+    ~MethodClock() {
+        if (!stopped) {
+            clock.stop();
+        }
+    }
+    void stop() {
+        clock.stop();
+        stopped = true;
+    }
+    void cont() {
+        if (stopped) {
+            clock.start();
+            stopped = false;
+        }
+    }
 };
 
 #endif

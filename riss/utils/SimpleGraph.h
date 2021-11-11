@@ -11,9 +11,7 @@
 #include "riss/core/SolverTypes.h"
 #include <set>
 
-
-
-//using namespace std;
+// using namespace std;
 
 typedef std::pair<int, double> edge;
 typedef std::vector<edge> adjacencyList;
@@ -22,13 +20,11 @@ typedef std::vector<edge> adjacencyList;
  * undirected weighted graph.
  */
 
-
-class SimpleGraph
-{
-  private:
+class SimpleGraph {
+private:
     void doPageRank();
-    //int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
-    //void compute_G_plus(SimpleGraph*& Graph_plus, const std::vector<int>& set);
+    // int recursive_treewidth(const std::vector<int>& Lset, const std::vector<int>& component);
+    // void compute_G_plus(SimpleGraph*& Graph_plus, const std::vector<int>& set);
     std::vector<std::vector<int>> getConnectedComponents(const std::vector<int>& set);
     void getallcombinations(const std::vector<int>& nodes, std::vector<int> set, std::vector<std::vector<int>>& sets, int k, int position);
     // bool improved_recursive_treewidth(int k);
@@ -36,36 +32,29 @@ class SimpleGraph
     std::vector<std::vector<int>> getSets(const std::vector<int>& nodes, int k);
     void controllbagsandadd(std::vector<std::pair<std::vector<int>, std::vector<int>>>& bags, Riss::MarkArray& visited);
 
-
-    bool mergeAtTheEnd; // do not detect duplicate entries during the creation of the graph
-    bool intermediateSort;  // remove duplicates in adjacency lists already during the algorithm execution
-    int intermediateSorts; // statistics
+    bool mergeAtTheEnd;                          // do not detect duplicate entries during the creation of the graph
+    bool intermediateSort;                       // remove duplicates in adjacency lists already during the algorithm execution
+    int intermediateSorts;                       // statistics
     bool addedDirectedEdge, addedUndirectedEdge; // bools to make sure in one graph not two different edge types have been added
     std::vector<double> getDistances(int nod);
     /** sort the adjacencyList and remove duplicate entries */
     uint64_t sortAdjacencyList(adjacencyList& aList);
 
-
-
-
-
-
-
-  protected:
-    std::vector <double> narity;
+protected:
+    std::vector<double> narity;
     int size;
     std::vector<adjacencyList> node;
     std::vector<int> nodeDeg;
     std::vector<std::set<int>> communityneighbors;
     std::vector<std::vector<int>> bridgenodes;
     double precision = 0.000001;
-    //vectors for communityclassifying
+    // vectors for communityclassifying
     std::vector<std::vector<int>> comm;
     std::vector<int> n2c;
     std::vector<double> pagerank;
     std::vector<int> articulationpoints;
 
-  public:
+public:
     void computeCommunityNeighbors();
     void computeCommunityBridgeNodes();
     std::vector<std::vector<int>> getCommunityForEachNode(double prec);
@@ -75,7 +64,7 @@ class SimpleGraph
     double arity(int x);
     double arity();
     double getPageRank(int node);
-    //int gettreewidth();
+    // int gettreewidth();
     void DepthFirstSearch(std::vector<int>& stack, Riss::MarkArray& visited, std::vector<int>& articulationspoints);
     bool thereisanedge(int nodeA, int nodeB);
     std::vector<int> getArticulationPoints();
@@ -84,7 +73,7 @@ class SimpleGraph
     double getDiameter();
     void completeSingleVIG();
 
-    std::vector<int> getAdjacency(int adjnode); /// collect all edges without weight (performs copy!)
+    std::vector<int> getAdjacency(int adjnode);            /// collect all edges without weight (performs copy!)
     void getAdjacency(int adjnode, std::vector<int>& adj); /// collect all edges without weight (performs copy, but uses the given vector)
 
     SimpleGraph(int nodes, bool computingDerivative);
@@ -97,7 +86,7 @@ class SimpleGraph
     uint64_t addAndCountUndirectedEdge(int nodeA, int nodeB, double weight);
     int getDegree(int node);
 
-    std::vector<int> sortSize;  // for each adjacencyList store the size when its re-sorted
+    std::vector<int> sortSize; // for each adjacencyList store the size when its re-sorted
     void setIntermediateSort(bool newValue);
 
     uint64_t computeStatistics(int quantilesCount);
@@ -107,21 +96,21 @@ class SimpleGraph
     /** finalize adjacency lists after all nodes have been added to the graph */
     void finalizeGraph();
 
-    int getSize() {return size;}
-    static bool nodesComparator(edge e1, edge e2)
-    {
+    int getSize() {
+        return size;
+    }
+    static bool nodesComparator(edge e1, edge e2) {
         return (e1.first < e2.first);
     }
 
     //--------------- TOOL FOR COMPUTING DIMENSIONS --------------------------------------------------
 
-    std::pair< double, double > regresion(std::vector< std::pair< double, double > >& v)
-    {
-//-----------------------------------------------------------------------------
-//Given a vector of points, computes the alpha and beta of a regression
-//-----------------------------------------------------------------------------
+    std::pair<double, double> regresion(std::vector<std::pair<double, double>>& v) {
+        //-----------------------------------------------------------------------------
+        // Given a vector of points, computes the alpha and beta of a regression
+        //-----------------------------------------------------------------------------
         double Sx = 0, Sy = 0, Sxx = 0, Syy = 0, Sxy = 0;
-        for (std::vector<std::pair <double, double> >::iterator it = v.begin(); it != v.end(); it++) {
+        for (std::vector<std::pair<double, double>>::iterator it = v.begin(); it != v.end(); it++) {
             double x = it->first;
             double y = it->second;
             Sx += x;
@@ -133,40 +122,48 @@ class SimpleGraph
 
         double alpha = (Sx * Sy - v.size() * Sxy) / (Sx * Sx - v.size() * Sxx);
         double beta = Sy / v.size() - alpha * Sx / v.size();
-        return std::pair <double, double>(alpha, beta);
+        return std::pair<double, double>(alpha, beta);
     }
-
-
-
-
 
     //--------------- ITERATOR ON EDGES --------------------------------------------------
 
-    struct edgeNewDef{
-        int orig; int dest; double weight;
-        edgeNewDef() : orig(-1), dest(-1), weight(1) {}
+    struct edgeNewDef {
+        int orig;
+        int dest;
+        double weight;
+        edgeNewDef()
+            : orig(-1)
+            , dest(-1)
+            , weight(1) {
+        }
     };
 
-    class EdgeIter;                          // Iterator to traverse all EDGES of the Graph
+    class EdgeIter; // Iterator to traverse all EDGES of the Graph
     friend class EdgeIter;
 
-    class EdgeIter : public std::iterator<std::input_iterator_tag, edgeNewDef>
-    {
+    class EdgeIter : public std::iterator<std::input_iterator_tag, edgeNewDef> {
         SimpleGraph& g;
         std::vector<edge>::iterator it;
         int node;
         SimpleGraph::edgeNewDef e;
 
-      public:
+    public:
+        EdgeIter(SimpleGraph& x)
+            : g(x) {
+        }
+        EdgeIter(SimpleGraph& x, std::vector<edge>::iterator y, int n)
+            : g(x)
+            , it(y)
+            , node(n) {
+        }
 
-        EdgeIter(SimpleGraph& x) : g(x) {}
-        EdgeIter(SimpleGraph& x, std::vector<edge>::iterator y, int n): g(x), it(y), node(n) { }
+        EdgeIter(const EdgeIter& x)
+            : g(x.g)
+            , it(x.it)
+            , node(x.node) {
+        }
 
-        EdgeIter(const EdgeIter& x) : g(x.g), it(x.it), node(x.node) {}
-
-        EdgeIter& operator++()
-        {
-
+        EdgeIter& operator++() {
 
             assert(node >= 0 && node < g.getSize());
             assert(node < g.getSize() - 1 || it != g.node[node].end());
@@ -177,15 +174,13 @@ class SimpleGraph
                         node++;
                         it = g.node[node].begin();
 
-
-                    } while (it == g.node[node].end() && node < g.getSize() - 1); //skip nodes without neighs
+                    } while (it == g.node[node].end() && node < g.getSize() - 1); // skip nodes without neighs
                 }
-            } while (!(it == g.node[node].end() && node == g.getSize() - 1) //skip when orig > dest
+            } while (!(it == g.node[node].end() && node == g.getSize() - 1) // skip when orig > dest
                      && node > it->first);
             return *this;
         }
-        EdgeIter& operator++(int)
-        {
+        EdgeIter& operator++(int) {
 
             EdgeIter clone(*this);
             assert(node >= 0 && node < g.getSize());
@@ -198,18 +193,21 @@ class SimpleGraph
 
                         node++;
                         it = g.node[node].begin();
-                    } while (it == g.node[node].end() && node < g.getSize() - 1); //skip nodes without neighs
+                    } while (it == g.node[node].end() && node < g.getSize() - 1); // skip nodes without neighs
                 }
-            } while (!(it == g.node[node].end() && node == g.getSize() - 1) //skip when orig > dest
+            } while (!(it == g.node[node].end() && node == g.getSize() - 1) // skip when orig > dest
                      && node > it->first);
             return *this;
         }
 
-        bool operator==(const EdgeIter& rhs) {return it == rhs.it;}
-        bool operator!=(const EdgeIter& rhs) {return it != rhs.it;}
+        bool operator==(const EdgeIter& rhs) {
+            return it == rhs.it;
+        }
+        bool operator!=(const EdgeIter& rhs) {
+            return it != rhs.it;
+        }
 
-        SimpleGraph::edgeNewDef& operator*()
-        {
+        SimpleGraph::edgeNewDef& operator*() {
             std::cerr << "ENTER *\n";
 
             e.orig = node;
@@ -217,80 +215,74 @@ class SimpleGraph
             e.weight = it->second;
             return e;
         }
-        SimpleGraph::edgeNewDef *operator->()
-        {
+        SimpleGraph::edgeNewDef* operator->() {
             e.orig = node;
             e.dest = it->first;
             e.weight = it->second;
 
             return &e;
         }
-
     };
 
-    EdgeIter begin()
-    {
+    EdgeIter begin() {
         int nod = 0;
-        while (this->node[nod].size() == 0 && nod < size) { nod++; }
+        while (this->node[nod].size() == 0 && nod < size) {
+            nod++;
+        }
         return EdgeIter(*this, this->node[nod].begin(), nod);
         // First neight of first node
     }
 
-    EdgeIter end()
-    {
+    EdgeIter end() {
         return EdgeIter(*this, this->node[size - 1].end(), size);
         // Last neight of last node
     }
 
     //--------------- ITERATOR ON NEIGHBORS --------------------------------------------------
 
-    class NeighIter : public std::vector<int>::iterator
-    {
+    class NeighIter : public std::vector<int>::iterator {
 
         std::vector<edge>::iterator it;
         SimpleGraph::edgeNewDef e;
 
+    public:
+        NeighIter(std::vector<edge>::iterator x)
+            : it(x) {
+        }
 
-      public:
-
-        NeighIter(std::vector<edge>::iterator x) : it(x) {}
-
-        SimpleGraph::edgeNewDef *operator->()
-        {
+        SimpleGraph::edgeNewDef* operator->() {
             e.dest = it->first;
             e.weight = it->second;
             return &e;
         }
-        NeighIter& operator++()
-        {
+        NeighIter& operator++() {
             ++it;
             return *this;
         }
-        NeighIter& operator++(int)
-        {
+        NeighIter& operator++(int) {
             it++;
             return *this;
         }
-        bool operator==(const NeighIter& x) {return it == x.it;}
-        bool operator!=(const NeighIter& x) {return it != x.it;}
+        bool operator==(const NeighIter& x) {
+            return it == x.it;
+        }
+        bool operator!=(const NeighIter& x) {
+            return it != x.it;
+        }
     };
 
-    NeighIter begin(int x)
-    {
+    NeighIter begin(int x) {
 
         assert(x >= 0 && x <= size - 1);
         return NeighIter(node[x].begin());
     }
 
-    NeighIter end(int x)
-    {
+    NeighIter end(int x) {
 
         assert(x >= 0 && x <= size - 1);
 
         return NeighIter(node[x].end());
     }
-
-
 };
 
 #endif /* GRAPH_H_ */
