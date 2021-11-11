@@ -14,40 +14,48 @@ Copyright (c) 2021, Anton Reinhard, LGPL v2, see LICENSE
 
 namespace Coprocessor {
 
-   /**
-    * @brief Class implementing Backbone Simplification as a procedure
-    * 
-    * @details For the original algorithm see: https://www.cril.univ-artois.fr/KC/documents/lagniez-marquis-aaai14.pdf
-    * Application of this procedure will result in an equivalent output fourmla
-    */
-   class BackboneSimplification : public Technique<BackboneSimplification> {
+    /**
+     * @brief Class implementing Backbone Simplification as a procedure
+     *
+     * @details For the original algorithm see: https://www.cril.univ-artois.fr/KC/documents/lagniez-marquis-aaai14.pdf
+     * Application of this procedure will result in an equivalent output formula
+     * The backbone of a formula is the set of all literals that are true in every model of the formula.
+     */
+    class BackboneSimplification : public Technique<BackboneSimplification> {
 
-   public:
+        CoprocessorData& data;
+        Coprocessor::Propagation& propagation;
 
-      /**
-       * @brief Construct a new Backbone Simplification procedure
-       * 
-       * @param solver The solver to use for this
-       */
-      BackboneSimplification(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller);
+    public:
+        void reset() const;
 
-      /**
-       * @brief Computes a backbone
-       * 
-       * @param formula The formula to get the backbone for 
-       * @return cnf::Literals The literals of the backbone
-       */
-      cnf::Literals getBackbone(const cnf::CNF& formula) const;
+        /** applies blocked clause elimination algorithm
+         * @return true, if something has been altered
+         */
+        bool process();
 
-   protected:
-   
-      /**
-       * @brief Apply Backbone Simplification to a formula
-       * 
-       * @param formula The formula to apply to
-       * @return bool True on success
-       */
-      bool impl(cnf::CNF& formula) override;
-   };
+        void printStatistics(std::ostream& stream);
 
-}
+        void giveMoreSteps();
+
+        void destroy();
+
+        /**
+         * @brief Construct a new Backbone Simplification procedure
+         *
+         * @param solver The solver to use for this
+         */
+        BackboneSimplification(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,
+                               Coprocessor::Propagation& _propagation);
+
+        /**
+         * @brief Computes a backbone
+         *
+         * @return std::vector<Lit> The literals of the backbone
+         */
+        std::vector<Lit> getBackbone() const;
+
+    protected:
+    };
+
+} // namespace Coprocessor
