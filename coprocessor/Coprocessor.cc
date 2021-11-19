@@ -45,6 +45,7 @@ namespace Coprocessor {
         , ee(data, config, solver->ca, controller, propagation, subsumption)
         , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
         , probing(config, solver->ca, controller, data, propagation, ee, *solver)
+        , backbone(config, solver->ca, controller, data, propagation, *solver)
         , rate(config, solver->ca, controller, data, *solver, propagation)
         , resolving(config, solver->ca, controller, data, propagation)
         , rewriter(config, solver->ca, controller, data, propagation, subsumption)
@@ -118,9 +119,9 @@ namespace Coprocessor {
             cerr << "c coprocessor finished initialization" << endl;
         }
 
-        const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, printCCE = false, printRATE = false, printEE = false,
-                   printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false, printTernResolve = false,
-                   printAddRedBin = false, printXOR = false, printENT = false, printBCE = false, printLA = false;
+        const bool printBVE = false, printBVA = false, printProbe = false, printBackbone = false, printUnhide = false, printCCE = false,
+                   printRATE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
+                   printTernResolve = false, printAddRedBin = false, printXOR = false, printENT = false, printBCE = false, printLA = false;
 
         // begin clauses have to be sorted here!!
         sortClauses();
@@ -736,6 +737,40 @@ namespace Coprocessor {
                     checkLists("after MODPREP");
                     scanCheck("after MODPREP");
                 }); // perform only if BCE finished the whole formula?!
+            }
+
+            if (!data.ok()) {
+                break;
+            } // stop here already
+            if (config.opt_backbone) {
+                if (config.opt_verbose > 0) {
+                    cerr << "c backbone simplification..." << endl;
+                }
+                if (config.opt_verbose > 4) {
+                    cerr << "c coprocessor(" << data.ok() << ") backbone simplification" << endl;
+                }
+
+                backbone.process();
+                if (!data.ok()) {
+                    status = l_False;
+                }
+
+                if (config.opt_verbose > 1) {
+                    printStatistics(cerr);
+                    probing.printStatistics(cerr);
+                }
+
+                DOUT(if ((const char*)config.stepbystepoutput != nullptr)
+                         outputFormula(string(string(config.stepbystepoutput) + "-BACKBONE.cnf").c_str(), 0););
+                DOUT(if (config.opt_debug) {
+                    checkLists("after BACKBONE - before GC");
+                    scanCheck("after BACKBONE - before GC");
+                });
+                DOUT(if (printBackbone || config.opt_debug ||
+                         (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p')) {
+                    printFormula("after Backbone");
+                });
+                data.checkGarbage(); // perform garbage collection
             }
 
             //
@@ -1713,6 +1748,7 @@ namespace Coprocessor {
         ee.giveMoreSteps();
         unhiding.giveMoreSteps();
         probing.giveMoreSteps();
+        backbone.giveMoreSteps();
         resolving.giveMoreSteps();
         rewriter.giveMoreSteps();
         fourierMotzkin.giveMoreSteps();
@@ -1970,6 +2006,9 @@ namespace Coprocessor {
         }
         if (config.opt_probe) {
             probing.destroy();
+        }
+        if (config.opt_backbone) {
+            backbone.destroy();
         }
         if (config.opt_unhide) {
             unhiding.destroy();

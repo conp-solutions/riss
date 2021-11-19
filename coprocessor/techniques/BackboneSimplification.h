@@ -14,6 +14,24 @@ Copyright (c) 2021, Anton Reinhard, LGPL v2, see LICENSE
 
 namespace Coprocessor {
 
+    // small helper class taking care of creating and reverting decision levels on a solver
+    // using RAII
+    class ScopedDecisionLevel {
+        Solver& solver;
+        int decisionLevel;
+
+    public:
+        ScopedDecisionLevel(Solver& solver)
+            : solver(solver)
+            , decisionLevel(solver.decisionLevel()) {
+            solver.newDecisionLevel();
+        }
+
+        ~ScopedDecisionLevel() {
+            solver.cancelUntil(decisionLevel);
+        }
+    };
+
     /**
      * @brief Class implementing Backbone Simplification as a procedure
      *
@@ -25,9 +43,12 @@ namespace Coprocessor {
 
         CoprocessorData& data;
         Coprocessor::Propagation& propagation;
+        Solver& solver;
+
+        std::vector<Lit> backbone;
 
     public:
-        void reset() const;
+        void reset();
 
         /** applies blocked clause elimination algorithm
          * @return true, if something has been altered
@@ -46,14 +67,13 @@ namespace Coprocessor {
          * @param solver The solver to use for this
          */
         BackboneSimplification(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,
-                               Coprocessor::Propagation& _propagation);
+                               Coprocessor::Propagation& _propagation, Solver& _solver);
 
         /**
          * @brief Computes a backbone
-         *
-         * @return std::vector<Lit> The literals of the backbone
+         * @note Resulting backbone is saved in the backbone member
          */
-        std::vector<Lit> getBackbone() const;
+        void computeBackbone();
 
     protected:
     };

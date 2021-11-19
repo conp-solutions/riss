@@ -33,6 +33,7 @@ Copyright (c) 2012, Norbert Manthey, LGPL v2, see LICENSE
 #include "coprocessor/techniques/HBR.h"
 #include "coprocessor/techniques/Experimental.h"
 #include "coprocessor/techniques/ModPrep.h"
+#include "coprocessor/techniques/BackboneSimplification.h"
 #include "coprocessor/Shuffler.h"
 
 #include "coprocessor/techniques/SLS.h"
@@ -162,6 +163,7 @@ namespace Coprocessor {
         EquivalenceElimination ee;
         Unhiding unhiding;
         Probing probing;
+        BackboneSimplification backbone;
         RATElimination rate;
         Resolving resolving;
         Rewriter rewriter;
@@ -213,7 +215,6 @@ namespace Coprocessor {
         void scanCheck(const std::string& headline);  // check clauses for duplicate literals
 
         // print formula
-
         void printFormula(const std::string& headline);
 
         /** print current state of the solver */

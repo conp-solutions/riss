@@ -69,6 +69,8 @@ namespace Coprocessor {
     class ExperimentalTechniques;
     class ModPrep;
     class BIG;
+    class BackboneSimplification;
+    class ScopedDecisionLevel;
 } // namespace Coprocessor
 
 #ifdef PCASSO
@@ -104,6 +106,8 @@ namespace Riss {
         friend class Coprocessor::FourierMotzkin;
         friend class Coprocessor::ExperimentalTechniques;
         friend class Coprocessor::ModPrep;
+        friend class Coprocessor::BackboneSimplification;
+        friend class Coprocessor::ScopedDecisionLevel;
         friend class Riss::IncSolver; // for bmc
 
 #ifdef PCASSO

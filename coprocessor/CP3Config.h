@@ -20,7 +20,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 namespace Coprocessor {
 
-    /** This class should contain all options that can be specified for the solver, and its tools.
+    /**
+     * This class should contain all options that can be specified for the solver, and its tools.
      * Furthermore, constraints/assertions on parameters can be specified, and checked.
      */
     class CP3Config : public Riss::Config {
@@ -82,6 +83,7 @@ namespace Coprocessor {
         Riss::BoolOption opt_bva;
         Riss::BoolOption opt_unhide;
         Riss::BoolOption opt_probe;
+        Riss::BoolOption opt_backbone;
         Riss::BoolOption opt_ternResolve;
         Riss::BoolOption opt_addRedBins;
         Riss::BoolOption opt_dense;

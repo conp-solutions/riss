@@ -3,6 +3,7 @@ Copyright (c) 2021, Anton Reinhard, LGPL v2, see LICENSE
 **************************************************************************************************/
 
 #include "BackboneSimplification.h"
+#include "riss/core/SolverTypes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,100 +13,94 @@ using namespace Riss;
 namespace Coprocessor {
 
     BackboneSimplification::BackboneSimplification(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,
-                                                   Propagation& _propagation)
+                                                   Propagation& _propagation, Solver& _solver)
         : Technique(_config, _ca, _controller)
         , data(_data)
-        , propagation(_propagation) {
+        , propagation(_propagation)
+        , solver(_solver) {
     }
 
-    void BackboneSimplification::reset() const {
+    void BackboneSimplification::giveMoreSteps() {
+    }
+
+    void BackboneSimplification::destroy() {
+    }
+
+    void BackboneSimplification::reset() {
+        backbone.clear();
     }
 
     bool BackboneSimplification::process() {
-        std::vector<Lit> backbone = this->getBackbone();
+        computeBackbone();
 
         // add new unit clauses
         for (const Lit& l : backbone) {
-            CRef newClause(l.x);
-            data.addClause(newClause);
+            data.enqueue(l);
         }
 
+        // propagate
         propagation.process(data, true);
 
         return true;
     }
 
-    std::vector<Lit> BackboneSimplification::getBackbone() const {
-        // util::Utility::logDebug("Computing Backbone");
+    void BackboneSimplification::computeBackbone() {
+        assert(solver.decisionLevel() == 0 && "Only use backbone computation on decision level 0");
 
-        // util::Utility::startTimer("backbone calculation");
-
-        // create copy of the formula to work on
-        std::vector<Lit> backbone;
+        // make new decision level
+        ScopedDecisionLevel outerLevel(solver);
 
         // Compute a model
-        cnf::Model startingModel = this->solver->getModel(workingFormula);
-
-        if (startingModel.empty()) {
-            // If the formula is unsatisfiable, the backbone is empty
-            return {};
+        if (!solver.solve()) {
+            // if the formula is unsatisfiable the backbone is empty
+            return;
         }
 
+        // add literals from the model to potentially be part of the backbone
         std::vector<Lit> remainingLiterals;
-        for (int32_t i = 1; i < startingModel.size(); ++i) {
-            if (startingModel[i]) {
-                remainingLiterals.push_back(mkLit(i));
+        for (int32_t i = 0; i < solver.model.size(); ++i) {
+            assert(solver.model[i] != l_Undef);
+            if (solver.model[i] == l_True) {
+                remainingLiterals.emplace_back(mkLit(i));
             } else {
-                remainingLiterals.push_back(mkLit(-i));
+                remainingLiterals.emplace_back(mkLit(i, true));
             }
         }
 
-        size_t i = 0;
-
-        BooleanConstraintPropagation bcp;
+        Riss::vec<Lit> unitLit(1);
 
         // Main loop
-        while (!remainingLiterals.empty()) {
-            ++i;
+        for (auto& currentLiteral : remainingLiterals) {
+            if (currentLiteral.x == -1) {
+                continue;
+            }
 
-            // currently used literal, compress
-            const int currentLiteral = /*workingFormula.compress*/ (remainingLiterals[0]);
+            ScopedDecisionLevel loopDecisionLevel(solver);
 
-            workingFormula.push_back(std::make_unique<cnf::Clause>(std::initializer_list<int>({-currentLiteral}))); // add negated literal
-            cnf::Model model = this->solver->getModel(workingFormula);
+            // add negated literal
+            unitLit[0] = ~currentLiteral;
+            solver.addUnitClauses(unitLit);
 
-            if (model.empty()) {
-                // if there's no model then the literal is in the backbone
-                // use the uncompressed remaining Literal for the backbone
-                backbone.push_back(remainingLiterals[0]);
-                workingFormula.erase(workingFormula.end()); // remove last clause again
+            // get new model
+            if (!solver.solve()) {
+                // if there's no model then the literal is in the backbone, because
+                // apparently no model exists with the literal negated
+                // use the remaining Literal for the backbone
+                backbone.push_back(currentLiteral);
+                continue;
+            }
 
-                bcp.applySingleLiteralEq(workingFormula, currentLiteral); // can propagate the literal we learned
-                // workingFormula.setLiteralBackpropagated(currentLiteral);
+            auto& model = solver.model;
 
-                remainingLiterals.erase(remainingLiterals.begin()); // remove the literal that was tried
-            } else {
-                // workingFormula.decompress(model);
-
-                remainingLiterals.erase(remainingLiterals.begin()); // remove the literal that was tried
-
-                remainingLiterals.erase(std::remove_if(remainingLiterals.begin(), remainingLiterals.end(),
-                                                       [&](int lit) {
-                                                           return model[std::abs(lit)] != (lit > 0);
-                                                       }),
-                                        remainingLiterals.end());
-
-                workingFormula.erase(workingFormula.end()); // remove last clause again
-
-                if (remainingLiterals.empty()) { // just in case remaining Literals has been emptied by remove_if
-                    break;
+            for (auto j = 0; j < model.size(); ++j) {
+                if (remainingLiterals[j].x == -1) {
+                    continue;
+                }
+                // check if signs are different
+                if (model[j] != (sign(remainingLiterals[j]) ? l_True : l_False)) {
+                    remainingLiterals[j].x = -1;
                 }
             }
         }
-
-        // util::Utility::logInfo("Backbone computation took ", util::Utility::durationToString(util::Utility::stopTimer("backbone calculation")));
-
-        return backbone;
     }
-
 } // namespace Coprocessor
