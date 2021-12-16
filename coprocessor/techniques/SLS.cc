@@ -78,7 +78,7 @@ namespace Coprocessor {
 
     bool SLS::solve(const vec<CRef>& formula, uint64_t stepLimit) {
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_sls_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_sls_cls) &&
+        if (!data.unlimited() && (data.nVars() > config.opt_sls_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_sls_cls) &&
             data.nTotLits() > config.opt_sls_lits) {
             return false;
         }

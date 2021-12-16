@@ -52,3 +52,5 @@ tools/checker/solver-wrapper.sh
 install/
 
 .vscode/
+
+scripts/out.cnf

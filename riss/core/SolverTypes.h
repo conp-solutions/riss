@@ -30,21 +30,21 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef RISS_Minisat_SolverTypes_h
 #define RISS_Minisat_SolverTypes_h
 
+#include <assert.h>
 #include <cstdio>
 #include <cstring>
-#include <assert.h>
 
-#include "riss/mtl/IntTypes.h"
 #include "riss/mtl/Alg.h"
-#include "riss/mtl/Vec.h"
+#include "riss/mtl/Alloc.h"
 #include "riss/mtl/HPVec.h"
+#include "riss/mtl/IntTypes.h"
 #include "riss/mtl/Map.h"
 #include "riss/mtl/Sort.h"
-#include "riss/mtl/Alloc.h"
+#include "riss/mtl/Vec.h"
 
 // for parallel stuff
-#include <pthread.h>
 #include "riss/utils/LockCollection.h"
+#include <pthread.h>
 
 #include <vector>
 
@@ -1233,13 +1233,14 @@ namespace Riss {
 
         for (unsigned i = 0; i < header.size; i++) {
             // search for c[i] or ~c[i]
-            for (unsigned j = 0; j < other.header.size; j++)
+            for (unsigned j = 0; j < other.header.size; j++) {
                 if (c[i] == d[j]) {
                     goto ok;
                 } else if (ret == lit_Undef && c[i] == ~d[j]) {
                     ret = c[i];
                     goto ok;
                 }
+            }
 
             // did not find it
             return lit_Error;

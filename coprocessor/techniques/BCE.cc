@@ -676,7 +676,7 @@ namespace Coprocessor {
         modifiedFormula = false;
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_bce_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_bce_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_bce_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_bce_cls &&
                                   data.nTotLits() > config.opt_bce_lits)) {
             return false;
         }

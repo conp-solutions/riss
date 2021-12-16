@@ -96,7 +96,7 @@ namespace Coprocessor {
         }
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_fm_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_fm_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_fm_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_fm_cls &&
                                   data.nTotLits() > config.opt_fm_lits)) {
             return false;
         }
@@ -140,7 +140,7 @@ namespace Coprocessor {
 
         // create full BIG, also rewrite learned clauses!!
         BIG big;
-        big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+        big.create(ca, data.nVars(), data.getClauses(), data.getLearnts());
 
         cards.clear();
 
@@ -299,7 +299,7 @@ namespace Coprocessor {
         }
 
         if (config.opt_fm_avoid_duplicates && cards.size() > 0) {
-            big.recreate(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+            big.recreate(ca, data.nVars(), data.getClauses(), data.getLearnts());
         }
 
         amoTime = cpuTime() - amoTime;

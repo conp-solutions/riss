@@ -30,9 +30,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 
-#include "riss/mtl/Sort.h"
-#include "riss/core/Solver.h"
 #include "riss/core/Constants.h"
+#include "riss/core/Solver.h"
+#include "riss/mtl/Sort.h"
 
 // to be able to use the preprocessor
 #include "coprocessor/Coprocessor.h"
@@ -5013,7 +5013,7 @@ namespace Riss {
         if (verbosity >= 1 || config.opt_solve_stats) {
 #if defined TOOLVERSION && TOOLVERSION < 400
 
-#else
+            //#else
             const double overheadC = totalTime.getCpuTime() - (propagationTime.getCpuTime() + analysisTime.getCpuTime() + extResTime.getCpuTime() +
                                                                preprocessTime.getCpuTime() + inprocessTime.getCpuTime());
             const double overheadW =

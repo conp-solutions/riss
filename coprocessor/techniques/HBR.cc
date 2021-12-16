@@ -63,9 +63,9 @@ namespace Coprocessor {
             nextRound.nextStep();
 
             // add new clauses into BIG
-            big.recreate(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+            big.recreate(ca, data.nVars(), data.getClauses(), data.getLearnts());
             big.generateImplied(data);
-            hbrSteps += data.getClauses().size() + data.getLEarnts().size();
+            hbrSteps += data.getClauses().size() + data.getLearnts().size();
 
             DOUT(if (config.opt_hbr_debug) {
                 cerr << "c full formula: " << endl;
@@ -281,7 +281,7 @@ namespace Coprocessor {
         modifiedFormula = false;
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_hbr_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_hbr_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_hbr_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_hbr_cls &&
                                   data.nTotLits() > config.opt_hbr_lits)) {
             return false;
         }

@@ -33,6 +33,7 @@ namespace Coprocessor {
     const char* _cat_hte = "COPROCESSOR - HTE";
     const char* _cat_pr = "COPROCESSOR - PROBING";
     const char* _cat_backbone = "COPROCESSOR - BACKBONE SIMPLIFICATION";
+    const char* _cat_be = "COPROCESSOR - BIPARTITION AND ELIMINATION";
     const char* _cat_up = "COPROCESSOR - UP";
     const char* _cat_res = "COPROCESSOR - RES";
     const char* _cat_rew = "COPROCESSOR - REWRITE #NoAutoT";
@@ -108,6 +109,7 @@ namespace Coprocessor {
         , opt_unhide(_cat2, "unhide", "Use Unhiding (UHTE, UHLE based on BIG sampling)", false, optionListPtr, &opt_enabled)
         , opt_probe(_cat2, "probe", "Use Probing/Clause Vivification", false, optionListPtr, &opt_enabled)
         , opt_backbone(_cat2, "backbone", "Use Backbone Simplification", false, optionListPtr, &opt_enabled)
+        , opt_be(_cat2, "be", "Use Bipartition and Elimination algorithm", false, optionListPtr, &opt_enabled)
         , opt_ternResolve(_cat2, "3resolve", "Use Ternary Clause Resolution", false, optionListPtr, &opt_enabled)
         , opt_addRedBins(_cat2, "addRed2", "Use Adding Redundant Binary Clauses", false, optionListPtr, &opt_enabled)
         , opt_dense(_cat2, "dense", "Remove gaps in variables of the formula", false, optionListPtr, &opt_enabled)

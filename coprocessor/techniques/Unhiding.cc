@@ -793,7 +793,7 @@ namespace Coprocessor {
 
         // do not simplify, if the formula is considered to be too large!
         if (!data.unlimited() &&
-            (data.nVars() > config.opt_unhide_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_unhide_cls &&
+            (data.nVars() > config.opt_unhide_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_unhide_cls &&
              data.nTotLits() > config.opt_unhide_lits)) {
             return false;
         }
@@ -811,7 +811,7 @@ namespace Coprocessor {
                 DOUT(if (config.opt_uhd_Debug) cerr
                          << "c DO USE learned clauses for creating the BIG (be careful with clause elimination techniques here!) " << endl;);
                 big.recreate(ca, data.nVars(), data.getClauses(),
-                             data.getLEarnts()); // the used techniques only reduce the size of clauses, so that using learned clauses is safe!
+                             data.getLearnts()); // the used techniques only reduce the size of clauses, so that using learned clauses is safe!
             }
 
             if (config.opt_uhd_TestDbl) {

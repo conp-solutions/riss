@@ -4,12 +4,12 @@ Copyright (c) 2012, Norbert Manthey, LGPL v2, see LICENSE
 
 #include "coprocessor/Coprocessor.h"
 
-#include "riss/utils/VarFileParser.h"
 #include "coprocessor/Shuffler.h"
 #include "riss/mtl/Sort.h"
+#include "riss/utils/VarFileParser.h"
 
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
 using namespace std;
 using namespace Riss;
@@ -46,6 +46,7 @@ namespace Coprocessor {
         , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
         , probing(config, solver->ca, controller, data, propagation, ee, *solver)
         , backbone(config, solver->ca, controller, data, propagation, *solver)
+        , be(config, solver->ca, controller, data, propagation, backbone, *solver)
         , rate(config, solver->ca, controller, data, *solver, propagation)
         , resolving(config, solver->ca, controller, data, propagation)
         , rewriter(config, solver->ca, controller, data, propagation, subsumption)
@@ -119,9 +120,10 @@ namespace Coprocessor {
             cerr << "c coprocessor finished initialization" << endl;
         }
 
-        const bool printBVE = false, printBVA = false, printProbe = false, printBackbone = false, printUnhide = false, printCCE = false,
-                   printRATE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
-                   printTernResolve = false, printAddRedBin = false, printXOR = false, printENT = false, printBCE = false, printLA = false;
+        const bool printBVE = false, printBVA = false, printProbe = false, printBackbone = false, printBe = false, printUnhide = false,
+                   printCCE = false, printRATE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false,
+                   printUP = false, printTernResolve = false, printAddRedBin = false, printXOR = false, printENT = false, printBCE = false,
+                   printLA = false;
 
         // begin clauses have to be sorted here!!
         sortClauses();
@@ -757,7 +759,7 @@ namespace Coprocessor {
 
                 if (config.opt_verbose > 1) {
                     printStatistics(cerr);
-                    probing.printStatistics(cerr);
+                    backbone.printStatistics(cerr);
                 }
 
                 DOUT(if ((const char*)config.stepbystepoutput != nullptr)
@@ -769,6 +771,39 @@ namespace Coprocessor {
                 DOUT(if (printBackbone || config.opt_debug ||
                          (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p')) {
                     printFormula("after Backbone");
+                });
+                data.checkGarbage(); // perform garbage collection
+            }
+
+            if (!data.ok()) {
+                break;
+            } // stop here already
+            if (config.opt_be) {
+                if (config.opt_verbose > 0) {
+                    cerr << "c bipartition and elimination..." << endl;
+                }
+                if (config.opt_verbose > 4) {
+                    cerr << "c coprocessor(" << data.ok() << ") bipartition and elimination" << endl;
+                }
+
+                be.process();
+                if (!data.ok()) {
+                    status = l_False;
+                }
+
+                if (config.opt_verbose > 1) {
+                    printStatistics(cerr);
+                    be.printStatistics(cerr);
+                }
+
+                DOUT(if ((const char*)config.stepbystepoutput != nullptr)
+                         outputFormula(string(string(config.stepbystepoutput) + "-BIPARTITIONELIMINATION.cnf").c_str(), 0););
+                DOUT(if (config.opt_debug) {
+                    checkLists("after BIPARTITIONELIMINATION - before GC");
+                    scanCheck("after BIPARTITIONELIMINATION - before GC");
+                });
+                DOUT(if (printBe || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p')) {
+                    printFormula("after Bipartition and Elimination");
                 });
                 data.checkGarbage(); // perform garbage collection
             }
@@ -1598,7 +1633,7 @@ namespace Coprocessor {
         const bool wasDoingER = solver->getExtendedResolution();
 
         // do not preprocess, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls ||
+        if (!data.unlimited() && (data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLearnts().size() > config.opt_cp3_cls ||
                                   data.nTotLits() > config.opt_cp3_lits)) {
             return l_Undef;
         }
@@ -1672,7 +1707,7 @@ namespace Coprocessor {
 
         // do not inprocess, if the formula is considered to be too large!
         if (!data.unlimited() &&
-            (data.nVars() > config.opt_cp3_ipvars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_ipcls ||
+            (data.nVars() > config.opt_cp3_ipvars || data.getClauses().size() + data.getLearnts().size() > config.opt_cp3_ipcls ||
              data.nTotLits() > config.opt_cp3_iplits)) {
             return l_Undef;
         }
@@ -1696,8 +1731,8 @@ namespace Coprocessor {
 
             if (inprocessings == 0 && config.opt_remL_inp) {
                 int removed = 0;
-                for (int i = 0; i < data.getLEarnts().size(); ++i) {
-                    Clause& c = ca[data.getLEarnts()[i]];
+                for (int i = 0; i < data.getLearnts().size(); ++i) {
+                    Clause& c = ca[data.getLearnts()[i]];
                     if (c.mark() == 0) {
                         data.addToProof(c, true); // remove clause from proof
                         c.mark(1);                // mark the clause to be not used next time
@@ -1820,8 +1855,8 @@ namespace Coprocessor {
                << " s-ppwTime, " << ipTime.getWallClockTime() << " s-ipwTime, " << memUsedPeak() << " MB, " << (data.ok() ? "ok " : "notok ")
                << overheadTime.getCpuTime() << " s-ohTime, " << endl;
 
-        stream << "c [STAT] CP3(2) " << data.getClauses().size() << " cls, " << data.getLEarnts().size() << " learnts, "
-               << thisClauses - data.getClauses().size() << " rem-cls, " << thisLearnts - data.getLEarnts().size() << " rem-learnts, " << endl;
+        stream << "c [STAT] CP3(2) " << data.getClauses().size() << " cls, " << data.getLearnts().size() << " learnts, "
+               << thisClauses - data.getClauses().size() << " rem-cls, " << thisLearnts - data.getLearnts().size() << " rem-learnts, " << endl;
     }
 
     void Preprocessor::extendModel(vec<lbool>& model) {
@@ -1862,7 +1897,7 @@ namespace Coprocessor {
         thisLearnts = 0;
 
         for (int p = 0; p < 2; ++p) {
-            vec<CRef>& clss = (p == 0) ? data.getClauses() : data.getLEarnts();
+            vec<CRef>& clss = (p == 0) ? data.getClauses() : data.getLearnts();
             int& thisClss = (p == 0) ? thisClauses : thisLearnts;
 
             for (int i = 0; i < clss.size(); ++i) {
@@ -2010,6 +2045,9 @@ namespace Coprocessor {
         if (config.opt_backbone) {
             backbone.destroy();
         }
+        if (config.opt_be) {
+            be.destroy();
+        }
         if (config.opt_unhide) {
             unhiding.destroy();
         }
@@ -2086,7 +2124,7 @@ namespace Coprocessor {
 
         // shuffle trail, clauses and learned clauses
         shuffleVariable = data.nVars();
-        shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(),
+        shuffler.process(data.getClauses(), data.getLearnts(), solver->trail, data.nVars(),
                          ca); // TODO: should also copy all other variable flags over!
 
         for (Var v = 0; v < data.nVars(); ++v) {
@@ -2165,15 +2203,15 @@ namespace Coprocessor {
             cerr << ca[data.getClauses()[i]] << endl;
         }
         cerr << "c learnts" << endl;
-        for (int i = 0; i < data.getLEarnts().size() && !data.isInterupted(); ++i) {
-            cerr << "(" << data.getLEarnts()[i] << ")";
-            if (ca[data.getLEarnts()[i]].can_be_deleted()) {
+        for (int i = 0; i < data.getLearnts().size() && !data.isInterupted(); ++i) {
+            cerr << "(" << data.getLearnts()[i] << ")";
+            if (ca[data.getLearnts()[i]].can_be_deleted()) {
                 cerr << "(ign)";
             }
             if (!ca[data.getClauses()[i]].learnt()) {
                 cerr << "(irred)";
             }
-            cerr << ca[data.getLEarnts()[i]] << endl;
+            cerr << ca[data.getLearnts()[i]] << endl;
         }
         cerr << "==================== " << endl;
         cerr << " actual formula to be copied: " << endl;
@@ -2216,8 +2254,8 @@ namespace Coprocessor {
         cerr << "c found " << foundEmpty << " empty lists, out of " << data.nVars() * 2 << endl;
 
         DOUT(if (config.opt_check > 1) {
-            for (int i = 0; i < data.getLEarnts().size(); ++i) {
-                const Clause& c = ca[data.getLEarnts()[i]];
+            for (int i = 0; i < data.getLearnts().size(); ++i) {
+                const Clause& c = ca[data.getLearnts()[i]];
                 if (c.can_be_deleted()) {
                     continue;
                 }
@@ -2226,14 +2264,14 @@ namespace Coprocessor {
         });
 
         DOUT(if (config.opt_check > 2) {
-            for (int i = 0; i < data.getLEarnts().size(); ++i) {
-                const Clause& c = ca[data.getLEarnts()[i]];
+            for (int i = 0; i < data.getLearnts().size(); ++i) {
+                const Clause& c = ca[data.getLearnts()[i]];
                 if (c.can_be_deleted()) {
                     continue;
                 }
                 for (int j = 0; j < data.getClauses().size(); ++j) {
-                    if (data.getLEarnts()[i] == data.getClauses()[j]) {
-                        cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl;
+                    if (data.getLearnts()[i] == data.getClauses()[j]) {
+                        cerr << "c found clause " << data.getLearnts()[i] << " in both vectors" << endl;
                         assert(false && "clause index duplicate in lists");
                     }
                 }
@@ -2258,21 +2296,21 @@ namespace Coprocessor {
                 }
             }
 
-            for (int i = 0; i < data.getLEarnts().size(); ++i) {
-                const Clause& c = ca[data.getLEarnts()[i]];
+            for (int i = 0; i < data.getLearnts().size(); ++i) {
+                const Clause& c = ca[data.getLearnts()[i]];
                 if (c.can_be_deleted()) {
                     continue;
                 }
                 totalClauses++;
-                for (int j = i + 1; j < data.getLEarnts().size(); ++j) {
-                    if (data.getLEarnts()[i] == data.getLEarnts()[j]) {
-                        cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl;
+                for (int j = i + 1; j < data.getLearnts().size(); ++j) {
+                    if (data.getLearnts()[i] == data.getLearnts()[j]) {
+                        cerr << "c found clause " << data.getLearnts()[i] << " in learnts vector twice" << endl;
                         assert(false && "clause index duplicate in lists");
                     }
                 }
                 if (config.opt_check > 3) {
-                    if (!data.proofHasClause(ca[data.getLEarnts()[i]])) {
-                        cerr << "c could not find clause " << ca[data.getLEarnts()[i]] << " in proof" << endl;
+                    if (!data.proofHasClause(ca[data.getLearnts()[i]])) {
+                        cerr << "c could not find clause " << ca[data.getLearnts()[i]] << " in proof" << endl;
                     }
                 }
             }
@@ -2286,7 +2324,7 @@ namespace Coprocessor {
         // check whether clause is in solver in the right watch lists
         for (int p = 0; p < 2; ++p) {
 
-            const vec<CRef>& clauses = (p == 0 ? data.getClauses() : data.getLEarnts());
+            const vec<CRef>& clauses = (p == 0 ? data.getClauses() : data.getLearnts());
             for (int i = 0; i < clauses.size(); ++i) {
                 const CRef cr = clauses[i];
                 const Clause& c = ca[cr];
@@ -2362,7 +2400,7 @@ namespace Coprocessor {
         // check whether clause is in solver in the right watch lists
         for (int p = 0; p < 2; ++p) {
 
-            const vec<CRef>& clauses = (p == 0 ? data.getClauses() : data.getLEarnts());
+            const vec<CRef>& clauses = (p == 0 ? data.getClauses() : data.getLearnts());
             for (int i = 0; i < clauses.size(); ++i) {
                 const CRef cr = clauses[i];
                 const Clause& c = ca[cr];

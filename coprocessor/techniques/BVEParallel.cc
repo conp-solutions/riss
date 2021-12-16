@@ -4,8 +4,8 @@ Copyright (c) 2013, Kilian Gebhardt, Norbert Manthey, LGPL v2, see LICENSE
 #include "BVE.h"
 #include "Propagation.h"
 #include "Subsumption.h"
-#include <algorithm> // std::sort
 #include "riss/mtl/Heap.h"
+#include <algorithm> // std::sort
 
 using namespace std;
 using namespace Riss;
@@ -942,7 +942,7 @@ namespace Coprocessor {
 
                         data_lock.lock();
                         if (resolvent.learnt()) {
-                            data.getLEarnts().push(cr);
+                            data.getLearnts().push(cr);
                         } else {
                             data.getClauses().push(cr);
                         }

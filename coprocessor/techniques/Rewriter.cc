@@ -59,7 +59,7 @@ namespace Coprocessor {
         modifiedFormula = false;
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_rew_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_rew_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_rew_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_rew_cls &&
                                   data.nTotLits() > config.opt_rew_lits)) {
             return false;
         }
@@ -579,7 +579,7 @@ namespace Coprocessor {
 
             // create full BIG, also rewrite learned clauses!!
             BIG big;
-            big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+            big.create(ca, data.nVars(), data.getClauses(), data.getLearnts());
 
             amos.clear();
 

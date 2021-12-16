@@ -185,7 +185,7 @@ declare -i SIMPLIFY_STATUS=0
     -no-dense \
     -search=0 \
     2> "$CP3_STDERR" \
-    1> /dev/null || SIMPLIFY_STATUS=$?
+    || SIMPLIFY_STATUS=$?
 echo "c simplficitaion returned with $SIMPLIFY_STATUS"
 
 if [ "$SIMPLIFY_STATUS" -ne 0 ] && [ "$SIMPLIFY_STATUS" -ne 20 ] && [ "$SIMPLIFY_STATUS" -ne 10 ]; then

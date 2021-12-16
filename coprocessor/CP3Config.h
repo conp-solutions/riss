@@ -13,8 +13,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define RISS_CPConfig_h
 
 #include "riss/utils/Config.h"
-#include "riss/utils/Options.h"
 #include "riss/utils/Debug.h"
+#include "riss/utils/Options.h"
 
 // using namespace Riss;
 
@@ -84,6 +84,7 @@ namespace Coprocessor {
         Riss::BoolOption opt_unhide;
         Riss::BoolOption opt_probe;
         Riss::BoolOption opt_backbone;
+        Riss::BoolOption opt_be;
         Riss::BoolOption opt_ternResolve;
         Riss::BoolOption opt_addRedBins;
         Riss::BoolOption opt_dense;

@@ -42,7 +42,7 @@ namespace Coprocessor {
         data.lits.clear();
         data.clss.clear();
 
-        if (data.nVars() == 0 || data.getClauses().size() + data.getLEarnts().size() == 0) {
+        if (data.nVars() == 0 || data.getClauses().size() + data.getLearnts().size() == 0) {
             return false;
         }
 

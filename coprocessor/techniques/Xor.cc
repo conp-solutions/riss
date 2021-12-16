@@ -55,7 +55,7 @@ namespace Coprocessor {
         modifiedFormula = false;
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_xor_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_xor_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_xor_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_xor_cls &&
                                   data.nTotLits() > config.opt_xor_lits)) {
             return false;
         }
@@ -975,7 +975,7 @@ namespace Coprocessor {
         DOUT(if (config.opt_xor_debug > 4) cerr << "c added clause by reencoding: [" << cr << "]: " << ca[cr] << endl;); // print created clause
         data.addClause(cr); // add to coprocessor data structures
         if (learnt) {       // add to corresponding clause list
-            data.getLEarnts().push(cr);
+            data.getLearnts().push(cr);
         } else {
             data.getClauses().push(cr);
         }

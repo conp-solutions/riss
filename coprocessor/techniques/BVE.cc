@@ -132,7 +132,7 @@ namespace Coprocessor {
         }
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_bve_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_bve_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_bve_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_bve_cls &&
                                   data.nTotLits() > config.opt_bve_lits)) {
             return l_Undef;
         }
@@ -189,9 +189,9 @@ namespace Coprocessor {
                 if (!ca[data.getClauses()[i]].can_be_deleted()) {
                     cerr << ca[data.getClauses()[i]] << endl;
                 }
-            for (int i = 0; i < data.getLEarnts().size(); ++i)
-                if (!ca[data.getLEarnts()[i]].can_be_deleted()) {
-                    cerr << ca[data.getLEarnts()[i]] << endl;
+            for (int i = 0; i < data.getLearnts().size(); ++i)
+                if (!ca[data.getLearnts()[i]].can_be_deleted()) {
+                    cerr << ca[data.getLearnts()[i]] << endl;
                 }
         }
 
@@ -1019,7 +1019,7 @@ namespace Coprocessor {
                         }
 
                         if (resolvent.learnt()) {
-                            data.getLEarnts().push(cr);
+                            data.getLearnts().push(cr);
                         } else {
                             data.getClauses().push(cr);
                         }

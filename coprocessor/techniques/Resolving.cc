@@ -40,7 +40,7 @@ namespace Coprocessor {
         if (!post) {
             // do not simplify, if the formula is considered to be too large!
             if (!data.unlimited() &&
-                (data.nVars() > config.opt_ternResolve_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_ternResolve_cls &&
+                (data.nVars() > config.opt_ternResolve_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_ternResolve_cls &&
                  data.nTotLits() > config.opt_ternResolve_lits)) {
                 return false;
             }
@@ -51,7 +51,7 @@ namespace Coprocessor {
             if (config.opt_add2_red) {
                 // do not simplify, if the formula is considered to be too large!
                 if (!data.unlimited() &&
-                    (data.nVars() > config.opt_addRedBins_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_addRedBins_cls &&
+                    (data.nVars() > config.opt_addRedBins_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_addRedBins_cls &&
                      data.nTotLits() > config.opt_addRedBins_lits)) {
                     return false;
                 }
@@ -172,7 +172,7 @@ namespace Coprocessor {
                         data.addCommentToProof("during ternary resolution");
                         data.addToProof(resolvent);
                         if (becomeLearnt) {
-                            data.getLEarnts().push(cr);
+                            data.getLearnts().push(cr);
                         } else {
                             data.getClauses().push(cr);
                         }
@@ -344,7 +344,7 @@ namespace Coprocessor {
 
         // create big
         for (int p = 0; p < 2; ++p) {
-            vec<CRef>& cls = p == 0 ? data.getClauses() : data.getLEarnts();
+            vec<CRef>& cls = p == 0 ? data.getClauses() : data.getLearnts();
             for (int i = 0; i < cls.size(); ++i) {
                 const Clause& c = ca[cls[i]];
                 if (c.can_be_deleted() || c.size() != 2) {

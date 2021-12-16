@@ -40,6 +40,7 @@ set(LIB_SOURCES
     techniques/SLS.cc
     techniques/Xor.cc
     techniques/BackboneSimplification.cc
+    techniques/BE.cc
     ${VERSION_CC})
 
 add_library(coprocessor-lib-static STATIC ${LIB_SOURCES})

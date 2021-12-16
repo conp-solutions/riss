@@ -40,7 +40,7 @@ namespace Coprocessor {
         }
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_cce_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_cce_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_cce_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_cce_cls &&
                                   data.nTotLits() > config.opt_cce_lits)) {
             return false;
         }

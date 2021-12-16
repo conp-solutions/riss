@@ -34,7 +34,7 @@ namespace Coprocessor {
 
         // count literals occuring in clauses
         countLiterals(count, data.getClauses());
-        countLiterals(count, data.getLEarnts());
+        countLiterals(count, data.getLearnts());
 
         // resize and clear temporary mappings - the mappings will only be used if the fragmentation is high enough
         mapping.resize(data.nVars());
@@ -90,7 +90,7 @@ namespace Coprocessor {
         // replace everything in the clauses
         DOUT(if (config.dense_debug_out > 0) cerr << "c [DENSE] compress clauses" << endl;);
         compressClauses(data.getClauses());
-        compressClauses(data.getLEarnts());
+        compressClauses(data.getLearnts());
 
         compressLiterals(data.getEquivalences());
 
@@ -214,10 +214,10 @@ namespace Coprocessor {
                     }
                 }
             }
-            for (int i = 0; i < data.getLEarnts().size(); ++i) {
-                const Clause& c = ca[data.getLEarnts()[i]];
+            for (int i = 0; i < data.getLearnts().size(); ++i) {
+                const Clause& c = ca[data.getLearnts()[i]];
                 if (!c.can_be_deleted()) {
-                    data.addClause(data.getLEarnts()[i]);
+                    data.addClause(data.getLearnts()[i]);
                     for (int j = 0; j < c.size(); ++j) {
                         assert(var(c[j]) <= data.nVars() && "all variables had to be compressed");
                     }

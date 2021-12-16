@@ -49,7 +49,7 @@ namespace Coprocessor {
         }
 
         // do not simplify, if the formula is considered to be too large!
-        if (!data.unlimited() && (data.nVars() > config.opt_ee_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_ee_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_ee_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_ee_cls &&
                                   data.nTotLits() > config.opt_ee_lits)) {
             return false;
         }
@@ -108,9 +108,9 @@ namespace Coprocessor {
                             cerr << "[" << data.getClauses()[i] << "]" << ca[data.getClauses()[i]] << endl;
                         }
                     cerr << "c learnts: " << endl;
-                    for (int i = 0; i < data.getLEarnts().size(); ++i)
-                        if (!ca[data.getLEarnts()[i]].can_be_deleted()) {
-                            cerr << "[" << data.getLEarnts()[i] << "]" << ca[data.getLEarnts()[i]] << endl;
+                    for (int i = 0; i < data.getLearnts().size(); ++i)
+                        if (!ca[data.getLearnts()[i]].can_be_deleted()) {
+                            cerr << "[" << data.getLearnts()[i] << "]" << ca[data.getLearnts()[i]] << endl;
                         }
                     cerr << "====================================" << endl << endl;
                 });
@@ -229,9 +229,9 @@ namespace Coprocessor {
                     if (!ca[data.getClauses()[i]].can_be_deleted()) {
                         cerr << ca[data.getClauses()[i]] << endl;
                     }
-                for (int i = 0; i < data.getLEarnts().size(); ++i)
-                    if (!ca[data.getLEarnts()[i]].can_be_deleted()) {
-                        cerr << ca[data.getLEarnts()[i]] << endl;
+                for (int i = 0; i < data.getLearnts().size(); ++i)
+                    if (!ca[data.getLearnts()[i]].can_be_deleted()) {
+                        cerr << ca[data.getLearnts()[i]] << endl;
                     }
                 cerr << "====================================" << endl;
                 cerr << "Solver Trail: " << endl;
@@ -599,7 +599,7 @@ namespace Coprocessor {
                         //      CRef lc = ca.alloc(eeLits, true);
                         //      assert ( ca[lc].size() == 2 && "new learned clause has to be binary!" );
                         //      data.addClause(lc);
-                        //      data.getLEarnts().push(lc);
+                        //      data.getLearnts().push(lc);
                         //      eeLits.clear();
                         //      if( config.ee_debug_out > 2 ) cerr << "c add clause " << ca[lc] << endl;
                         //      if( isToAnalyze[ var(x) ] == 0 ) { eqDoAnalyze.push_back(x); isToAnalyze[ var(x) ] = 1; }
@@ -1943,7 +1943,7 @@ namespace Coprocessor {
         // create underlying data structure
         BIG big;
         if (externBig == 0) {
-            big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+            big.create(ca, data.nVars(), data.getClauses(), data.getLearnts());
         }
 
         while (!eqDoAnalyze.empty() && !data.isInterupted() && (data.unlimited() || steps < config.opt_ee_limit)) {
@@ -2109,7 +2109,7 @@ namespace Coprocessor {
 
         BIG big;
         if (externBig == 0) {
-            big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+            big.create(ca, data.nVars(), data.getClauses(), data.getLearnts());
         }
 
         steps += (data.getClauses().size() / 16); // some initial steps, because BIG was created
@@ -2129,9 +2129,9 @@ namespace Coprocessor {
                     if (!ca[data.getClauses()[i]].can_be_deleted()) {
                         cerr << ca[data.getClauses()[i]] << endl;
                     }
-                for (int i = 0; i < data.getLEarnts().size(); ++i)
-                    if (!ca[data.getLEarnts()[i]].can_be_deleted()) {
-                        cerr << ca[data.getLEarnts()[i]] << endl;
+                for (int i = 0; i < data.getLearnts().size(); ++i)
+                    if (!ca[data.getLearnts()[i]].can_be_deleted()) {
+                        cerr << ca[data.getLearnts()[i]] << endl;
                     }
                 cerr << "====================================" << endl << endl;
             }
@@ -2305,9 +2305,9 @@ namespace Coprocessor {
                             cerr << ca[data.getClauses()[i]] << endl;
                         }
                     cerr << "c learnts: " << endl;
-                    for (int i = 0; i < data.getLEarnts().size(); ++i)
-                        if (!ca[data.getLEarnts()[i]].can_be_deleted()) {
-                            cerr << ca[data.getLEarnts()[i]] << endl;
+                    for (int i = 0; i < data.getLearnts().size(); ++i)
+                        if (!ca[data.getLearnts()[i]].can_be_deleted()) {
+                            cerr << ca[data.getLearnts()[i]] << endl;
                         }
                     cerr << "====================================" << endl << endl;
                 }

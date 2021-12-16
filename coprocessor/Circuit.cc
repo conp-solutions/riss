@@ -28,7 +28,7 @@ namespace Coprocessor {
             delete big;
         }
         big = new BIG();
-        big->create(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+        big->create(ca, data.nVars(), data.getClauses(), data.getLearnts());
 
         if (config.circ_Implied) {
             big->generateImplied(data);
@@ -62,7 +62,7 @@ namespace Coprocessor {
             quads[v].clear();
         }
         for (int p = 0; p < 2; ++p) {
-            vec<CRef>& list = p == 0 ? data.getClauses() : data.getLEarnts();
+            vec<CRef>& list = p == 0 ? data.getClauses() : data.getLearnts();
             for (int i = 0; i < list.size(); ++i) {
                 const Clause& c = ca[list[i]];
                 if (c.can_be_deleted()) {

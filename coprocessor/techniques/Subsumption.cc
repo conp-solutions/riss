@@ -88,7 +88,7 @@ namespace Coprocessor {
 
         // do not simplify, if the formula is considered to be too large!
         if (!data.unlimited() &&
-            (data.nVars() > config.opt_subsimp_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_subsimp_cls &&
+            (data.nVars() > config.opt_subsimp_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_subsimp_cls &&
              data.nTotLits() > config.opt_subsimp_lits)) {
             return false;
         }
@@ -1311,7 +1311,7 @@ namespace Coprocessor {
             resolvent = ca.alloc(ps, origin.learnt());
             data.addClause(resolvent, heap, ignore);
             if (ca[resolvent].learnt()) {
-                data.getLEarnts().push(resolvent);
+                data.getLearnts().push(resolvent);
             } else {
                 data.getClauses().push(resolvent);
             }

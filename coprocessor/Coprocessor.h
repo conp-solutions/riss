@@ -7,39 +7,40 @@ Copyright (c) 2012, Norbert Manthey, LGPL v2, see LICENSE
 
 #include "riss/core/Solver.h"
 
+#include "coprocessor/CP3Config.h"
 #include "coprocessor/CoprocessorTypes.h"
 #include "riss/utils/ThreadController.h"
-#include "coprocessor/CP3Config.h"
 
-#include "coprocessor/techniques/Propagation.h"
-#include "coprocessor/techniques/Subsumption.h"
-#include "coprocessor/techniques/HiddenTautologyElimination.h"
-#include "coprocessor/techniques/BVE.h"
-#include "coprocessor/techniques/ClauseElimination.h"
-#include "coprocessor/techniques/RATE.h"
-#include "coprocessor/techniques/EquivalenceElimination.h"
+#include "coprocessor/Shuffler.h"
+#include "coprocessor/techniques/BCE.h"
+#include "coprocessor/techniques/BE.h"
 #include "coprocessor/techniques/BVA.h"
-#include "coprocessor/techniques/Unhiding.h"
+#include "coprocessor/techniques/BVE.h"
+#include "coprocessor/techniques/BackboneSimplification.h"
+#include "coprocessor/techniques/ClauseElimination.h"
+#include "coprocessor/techniques/Dense.h"
+#include "coprocessor/techniques/Entailed.h"
+#include "coprocessor/techniques/EquivalenceElimination.h"
+#include "coprocessor/techniques/Experimental.h"
+#include "coprocessor/techniques/FourierMotzkin.h"
+#include "coprocessor/techniques/HBR.h"
+#include "coprocessor/techniques/HiddenTautologyElimination.h"
+#include "coprocessor/techniques/LiteralAddition.h"
+#include "coprocessor/techniques/ModPrep.h"
 #include "coprocessor/techniques/Probing.h"
+#include "coprocessor/techniques/Propagation.h"
+#include "coprocessor/techniques/RATE.h"
 #include "coprocessor/techniques/Resolving.h"
 #include "coprocessor/techniques/Rewriter.h"
-#include "coprocessor/techniques/FourierMotzkin.h"
-#include "coprocessor/techniques/BCE.h"
-#include "coprocessor/techniques/LiteralAddition.h"
-#include "coprocessor/techniques/Xor.h"
-#include "coprocessor/techniques/Entailed.h"
-#include "coprocessor/techniques/Dense.h"
+#include "coprocessor/techniques/Subsumption.h"
 #include "coprocessor/techniques/Symmetry.h"
-#include "coprocessor/techniques/HBR.h"
-#include "coprocessor/techniques/Experimental.h"
-#include "coprocessor/techniques/ModPrep.h"
-#include "coprocessor/techniques/BackboneSimplification.h"
-#include "coprocessor/Shuffler.h"
+#include "coprocessor/techniques/Unhiding.h"
+#include "coprocessor/techniques/Xor.h"
 
 #include "coprocessor/techniques/SLS.h"
 
-#include <string>
 #include <cstring>
+#include <string>
 
 // using namespace Riss;
 // using namespace std;
@@ -164,6 +165,7 @@ namespace Coprocessor {
         Unhiding unhiding;
         Probing probing;
         BackboneSimplification backbone;
+        BE be;
         RATElimination rate;
         Resolving resolving;
         Rewriter rewriter;

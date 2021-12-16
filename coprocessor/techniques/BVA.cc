@@ -66,11 +66,11 @@ namespace Coprocessor {
 
         // do not simplify, if the formula is considered to be too large!
         // if all limits are reached, do not continue!
-        if (!data.unlimited() && (data.nVars() > config.opt_bva_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_bva_cls &&
+        if (!data.unlimited() && (data.nVars() > config.opt_bva_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_bva_cls &&
                                   data.nTotLits() > config.opt_bva_lits)) {
-            if ((data.nVars() > config.opt_Xbva_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_Xbva_cls &&
+            if ((data.nVars() > config.opt_Xbva_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_Xbva_cls &&
                  data.nTotLits() > config.opt_Xbva_lits)) {
-                if ((data.nVars() > config.opt_Ibva_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_Ibva_cls &&
+                if ((data.nVars() > config.opt_Ibva_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_Ibva_cls &&
                      data.nTotLits() > config.opt_Ibva_lits)) {
                     return modifiedFormula;
                 }
@@ -89,13 +89,13 @@ namespace Coprocessor {
             // run all three types of bva - could even re-run?
             if (config.opt_Abva) {
                 if (data.unlimited() ||
-                    (data.nVars() <= config.opt_bva_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_bva_cls ||
+                    (data.nVars() <= config.opt_bva_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_bva_cls ||
                      data.nTotLits() <= config.opt_bva_lits)) { // apply only if limits are not reached
                     modifiedFormula = andBVA();
                 }
             }
             if (data.unlimited() ||
-                (data.nVars() <= config.opt_Xbva_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_Xbva_cls ||
+                (data.nVars() <= config.opt_Xbva_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_Xbva_cls ||
                  data.nTotLits() <= config.opt_Xbva_lits)) { // apply only if limits are not reached
                 if (config.opt_Xbva == 1) {
                     modifiedFormula = xorBVAhalf() || modifiedFormula;
@@ -104,7 +104,7 @@ namespace Coprocessor {
                 }
             }
             if (data.unlimited() ||
-                (data.nVars() <= config.opt_Ibva_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_Ibva_cls ||
+                (data.nVars() <= config.opt_Ibva_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_Ibva_cls ||
                  data.nTotLits() <= config.opt_Ibva_lits)) { // apply only if limits are not reached
                 if (config.opt_Ibva == 1) {
                     modifiedFormula = iteBVAhalf() || modifiedFormula;

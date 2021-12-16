@@ -67,10 +67,10 @@ namespace Coprocessor {
 
         // if all limits are reached, do not continue!
         if (!data.unlimited() &&
-            (data.nVars() > config.opt_probe_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls &&
+            (data.nVars() > config.opt_probe_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_probe_cls &&
              data.nTotLits() > config.opt_probe_lits)) {
             if (!data.unlimited() &&
-                (data.nVars() > config.opt_viv_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_viv_cls &&
+                (data.nVars() > config.opt_viv_vars && data.getClauses().size() + data.getLearnts().size() > config.opt_viv_cls &&
                  data.nTotLits() > config.opt_viv_lits)) {
                 return false;
             }
@@ -92,18 +92,18 @@ namespace Coprocessor {
             vec<Solver::VarFlags> polarity;
             solver.varFlags.copyTo(polarity);
 
-            DOUT(if (config.pr_debug_out > 0) cerr << "c before probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size()
+            DOUT(if (config.pr_debug_out > 0) cerr << "c before probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLearnts().size()
                                                    << endl;);
 
             const int beforeClauses = data.getClauses().size();
-            const int beforeLClauses = data.getLEarnts().size();
+            const int beforeLClauses = data.getLearnts().size();
 
             // run probing?
             if (config.pr_probe && data.ok()) {
 
                 // do not probe, if the formula is considered to be too large!
                 if (data.unlimited() ||
-                    (data.nVars() <= config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_probe_cls ||
+                    (data.nVars() <= config.opt_probe_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_probe_cls ||
                      data.nTotLits() <= config.opt_probe_lits)) {
                     DOUT(if (config.pr_debug_out > 0) cerr << "c old trail: " << solver.trail.size() << endl;);
                     probing();
@@ -111,14 +111,14 @@ namespace Coprocessor {
                 }
             }
 
-            DOUT(if (config.pr_debug_out > 0) cerr << "c after probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size()
+            DOUT(if (config.pr_debug_out > 0) cerr << "c after probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLearnts().size()
                                                    << endl;);
 
             // run clause vivification?
             const int beforeVivClauses = data.getClauses().size();
             if (config.pr_vivi && data.ok()) {
                 if (data.unlimited() ||
-                    (data.nVars() <= config.opt_viv_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_viv_cls ||
+                    (data.nVars() <= config.opt_viv_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_viv_cls ||
                      data.nTotLits() <= config.opt_viv_lits)) {
                     clauseVivification();
                 }
@@ -126,20 +126,20 @@ namespace Coprocessor {
             }
 
             DOUT(if (config.pr_debug_out > 0) cerr << "c after vivification: cls: " << data.getClauses().size()
-                                                   << " vs. ls: " << data.getLEarnts().size() << endl;);
+                                                   << " vs. ls: " << data.getLearnts().size() << endl;);
 
             // run learnt clause minimization IJCAI 2017 paper?
             const int beforeLCMClauses = data.getClauses().size();
             if (config.pr_lcm && data.ok()) {
                 if (data.unlimited() ||
-                    (data.nVars() <= config.opt_lcm_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_lcm_cls ||
+                    (data.nVars() <= config.opt_lcm_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_lcm_cls ||
                      data.nTotLits() <= config.opt_lcm_lits)) {
                     clauseVivificationLCM();
                 }
                 assert(solver.decisionLevel() == 0 && "after lcm vivification the decision level should be 0!");
             }
 
-            DOUT(if (config.pr_debug_out > 0) cerr << "c after LCM: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size()
+            DOUT(if (config.pr_debug_out > 0) cerr << "c after LCM: cls: " << data.getClauses().size() << " vs. ls: " << data.getLearnts().size()
                                                    << endl;);
 
             // restore the polarity for phase saving
@@ -154,7 +154,7 @@ namespace Coprocessor {
                 modifiedFormula) { // as the routine might have modified existing clauses as well, perform a full re-add of actual clauses!
                 data.cleanOccurrences();
                 for (int p = 0; p < 2; ++p) {
-                    const vec<CRef>& clauseList = p == 0 ? data.getClauses() : data.getLEarnts();
+                    const vec<CRef>& clauseList = p == 0 ? data.getClauses() : data.getLearnts();
                     for (int i = 0; i < clauseList.size(); ++i) {
                         if (ca[clauseList[i]].can_be_deleted()) {
                             continue;
@@ -177,24 +177,24 @@ namespace Coprocessor {
             }
             probeLHBRs = probeLHBRs + data.getClauses().size() - beforeVivClauses; // stats
 
-            if (beforeLClauses < data.getLEarnts().size()) {
+            if (beforeLClauses < data.getLearnts().size()) {
                 if (config.pr_keepLHBRs > 0) {
 #ifndef NDEBUG
-                    for (int i = beforeLClauses; i < data.getLEarnts().size(); ++i) {
-                        data.addClause(data.getLEarnts()[i], config.pr_debug_out > 0);
+                    for (int i = beforeLClauses; i < data.getLearnts().size(); ++i) {
+                        data.addClause(data.getLearnts()[i], config.pr_debug_out > 0);
                     }
 #else
-                    for (int i = beforeLClauses; i < data.getLEarnts().size(); ++i) {
-                        data.addClause(data.getLEarnts()[i]);
+                    for (int i = beforeLClauses; i < data.getLearnts().size(); ++i) {
+                        data.addClause(data.getLearnts()[i]);
                     }
 #endif
                 } else {
-                    DOUT(if (config.pr_debug_out) cerr << "c remove " << data.getLEarnts().size() - beforeLClauses
+                    DOUT(if (config.pr_debug_out) cerr << "c remove " << data.getLearnts().size() - beforeLClauses
                                                        << " new learnt clauses to the formula" << endl;);
-                    for (int i = beforeLClauses; i < data.getLEarnts().size(); ++i) {
-                        ca.free(data.getLEarnts()[i]); // these clauses never made it into CP3 ... could also be added, parameter!
+                    for (int i = beforeLClauses; i < data.getLearnts().size(); ++i) {
+                        ca.free(data.getLearnts()[i]); // these clauses never made it into CP3 ... could also be added, parameter!
                     }
-                    data.getLEarnts().shrink_(data.getLEarnts().size() - beforeLClauses); // if added, then do not remove!
+                    data.getLearnts().shrink_(data.getLearnts().size() - beforeLClauses); // if added, then do not remove!
                 }
             }
 
@@ -989,7 +989,7 @@ namespace Coprocessor {
         CRef thisConflict = CRef_Undef;
 
         BIG big;
-        big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts()); // lets have the full big
+        big.create(ca, data.nVars(), data.getClauses(), data.getLearnts()); // lets have the full big
 
         big.fillSorted(variableHeap, data, config.pr_rootsOnly);
         // if there are no root variables (or lits implied by roots), consider all variables!
@@ -1212,7 +1212,7 @@ namespace Coprocessor {
                 } else {
                     c.set_learnt(true);
                     c.activity() = 0;
-                    data.getLEarnts().push(l2conflicts[i]);
+                    data.getLearnts().push(l2conflicts[i]);
                 }
             }
         } else {
@@ -1236,7 +1236,7 @@ namespace Coprocessor {
                 } else {
                     c.set_learnt(true);
                     c.activity() = 0;
-                    data.getLEarnts().push(l2implieds[i]);
+                    data.getLearnts().push(l2implieds[i]);
                 }
             }
         } else {
@@ -1299,7 +1299,7 @@ namespace Coprocessor {
             // fill gaps unneeded space
             clauses.shrink(clauses.size() - keptClauses);
         }
-        // data.unlimited() || (data.nVars() <= config.opt_lcm_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_lcm_cls  ||
+        // data.unlimited() || (data.nVars() <= config.opt_lcm_vars || data.getClauses().size() + data.getLearnts().size() <= config.opt_lcm_cls  ||
         // data.nTotLits() <= config.opt_lcm_lits)) {
     }
 

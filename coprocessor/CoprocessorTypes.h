@@ -7,14 +7,14 @@ Copyright (c) 2012, Norbert Manthey, LGPL v2, see LICENSE
 
 #include "riss/core/Solver.h"
 
-#include "riss/utils/System.h"
 #include "riss/mtl/Sort.h"
+#include "riss/utils/System.h"
 
-#include "riss/utils/LockCollection.h"
 #include "riss/utils/AutoDelete.h"
+#include "riss/utils/LockCollection.h"
 
-#include <vector>
 #include <ostream>
+#include <vector>
 
 namespace Coprocessor {
 
@@ -160,7 +160,7 @@ namespace Coprocessor {
         const std::vector<Riss::CRef>& list(const Riss::Lit& l) const; // return the list of clauses, which have literal l
 
         Riss::vec<Riss::CRef>& getClauses(); // return the std::vector of clauses in the solver object
-        Riss::vec<Riss::CRef>& getLEarnts(); // return the std::vector of learnt clauses in the solver object
+        Riss::vec<Riss::CRef>& getLearnts(); // return the std::vector of learnt clauses in the solver object
         Riss::vec<Riss::Lit>& getTrail();    // return trail
         Riss::Compression& getCompression(); // return compression table of the solver
         void clearTrail();                   // remove all variables from the trail, and reset qhead in the solver
@@ -698,7 +698,7 @@ namespace Coprocessor {
         return solver->clauses;
     }
 
-    inline Riss::vec<Riss::CRef>& CoprocessorData::getLEarnts() {
+    inline Riss::vec<Riss::CRef>& CoprocessorData::getLearnts() {
         return solver->learnts;
     }
 
@@ -1135,7 +1135,7 @@ namespace Coprocessor {
 
     inline void CoprocessorData::sortClauseLists(bool alsoLearnts) {
         for (int p = 0; p < (alsoLearnts ? 2 : 1); ++p) {
-            Riss::vec<Riss::CRef>& clauseList = (p == 0 ? getClauses() : getLEarnts());
+            Riss::vec<Riss::CRef>& clauseList = (p == 0 ? getClauses() : getLearnts());
             int32_t n = clauseList.size();
             int32_t m, s;
             // copy elements from std::vector
