@@ -27,8 +27,20 @@ namespace Coprocessor {
         Propagation& propagation;
         Solver& solver;
 
+        Riss::Solver* ownSolver;
+        Coprocessor::CP3Config* cp3config;
+        Riss::CoreConfig* solverconfig;
+        Riss::vec<Riss::Lit> assumptions; // current set of assumptions that are used for the next SAT call
+
         std::vector<Lit> backbone;
         bool ran = false;
+
+        int conflictBudget; // how many conflicts is the solver allowed to have before aborting the search for a model
+
+        int totalConflits;
+        int timedOutCalls;
+        double copyTime;
+        double searchTime;
 
     public:
         void reset();
@@ -64,6 +76,11 @@ namespace Coprocessor {
          * @note Resulting backbone is saved in the backbone member
          */
         void computeBackbone();
+
+        /**
+         * @brief Copies the state of the solver to the ownSolver
+         */
+        void copySolver();
 
     protected:
     };

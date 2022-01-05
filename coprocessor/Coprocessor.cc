@@ -923,6 +923,9 @@ namespace Coprocessor {
             if (config.opt_probe) {
                 probing.printStatistics(cerr);
             }
+            if (config.opt_backbone) {
+                backbone.printStatistics(cerr);
+            }
             if (config.opt_unhide) {
                 unhiding.printStatistics(cerr);
             }
@@ -1561,6 +1564,9 @@ namespace Coprocessor {
             }
             if (config.opt_probe) {
                 probing.printStatistics(cerr);
+            }
+            if (config.opt_backbone) {
+                backbone.printStatistics(cerr);
             }
             if (config.opt_unhide) {
                 unhiding.printStatistics(cerr);

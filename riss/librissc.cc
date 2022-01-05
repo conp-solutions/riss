@@ -2,10 +2,10 @@
 Copyright (c) 2013, Norbert Manthey, LGPL v2, see LICENSE
 **************************************************************************************************/
 
-#include <string>
-#include <algorithm> // std::remove
 #include "coprocessor/Coprocessor.h"
 #include "riss/utils/version.h"
+#include <algorithm> // std::remove
+#include <string>
 
 using namespace std;
 using namespace Riss;
@@ -29,7 +29,7 @@ struct libriss {
     } // default constructor to ensure everything is set to 0
 };
 
-/** construct the conflict map that nidicates whether a variable is present in the final conflict
+/** construct the conflict map that indicates whether a variable is present in the final conflict
  *  Note: if the map has already a size, its not rebuild (has to be cleared once the last conflict is not valid any longer)
  */
 static void riss_build_conflict_map(libriss* solver) {

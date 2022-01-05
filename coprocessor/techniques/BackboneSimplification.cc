@@ -18,22 +18,38 @@ namespace Coprocessor {
         : Technique(_config, _ca, _controller)
         , data(_data)
         , propagation(_propagation)
-        , solver(_solver) {
+        , solver(_solver)
+        , conflictBudget(_config.opt_backbone_nconf)
+        , totalConflits(0)
+        , timedOutCalls(0)
+        , copyTime(0)
+        , searchTime(0) {
+        printf("### Using conflict budget %d\n", conflictBudget);
     }
 
     void BackboneSimplification::giveMoreSteps() {
     }
 
     void BackboneSimplification::destroy() {
+        delete solverconfig;
+        delete cp3config;
+        delete ownSolver;
     }
 
     void BackboneSimplification::reset() {
+        destroy();
         backbone.clear();
         ran = false;
+        totalConflits = 0;
+        timedOutCalls = 0;
+        copyTime = 0;
+        searchTime = 0;
     }
 
     void BackboneSimplification::printStatistics(std::ostream& stream) {
-        stream << "no stats yet";
+        stream << "c [STAT] BACKBONE found variables: " << backbone.size() << std::endl;
+        stream << "c [STAT] BACKBONE nConf: " << totalConflits << " timed out calls: " << timedOutCalls << std::endl;
+        stream << "c [STAT] BACKBONE time copying: " << copyTime << "s time searching: " << searchTime << "s" << std::endl;
     }
 
     bool BackboneSimplification::process() {
@@ -59,20 +75,22 @@ namespace Coprocessor {
     }
 
     void BackboneSimplification::computeBackbone() {
-        printf("c ########## Starting backbone computation ##########\n");
-
         if (ran) {
-            printf("c # Already ran backbone computation\n");
+            // running again on the same thing is never beneficial
             return;
         }
 
-        assert(solver.decisionLevel() == 0 && "Only use backbone computation on decision level 0");
+        copySolver();
 
-        // make new decision level
-        ScopedDecisionLevel outerLevel(solver);
+        MethodTimer timer(&searchTime);
+
+        // set conflict budget to infinity
+        ownSolver->budgetOff();
+
+        auto ret = ownSolver->solveLimited({});
 
         // Compute a model
-        if (!solver.solve()) {
+        if (ret == l_False) {
             // if the formula is unsatisfiable the backbone is empty
             return;
         }
@@ -81,20 +99,16 @@ namespace Coprocessor {
         std::vector<Lit> remainingLiterals;
         remainingLiterals.reserve(solver.model.size());
 
-        printf("c Solver has %i variables\n", solver.nVars());
-        printf("c Solver has %i clauses\n", solver.nClauses());
-        printf("c Model has %i variables\n", solver.model.size());
-
-        for (int32_t i = 0; i < solver.model.size(); ++i) {
-            assert(solver.model[i] != l_Undef);
-            if (solver.model[i] == l_True) {
-                remainingLiterals.emplace_back(mkLit(i, true));
-            } else {
+        for (int32_t i = 0; i < ownSolver->model.size(); ++i) {
+            assert(ownSolver->model[i] != l_Undef);
+            if (ownSolver->model[i] == l_True) {
                 remainingLiterals.emplace_back(mkLit(i, false));
+            } else {
+                remainingLiterals.emplace_back(mkLit(i, true));
             }
         }
 
-        Riss::vec<Lit> unitLit(1);
+        Riss::vec<Lit> unitLit;
 
         // Main loop over the literals
         for (auto& currentLiteral : remainingLiterals) {
@@ -102,20 +116,19 @@ namespace Coprocessor {
                 continue;
             }
 
-            printf("Checking literal %i\n", currentLiteral.x);
+            ownSolver->model.clear();
 
-            ScopedDecisionLevel loopDecisionLevel(solver);
-
-            // add negated literal
-            auto negLit = ~currentLiteral;
-
-            printf("Enqueueing: %i\n", negLit.x);
-
-            unitLit[0] = negLit;
+            // now set conflict budget
+            ownSolver->setConfBudget(conflictBudget);
 
             // get new model
-            if (solver.solveLimited(unitLit) == l_False) {
-                printf("Found backbone variable\n");
+            unitLit.push(~currentLiteral);
+            ownSolver->integrateAssumptions(unitLit);
+            auto solveResult = ownSolver->solveLimited(unitLit);
+            ownSolver->assumptions.clear();
+            unitLit.clear();
+
+            if (solveResult == l_False) {
                 // if there's no model then the literal is in the backbone, because
                 // apparently no model exists with the literal negated
                 // use the remaining Literal for the backbone
@@ -123,30 +136,59 @@ namespace Coprocessor {
                 continue;
             }
 
-            auto& model = solver.model;
+            if (solveResult == l_Undef) {
+                // if we ran out of conflict budget just continue
+                ++timedOutCalls;
+                continue;
+            }
 
-            printf("Model size now: %i\n", model.size());
+            auto& model = ownSolver->model;
 
             for (int32_t j = 0; j < model.size(); ++j) {
                 assert(model[j] != l_Undef);
                 if (remainingLiterals[j] == currentLiteral) {
                     // printf("Current Literal: %i, in Model: %i\n", currentLiteral.x, mkLit(j + 1, model[j] == l_True).x);
-                    if (currentLiteral.x == mkLit(j, model[j] == l_True).x) {
-                        printf("Should never happen\n");
+                    if (currentLiteral.x == mkLit(j, model[j] != l_True).x) {
+                        assert(false);
                     }
                 }
                 if (remainingLiterals[j].x == -1) {
                     continue;
                 }
                 // check if signs are different
-                /*if (model[j] != (sign(remainingLiterals[j]) ? l_False : l_True)) {
-                    remainingLiterals[j].x = -1;
-                }*/
             }
         }
 
         ran = true;
-        printf("c ########## Finished backbone computation, found %lu variables ##########\n", backbone.size());
+        totalConflits = ownSolver->conflicts;
+    }
+
+    void BackboneSimplification::copySolver() {
+        MethodTimer timer(&copyTime);
+
+        // init the solver
+        solverconfig = new Riss::CoreConfig("");
+        cp3config = new Coprocessor::CP3Config("-no-backbone -no-dense -no-propagation");
+        ownSolver = new Riss::Solver(solverconfig);
+        ownSolver->setPreprocessor(cp3config);
+
+        // -- copy the solver --
+        // register variables
+        for (auto i = 0; i < solver.nVars(); ++i) {
+            ownSolver->newVar();
+        }
+
+        // copy clauses
+        Riss::vec<Lit> assembledClause;
+        for (std::size_t i = 0; i < solver.clauses.size(); ++i) {
+            const auto& clause = ca[solver.clauses[i]];
+            const Lit* lit = (const Lit*)(clause);
+            for (int j = 0; j < clause.size(); ++j) {
+                assembledClause.push(lit[j]);
+            }
+            ownSolver->integrateNewClause(assembledClause);
+            assembledClause.clear();
+        }
     }
 
 } // namespace Coprocessor

@@ -644,6 +644,13 @@ namespace Coprocessor {
         ,
 #endif
 
+        //
+        // Backbone
+        //
+        opt_backbone_nconf(_cat, "cp3_backbone_nconf", "how many conflicts the solver is allowed per tested variable", 50, IntRange(0, INT32_MAX),
+                           optionListPtr, &opt_backbone)
+        ,
+
 //
 // Unit Propagation
 //

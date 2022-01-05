@@ -95,6 +95,7 @@ namespace Coprocessor {
     }
 
     bool BE::isDefined(const int32_t index, std::vector<Var>& vars) {
+        
         const Var x = vars[index];
         // every new variable made from existing ones will just get nVars added to themselves
         // this way no collisions can happen

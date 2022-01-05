@@ -505,6 +505,11 @@ namespace Coprocessor {
 #endif
 
         //
+        // Backbone
+        //
+        Riss::IntOption opt_backbone_nconf; // limit of conflicts for solver calls
+
+        //
         // Unit Propagation
         //
 #ifndef NDEBUG
