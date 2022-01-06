@@ -24,7 +24,6 @@ namespace Coprocessor {
         , timedOutCalls(0)
         , copyTime(0)
         , searchTime(0) {
-        printf("### Using conflict budget %d\n", conflictBudget);
     }
 
     void BackboneSimplification::giveMoreSteps() {
@@ -123,7 +122,6 @@ namespace Coprocessor {
 
             // get new model
             unitLit.push(~currentLiteral);
-            ownSolver->integrateAssumptions(unitLit);
             auto solveResult = ownSolver->solveLimited(unitLit);
             ownSolver->assumptions.clear();
             unitLit.clear();
@@ -168,7 +166,7 @@ namespace Coprocessor {
 
         // init the solver
         solverconfig = new Riss::CoreConfig("");
-        cp3config = new Coprocessor::CP3Config("-no-backbone -no-dense -no-propagation");
+        cp3config = new Coprocessor::CP3Config("-no-backbone -no-be -no-dense");
         ownSolver = new Riss::Solver(solverconfig);
         ownSolver->setPreprocessor(cp3config);
 

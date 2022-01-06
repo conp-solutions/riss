@@ -510,6 +510,11 @@ namespace Coprocessor {
         Riss::IntOption opt_backbone_nconf; // limit of conflicts for solver calls
 
         //
+        // Bipartition and Elimination
+        //
+        Riss::IntOption opt_be_nconf; // limit of conflicts for solver calls
+
+        //
         // Unit Propagation
         //
 #ifndef NDEBUG

@@ -30,16 +30,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef RISS_Minisat_Solver_h
 #define RISS_Minisat_Solver_h
 
-#include "riss/mtl/Vec.h"
-#include "riss/mtl/Heap.h"
-#include "riss/mtl/Alg.h"
-#include "riss/utils/Options.h"
-#include "riss/utils/System.h"
-#include "riss/utils/Compression.h"
-#include "riss/core/SolverTypes.h"
 #include "riss/core/BoundedQueue.h"
 #include "riss/core/Constants.h"
 #include "riss/core/CoreConfig.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/mtl/Alg.h"
+#include "riss/mtl/Heap.h"
+#include "riss/mtl/Vec.h"
+#include "riss/utils/Compression.h"
+#include "riss/utils/Options.h"
+#include "riss/utils/System.h"
 
 //
 // choose which bit width should be used
@@ -70,6 +70,7 @@ namespace Coprocessor {
     class ModPrep;
     class BIG;
     class BackboneSimplification;
+    class BE;
     class ScopedDecisionLevel;
 } // namespace Coprocessor
 
@@ -107,6 +108,7 @@ namespace Riss {
         friend class Coprocessor::ExperimentalTechniques;
         friend class Coprocessor::ModPrep;
         friend class Coprocessor::BackboneSimplification;
+        friend class Coprocessor::BE;
         friend class Coprocessor::ScopedDecisionLevel;
         friend class Riss::IncSolver; // for bmc
 

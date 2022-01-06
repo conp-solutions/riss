@@ -1,0 +1,16 @@
+c start simplification ...
+c ====================[ Coprocessor 7.1.75        satcomp-2020-21-gd54b00b ]================================
+c | Norbert Manthey. The use of the tool is limited to research only!                                     |
+c | Contributors:                                                                                         |
+c |     Kilian Gebhard                                                                                    |
+c |     Lucas Kahlert, Franziska Krüger, Aaron Stephan                                                    |
+c ============================[ Problem Statistics ]=======================================================
+c |                                                                                                       |
+c |  Number of variables:             5                                                                  |
+c |  Number of clauses:              11                                                                   |
+c |  Parse time:                   0.00 s                                                                 |
+c |  Simplification time:          0.00 s                                                                 |
+c |                                                                                                       |
+c ==============================[ Writing DIMACS ]=========================================================
+c simplficitaion returned with 0
+c copying formula to benchout/beex.cnf

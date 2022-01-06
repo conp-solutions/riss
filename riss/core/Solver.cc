@@ -799,7 +799,7 @@ namespace Riss {
     void Solver::detachClause(CRef cr, bool strict) {
         const Clause& c = ca[cr];
 
-        //     cerr << "c detach clause " << cr << " which is " << ca[cr] << endl;
+        cerr << "c detach clause " << cr << " which is " << ca[cr] << endl;
 
         // assert(c.size() > 1 && "there should not be unit clauses - on the other hand, LHBR and OTFSS could create unit clauses");
         //     if( c.size() == 1 ) {

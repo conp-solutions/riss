@@ -46,7 +46,7 @@ namespace Coprocessor {
         , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
         , probing(config, solver->ca, controller, data, propagation, ee, *solver)
         , backbone(config, solver->ca, controller, data, propagation, *solver)
-        , be(config, solver->ca, controller, data, propagation, backbone, *solver)
+        , be(config, solver->ca, controller, data, propagation, probing, backbone, *solver)
         , rate(config, solver->ca, controller, data, *solver, propagation)
         , resolving(config, solver->ca, controller, data, propagation)
         , rewriter(config, solver->ca, controller, data, propagation, subsumption)
@@ -795,6 +795,8 @@ namespace Coprocessor {
                     printStatistics(cerr);
                     be.printStatistics(cerr);
                 }
+
+                be.printStatistics(cout);
 
                 DOUT(if ((const char*)config.stepbystepoutput != nullptr)
                          outputFormula(string(string(config.stepbystepoutput) + "-BIPARTITIONELIMINATION.cnf").c_str(), 0););
