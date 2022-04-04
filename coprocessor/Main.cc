@@ -25,6 +25,8 @@ using namespace std;
 
 //=================================================================================================
 
+#define NDEBUG 1
+
 void printStats(Solver& solver) {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
@@ -372,11 +374,8 @@ int main(int argc, char** argv) {
 
         cerr.flush();
         cout.flush();
-#ifdef NDEBUG
-        exit(0); // (faster than "return", which will invoke the destructor for 'Solver')
-#else
+        
         return (0);
-#endif
     } catch (OutOfMemoryException&) {
         printf("c =========================================================================================================\n");
         printf("s UNKNOWN\n");

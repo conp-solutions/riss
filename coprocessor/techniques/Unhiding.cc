@@ -1043,7 +1043,8 @@ namespace Coprocessor {
     }
 
     void Unhiding::destroy() {
-        big.~BIG();
+        // DO NOT CALL THE DESTRUCTOR OF A NON-DYNAMIC VARIABLE
+        //big.~BIG();
         vector<literalData>().swap(stampInfo);
 
         // queue of literals that have to be stamped in the current function call

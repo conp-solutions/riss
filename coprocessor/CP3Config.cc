@@ -647,7 +647,7 @@ namespace Coprocessor {
         //
         // Backbone
         //
-        opt_backbone_nconf(_cat, "backbone_nconf", "how many conflicts the solver is allowed per tested variable", 50, IntRange(0, INT32_MAX),
+        opt_backbone_nconf(_cat, "backbone_nconf", "how many conflicts the solver is allowed per tested variable", 5, IntRange(0, INT32_MAX),
                            optionListPtr, &opt_backbone)
         ,
 

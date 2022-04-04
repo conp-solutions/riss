@@ -33,14 +33,17 @@ namespace Coprocessor {
         Riss::vec<Riss::Lit> assumptions; // current set of assumptions that are used for the next SAT call
 
         std::vector<Lit> backbone;
+        std::vector<bool> varUsed;        // "map" from variable to whether it is used in the solver, i.e. whether it is not a unit
         bool ran = false;
 
         int conflictBudget; // how many conflicts is the solver allowed to have before aborting the search for a model
 
         int totalConflits;
         int timedOutCalls;
+        int crossCheckRemovedLiterals;
         double copyTime;
         double searchTime;
+        double solverTime;
 
     public:
         void reset();

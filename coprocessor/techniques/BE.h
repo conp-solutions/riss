@@ -40,6 +40,8 @@ namespace Coprocessor {
         double copyTime;
         double bipartitionTime;
         double eliminationTime;
+        mutable double getVarsTime;
+        mutable int getVarsCount;
         int eliminatedVars;
 
         mutable bool dirtyCache;

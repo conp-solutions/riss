@@ -757,6 +757,8 @@ namespace Coprocessor {
                     status = l_False;
                 }
 
+                backbone.printStatistics(cout);
+
                 if (config.opt_verbose > 1) {
                     printStatistics(cerr);
                     backbone.printStatistics(cerr);

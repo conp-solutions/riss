@@ -33,6 +33,8 @@ namespace Coprocessor {
         , copyTime(0)
         , bipartitionTime(0)
         , eliminationTime(0)
+        , getVarsTime(0)
+        , getVarsCount(0)
         , eliminatedVars(0)
         , dirtyCache(false) {
     }
@@ -47,8 +49,9 @@ namespace Coprocessor {
     }
 
     void BE::printStatistics(std::ostream& stream) {
-        stream << "[BE] copyTime: " << copyTime << "s, bipartitionTime: " << bipartitionTime << "s, eliminationTime: " << eliminationTime
-               << "s, no. eliminated Vars: " << eliminatedVars << std::endl;
+        stream << "c [BE] copyTime: " << copyTime << "s, bipartitionTime: " << bipartitionTime << "s, eliminationTime: " << eliminationTime
+               << "s, getVarsTime: " << getVarsTime << "s, getVarsCount: " << getVarsCount << ", no. eliminated Vars: " << eliminatedVars 
+               << std::endl;
     }
 
     void BE::reset() {
@@ -67,7 +70,7 @@ namespace Coprocessor {
 
         computeBipartition();
 
-        fprintf(stderr, "[BE] start\n");
+        fprintf(stderr, "c [BE] start\n");
 
         eliminate();
 
@@ -75,7 +78,7 @@ namespace Coprocessor {
 
         printf("c Afterwards solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
 
-        fprintf(stderr, "[BE] stop\n");
+        fprintf(stderr, "c [BE] stop\n");
 
         return eliminatedVars != 0;
     }
@@ -88,18 +91,12 @@ namespace Coprocessor {
 
         MethodTimer timer(&bipartitionTime);
 
-        // line 11
+        // line 1
         auto& backbone = backboneSimpl.getBackbone();
         outputVariables.reserve(backbone.size());
         for (const auto& lit : backbone) {
             outputVariables.emplace_back(var(lit));
         }
-
-        printf("c Output Variables from backbone:");
-        for (auto& var : outputVariables) {
-            printf(" %d", var + 1);
-        }
-        printf("\n");
 
         // line 2
         std::vector<Var> vars;
@@ -126,18 +123,6 @@ namespace Coprocessor {
     }
 
     void BE::eliminate() {
-        printf("c Output Variables identified:");
-
-        for (auto& var : outputVariables) {
-            printf(" %d", var + 1);
-        }
-
-        printf("\nc Input Variables identified:");
-        for (auto& var : inputVariables) {
-            printf(" %d", var + 1);
-        }
-        printf("\n");
-
         MethodTimer timer(&eliminationTime);
 
         // line 2
@@ -244,13 +229,6 @@ namespace Coprocessor {
                         ++eliminatedVars;
 
                         deletedVars.emplace_back(x);
-
-                        if (getClausesContaining(mkLit(x, false)).size() != 0) {
-                            printf("c ... what?\n");
-                        }
-                        if (getClausesContaining(mkLit(x, true)).size() != 0) {
-                            printf("c ... what?+\n");
-                        }
                     } else {
                         // line 18
                         // reconsider later
@@ -260,11 +238,7 @@ namespace Coprocessor {
             }
         }
 
-        printf("c deleted variables: ");
-        for (auto v : deletedVars) {
-            printf("%d, ", v + 1);
-        }
-        printf("\n");
+        printf("c deleted %ld variables\n", deletedVars.size());
     }
 
     bool BE::isDefined(const int32_t index, std::vector<Var>& vars) {
@@ -398,6 +372,9 @@ namespace Coprocessor {
     }
 
     std::vector<Riss::CRef> BE::getClausesContaining(const Lit& x) const {
+        ++getVarsCount;
+        MethodTimer timer(&getVarsTime);
+
         std::vector<Riss::CRef> resultClauses;
 
         for (std::size_t i = 0; i < data.getClauses().size(); ++i) {
@@ -462,9 +439,9 @@ namespace Coprocessor {
                     resolvents.erase(resolvents.end() - 1);
                 }
 
-                if (resolvent.size() <= 1) {
+                /*if (resolvent.size() <= 1) {
                     printf("c no\n");
-                }
+                }*/
             }
         }
 
