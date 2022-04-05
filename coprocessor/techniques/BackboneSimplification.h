@@ -38,6 +38,8 @@ namespace Coprocessor {
 
         int conflictBudget; // how many conflicts is the solver allowed to have before aborting the search for a model
 
+        int nSolve;         // number of solve calls done
+        int unitsBefore;    // number of units before backbone was called
         int totalConflits;
         int timedOutCalls;
         int crossCheckRemovedLiterals;

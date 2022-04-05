@@ -757,8 +757,6 @@ namespace Coprocessor {
                     status = l_False;
                 }
 
-                backbone.printStatistics(cout);
-
                 if (config.opt_verbose > 1) {
                     printStatistics(cerr);
                     backbone.printStatistics(cerr);
@@ -797,8 +795,6 @@ namespace Coprocessor {
                     printStatistics(cerr);
                     be.printStatistics(cerr);
                 }
-
-                be.printStatistics(cout);
 
                 DOUT(if ((const char*)config.stepbystepoutput != nullptr)
                          outputFormula(string(string(config.stepbystepoutput) + "-BIPARTITIONELIMINATION.cnf").c_str(), 0););

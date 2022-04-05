@@ -21,6 +21,8 @@ namespace Coprocessor {
         , solver(_solver)
         , varUsed(solver.nVars(), false)
         , conflictBudget(_config.opt_backbone_nconf)
+        , nSolve(0)
+        , unitsBefore(0)
         , totalConflits(0)
         , timedOutCalls(0)
         , crossCheckRemovedLiterals(0)
@@ -48,22 +50,25 @@ namespace Coprocessor {
         copyTime = 0;
         searchTime = 0;
         solverTime = 0;
+        nSolve = 0;
+        unitsBefore = 0;
     }
 
     void BackboneSimplification::printStatistics(std::ostream& stream) {
-        stream << "c [STAT] BACKBONE found variables: " << backbone.size() << std::endl;
+        stream << "c [STAT] BACKBONE found variables: " << backbone.size() - unitsBefore << std::endl;
         stream << "c [STAT] BACKBONE nConf: " << totalConflits << ", timed out calls: " << timedOutCalls
                << ", removed literals through found model: " << crossCheckRemovedLiterals << std::endl;
         stream << "c [STAT] BACKBONE time copying: " << copyTime << "s, time searching: " << searchTime << "s, solverTime: " << solverTime << "s" << std::endl;
+        stream << "c [STAT] BACKBONE solver calls: " << nSolve << std::endl;
         int units = 0;
         for (const auto& it : varUsed) {
-            if (!bool(it)) ++units;
+            if (bool(it)) ++units;
         }
-        stream << "c [STAT] BACKBONE ignored " << units << " units" << std::endl;
+        stream << "c [STAT] BACKBONE used " << units << " variables" << std::endl;
     }
 
     bool BackboneSimplification::process() {
-        printf("c Solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
+        printf("c Before: Solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
 
         computeBackbone();
 
@@ -74,6 +79,8 @@ namespace Coprocessor {
 
         // propagate
         propagation.process(data, true);
+        
+        printf("c After Prop: Solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
 
         return true;
     }
@@ -105,7 +112,6 @@ namespace Coprocessor {
             // Compute a model
             ret = ownSolver->solveLimited({});
         }
-        std::cout << "first solve took " << solverTime << "s" << std::endl;
 
         if (ret == l_False) {
             // if the formula is unsatisfiable the backbone is empty
@@ -127,8 +133,6 @@ namespace Coprocessor {
         }
 
         Riss::vec<Lit> unitLit;
-
-        auto nSolve = 0;
 
         // Main loop over the literals
         for (auto& currentLiteral : remainingLiterals) {
@@ -194,8 +198,7 @@ namespace Coprocessor {
         ran = true;
         totalConflits = ownSolver->conflicts;
 
-        std::cout << "Had " << nSolve << " solver calls" << std::endl;
-        printf("c Solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
+        printf("c After: Solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
     }
 
     void BackboneSimplification::copySolver() {
@@ -224,6 +227,13 @@ namespace Coprocessor {
             ownSolver->integrateNewClause(assembledClause);
             assembledClause.clear();
         }
+
+        for (std::size_t i = 0; i < solver.trail.size(); ++i) {
+            backbone.emplace_back(solver.trail[i]);
+        }
+
+        unitsBefore = backbone.size();
+        std::cout << "c found " << unitsBefore << " units to put into backbone immediately" << std::endl;
     }
 
 } // namespace Coprocessor
