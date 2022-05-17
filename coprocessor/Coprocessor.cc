@@ -926,6 +926,9 @@ namespace Coprocessor {
             if (config.opt_backbone) {
                 backbone.printStatistics(cerr);
             }
+            if (config.opt_be) {
+                be.printStatistics(cerr);
+            }
             if (config.opt_unhide) {
                 unhiding.printStatistics(cerr);
             }
@@ -1567,6 +1570,9 @@ namespace Coprocessor {
             }
             if (config.opt_backbone) {
                 backbone.printStatistics(cerr);
+            }
+            if (config.opt_be) {
+                be.printStatistics(cerr);
             }
             if (config.opt_unhide) {
                 unhiding.printStatistics(cerr);

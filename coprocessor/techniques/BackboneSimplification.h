@@ -14,6 +14,12 @@ Copyright (c) 2021, Anton Reinhard, LGPL v2, see LICENSE
 
 namespace Coprocessor {
 
+    enum class LIKELIHOOD_HEURISTIC {
+        MULT, // npos * nneg
+        DIV,  // npos / nneg or npos / nneg whichever is > 1
+    };
+    enum class GROUPED { NOT, CONJUNCTIVE, DISJUNCTIVE };
+
     /**
      * @brief Class implementing Backbone Simplification as a procedure
      *
@@ -33,13 +39,19 @@ namespace Coprocessor {
         Riss::vec<Riss::Lit> assumptions; // current set of assumptions that are used for the next SAT call
 
         std::vector<Lit> backbone;
-        std::vector<bool> varUsed;        // "map" from variable to whether it is used in the solver, i.e. whether it is not a unit
-        bool ran = false;
+        std::vector<bool> varUsed; // "map" from variable to whether it is used in the solver, i.e. whether it is not a unit
+        int noUsedVars;
+        bool ran;
+        bool dirtyCache;
 
         int conflictBudget; // how many conflicts is the solver allowed to have before aborting the search for a model
+        LIKELIHOOD_HEURISTIC likelihood_heuristic;
+        GROUPED grouping;
+        int nGrouping;
+        double lookedAtPercent; // after how many of the used vars havebeen looked at will ngrouping be decreased
 
-        int nSolve;         // number of solve calls done
-        int unitsBefore;    // number of units before backbone was called
+        int nSolve;      // number of solve calls done
+        int unitsBefore; // number of units before backbone was called
         int totalConflits;
         int timedOutCalls;
         int crossCheckRemovedLiterals;
@@ -88,6 +100,13 @@ namespace Coprocessor {
         void copySolver();
 
     protected:
+        /**
+         * @brief Returns how likely it is that x is in the backbone according to some heuristic
+         *
+         * @param x
+         * @return double
+         */
+        double getBackboneLikelihood(Var x);
     };
 
 } // namespace Coprocessor

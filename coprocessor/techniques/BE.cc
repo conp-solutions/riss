@@ -1,4 +1,4 @@
-/***********************************************************************[BackboneSimplification.cc]
+/***********************************************************************[BE.cc]
 Copyright (c) 2021, Anton Reinhard, LGPL v2, see LICENSE
 **************************************************************************************************/
 
@@ -28,14 +28,22 @@ namespace Coprocessor {
         , backboneSimpl(_backboneSimpl)
         , solver(_solver)
         , nVar(solver.nVars())
-        , maxRes(10)
-        , conflictBudget(5)
+        , maxRes(_config.opt_be_maxres)
+        , conflictBudget(_config.opt_be_nconf)
+        , varUsed(solver.nVars(), false)
+        , nDeletedVars(0)
         , copyTime(0)
         , bipartitionTime(0)
         , eliminationTime(0)
-        , getVarsTime(0)
-        , getVarsCount(0)
+        , eliminationTime2(0)
+        , solverTime(0)
+        , subsumptionTime(0)
+        , getResTime(0)
+        , nSolverCalls(0)
         , eliminatedVars(0)
+        , nTopLevelIterations(0)
+        , nSubsumption(0)
+        , nGetRes(0)
         , dirtyCache(false) {
     }
 
@@ -49,14 +57,30 @@ namespace Coprocessor {
     }
 
     void BE::printStatistics(std::ostream& stream) {
-        stream << "c [BE] copyTime: " << copyTime << "s, bipartitionTime: " << bipartitionTime << "s, eliminationTime: " << eliminationTime
-               << "s, getVarsTime: " << getVarsTime << "s, getVarsCount: " << getVarsCount << ", no. eliminated Vars: " << eliminatedVars 
-               << std::endl;
+        stream << "c [STAT] BE maxres: " << maxRes << std::endl;
+        stream << "c [STAT] BE nConf: " << conflictBudget << std::endl;
+        stream << "c [STAT] BE deleted variables: " << nDeletedVars << std::endl;
+        stream << "c [STAT] BE bipartitionTime: " << bipartitionTime << std::endl;
+        stream << "c [STAT] BE eliminationTime: " << eliminationTime << std::endl;
+        stream << "c [STAT] BE solverTime: " << solverTime << std::endl;
+        stream << "c [STAT] BE nSolverCalls: " << nSolverCalls << std::endl;
+        stream << "c [STAT] BE elimination candidates: " << eliminationCandidates << std::endl;
+        stream << "c [STAT] BE no. top level iterations: " << nTopLevelIterations << std::endl;
+        int usedVars = 0;
+        for (const auto& it : varUsed) {
+            if (bool(it)) ++usedVars;
+        }
+        stream << "c [STAT] BE used variables: " << usedVars << std::endl;
     }
 
     void BE::reset() {
         destroy();
         outputVariables.clear();
+        copyTime = 0;
+        bipartitionTime = 0;
+        eliminationTime = 0;
+        eliminationCandidates = 0;
+        eliminatedVars = 0;
     }
 
     bool BE::process() {
@@ -66,19 +90,17 @@ namespace Coprocessor {
             return false;
         }
 
-        printf("c Solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
-
         computeBipartition();
-
-        fprintf(stderr, "c [BE] start\n");
 
         eliminate();
 
         ran = true;
 
-        printf("c Afterwards solver has %i variables, %i clauses\n", solver.nVars(), solver.nClauses());
-
-        fprintf(stderr, "c [BE] stop\n");
+        static bool first = true;
+        if (first) {
+            printStatistics(std::cout);
+            first = false;
+        }
 
         return eliminatedVars != 0;
     }
@@ -91,7 +113,7 @@ namespace Coprocessor {
 
         MethodTimer timer(&bipartitionTime);
 
-        // line 1
+        // line 1 - get the backbone and put it into output variables. this includes all units
         auto& backbone = backboneSimpl.getBackbone();
         outputVariables.reserve(backbone.size());
         for (const auto& lit : backbone) {
@@ -112,6 +134,11 @@ namespace Coprocessor {
 
         // line 4
         for (int i = 0; i < vars.size(); ++i) {
+            if (!varUsed[vars[i]]) {
+                // skip unused variables
+                inputVariables.emplace_back(vars[i]);
+                continue;
+            }
             if (isDefined(i, vars)) {
                 outputVariables.emplace_back(vars[i]);
             } else {
@@ -119,7 +146,9 @@ namespace Coprocessor {
             }
         }
 
-        printf("c ########## Finished bipartition computation, found %lu output variables ##########\n", outputVariables.size());
+        eliminationCandidates = outputVariables.size() - solver.trail.size();
+
+        std::cout << "c Bipartition done!" << std::endl;
     }
 
     void BE::eliminate() {
@@ -134,6 +163,8 @@ namespace Coprocessor {
 
         // line 3
         while (iterate) {
+            std::cout << "c top level iteration..." << std::endl;
+            ++nTopLevelIterations;
 
             // line 4
             outputVariables = retrySet;
@@ -150,17 +181,27 @@ namespace Coprocessor {
 
             // line 6
             while (!outputVariables.empty()) {
+                Riss::Var x;
+                {
+                    MethodTimer timer(&eliminationTime2);
 
-                // line 7
-                // select one of the output Variables that minimizes possible resolvents
-                std::sort(outputVariables.begin(), outputVariables.end(), [&](const Var& x, const Var& y) {
-                    return this->numRes(x) < this->numRes(y);
-                }); // TODO: maybe just find smallest value here instead of sorting completely? should be linear instead of n*log n
-                auto x = outputVariables.front();
+                    // line 7
+                    // select one of the output Variables that minimizes possible resolvents
+                    std::size_t minIndex = 0;
+                    int minRes = std::numeric_limits<int>::max();
+                    for (std::size_t i = 0; i < outputVariables.size(); ++i) {
+                        auto nRes = numRes(outputVariables[i]);
+                        if (nRes < minRes) {
+                            minRes = nRes;
+                            minIndex = i;
+                        }
+                    }
+                    x = outputVariables[minIndex];
 
-                // line 8
-                // remove selected variable from the set
-                outputVariables.erase(outputVariables.begin());
+                    // line 8
+                    // remove selected variable from the set
+                    outputVariables.erase(outputVariables.begin() + minIndex);
+                }
 
                 // line 9
                 // occurrence simplification on x
@@ -192,6 +233,7 @@ namespace Coprocessor {
                     // we can assume that these don't overlap
 
                     if (posXClauses.size() + negXClauses.size() > R.size()) {
+                        // actually do the elimination now
                         for (const auto& clause : posXClauses) {
                             ca[clause].mark(1);
                             ca[clause].set_delete(true);
@@ -237,8 +279,9 @@ namespace Coprocessor {
                 }
             }
         }
+        nDeletedVars = deletedVars.size();
 
-        printf("c deleted %ld variables\n", deletedVars.size());
+        std::cout << "Elimination Done" << std::endl;
     }
 
     bool BE::isDefined(const int32_t index, std::vector<Var>& vars) {
@@ -266,6 +309,10 @@ namespace Coprocessor {
         // now set conflict budget
         ownSolver->setConfBudget(conflictBudget);
 
+        ownSolver->assumptions.clear();
+
+        MethodTimer timer(&solverTime);
+        ++nSolverCalls;
         return ownSolver->solveLimited(assumptions) == l_False;
     }
 
@@ -292,10 +339,10 @@ namespace Coprocessor {
         Riss::vec<Lit> primeClause;
         for (std::size_t i = 0; i < data.getClauses().size(); ++i) {
             const auto& clause = ca[data.getClauses()[i]];
-            const Lit* lit = (const Lit*)(clause);
             for (int j = 0; j < clause.size(); ++j) {
-                assembledClause.push(lit[j]);
-                primeClause.push(mkLit(var(lit[j]) + nVar, sign(lit[j])));
+                assembledClause.push(clause[j]);
+                primeClause.push(mkLit(var(clause[j]) + nVar, sign(clause[j])));
+                varUsed[var(clause[j])] = true;
             }
             ownSolver->integrateNewClause(assembledClause);
             ownSolver->integrateNewClause(primeClause);
@@ -306,6 +353,10 @@ namespace Coprocessor {
         // add 2 additional clauses for every variable
         Riss::vec<Lit> addedClause;
         for (int var = 0; var < solver.nVars(); ++var) {
+            if (!varUsed[var]) {
+                // no need to do this for unused variables
+                continue;
+            }
             // z is var
             const auto z = var;
             const auto zP = var + nVar;
@@ -372,9 +423,6 @@ namespace Coprocessor {
     }
 
     std::vector<Riss::CRef> BE::getClausesContaining(const Lit& x) const {
-        ++getVarsCount;
-        MethodTimer timer(&getVarsTime);
-
         std::vector<Riss::CRef> resultClauses;
 
         for (std::size_t i = 0; i < data.getClauses().size(); ++i) {
@@ -396,6 +444,8 @@ namespace Coprocessor {
     }
 
     std::vector<std::vector<Lit>> BE::getResolvents(const Var& x) const {
+        MethodTimer timer(&getResTime);
+        ++nGetRes;
         auto posX = mkLit(x, false);
         auto negX = mkLit(x, true);
 
@@ -449,6 +499,8 @@ namespace Coprocessor {
     }
 
     void BE::subsume(std::vector<std::vector<Lit>>& clauses) const {
+        MethodTimer timer(&subsumptionTime);
+        ++nSubsumption;
         // remember if something is subsumed
         std::vector<bool> isSubsumed(clauses.size(), false);
 

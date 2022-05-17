@@ -649,6 +649,15 @@ namespace Coprocessor {
         //
         opt_backbone_nconf(_cat, "backbone_nconf", "how many conflicts the solver is allowed per tested variable", 5, IntRange(0, INT32_MAX),
                            optionListPtr, &opt_backbone)
+        , opt_backbone_ngrouping(_cat, "backbone_ngrouping", "how many literals are tested at once at first", 32, IntRange(1, INT32_MAX),
+                                 optionListPtr, &opt_backbone)
+        , opt_backbone_grouping(_cat, "backbone_grouping", "what kind of grouping is used (none = 0, conjunctive = 1, disjunctive = 2)", 1,
+                                IntRange(0, 2), optionListPtr, &opt_backbone)
+        , opt_backbone_sorting(_cat, "backbone_sorting", "what kind of sorting is used (MULT = 0, DIV = 1)", 1, IntRange(0, 1), optionListPtr,
+                               &opt_backbone)
+        , opt_backbone_decreasePercent(_cat, "backbone_decrease_percent",
+                                       "after how many percent of variables have been used will the nGrouping be decreased", 0.8,
+                                       DoubleRange(0., false, 1., true), optionListPtr, &opt_backbone)
         ,
 
         //
@@ -656,6 +665,8 @@ namespace Coprocessor {
         //
         opt_be_nconf(_cat, "be_nconf", "how many conflicts the solver is allowed per tested variable", 5, IntRange(0, INT32_MAX), optionListPtr,
                      &opt_be)
+        , opt_be_maxres(_cat, "be_maxres", "how many resolvents are allowed to be added to forget one variable", 500, IntRange(0, INT32_MAX),
+                        optionListPtr, &opt_be)
         ,
 
 //

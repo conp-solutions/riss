@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
             gzclose(in);
 
             if (S.verbosity > 0) {
-                printf("c |  Number of variables:  %12d                                                                  |\n", S.nVars());
+                printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
                 printf("c |  Number of clauses:    %12d                                                                   |\n", S.nClauses());
             }
 

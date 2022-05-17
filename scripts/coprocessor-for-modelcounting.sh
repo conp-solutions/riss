@@ -183,6 +183,7 @@ declare -i SIMPLIFY_STATUS=0
     -whiteList="$WHITE_FILE" \
     -dimacs="$SIMPLIFIED_CNF" \
     -no-dense \
+    -backbone \
     -search=0 \
     2> "$CP3_STDERR" \
     || SIMPLIFY_STATUS=$?
