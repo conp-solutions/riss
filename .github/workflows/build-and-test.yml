@@ -1,0 +1,21 @@
+name: Build and Test on Linux and Mac OS
+
+on:
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+
+  Linux:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Install Packages
+      run: sudo apt-get install zlib1g-dev make cmake picosat
+
+    - uses: actions/checkout@v1
+
+    - name: run CI script
+      run: ./scripts/ci.sh
