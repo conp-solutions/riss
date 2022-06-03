@@ -13,6 +13,7 @@ OUTPUT_LOCATION=""
 DEBUG=""
 AWK="awk"
 COPROCESSOR_FAILBACK="false"
+KEEP_VARS_EQUAL=
 
 usage () 
 {
@@ -29,6 +30,8 @@ cat << EOF
   -F ............... fail back to no simplification in case coprocessor fails
   -p CLI ........... add this CLI parameters to coprocessor
   -o FILE .......... write simplified file to this location, instead of solving
+  -k VARS .......... keep the first VARS variables 'stable', to keep the number
+                     of models
   
   To get more insights into this scripts internals
   -d ............... Print some debugging output
@@ -40,7 +43,7 @@ EOF
 }
 
 # Handle CLI
-while getopts "ac:deFho:p:t" o; do
+while getopts "ac:deFhk:o:p:t" o; do
     case "${o}" in
         a)
             AWK="${OPTARG}"
@@ -60,6 +63,9 @@ while getopts "ac:deFho:p:t" o; do
             usage
             exit 0
             ;;    
+        k)
+            KEEP_VARS_EQUAL="${OPTARG}"
+            ;;
         p)
             COPROCESSOR_EXTRA_ARGS="${OPTARG}"
             ;;
@@ -136,6 +142,15 @@ else
     COMMENTS=$(grep "^c" "$INPUT")
     P_LINE=$(grep "^p" "$INPUT")
     grep -v "^w" "$INPUT" > "$WEIGHT_FREE_CNF"
+fi
+
+if [ -n "${KEEP_VARS_EQUAL:-}" ]; then
+    if [ "$KEEP_VARS_EQUAL" -gt "$VARS" ]; then
+        echo "Error: specified number of variables ($KEEP_VARS_EQUAL) is greater than number of variables in formula ($VARS), aborting"
+        exit 1
+    fi
+    echo "c set variables to keep assignment from $VARS to $KEEP_VARS_EQUAL"
+    VARS="$KEEP_VARS_EQUAL"
 fi
 
 # In case the initial formula said 'p wcnf', drop the 'w' for Coprocessor
@@ -224,6 +239,7 @@ echo "$P_LINE" >> "$TMP_OUTPUT"
 [ -n "$COMMENTS" ] && echo "$COMMENTS" >> "$TMP_OUTPUT"
 [ -n "$WEIGHT_LINES" ] && echo "$WEIGHT_LINES" >> "$TMP_OUTPUT"
 [ -n "$DEBUG" ] && cat "$CP3_STDERR" >> "$TMP_OUTPUT"
+# TODO FIXME: use correct p line!
 grep -v "^p " "$SIMPLIFIED_CNF" | grep -v "^c" >> "$TMP_OUTPUT"
 
 # If there is an output location, copy and stop
