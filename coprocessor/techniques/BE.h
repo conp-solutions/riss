@@ -34,8 +34,8 @@ namespace Coprocessor {
         Riss::CoreConfig* solverconfig;
         Riss::vec<Riss::Lit> assumptions; // current set of assumptions that are used for the next SAT call
 
-        int conflictBudget;               // how many conflicts is the solver allowed to have before aborting the search for a model
-        std::vector<bool> varUsed;        // "map" from variable to whether it is used in the solver, i.e. whether it is not a unit
+        int conflictBudget;        // how many conflicts is the solver allowed to have before aborting the search for a model
+        std::vector<bool> varUsed; // "map" from variable to whether it is used in the solver, i.e. whether it is not a unit
 
         // statistic variables
         int nDeletedVars;
@@ -43,15 +43,17 @@ namespace Coprocessor {
         double bipartitionTime;
         double eliminationTime;
         double eliminationTime2;
+        double occurrenceSimplTime;
         double solverTime;
         mutable double subsumptionTime;
         mutable double getResTime;
         int nSolverCalls;
-        int eliminationCandidates;  // number of variables that are candidates for elimination, excluding units
+        int eliminationCandidates; // number of variables that are candidates for elimination, excluding units
         int eliminatedVars;
-        int nTopLevelIterations;    // number of top level iterations in elimination
+        int nTopLevelIterations; // number of top level iterations in elimination
         mutable int nSubsumption;
         mutable int nGetRes;
+        mutable int nOccurrencesRemoved;
 
         mutable bool dirtyCache;
 
@@ -137,6 +139,12 @@ namespace Coprocessor {
          * @return true if a subsumes b, false otherwise
          */
         inline bool subsumes(std::vector<Lit>& a, std::vector<Lit>& b) const;
+
+        /**
+         * @brief Performs occurrence simplification on x
+         * @return true if the formula changed, false if not
+         */
+        inline void occurrenceSimpl(const Lit& x);
 
         /**
          * @brief for debugging, prints a vector of literals

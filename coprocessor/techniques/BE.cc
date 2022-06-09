@@ -36,6 +36,7 @@ namespace Coprocessor {
         , bipartitionTime(0)
         , eliminationTime(0)
         , eliminationTime2(0)
+        , occurrenceSimplTime(0)
         , solverTime(0)
         , subsumptionTime(0)
         , getResTime(0)
@@ -44,6 +45,7 @@ namespace Coprocessor {
         , nTopLevelIterations(0)
         , nSubsumption(0)
         , nGetRes(0)
+        , nOccurrencesRemoved(0)
         , dirtyCache(false) {
     }
 
@@ -62,13 +64,16 @@ namespace Coprocessor {
         stream << "c [STAT] BE deleted variables: " << nDeletedVars << std::endl;
         stream << "c [STAT] BE bipartitionTime: " << bipartitionTime << std::endl;
         stream << "c [STAT] BE eliminationTime: " << eliminationTime << std::endl;
+        stream << "c [STAT] BE occurrenceSimplTime: " << occurrenceSimplTime << std::endl;
+        stream << "c [STAT] BE occurrences removed: " << nOccurrencesRemoved << std::endl;
         stream << "c [STAT] BE solverTime: " << solverTime << std::endl;
         stream << "c [STAT] BE nSolverCalls: " << nSolverCalls << std::endl;
         stream << "c [STAT] BE elimination candidates: " << eliminationCandidates << std::endl;
         stream << "c [STAT] BE no. top level iterations: " << nTopLevelIterations << std::endl;
         int usedVars = 0;
         for (const auto& it : varUsed) {
-            if (bool(it)) ++usedVars;
+            if (bool(it))
+                ++usedVars;
         }
         stream << "c [STAT] BE used variables: " << usedVars << std::endl;
     }
@@ -79,8 +84,10 @@ namespace Coprocessor {
         copyTime = 0;
         bipartitionTime = 0;
         eliminationTime = 0;
+        occurrenceSimplTime = 0;
         eliminationCandidates = 0;
         eliminatedVars = 0;
+        nOccurrencesRemoved = 0;
     }
 
     bool BE::process() {
@@ -205,6 +212,8 @@ namespace Coprocessor {
 
                 // line 9
                 // occurrence simplification on x
+                occurrenceSimpl(mkLit(x, false));
+                occurrenceSimpl(mkLit(x, true));
 
                 // line 10
                 if (numRes(x) > maxRes) {
@@ -281,7 +290,7 @@ namespace Coprocessor {
         }
         nDeletedVars = deletedVars.size();
 
-        std::cout << "Elimination Done" << std::endl;
+        std::cout << "c Elimination Done" << std::endl;
     }
 
     bool BE::isDefined(const int32_t index, std::vector<Var>& vars) {
@@ -556,6 +565,46 @@ namespace Coprocessor {
         // -> removes all clauses that were marked in isSubsumed
         // (this assumes that std::remove_if goes through the elements in clauses in order, which isn't specified in the standard)
         clauses.erase(std::remove_if(clauses.begin(), clauses.end(), std::ref(remover)), clauses.end());
+    }
+
+    void BE::occurrenceSimpl(const Lit& x) {
+        MethodTimer timer(&occurrenceSimplTime);
+
+        bool changed = false;
+        auto clauses = getClausesContaining(x);
+
+        for (auto& clause : clauses) {
+
+            Riss::vec<Lit> assumptions;
+            auto& c = ca[clause];
+            c.size();
+
+            // add assumptions for negated clause literals except x, which is positive
+            for (auto i = 0; i < c.size(); ++i) {
+                if (c[i] == x) {
+                    assumptions.push(x);
+                } else {
+                    assumptions.push(~c[i]);
+                }
+            }
+
+            // only use bcp -> confbudget = 0
+            ownSolver->setConfBudget(1);
+            ownSolver->assumptions.clear();
+
+            ++nSolverCalls;
+            if (ownSolver->solveLimited(assumptions) == l_False) {
+                // unsatisfiable -> remove x from the clause
+                c.remove_lit(x);
+
+                ++nOccurrencesRemoved;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            dirtyCache = true;
+        }
     }
 
     bool BE::subsumes(std::vector<Lit>& a, std::vector<Lit>& b) const {

@@ -184,6 +184,7 @@ declare -i SIMPLIFY_STATUS=0
     -dimacs="$SIMPLIFIED_CNF" \
     -no-dense \
     -backbone \
+    -be \
     -search=0 \
     2> "$CP3_STDERR" \
     || SIMPLIFY_STATUS=$?
