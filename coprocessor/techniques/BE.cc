@@ -162,21 +162,23 @@ namespace Coprocessor {
         MethodTimer timer(&eliminationTime);
 
         // line 2
-        bool iterate = true;
         std::vector<Var> retrySet = outputVariables;
 
         // the variables that are deleted, so they can be completely removed from the cnf
         std::vector<Var> deletedVars;
 
+        int changedVars = 0;
+        const int minChange = 0.0001 * data.nVars() + 1;
+
         // line 3
-        while (iterate) {
-            std::cout << "c top level iteration..." << std::endl;
+        while (changedVars >= minChange) {
+            std::cout << "c top level iteration...\n";
             ++nTopLevelIterations;
 
             // line 4
             outputVariables = retrySet;
             retrySet.clear();
-            iterate = false;
+            changedVars = 0;
 
             // line 5
             // vivification on output variables
@@ -275,7 +277,7 @@ namespace Coprocessor {
 
                         // line 16
                         // something happened, so retrying might yield new results, also invalidate numRes cache
-                        iterate = true;
+                        ++changedVars;
                         dirtyCache = true;
                         ++eliminatedVars;
 
@@ -287,6 +289,7 @@ namespace Coprocessor {
                     }
                 }
             }
+            std::cout << "c Removed " << changedVars << " variables this iteration\n";
         }
         nDeletedVars = deletedVars.size();
 
