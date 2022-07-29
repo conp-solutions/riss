@@ -121,7 +121,7 @@ namespace Coprocessor {
 
         static bool first = true;
         if (first) {
-            printStatistics(std::cout);
+            printStatistics(std::cerr);
             first = false;
         }
 

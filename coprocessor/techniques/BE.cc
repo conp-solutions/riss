@@ -105,7 +105,7 @@ namespace Coprocessor {
 
         static bool first = true;
         if (first) {
-            printStatistics(std::cout);
+            printStatistics(std::cerr);
             first = false;
         }
 
@@ -273,7 +273,13 @@ namespace Coprocessor {
                             data.lits.clear();
                         }
 
-                        solver.addClause(mkLit(x));
+                        // add unit clause with x to fix it, otherwise we double the number of solutions
+                        data.lits.emplace_back(mkLit(x));
+                        Riss::CRef newClause = ca.alloc(data.lits, false);
+                        data.addClause(newClause);
+                        data.getClauses().push(newClause);
+
+                        data.lits.clear();
 
                         // line 16
                         // something happened, so retrying might yield new results, also invalidate numRes cache
@@ -592,7 +598,7 @@ namespace Coprocessor {
             }
 
             // only use bcp -> confbudget = 0
-            ownSolver->setConfBudget(1);
+            ownSolver->setConfBudget(0);
             ownSolver->assumptions.clear();
 
             ++nSolverCalls;
