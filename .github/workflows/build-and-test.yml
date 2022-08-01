@@ -1,0 +1,41 @@
+name: Build Solver on Linux
+
+on:
+  push:
+    branches:
+      - '**'
+
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  Linux:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install Packages
+      run: sudo apt-get install zlib1g-dev make cmake picosat
+
+    - uses: actions/checkout@v1
+
+    - name: build debug
+      run: |
+        mkdir debug
+        cd debug
+        cmake -D CMAKE_BUILD_TYPE=Debug -D DRATPROOF=ON ..
+        make riss-simp -j 4
+        make riss-core -j 4
+        make scripts -j 4
+
+
+    - name: build release
+      run: |
+        mkdir release
+        cd release
+        cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_CXX_COMPILER=clang++ .. ..
+        make riss-simp -j 4
+        make riss-core -j 4
+        make scripts -j 4
+        
