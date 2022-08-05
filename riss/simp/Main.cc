@@ -246,7 +246,7 @@ int main(int argc, char** argv)
 
         if (!S.okay()) {
             // turn UNSAT into UNKNOWN?
-            if(opt_nounsat) {
+            if (opt_nounsat) {
                 if (res != nullptr) {
                     if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"), fclose(res); }
                     else { fprintf(res, "s UNKNOWN\n"), fclose(res); }
@@ -294,7 +294,7 @@ int main(int argc, char** argv)
         lbool ret = S.solveLimited(dummy);
 
         // fake UNSAT into UNKNOWN, in case the user demands it
-        if(ret == l_False && opt_nounsat) ret = l_Undef;
+        if (ret == l_False && opt_nounsat) { ret = l_Undef; }
 
         if (S.verbosity > 0) {
             printStats(S);
