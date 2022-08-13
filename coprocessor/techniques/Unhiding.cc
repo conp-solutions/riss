@@ -927,7 +927,6 @@ void Unhiding::printStatistics(ostream& stream)
 
 void Unhiding::destroy()
 {
-    big.~BIG();
     vector<literalData>().swap(stampInfo);
 
     // queue of literals that have to be stamped in the current function call
