@@ -26,15 +26,15 @@ Copyright (c) 2013-2015, Norbert Manthey, LGPL v2, see LICENSE
 
 // use these values to specify the model in extend model
 #ifndef l_True
-    #define l_True  0 // gcc does not do constant propagation if these are real constants.
+#define l_True 0 // gcc does not do constant propagation if these are real constants.
 #endif
 
 #ifndef l_False
-    #define l_False 1
+#define l_False 1
 #endif
 
 #ifndef l_Undef
-    #define l_Undef 2
+#define l_Undef 2
 #endif
 
 /**
@@ -73,7 +73,7 @@ extern void riss_destroy(void** riss);
 /** add a new variables in the solver
  * @return number of the newly generated variable
  */
-extern int riss_new_variable(const void* riss) ;
+extern int riss_new_variable(const void* riss);
 
 /** add a literal to the solver, if lit == 0, end the clause and actually add it (lit is in external 1-N variable representation)
  *  @return 0, if addition is ok. 1, if adding this literal (0) leads to a bad state of the solver
@@ -103,12 +103,12 @@ extern void riss_set_termination_callback(void* riss, void* terminationState, in
  * @param max_length max length of clauses to be shared
  * @param learn function that will process the shared learned clause
  */
-extern void riss_set_learn_callback(void *riss, void * state, int max_length, void (*learn)(void * state, int * clause));
+extern void riss_set_learn_callback(void* riss, void* state, int max_length, void (*learn)(void* state, int* clause));
 
 /** apply unit propagation (find units, not shrink clauses) and remove satisfied (learned) clauses from solver
  * @return 1, if simplification did not reveal an empty clause, 0 if an empty clause was found (or inconsistency by unit propagation)
  */
-extern int riss_simplify(const void* riss) ;
+extern int riss_simplify(const void* riss);
 
 /** solve the formula that is currently present (riss_add) under the specified assumptions since the last call
  * Note: clears the assumptions after the solver run finished
@@ -127,38 +127,38 @@ extern int riss_sat_limited(void* riss, const int64_t nOfConflicts);
 /** return the polarity of a variable in the model of the last solver run (if the result was sat)
  * @return 1 = literal is true, -1 = literal is false, 0 = value is unknown
  */
-extern int riss_deref(const void* riss, const int lit) ;
+extern int riss_deref(const void* riss, const int lit);
 
 /** give number of literals that are present in the conflict clause that has been produced by analyze_final
  *  @return number of literals in the conflict clause
  */
-extern int riss_conflict_size(const void* riss) ;
+extern int riss_conflict_size(const void* riss);
 
 /** return the literals of the conflict clause at the specified position
  *  @return a literal of the conflict clause
  */
-extern int riss_conflict_lit(const void* riss, const int position) ;
+extern int riss_conflict_lit(const void* riss, const int position);
 
-/** check whether a given assumption variable (literal is turned into the corresponding variable) is present in the current conflict clause (result of analyzeFinal)
-* @return 1 if the assumption variable is part of the conflict, 0 otherwise.
-*/
+/** check whether a given assumption variable (literal is turned into the corresponding variable) is present in the current conflict clause (result of
+ * analyzeFinal)
+ * @return 1 if the assumption variable is part of the conflict, 0 otherwise.
+ */
 extern int riss_assumption_failed(void* riss, int lit);
 
 /** returns the number of variables that are currently used by the solver
  * @return number of currently maximal variables
  */
-extern int riss_variables(const void* riss) ;
+extern int riss_variables(const void* riss);
 
 /** returns the current number of assumption literals for the next solver call
  * @return number of currently added assumptions for the next solver call
  */
-extern int riss_assumptions(const void* riss) ;
+extern int riss_assumptions(const void* riss);
 
 /** returns the number of (added) clauses that are currently used by the solver (does not include learnt clauses)
  * @return number of clauses (not including learnt clauses)
  */
-extern int riss_clauses(const void* riss) ;
-
+extern int riss_clauses(const void* riss);
 
 #ifdef __cplusplus
 }

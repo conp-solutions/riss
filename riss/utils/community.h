@@ -42,12 +42,11 @@ along with GraphFeatSAT. If not, see <http://www.gnu.org/licenses/>.
 using namespace std;
 
 //-------------------------------------------------------------------------------------------
-inline void shuffle(vector <int>& x)
-{
-//-------------------------------------------------------------------------------------------
-// Randomly re-order elements of a vector
-//-------------------------------------------------------------------------------------------
-    for (int i = 0 ; i < x.size() - 1 ; i++) {
+inline void shuffle(vector<int>& x) {
+    //-------------------------------------------------------------------------------------------
+    // Randomly re-order elements of a vector
+    //-------------------------------------------------------------------------------------------
+    for (int i = 0; i < x.size() - 1; i++) {
         int j = rand() % (x.size() - i) + i;
         int aux = x[i];
         x[i] = x[j];
@@ -55,33 +54,30 @@ inline void shuffle(vector <int>& x)
     }
 }
 //-------------------------------------------------------------------------------------------
-inline double abs2(double x)
-{
-//-------------------------------------------------------------------------------------------
-    if (x < 0) { return -x; }
-    else { return x; }
+inline double abs2(double x) {
+    //-------------------------------------------------------------------------------------------
+    if (x < 0) {
+        return -x;
+    } else {
+        return x;
+    }
 }
 //-------------------------------------------------------------------------------------------
-inline bool my_bigger_communities(pair <int, double> x, pair <int, double> y)
-{
+inline bool my_bigger_communities(pair<int, double> x, pair<int, double> y) {
     return x.second > y.second;
 }
 //-------------------------------------------------------------------------------------------
 
+class Community {
+    vector<double> arity; // arity[i] = Sum of the arities of nodes belonging to community "i"
 
-class Community
-{
-    vector <double> arity; // arity[i] = Sum of the arities of nodes belonging to community "i"
-
-  public:
-
+public:
     SimpleGraph* g;
-    vector <int> n2c;      // Assigns every node a community (community identifiers belong to 0..n-1)
-    vector <vector <int> > Comm;
-    vector <pair <int, int> > Comm_order;
+    vector<int> n2c; // Assigns every node a community (community identifiers belong to 0..n-1)
+    vector<vector<int>> Comm;
+    vector<pair<int, int>> Comm_order;
 
-    Community(SimpleGraph* g2)
-    {
+    Community(SimpleGraph* g2) {
         ncomm = 0;
         iterations = 0;
 
@@ -93,17 +89,16 @@ class Community
             n2c.resize(g->getSize());
 
             for (int i = 0; i < g->getSize(); i++) {
-                n2c[i] = i;    // Every node to one singleton community
+                n2c[i] = i; // Every node to one singleton community
             }
 
             for (int i = 0; i < g->getSize(); i++) {
-                arity[i] = g->arity(i);    // Arity of the (singleton) community equals to arity of node
+                arity[i] = g->arity(i); // Arity of the (singleton) community equals to arity of node
             }
         }
     }
 
-    Community(SimpleGraph* g2, vector<int>& n2cb)
-    {
+    Community(SimpleGraph* g2, vector<int>& n2cb) {
         ncomm = 0;
         g = g2;
         iterations = 0;
@@ -119,59 +114,51 @@ class Community
     int ncomm;
     int iterations;
 
-
-//-------------------------------------------------------------------------------------------
-    double modularity()
-    {
-//-------------------------------------------------------------------------------------------
-// Given the graph "g" and the partition "n2c" computes the modularity
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    double modularity() {
+        //-------------------------------------------------------------------------------------------
+        // Given the graph "g" and the partition "n2c" computes the modularity
+        //-------------------------------------------------------------------------------------------
         double w = 0;
         double arity = 0;
-        vector <double> aritym(g->getSize(), 0);
-
+        vector<double> aritym(g->getSize(), 0);
 
         for (SimpleGraph::EdgeIter it = g->begin(); it != g->end(); it++) {
-            //assert(it->orig >= 0 && it->orig < n2c.size());
-            //assert(it->dest >= 0 && it->dest < n2c.size());
+            // assert(it->orig >= 0 && it->orig < n2c.size());
+            // assert(it->dest >= 0 && it->dest < n2c.size());
             if (n2c[it->orig] == n2c[it->dest]) {
                 w += it->weight;
             }
         }
 
-
         for (int i = 0; i < g->getSize(); i++) {
             aritym[n2c[i]] += g->arity(i);
         }
-
-
 
         for (int i = 0; i < g->getSize(); i++) {
             arity += aritym[i] * aritym[i] / g->arity() / g->arity();
         }
 
-
-//  cerr <<" Modularity = "<<w / g->arity()<<" - "<<arity<<" = "<<w / g->arity() - arity<<endl;
+        //  cerr <<" Modularity = "<<w / g->arity()<<" - "<<arity<<" = "<<w / g->arity() - arity<<endl;
         return 2 * w / g->arity() - arity;
     }
 
-//-------------------------------------------------------------------------------------------
-    bool one_level()
-    {
-//-------------------------------------------------------------------------------------------
-// Given a graf "g" and a partition "n2c", improves the partition by moving nodes from one
-// partition to another. Modifies "arity" and "n2c". Returns "true" if partition changed.
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    bool one_level() {
+        //-------------------------------------------------------------------------------------------
+        // Given a graf "g" and a partition "n2c", improves the partition by moving nodes from one
+        // partition to another. Modifies "arity" and "n2c". Returns "true" if partition changed.
+        //-------------------------------------------------------------------------------------------
 
         bool improved = false, changed;
         vector<int> random_order(g->getSize());
 
-        for (int i = 0 ; i < random_order.size(); i++) {
+        for (int i = 0; i < random_order.size(); i++) {
             random_order[i] = i;
         }
 
-        vector <double> wc(g->getSize(), -1); // wc[c] = sum_{j\in c} w(n,j) for c not conected wc[c]=-1
-        vector <int> nc;                  // neigh communities
+        vector<double> wc(g->getSize(), -1); // wc[c] = sum_{j\in c} w(n,j) for c not conected wc[c]=-1
+        vector<int> nc;                      // neigh communities
         do {
             DOUT(cerr << "c Q=" << modularity() << " at iteration " << iterations << endl;);
             iterations++;
@@ -210,7 +197,7 @@ class Community
                     }
                 }
                 if (best_c != n2c[n]) {
-                    //cerr << "Node " << n << " goes " << n2c[n] << " -> " <<best_c << " inc="<<2*best_inc/g->arity()<<endl;
+                    // cerr << "Node " << n << " goes " << n2c[n] << " -> " <<best_c << " inc="<<2*best_inc/g->arity()<<endl;
                     changed = true;
                     improved = true;
                     n2c[n] = best_c;
@@ -223,20 +210,21 @@ class Community
         return (improved);
     }
 
-//-------------------------------------------------------------------------------------------
-    SimpleGraph* community2graph()
-    {
-//-------------------------------------------------------------------------------------------
-// Given a graph "g" and a partition "n2c" generates a new grapf "g2" where nodes
-// are communities and edges are the sum of the edges between both communities.
-//-------------------------------------------------------------------------------------------
-        vector <int> ren(n2c.size(), -1);
+    //-------------------------------------------------------------------------------------------
+    SimpleGraph* community2graph() {
+        //-------------------------------------------------------------------------------------------
+        // Given a graph "g" and a partition "n2c" generates a new grapf "g2" where nodes
+        // are communities and edges are the sum of the edges between both communities.
+        //-------------------------------------------------------------------------------------------
+        vector<int> ren(n2c.size(), -1);
         for (int i = 0; i < n2c.size(); i++) {
             ren[n2c[i]] = 0;
         }
         int aux = 0;
         for (int i = 0; i < ren.size(); i++)
-            if (ren[i] == 0) { ren[i] = aux++; }
+            if (ren[i] == 0) {
+                ren[i] = aux++;
+            }
         for (int i = 0; i < n2c.size(); i++) {
             n2c[i] = ren[n2c[i]];
         }
@@ -251,13 +239,12 @@ class Community
         return g2;
     }
 
-//-------------------------------------------------------------------------------------------
-    double compute_modularity_GFA(double precision)
-    {
-//-------------------------------------------------------------------------------------------
-// Given a graph "g", computes a partition "n2c" by the GFA method, applying "one-level" while it is possible,
-// and collapsing communities into nodes applying "community2graph".
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    double compute_modularity_GFA(double precision) {
+        //-------------------------------------------------------------------------------------------
+        // Given a graph "g", computes a partition "n2c" by the GFA method, applying "one-level" while it is possible,
+        // and collapsing communities into nodes applying "community2graph".
+        //-------------------------------------------------------------------------------------------
         bool improved = false;
         Community* c = new Community(g);
 
@@ -267,7 +254,7 @@ class Community
             DOUT(cerr << "c\tpre improved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux << endl;);
 
             improved = c->one_level() && abs2(c->modularity() - aux) > precision;
-            //improved = c->one_level();
+            // improved = c->one_level();
             DOUT(cerr << "c\tipos mproved: " << improved << " c->modularity(): " << c->modularity() << " aux: " << aux << endl;);
 
             if (improved) {
@@ -282,28 +269,25 @@ class Community
             }
 
             DOUT(cerr << "c\tQ = " << modularity() << " #comm = " << ncomm << endl;);
-            //c.g.print();
+            // c.g.print();
         } while (improved);
-
 
         return modularity();
     }
 
-//-------------------------------------------------------------------------------------------
-    double compute_modularity_LPA(double precision)
-    {
-//-------------------------------------------------------------------------------------------
-//TODO
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    double compute_modularity_LPA(double precision) {
+        //-------------------------------------------------------------------------------------------
+        // TODO
+        //-------------------------------------------------------------------------------------------
         return 0;
     }
 
-//-------------------------------------------------------------------------------------------
-    void connected()
-    {
-//-------------------------------------------------------------------------------------------
-// Given a graph "g", computes "n2c" assignning every node a connected component.
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    void connected() {
+        //-------------------------------------------------------------------------------------------
+        // Given a graph "g", computes "n2c" assignning every node a connected component.
+        //-------------------------------------------------------------------------------------------
 
         for (int i = 0; i < n2c.size(); i++) {
             n2c[i] = -1;
@@ -311,7 +295,7 @@ class Community
 
         int c = 0;
 
-        stack <int> nb;
+        stack<int> nb;
         for (int i = 0; i < g->getSize(); i++) {
             if (n2c[i] == -1) {
                 n2c[i] = c;
@@ -331,15 +315,14 @@ class Community
         ncomm = c;
     }
 
-//-------------------------------------------------------------------------------------------
-    void compute_communities()
-    {
-//-------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    void compute_communities() {
+        //-------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------
 
         Comm.resize(g->getSize());
         for (int i = 0; i < g->getSize(); i++) {
-            Comm[n2c[i]].push_back(i);    //original Version push_back(i+1)
+            Comm[n2c[i]].push_back(i); // original Version push_back(i+1)
         }
 
         for (int i = 0; i < Comm.size(); i++) {
@@ -348,7 +331,8 @@ class Community
         sort(Comm_order.begin(), Comm_order.end(), my_bigger_communities);
 
         int i;
-        for (i = 0; i < Comm.size() && Comm[Comm_order[i].first].size() > 0; i++);
+        for (i = 0; i < Comm.size() && Comm[Comm_order[i].first].size() > 0; i++)
+            ;
         ncomm = i;
 
         /*
@@ -358,14 +342,13 @@ class Community
         */
     }
 
-//-------------------------------------------------------------------------------------------
-    void print_communities(char *filename)
-    {
-//-------------------------------------------------------------------------------------------
-// Print communities of nodes in a file
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    void print_communities(char* filename) {
+        //-------------------------------------------------------------------------------------------
+        // Print communities of nodes in a file
+        //-------------------------------------------------------------------------------------------
 
-        FILE *file;
+        FILE* file;
 
         if ((file = fopen(filename, "w")) == NULL) {
             cerr << "Unable to open file " << filename << " for writing\n";
@@ -383,24 +366,22 @@ class Community
         cerr << "Written community file\n";
     }
 
-//-------------------------------------------------------------------------------------------
-    void print()
-    {
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    void print() {
+        //-------------------------------------------------------------------------------------------
         cerr << "------- COMMUNITY ------\n";
         cerr << "Q = " << modularity() << endl;
         cerr << "#C = " << ncomm << endl;
         for (int i = 0; i < n2c.size(); i++) {
             cerr << i << " -> " << n2c[i] << endl;
         }
-//g.print();
+        // g.print();
     }
 
-//-------------------------------------------------------------------------------------------
-    void print_modules(char *filename)
-    {
-//-------------------------------------------------------------------------------------------
-        FILE *file;
+    //-------------------------------------------------------------------------------------------
+    void print_modules(char* filename) {
+        //-------------------------------------------------------------------------------------------
+        FILE* file;
 
         if ((file = fopen(filename, "w")) == NULL) {
             cerr << "Unable to open file " << filename << " for writing\n";
@@ -412,6 +393,5 @@ class Community
         }
         fclose(file);
     }
-
 };
 #endif

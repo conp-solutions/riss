@@ -8,8 +8,7 @@
 using namespace std;
 using namespace Riss;
 
-int main()
-{
+int main() {
     cout << "Start testing Compression map ... ";
 
     Compression compression = Riss::Compression();

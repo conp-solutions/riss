@@ -48,3 +48,9 @@ tools/checker/solver-wrapper.sh
 
 # backup files
 *~
+
+install/
+
+.vscode/
+
+scripts/out.cnf

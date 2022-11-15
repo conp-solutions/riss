@@ -98,3 +98,49 @@ Riss and the implemented tools can be used to solver multiple other problems
  * Riss can print its parameter specification to automatically tune it for a
    benchmark using tools like ParamILS or SMAC
  * Coprocessor can be used to simplify CNF formulas
+
+# Using Coprocessor
+
+**How to run the tools?** For some of the tools, there exists a calling script in the directory scripts.
+
+**How to find first help?** Run the tool with the parameter --help (will print a very long list).
+
+Coprocessor is the build-in preprocessor of the SAT solver riss and has been extended such that it can be used as a standalone binary. This binary can be used to preprocess a formula in CNF and output the undo information as well. The tool can also be used to postprocess the model for the preprocessed formula to obtain a model for the original formula again.
+
+Techniques that are implemented, but not present in SatElite include Failed Literal Probing, Blocked Clause Elimination, Hidden Tautology Elimination and some more. The aim of Coprocessor is to provide a simplifier that is able to run each technique independently or in a user order. This way, preprocessing techniques can be analyzed and optimized for certain use cases.
+
+Since it is also valueable to preprocess SAT formulae, that should be used for optimization procedures (e.g. MaxSAT) or where clauses should be added afterwards, simplifying the formula can be very helpful to increase the overall speed. Coprocessor provides an interface that disallows to touch variables that are influenced by the optimization or by adding new clauses. This way, the simplification can still be executed on the remaining set of variables. Preliminary studies on PB and MaxSAT showed that this technique is valueable.
+
+In this section a brief overview of the usage for the standalone preprocessor is given to enable a quick and easy start with the tool. Most of the presented parameters can also be used for the preprocessor when used before or during search.
+
+**How to compile the tool?** See detailed instructions of the included README.md file
+
+**How to simplify a formula?** By default the whole preprocessor is disabled and no simplification is executed. Depending on the parameters, Coprocessor 3 can output the simplified formula, and a file that stores the information to extend a model of the simplified formula into a model for the original input formula. A typical commandline looks like ./coprocessor INSTANCE -dimacs=OUTPUTFORMULA -cp3_undo=UNDOINFO
+
+**What is a good parameter setup?** Additionally to the above parameters, the following command line seems to well for application instances. If Coprocessor, or Riss is executed with
+-enabled_cp3 -cp3_stats -up -subsimp -all_strength_res=3 -bva -cp3_bva_limit=120000 -bve -bve_red_lits=1 -no-bve_BCElim -unhide -no-cp3_uhdUHLE -cp3_uhdIters=5 -dense
+This commandline enabled executes unit propagation, unhiding (Unhide), bounded variable addition (BVA) and bounded variable elimination (BVE) in this order. Finally, the gaps in the variables of the formula are closed, which reduces the maximum variable of the formula. Furthermore, for ternary clauses all self-subsuming resolvents are produced. BVA is limited to touch 120000 clauses. BVE reduces the number of clauses, and does not apply blocked clause elimination. Finally, unhiding is not executing unhiding literal elimination and uses five iterations of the unhiding algorithm. After all simplifications have been executed, the preprocessor prints statistics about the execution and effects of single simpification techniques.
+
+**How to create a model for the input formula?** If the simplified formula has been solved by some SAT solver, the model can be extended for a model of the input formula again. The model needs to be given to the preprocessor via a file. A possible command line can look like ./coprocessor -cp3_post -cp3_undo=UNDOINFO -cp3_model=MODELFILE
+Note Coprocessor accepts both the format of SAT competitions and the format of Minisat as models.
+Note that you do not need to extend a model, if the formula is unsatisfiable.
+Note that you do need the UNDOINFO file, if a correct model should be created.
+
+**How to run variable elimination in parallel?** To run variable elimination in parallel, a number of threads needs to be specified. An example command line is./coprocessor INSTANCE -dimacs=MODEL -enabled_cp3 -bve -cp3_threads=N , where N is the number of threads that should be used.
+
+**How to run single techniques?** The preprocessor enables access to the implemented techniques. Each technique is represented by a single letter. The following list shows the letters and the associated techniques:
+u - Boolean Constraint Propagation
+s - Self-Subsuming Resolution
+v - Variable Elimination
+w - Variable Addition
+e - Equivalent Literal Elimination
+h - Hidden Tautology Elimination
+c - Covered Clause Elimination
+p - Probing and Failed Literal Detection
+x - XOR detection and gaussian elimination
+f - Cardinality constraint detection and Fourier-Motzkin reasoning
+To choose a technique that should be executed, the parameter -cp3_ptechs has to be specified on the commandline. For running a set of techniques until completion, the corresponding set of letters can be surrounded by '[' and ']+'.
+Note, that nested brackets cannot be handled correctly.
+Note, each technique that should be used has to be enabled also via the commandline.
+This syntax tells the simplifier that it should run the sourrounded techniques until no simplifications can be executed any more. To simplify the formula with Boolean Constraint Propagation, Self-Subsuming Resolution and Equivalent Literal Elimination, type -cp3_ptechs=[use]+.
+

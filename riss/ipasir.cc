@@ -44,8 +44,7 @@ extern "C" {
  * Return the name and the version of the incremental SAT
  * solving library.
  */
-const char * ipasir_signature()
-{
+const char* ipasir_signature() {
     return riss_signature();
 }
 
@@ -57,11 +56,11 @@ const char * ipasir_signature()
  * Required state: N/A
  * State after: INPUT
  */
-void * ipasir_init()
-{
+void* ipasir_init() {
     char* env_config = getenv("RISSCONFIG");
     const char* rissconfig = env_config == 0 ? 0 : env_config; // old default config, possible buggy: INCSOLVE:-init-act=3:-actStart=2048:INCSIMP
-    return riss_init_configured(rissconfig); // use riss with the configuration for incremental solving, and incremental simplification (after 50000 conflicts)
+    return riss_init_configured(
+        rissconfig); // use riss with the configuration for incremental solving, and incremental simplification (after 50000 conflicts)
 }
 
 /**
@@ -72,8 +71,7 @@ void * ipasir_init()
  * Required state: INPUT or SAT or UNSAT
  * State after: undefined
  */
-void ipasir_release(void * solver)
-{
+void ipasir_release(void* solver) {
     riss_destroy(&solver);
 }
 
@@ -92,8 +90,7 @@ void ipasir_release(void * solver)
  * negation overflow).  This applies to all the literal
  * arguments in API functions.
  */
-void ipasir_add(void * solver, int lit_or_zero)
-{
+void ipasir_add(void* solver, int lit_or_zero) {
     riss_add(solver, lit_or_zero);
 }
 
@@ -105,8 +102,7 @@ void ipasir_add(void * solver, int lit_or_zero)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT
  */
-void ipasir_assume(void * solver, int lit)
-{
+void ipasir_assume(void* solver, int lit) {
     riss_assume(solver, lit);
 }
 
@@ -120,8 +116,7 @@ void ipasir_assume(void * solver, int lit)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-int ipasir_solve(void * solver)
-{
+int ipasir_solve(void* solver) {
     return riss_sat(solver);
 }
 
@@ -135,8 +130,7 @@ int ipasir_solve(void * solver)
  * Required state: SAT
  * State after: SAT
  */
-int ipasir_val(void * solver, int lit)
-{
+int ipasir_val(void* solver, int lit) {
     return riss_deref(solver, lit) > 0 ? lit : -lit;
 }
 
@@ -151,9 +145,9 @@ int ipasir_val(void * solver, int lit)
  * Required state: UNSAT
  * State after: UNSAT
  */
-int ipasir_failed(void * solver, int lit)
-{
-// Note: Riss will convert the literal into a variable, hence the check works only for variables, not for literals (if the complement of an assumption is tested)
+int ipasir_failed(void* solver, int lit) {
+    // Note: Riss will convert the literal into a variable, hence the check works only for variables, not for literals (if the complement of an
+    // assumption is tested)
     return riss_assumption_failed(solver, lit);
 }
 
@@ -170,8 +164,7 @@ int ipasir_failed(void * solver, int lit)
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * state))
-{
+void ipasir_set_terminate(void* solver, void* state, int (*terminate)(void* state)) {
     riss_set_termination_callback(solver, state, terminate);
 }
 
@@ -189,8 +182,7 @@ void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * s
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-void ipasir_set_learn(void * solver, void * state, int max_length, void (*learn)(void * state, int * clause))
-{
+void ipasir_set_learn(void* solver, void* state, int max_length, void (*learn)(void* state, int* clause)) {
     riss_set_learn_callback(solver, state, max_length, learn);
 }
 

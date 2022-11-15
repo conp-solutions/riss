@@ -183,10 +183,11 @@ declare -i SIMPLIFY_STATUS=0
     -whiteList="$WHITE_FILE" \
     -dimacs="$SIMPLIFIED_CNF" \
     -no-dense \
+    -backbone \
     -search=0 \
     2> "$CP3_STDERR" \
-    1> /dev/null || SIMPLIFY_STATUS=$?
-echo "c simplficitaion returned with $SIMPLIFY_STATUS"
+    || SIMPLIFY_STATUS=$?
+echo "c simplification returned with $SIMPLIFY_STATUS"
 
 if [ "$SIMPLIFY_STATUS" -ne 0 ] && [ "$SIMPLIFY_STATUS" -ne 20 ] && [ "$SIMPLIFY_STATUS" -ne 10 ]; then
     echo "c exit, due to simplification status $SIMPLIFY_STATUS"

@@ -7,26 +7,24 @@
 
 #include "riss/utils/SimpleGraph.h"
 
-#include <math.h>
-#include <assert.h>
-#include <sstream>
-#include <iostream>
-#include <algorithm>
-#include "riss/mtl/Sort.h"
 #include "riss/core/SolverTypes.h"
+#include "riss/mtl/Sort.h"
 #include "riss/utils/community.h"
+#include <algorithm>
+#include <assert.h>
+#include <iostream>
+#include <math.h>
+#include <sstream>
+#include <limits>
 
 #include <iterator>
 
-
-
 using namespace std;
 
-SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
-    node(size),
-    nodeDeg(size, 0),
-    pagerank(size, 0)
-{
+SimpleGraph::SimpleGraph(int size, bool computingDerivative)
+    : node(size)
+    , nodeDeg(size, 0)
+    , pagerank(size, 0) {
 
     // TODO Auto-generated constructor stub
     this->size = size;
@@ -35,17 +33,17 @@ SimpleGraph::SimpleGraph(int size, bool computingDerivative) :
     addedUndirectedEdge = false;
     intermediateSort = true;
     intermediateSorts = 0;
-    for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
-    sortSize.resize(size, 4);      // re-sort after 16 elements
+    for (int i = 0; i < size; ++i) {
+        node[i].reserve(8);
+    }                         // get space for the first 8 elements
+    sortSize.resize(size, 4); // re-sort after 16 elements
     narity.resize(size, 0);
-
 }
 
-SimpleGraph::SimpleGraph(int size, bool mergeAtTheEnd, bool computingDerivative) :
-    node(size),
-    nodeDeg(size, 0),
-    pagerank(size, 0)
-{
+SimpleGraph::SimpleGraph(int size, bool mergeAtTheEnd, bool computingDerivative)
+    : node(size)
+    , nodeDeg(size, 0)
+    , pagerank(size, 0) {
     // TODO Auto-generated constructor stub
     this->size = size;
     this->mergeAtTheEnd = mergeAtTheEnd;
@@ -53,67 +51,63 @@ SimpleGraph::SimpleGraph(int size, bool mergeAtTheEnd, bool computingDerivative)
     addedUndirectedEdge = false;
     intermediateSort = true;
     intermediateSorts = 0;
-    sortSize.resize(size, 4);      // re-sort after 16 elements
+    sortSize.resize(size, 4); // re-sort after 16 elements
     narity.resize(size, 0);
-    for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
+    for (int i = 0; i < size; ++i) {
+        node[i].reserve(8);
+    } // get space for the first 8 elements
 }
 
-SimpleGraph::~SimpleGraph()
-{
+SimpleGraph::~SimpleGraph() {
     // TODO Auto-generated destructor stub
-//   cerr << "c intermediate sorts: " << intermediateSorts << endl;
+    //   cerr << "c intermediate sorts: " << intermediateSorts << endl;
 }
 
-void SimpleGraph::finalizeGraph()
-{
+void SimpleGraph::finalizeGraph() {
     for (int i = 0; i < node.size(); i++) {
-        sortAdjacencyList(node[i]);                    //finalizeGraph
+        sortAdjacencyList(node[i]); // finalizeGraph
         nodeDeg[i] = node[i].size();
     }
 }
 
-void SimpleGraph::setIntermediateSort(bool newValue)
-{
+void SimpleGraph::setIntermediateSort(bool newValue) {
     intermediateSort = newValue;
     if (intermediateSort == true) {
-        sortSize.resize(size, 4);      // re-sort after 16 elements
+        sortSize.resize(size, 4); // re-sort after 16 elements
     }
 }
 
-//void Graph::addEdge(int nodeA, int nodeB) {
+// void Graph::addEdge(int nodeA, int nodeB) {
 //  addEdge(nodeA,nodeB,1);
 //}
 //
-//void Graph::addEdge(int nodeA, int nodeB, double aweight) {
+// void Graph::addEdge(int nodeA, int nodeB, double aweight) {
 //  addUndirectedEdge(nodeA,nodeB,aweight);
 //  addUndirectedEdge(nodeB,nodeA,aweight);
 //}
 
-int SimpleGraph::getDegree(int node)
-{
+int SimpleGraph::getDegree(int node) {
     return this->nodeDeg[node];
 }
 
-double SimpleGraph::arity(int x)
-{
+double SimpleGraph::arity(int x) {
     assert(x >= 0 && x <= size - 1);
     return narity[x];
 }
 
-double SimpleGraph::arity()
-{
+double SimpleGraph::arity() {
     double arit = 0;
-    for (int i = 0; i < narity.size(); i++) { arit += narity[i]; }
+    for (int i = 0; i < narity.size(); i++) {
+        arit += narity[i];
+    }
     return arit;
 }
 
-void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB)
-{
+void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB) {
     addUndirectedEdge(nodeA, nodeB, 1);
 }
 
-void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
-{
+void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB, double aweight) {
     assert(!addedDirectedEdge && "cannot mix edge types in implementation");
     addedUndirectedEdge = true;
     if (nodeA >= node.size()) {
@@ -134,15 +128,14 @@ void SimpleGraph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
     nodeDeg[nodeB]++;
     narity[nodeA] += aweight;
     narity[nodeB] += aweight;
-    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+    if (intermediateSort && node[nodeA].size() > sortSize[nodeA]) {
         sortAdjacencyList(node[nodeA]);
-        sortSize[ nodeA ] *= 2;
+        sortSize[nodeA] *= 2;
         nodeDeg[nodeA] = node[nodeA].size();
     }
 }
 
-void SimpleGraph::addDirectedEdge(int nodeA, int nodeB, double aweight)
-{
+void SimpleGraph::addDirectedEdge(int nodeA, int nodeB, double aweight) {
     assert(!addedUndirectedEdge && "cannot mix edge types in implementation");
     addedDirectedEdge = true;
     if (nodeA >= node.size()) {
@@ -157,15 +150,14 @@ void SimpleGraph::addDirectedEdge(int nodeA, int nodeB, double aweight)
     nodeDeg[nodeA]++;
     narity[nodeA] += aweight;
     narity[nodeB] += aweight;
-    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+    if (intermediateSort && node[nodeA].size() > sortSize[nodeA]) {
         sortAdjacencyList(node[nodeA]);
-        sortSize[ nodeA ] *= 2;
+        sortSize[nodeA] *= 2;
         nodeDeg[nodeA] = node[nodeA].size();
     }
 }
 
-void SimpleGraph::addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double aweight)
-{
+void SimpleGraph::addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double aweight) {
     assert(!addedUndirectedEdge && "cannot mix edge types in implementation");
     addedDirectedEdge = true;
     if (nodeA >= node.size()) {
@@ -184,20 +176,19 @@ void SimpleGraph::addDirectedEdgeAndInvertedEdge(int nodeA, int nodeB, double aw
     narity[nodeA] += aweight;
     narity[nodeB] += aweight;
 
-    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+    if (intermediateSort && node[nodeA].size() > sortSize[nodeA]) {
         sortAdjacencyList(node[nodeA]);
-        sortSize[ nodeA ] *= 2;
+        sortSize[nodeA] *= 2;
         nodeDeg[nodeA] = node[nodeA].size();
     }
-    if (intermediateSort && node[nodeB].size() > sortSize[ nodeB ]) {
+    if (intermediateSort && node[nodeB].size() > sortSize[nodeB]) {
         sortAdjacencyList(node[nodeB]);
-        sortSize[ nodeB ] *= 2;
+        sortSize[nodeB] *= 2;
         nodeDeg[nodeB] = node[nodeB].size();
     }
 }
 
-uint64_t SimpleGraph::addAndCountUndirectedEdge(int nodeA, int nodeB, double weight)
-{
+uint64_t SimpleGraph::addAndCountUndirectedEdge(int nodeA, int nodeB, double weight) {
     assert(!addedDirectedEdge && "cannot mix edge types in implementation");
     addedUndirectedEdge = true;
     uint64_t operations = 0;
@@ -231,8 +222,7 @@ uint64_t SimpleGraph::addAndCountUndirectedEdge(int nodeA, int nodeB, double wei
     return operations;
 }
 
-uint64_t SimpleGraph::computeStatistics(int quantilesCount)
-{
+uint64_t SimpleGraph::computeStatistics(int quantilesCount) {
     uint64_t operations = 0;
     if (!mergeAtTheEnd) {
         operations += computeOnlyStatistics(quantilesCount);
@@ -242,8 +232,7 @@ uint64_t SimpleGraph::computeStatistics(int quantilesCount)
     return operations;
 }
 
-uint64_t SimpleGraph::computeOnlyStatistics(int quantilesCount)
-{
+uint64_t SimpleGraph::computeOnlyStatistics(int quantilesCount) {
     uint64_t operations = 0;
     int i, nsize;
     // Statistics for the degrees
@@ -261,8 +250,7 @@ uint64_t SimpleGraph::computeOnlyStatistics(int quantilesCount)
     return operations;
 }
 
-uint64_t SimpleGraph::computeNmergeStatistics(int quantilesCount)
-{
+uint64_t SimpleGraph::computeNmergeStatistics(int quantilesCount) {
     uint64_t operations = 0;
     for (int i = 0; i < size; ++i) {
         if (node[i].size() > 0) {
@@ -295,37 +283,42 @@ uint64_t SimpleGraph::computeNmergeStatistics(int quantilesCount)
     return operations;
 }
 
-uint64_t SimpleGraph::sortAdjacencyList(adjacencyList& aList)
-{
-    if (aList.size() == 0) { return 0; }  // early abort, there is nothing to be done for this list!
+uint64_t SimpleGraph::sortAdjacencyList(adjacencyList& aList) {
+    if (aList.size() == 0) {
+        return 0;
+    } // early abort, there is nothing to be done for this list!
     uint64_t operations = 0;
 
     sort(aList.begin(), aList.end(), nodesComparator);
     operations += aList.size() * log(aList.size());
     int kept = 0;
     for (int j = 1; j < aList.size(); ++j) { // start with second element, as the first element will be kept in all cases!
-        if (aList[j].first != aList[kept].first) { aList[++kept] = aList[j]; }   // keep the next element
-        else { aList[kept].second += aList[j].second; } // otherwise add the weights!
+        if (aList[j].first != aList[kept].first) {
+            aList[++kept] = aList[j];
+        } // keep the next element
+        else {
+            aList[kept].second += aList[j].second;
+        } // otherwise add the weights!
     }
     operations += aList.size();
 
-    if (kept < aList.size()) { aList.resize(kept + 1); }    // save space!
+    if (kept < aList.size()) {
+        aList.resize(kept + 1);
+    } // save space!
 
-    intermediateSorts ++;
+    intermediateSorts++;
 
     return operations;
 }
 
-void SimpleGraph::getAdjacency(int adjnode, std::vector<int>& adj)
-{
+void SimpleGraph::getAdjacency(int adjnode, std::vector<int>& adj) {
     adj.clear();
     for (int i = 0; i < node[adjnode].size(); i++) {
         adj.push_back(node[adjnode][i].first);
     }
 }
 
-vector<int> SimpleGraph::getAdjacency(int adjnode)
-{
+vector<int> SimpleGraph::getAdjacency(int adjnode) {
     adjacencyList& adj = node[adjnode];
     vector<int> nodes;
 
@@ -333,26 +326,24 @@ vector<int> SimpleGraph::getAdjacency(int adjnode)
         edge edg = adj[i];
 
         nodes.push_back(edg.first);
-
     }
 
     return nodes;
 }
 
-void SimpleGraph::completeSingleVIG()
-{
+void SimpleGraph::completeSingleVIG() {
 
-    for (int j = size - 2; j >= 0; j--) { //you dont have to check the last node
+    for (int j = size - 2; j >= 0; j--) { // you dont have to check the last node
         adjacencyList& adj = node[j];
-        for (int k = 0; k < adj.size(); k++) { addDirectedEdge(adj[k].first, j, adj[k].second); }
+        for (int k = 0; k < adj.size(); k++) {
+            addDirectedEdge(adj[k].first, j, adj[k].second);
+        }
     }
 
-    finalizeGraph(); //make sure that the graph is sorted and that there are no duplicates in adjacency lists
-
+    finalizeGraph(); // make sure that the graph is sorted and that there are no duplicates in adjacency lists
 }
 
-vector<double> SimpleGraph::getDistances(int nod)
-{
+vector<double> SimpleGraph::getDistances(int nod) {
 
     Riss::MarkArray visited;
     visited.create(size);
@@ -362,93 +353,107 @@ vector<double> SimpleGraph::getDistances(int nod)
     adjacencyList& adj = node[nod];
     double tmpdistance;
 
-    for (int x = 0; x < size; x++) { distance[x] = numeric_limits<double>::infinity(); } //distance to all nodes = inf
+    for (int x = 0; x < size; x++) {
+        distance[x] = numeric_limits<double>::infinity();
+    } // distance to all nodes = inf
 
     distance[nod] = 0;
     visited.setCurrentStep(nod);
 
-    for (int i = 0; i < adj.size(); i++) { //setting distance of neighbors
+    for (int i = 0; i < adj.size(); i++) { // setting distance of neighbors
         nodestovisit.push_back(adj[i].first);
         visited.setCurrentStep(adj[i].first);
         distance[adj[i].first] = adj[i].second;
     }
 
-    for (int k = 0; k < nodestovisit.size(); ++k) { //breadthfirstsearch algorithm to find the distance to all nodes
+    for (int k = 0; k < nodestovisit.size(); ++k) { // breadthfirstsearch algorithm to find the distance to all nodes
 
         tmpdistance = distance[nodestovisit[k]];
         adjacencyList& adjNeighbor = node[nodestovisit[k]];
 
         for (int j = 0; j < adjNeighbor.size(); ++j) {
 
-            if (distance[adjNeighbor[j].first] > tmpdistance + adjNeighbor[j].second) { distance[adjNeighbor[j].first] = tmpdistance + adjNeighbor[j].second; }
-            if (visited.isCurrentStep(adjNeighbor[j].first)) { continue; }
+            if (distance[adjNeighbor[j].first] > tmpdistance + adjNeighbor[j].second) {
+                distance[adjNeighbor[j].first] = tmpdistance + adjNeighbor[j].second;
+            }
+            if (visited.isCurrentStep(adjNeighbor[j].first)) {
+                continue;
+            }
             visited.setCurrentStep(adjNeighbor[j].first);
             nodestovisit.push_back(adjNeighbor[j].first);
         }
-
     }
 
     return distance;
 }
 
-double SimpleGraph::getDiameter()  //TODO: Elias: Maybe there are faster algorithms to find just the diameter/radius(without using the exzentricity of each node)
+double SimpleGraph::getDiameter() // TODO: Elias: Maybe there are faster algorithms to find just the diameter/radius(without using the exzentricity of
+                                  // each node)
 {
 
     double ex;
     double diameter = 0;
 
-    for (int i = 0; i < size; ++i) { //getting the biggest exzentricity (=diameter)
+    for (int i = 0; i < size; ++i) { // getting the biggest exzentricity (=diameter)
         ex = getExzentricity(i);
-        if (ex > diameter) { diameter = ex; }
+        if (ex > diameter) {
+            diameter = ex;
+        }
     }
     return diameter;
 }
 
-double SimpleGraph::getRadius()
-{
+double SimpleGraph::getRadius() {
 
     double radius = numeric_limits<double>::infinity();
     double ex;
     for (int i = 0; i < size; ++i) {
         ex = getExzentricity(i);
-        if (ex == 0) { continue; } //TODO: Elias: whats happening with nodes with no edges ? getExzentricity = 0 or inf ?
-        if (ex < radius) { radius = ex; }
+        if (ex == 0) {
+            continue;
+        } // TODO: Elias: whats happening with nodes with no edges ? getExzentricity = 0 or inf ?
+        if (ex < radius) {
+            radius = ex;
+        }
     }
     return radius;
 }
 
-double SimpleGraph::getExzentricity(int nod)
-{
+double SimpleGraph::getExzentricity(int nod) {
 
     const vector<double>& distance = getDistances(nod);
     double max = 0;
 
     for (int j = 0; j < distance.size(); ++j) {
-        if (distance[j] == numeric_limits<double>::infinity()) { continue; }
-        if (distance[j] > max) { max = distance[j]; }
+        if (distance[j] == numeric_limits<double>::infinity()) {
+            continue;
+        }
+        if (distance[j] > max) {
+            max = distance[j];
+        }
     }
 
     return max;
-
 }
 
-vector<int> SimpleGraph::getArticulationPoints()
-{
+vector<int> SimpleGraph::getArticulationPoints() {
 
     Riss::MarkArray visited;
     visited.create(size);
     visited.nextStep();
     vector<int> stack;
-    int tmp = 0; //if root is cut_vertex tmp>1 (more then one child in DFS tree)
+    int tmp = 0; // if root is cut_vertex tmp>1 (more then one child in DFS tree)
 
-    int rootnode = 0; //root node
+    int rootnode = 0; // root node
 
     const vector<int>& adj = getAdjacency(rootnode);
     visited.setCurrentStep(rootnode);
     stack.push_back(rootnode);
 
     for (int i = 0; i < adj.size(); ++i) {
-        if (visited.isCurrentStep(adj[i])) { continue; }
+        if (visited.isCurrentStep(adj[i])) {
+            continue;
+        }
         visited.setCurrentStep(adj[i]);
         stack.push_back(adj[i]);
         tmp++;
@@ -458,14 +463,11 @@ vector<int> SimpleGraph::getArticulationPoints()
 
     if (tmp > 1) {
         articulationpoints.push_back(rootnode);
-
     }
     return articulationpoints;
-
 }
 
-void SimpleGraph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited, vector<int>& articulationspoints)
-{
+void SimpleGraph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited, vector<int>& articulationspoints) {
 
     int nod = stack.back();
     const vector<int>& adj = getAdjacency(nod);
@@ -474,7 +476,9 @@ void SimpleGraph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited,
 
     for (int i = 0; i < adj.size(); ++i) {
 
-        if (visited.isCurrentStep(adj[i])) { continue; }
+        if (visited.isCurrentStep(adj[i])) {
+            continue;
+        }
 
         stack.push_back(adj[i]);
         visited.setCurrentStep(adj[i]);
@@ -485,7 +489,9 @@ void SimpleGraph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited,
         for (int j = stack.size() - 1; j >= tmpstacksize; --j) {
 
             for (int k = 0; k < tmpstacksize - 1; k++) {
-                if (thereisanedge(stack[k], stack[j])) { artic = false; }
+                if (thereisanedge(stack[k], stack[j])) {
+                    artic = false;
+                }
             }
             if (artic) {
                 articulationspoints.push_back(stack[tmpstacksize - 1]);
@@ -493,26 +499,24 @@ void SimpleGraph::DepthFirstSearch(vector<int>& stack, Riss::MarkArray& visited,
             stack.pop_back();
         }
     }
-
 }
 
-
-bool SimpleGraph::thereisanedge(int nodeA, int nodeB)  //TODO: Maybe check if Graph is finalized (+backedges added) [also in other methods]
+bool SimpleGraph::thereisanedge(int nodeA, int nodeB) // TODO: Maybe check if Graph is finalized (+backedges added) [also in other methods]
 {
-
 
     const adjacencyList& adj = node[nodeA];
 
-    if (adj.size() < 64) { //linear search, faster von size < 64(?) TODO: Find bordervalue(binarysearch faster then linearsearch)
+    if (adj.size() < 64) { // linear search, faster von size < 64(?) TODO: Find bordervalue(binarysearch faster then linearsearch)
 
         for (int i = 0; i < adj.size(); ++i) {
 
-            if (adj[i].first == nodeB) { return true; }
-
+            if (adj[i].first == nodeB) {
+                return true;
+            }
         }
     }
 
-    else { //binary search
+    else { // binary search
         int left = 0;
         int right = adj.size() - 1;
         int middle;
@@ -521,17 +525,19 @@ bool SimpleGraph::thereisanedge(int nodeA, int nodeB)  //TODO: Maybe check if Gr
 
             middle = (left + right) / 2;
 
-            if (adj[middle].first == nodeB) { return true; }
+            if (adj[middle].first == nodeB) {
+                return true;
+            }
 
-            if (adj[middle].first > nodeB) { right = middle - 1; }
-            else { left = middle + 1; }
-
+            if (adj[middle].first > nodeB) {
+                right = middle - 1;
+            } else {
+                left = middle + 1;
+            }
         }
     }
 
-
     return false;
-
 }
 /*
 int SimpleGraph::gettreewidth(){
@@ -762,7 +768,7 @@ void SimpleGraph::compute_G_plus(SimpleGraph*& Graph_plus ,const vector<int>& se
 
 }
 */
-vector<vector<int>> SimpleGraph::getConnectedComponents(const vector<int>& set)  //connected components without set
+vector<vector<int>> SimpleGraph::getConnectedComponents(const vector<int>& set) // connected components without set
 {
 
     Riss::MarkArray visited;
@@ -771,11 +777,15 @@ vector<vector<int>> SimpleGraph::getConnectedComponents(const vector<int>& set) 
     vector<int> componentnodes;
     vector<vector<int>> components;
 
-    for (int a = 0; a < set.size(); a++) { visited.setCurrentStep(set[a]); } //dont look at nodes, that are in the set
+    for (int a = 0; a < set.size(); a++) {
+        visited.setCurrentStep(set[a]);
+    } // dont look at nodes, that are in the set
 
     for (int k = 0; k < node.size(); k++) {
 
-        if (visited.isCurrentStep(k)) { continue; }
+        if (visited.isCurrentStep(k)) {
+            continue;
+        }
 
         componentnodes.push_back(k);
         visited.setCurrentStep(k);
@@ -784,28 +794,24 @@ vector<vector<int>> SimpleGraph::getConnectedComponents(const vector<int>& set) 
 
             const adjacencyList& adj = node[componentnodes[i]];
 
-
             for (int j = 0; j < adj.size(); ++j) {
 
-                if (visited.isCurrentStep(adj[j].first)) { continue; }
+                if (visited.isCurrentStep(adj[j].first)) {
+                    continue;
+                }
                 componentnodes.push_back(adj[j].first);
                 visited.setCurrentStep(adj[j].first);
-
             }
-
         }
 
         components.push_back(componentnodes);
         componentnodes.clear();
-
     }
 
     return components;
-
 }
 
-vector<vector<int>> SimpleGraph::getSets(const vector<int>& nodes, int k)
-{
+vector<vector<int>> SimpleGraph::getSets(const vector<int>& nodes, int k) {
     vector<vector<int>> sets;
     vector<int> set;
 
@@ -813,8 +819,9 @@ vector<vector<int>> SimpleGraph::getSets(const vector<int>& nodes, int k)
 
         set.push_back(nodes[i]);
 
-        if (k == 1) { sets.push_back(set); }
-        else {
+        if (k == 1) {
+            sets.push_back(set);
+        } else {
             for (int j = i + 1; j <= nodes.size() - (k - 1); ++j) {
 
                 getallcombinations(nodes, set, sets, k - 2, j);
@@ -826,8 +833,7 @@ vector<vector<int>> SimpleGraph::getSets(const vector<int>& nodes, int k)
     return sets;
 }
 
-void SimpleGraph::getallcombinations(const vector<int>& nodes, vector<int> set, vector<vector<int>>& sets, int k, int position)
-{
+void SimpleGraph::getallcombinations(const vector<int>& nodes, vector<int> set, vector<vector<int>>& sets, int k, int position) {
 
     set.push_back(nodes[position]);
 
@@ -837,37 +843,37 @@ void SimpleGraph::getallcombinations(const vector<int>& nodes, vector<int> set, 
 
             getallcombinations(nodes, set, sets, k - 1, position + i);
         }
-    } else { sets.push_back(set); }
-
+    } else {
+        sets.push_back(set);
+    }
 }
 
-double SimpleGraph::getPageRank(int node)
-{
+double SimpleGraph::getPageRank(int node) {
 
     double pgrnk;
 
     if (pagerank[node] == 0) {
 
-        for (int i = 0; i < 10; ++i) { doPageRank(); } //ten iterationsteps
-
+        for (int i = 0; i < 10; ++i) {
+            doPageRank();
+        } // ten iterationsteps
     }
 
     pgrnk = pagerank[node];
 
     return pgrnk;
-
 }
 
-void SimpleGraph::doPageRank()
-{
+void SimpleGraph::doPageRank() {
 
     double d = 0.85;
     int neighbors_neighbor;
 
     double pgrnk, pgrnk_neighbor;
 
-    for (int i = 0; i < pagerank.size(); ++i) { pagerank[i] = 1; } //setting each pagerank to 1 (= startvalue)
-
+    for (int i = 0; i < pagerank.size(); ++i) {
+        pagerank[i] = 1;
+    } // setting each pagerank to 1 (= startvalue)
 
     for (int i = 0; i < pagerank.size(); ++i) {
 
@@ -881,18 +887,14 @@ void SimpleGraph::doPageRank()
         }
 
         pagerank[i] = pgrnk * d + (1 - d);
-
     }
-
 }
 
-void SimpleGraph::getCommunities(double precision)
-{
+void SimpleGraph::getCommunities(double precision) {
 
     Community c(this);
     double modularity;
     cerr << "Computing COMMUNITY Structure (VIG)" << endl;
-
 
     modularity = c.compute_modularity_GFA(precision);
     c.compute_communities();
@@ -905,15 +907,13 @@ void SimpleGraph::getCommunities(double precision)
     cerr << "largest size = " << (double)c.Comm[c.Comm_order[0].first].size() / getSize() << endl;
     cerr << "iterations = " << c.iterations << endl;
     cerr << "------------" << endl;
-
-
-
 }
 
-void SimpleGraph::computeCommunityNeighbors()
-{
+void SimpleGraph::computeCommunityNeighbors() {
 
-    if (comm.size() == 0) { getCommunities(precision); }
+    if (comm.size() == 0) {
+        getCommunities(precision);
+    }
     cerr << comm.size() << endl;
     vector<int> adj;
     for (int i = 0; i < comm.size() - 1; ++i) {
@@ -924,18 +924,20 @@ void SimpleGraph::computeCommunityNeighbors()
 
                     communityneighbors[i].insert(n2c[adj[k]]);
                     communityneighbors[n2c[adj[k]]].insert(i);
-                    if (communityneighbors[i].size() > (comm.size() - 1)) { break; }
+                    if (communityneighbors[i].size() > (comm.size() - 1)) {
+                        break;
+                    }
                 }
             }
         }
     }
-
 }
 
-void SimpleGraph::computeCommunityBridgeNodes()
-{
+void SimpleGraph::computeCommunityBridgeNodes() {
 
-    if (comm.size() == 0) { getCommunities(precision); }
+    if (comm.size() == 0) {
+        getCommunities(precision);
+    }
 
     vector<int> adj;
     for (int i = 0; i < comm.size(); ++i) {
@@ -949,6 +951,5 @@ void SimpleGraph::computeCommunityBridgeNodes()
                 }
             }
         }
-
     }
 }

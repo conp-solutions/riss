@@ -7,70 +7,68 @@ Copyright (c) 2015, Norbert Manthey, LGPL v2, see LICENSE
 
 #include "coprocessor/Coprocessor.h"
 
-namespace Coprocessor
-{
+namespace Coprocessor {
 
-class Mprocessor
-{
+    class Mprocessor {
 
-  public:  // TODO get this right by having getters and setters
-    // from coprocessor
-    Coprocessor::CP3Config cpconfig;
-    Preprocessor* preprocessor;
-    Riss::Solver* S;
-    Riss::vec<int> literalWeights; /// weights seem to be ints
+    public: // TODO get this right by having getters and setters
+        // from coprocessor
+        Coprocessor::CP3Config cpconfig;
+        Preprocessor* preprocessor;
+        Riss::Solver* S;
+        Riss::vec<int> literalWeights; /// weights seem to be ints
 
-    // from open-wbo
-    int problemType;
-    int hardWeight;
-    int currentWeight;
-    int sumWeights;
-    bool hasNonUnitSoftClauses; // indicate whether there are soft clauses that are not a unit clause
+        // from open-wbo
+        int problemType;
+        int hardWeight;
+        int currentWeight;
+        int sumWeights;
+        bool hasNonUnitSoftClauses; // indicate whether there are soft clauses that are not a unit clause
 
-    int specVars, specCls; // clauses specified in the header
-    int fullVariables;     // variables after parsing the formula
+        int specVars, specCls; // clauses specified in the header
+        int fullVariables;     // variables after parsing the formula
 
-    int debugLevel; // how much
+        int debugLevel; // how much
 
-  public:
+    public:
+        Mprocessor(const char* configname);
 
-    Mprocessor(const char* configname);
+        ~Mprocessor();
 
-    ~Mprocessor();
+        void setDebugLevel(int level) {
+            debugLevel = level;
+        }
 
-    void setDebugLevel(int level) { debugLevel = level; }
+        // from open-wbo maxsat solver
+        void setProblemType(int type);     // Set problem type.
+        int getProblemType();              // Get problem type.
+        int getCurrentWeight();            // Get 'currentWeight'.
+        void updateSumWeights(int weight); // Update initial 'ubCost'.
+        void setCurrentWeight(int weight); // Set initial 'currentWeight'.
 
-    // from open-wbo maxsat solver
-    void setProblemType(int type);       // Set problem type.
-    int getProblemType();                // Get problem type.
-    int getCurrentWeight();              // Get 'currentWeight'.
-    void updateSumWeights(int weight);   // Update initial 'ubCost'.
-    void setCurrentWeight(int weight);   // Set initial 'currentWeight'.
+        void setHardWeight(int weight); // Set initial 'hardWeight'.
 
-    void setHardWeight(int weight);      // Set initial 'hardWeight'.
+        int nVars() const;                                                         /// The current number of variables.
+        Riss::Var newVar(bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
 
-    int     nVars()      const;             /// The current number of variables.
-    Riss::Var     newVar(bool polarity = true, bool dvar = true, char type = 'o');     // Add a new variable with parameters specifying variable mode.
+        void addHardClause(Riss::vec<Riss::Lit>& lits); // Add a new hard clause.
 
-    void addHardClause(Riss::vec<Riss::Lit>& lits);             // Add a new hard clause.
+        /** Add a new soft clause.
+         *  @return true, if soft clause has been a unit clause
+         */
+        bool addSoftClause(int weight, Riss::vec<Riss::Lit>& lits);
 
-    /** Add a new soft clause.
-     *  @return true, if soft clause has been a unit clause
-     */
-    bool addSoftClause(int weight, Riss::vec< Riss::Lit >& lits);
+        void setSpecs(int specifiedVars, int specifiedCls);
 
-    void setSpecs(int specifiedVars, int specifiedCls) ;
+        /// return that the solver state is still ok (check for unsat)
+        bool okay();
 
-    /// return that the solver state is still ok (check for unsat)
-    bool okay();
+        /// apply simplification
+        void simplify();
 
-    /// apply simplification
-    void simplify();
+        ///
+    };
 
-    ///
-
-};
-
-};
+}; // namespace Coprocessor
 
 #endif
