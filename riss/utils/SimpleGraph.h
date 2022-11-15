@@ -142,7 +142,7 @@ class SimpleGraph
 
     //--------------- ITERATOR ON EDGES --------------------------------------------------
 
-    struct edgeNewDef{
+    struct edgeNewDef {
         int orig; int dest; double weight;
         edgeNewDef() : orig(-1), dest(-1), weight(1) {}
     };

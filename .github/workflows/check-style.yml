@@ -1,0 +1,25 @@
+name: Check coding style
+
+on:
+  push:
+    branches:
+      - '**'
+
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  Linux:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install Packages
+      run: sudo apt-get install astyle
+
+    - uses: actions/checkout@v1
+
+    - name: check style
+      run: |
+        ./regression/test-codestyle.sh

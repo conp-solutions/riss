@@ -341,7 +341,7 @@ int main(int argc, char** argv)
 
         if (!S->simplify()) {
             // turn UNSAT into UNKNOWN?
-            if(opt_nounsat) {
+            if (opt_nounsat) {
                 if (res != nullptr) {
                     if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"), fclose(res); }
                     else { fprintf(res, "s UNKNOWN\n"), fclose(res); }
@@ -421,7 +421,7 @@ int main(int argc, char** argv)
         }
 
         // fake UNSAT into UNKNOWN, in case the user demands it
-        if(ret == l_False && opt_nounsat) ret = l_Undef;
+        if (ret == l_False && opt_nounsat) { ret = l_Undef; }
 
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {

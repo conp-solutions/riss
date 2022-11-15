@@ -1,4 +1,4 @@
-name: Build Solver on Linux
+name: Build Solver on Linux and test it
 
 on:
   push:
@@ -16,11 +16,11 @@ jobs:
 
     steps:
     - name: Install Packages
-      run: sudo apt-get install zlib1g-dev make cmake picosat
+      run: sudo apt-get install zlib1g-dev make cmake picosat astyle
 
     - uses: actions/checkout@v1
 
-    - name: build debug
+    - name: build and test debug
       run: |
         mkdir debug
         cd debug
@@ -28,6 +28,8 @@ jobs:
         make riss-simp -j 4
         make riss-core -j 4
         make scripts -j 4
+        cd ..
+        scripts/ci.sh
 
 
     - name: build release
@@ -38,4 +40,5 @@ jobs:
         make riss-simp -j 4
         make riss-core -j 4
         make scripts -j 4
-        
+        cd ..
+        scripts/ci.sh
